@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("3fdhpiNWfrz4MrQsoPgjkML5kiBgc9thUpxjd8KDEcf6");
+declare_id!("65jtKVsceUHnuj5rK4e7dqyjy8cn2GEXvp1jkyYnGKD");
 
 #[program]
 pub mod bonding_curve {
@@ -46,8 +46,8 @@ pub mod bonding_curve {
         instructions::sell(ctx, amount, bump)
     }
 
-    pub fn add_liquidity(ctx: Context<AddLiquidity>) -> Result<()> {
-        instructions::add_liquidity(ctx)
+    pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
+        instructions::add_liquidity(ctx, amount)
     }
 
     pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {

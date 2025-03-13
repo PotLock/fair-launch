@@ -7,7 +7,7 @@ use anchor_spl::{
 
 use crate::state::{CurveConfiguration, BondingCurve, BondingCurveAccount};
 use crate::consts::*;
-
+use crate::errors::CustomError;
 
 
 pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
@@ -15,6 +15,11 @@ pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
 
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.user;
+    // check if the user is the creator of the pool
+    if bonding_curve.creator != user.key() {
+        return Err(CustomError::InvalidAuthority.into());
+    }
+
     let system_program = &ctx.accounts.system_program;
     let token_program = &ctx.accounts.token_program;
     let pool_sol_vault = &mut ctx.accounts.pool_sol_vault;

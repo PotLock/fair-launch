@@ -4,6 +4,7 @@ use anchor_spl::token::Mint;
 
 use crate::state::{CurveConfiguration, BondingCurve, FeePool, FeePoolAccount, Recipient};
 use crate::consts::*;
+use crate::errors::CustomError;
 
 
 
@@ -12,6 +13,10 @@ pub fn add_fee_recipients(ctx: Context<AddFeeRecipient>, recipients: Vec<Recipie
     msg!("Trying to add fee recipient");
     // TODO: Implement buy function
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
+    let user = &ctx.accounts.authority;
+    if bonding_curve.creator != user.key() {
+        return Err(CustomError::InvalidAuthority.into());
+    }
     let fee_pool = &mut ctx.accounts.fee_pool_account;
 
     fee_pool.add_fee_recipients(recipients)?;

@@ -52,7 +52,6 @@ pub struct CreateLiquidityPool<'info> {
     )]
     pub fee_pool_account: Box<Account<'info, FeePool>>,
 
-
     #[account(mut)]
     pub payer: Signer<'info>,
     pub token_program: Program<'info, Token>,

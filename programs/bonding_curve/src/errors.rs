@@ -36,5 +36,11 @@ pub enum CustomError {
     InvalidSharePercentage,
 
     #[msg("Fee recipient not found")]
-    FeeRecipientNotFound
+    FeeRecipientNotFound,
+
+    #[msg("Invalid amount")]
+    InvalidAmount,
+
+    #[msg("Invalid authority")]
+    InvalidAuthority
 }

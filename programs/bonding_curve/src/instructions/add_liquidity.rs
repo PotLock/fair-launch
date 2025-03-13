@@ -7,14 +7,20 @@ use anchor_spl::{
 
 use crate::state::{CurveConfiguration, BondingCurve, BondingCurveAccount};
 use crate::consts::*;
+use crate::errors::CustomError;
 
 
 
-pub fn add_liquidity(ctx: Context<AddLiquidity>) -> Result<()> {
+pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
     msg!("Trying to add liquidity to the pool");
 
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.user;
+    // check if the user is the creator of the pool
+    if bonding_curve.creator != user.key() {
+        return Err(CustomError::InvalidAuthority.into());
+    }
+
     let system_program = &ctx.accounts.system_program;
     let token_program = &ctx.accounts.token_program;
     let pool_sol_vault = &mut ctx.accounts.pool_sol_vault;
@@ -25,7 +31,7 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>) -> Result<()> {
         &mut *ctx.accounts.user_token_account,
     );
 
-    bonding_curve.add_liquidity(token_one_accounts, pool_sol_vault, user, token_program, system_program)?;
+    bonding_curve.add_liquidity(token_one_accounts, pool_sol_vault, amount, user, token_program, system_program)?;
     Ok(())
 }
 
