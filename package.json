@@ -7,7 +7,8 @@
         "createMultisig": "ts-node scripts/create-multisig.ts",
         "claim": "ts-node scripts/claim.ts",
         "createPool": "ts-node scripts/create-pool.ts",
-        "deposit": "ts-node scripts/deposit.ts"
+        "fetchPool": "ts-node scripts/fetchPool.ts",
+        "swap": "ts-node scripts/swap.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",
