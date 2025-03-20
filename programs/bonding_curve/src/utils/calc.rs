@@ -92,11 +92,68 @@ pub fn linear_sell_cost(amount: u64, reserve_ratio: u16, total_supply: u64) -> R
 
 
 pub fn quadratic_buy_cost(amount: u64, reserve_ratio: u16, total_supply: u64) -> Result<u64> {
-    // TODO: Implement quadratic buy cost
-    Ok(0)
+    // Convert to u128 for intermediate calculations to prevent overflow
+    let amount = amount as u128;
+    let supply = total_supply as u128;
+    let k = (reserve_ratio as u128).checked_div(10000)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let term1 = k
+        .checked_mul(supply)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let term2 = k
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_div(2)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let cost = term1
+        .checked_add(term2)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    if cost > u64::MAX as u128 {
+        return Err(CustomError::OverFlowUnderFlowOccured.into());
+    }
+
+    Ok(cost as u64)
 }
 
 pub fn quadratic_sell_cost(amount: u64, reserve_ratio: u16, total_supply: u64) -> Result<u64> {
-    // TODO: Implement quadratic sell cost
-    Ok(0)
+    if amount > total_supply {
+        return Err(CustomError::InsufficientBalance.into());
+    }
+
+    let amount = amount as u128;
+    let supply = total_supply as u128;
+    let k = (reserve_ratio as u128).checked_div(10000)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let term1 = k
+        .checked_mul(supply)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let term2 = k
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_mul(amount)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_div(2)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    let reward = term1
+        .checked_sub(term2)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    if reward > u64::MAX as u128 {
+        return Err(CustomError::OverFlowUnderFlowOccured.into());
+    }
+
+    Ok(reward as u64)
 }
