@@ -1,6 +1,7 @@
 import { Connection, GetProgramAccountsFilter, PublicKey } from "@solana/web3.js";
 import { Buffer } from "buffer";
-import { deserializeBondingCurve, deserializeCurveConfiguration } from "./utils";
+import { deserializeBondingCurve, deserializeCurveConfiguration, getKeypairFromFile, getPDAs } from "./utils";
+import os from "os";
 
 const programId = new PublicKey("ChNYPWh7iahysHscCesR37994jyGtALBhWevtAqay233");
 
@@ -9,10 +10,12 @@ const connection = new Connection("https://api.devnet.solana.com", {
   commitment: "confirmed",
 });
 
+
+const wallet = getKeypairFromFile(`${os.homedir()}/.config/solana/id.json`);
+
+
 async function getCurveConfig() {
-  const seeds = [Buffer.from("curve_configuration")];
-  const [curveConfig] = PublicKey.findProgramAddressSync(seeds, programId);
-  console.log("Curve Config PDA:", curveConfig.toBase58());
+  const {curveConfig} = await getPDAs(wallet.publicKey, mint, programId);
   const accountInfo = await connection.getAccountInfo(curveConfig);
   if (!accountInfo) {
     console.log("PDA account does not exist or has no data.");

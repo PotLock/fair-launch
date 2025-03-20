@@ -45,11 +45,12 @@ pub struct CurveConfiguration {
     pub fee_percentage: u16,    // Transaction fee in basis points (e.g., 200 = 2%)
     pub fees_enabled: bool,     // Toggle for enabling/disabling fees
     pub bonding_curve_type: BondingCurveType,
+    pub max_token_supply: u64,
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1)
-    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1;
+    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8)
+    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8;
 
     pub fn new(
         initial_quorum: u64,
@@ -58,6 +59,7 @@ impl CurveConfiguration {
         governance: Pubkey,
         dao_quorum: u16,
         bonding_curve_type: u8,
+        max_token_supply: u64,
     ) -> Self {
         let bonding_curve_type =
             BondingCurveType::try_from(bonding_curve_type).unwrap_or(BondingCurveType::Linear);
@@ -72,6 +74,7 @@ impl CurveConfiguration {
             fee_percentage,
             fees_enabled: true,
             bonding_curve_type,
+            max_token_supply,
         }
     }
 }
@@ -369,6 +372,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             &mut Account<'info, TokenAccount>,
             &mut Account<'info, TokenAccount>,
         ),
+        
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
         authority: &Signer<'info>,
@@ -379,7 +383,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         // Checking if the amount is greater than 0 and less than token balance
         let balance = token_accounts.2.amount;
         msg!("balance {}", balance);
-        if amount == 0 || amount > balance {
+        if amount == 0 || amount > balance   {
             return err!(CustomError::InvalidAmount);
         }
 

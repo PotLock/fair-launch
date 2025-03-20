@@ -24,7 +24,7 @@ describe("bonding_curve", () => {
   console.log("Fee address1 :", feeRecipient.publicKey.toBase58());
   console.log("Fee address2 :", feeRecipient2.publicKey.toBase58());
   // get existing TokenMint and TokenATA or we can create new token 
-  const mint = new PublicKey("BU38GveW5z5N61kuazeSJSPJCcQt9fn4SYZboBCxBVpz");
+  const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
   //5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa
 
   const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
