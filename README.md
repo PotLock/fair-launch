@@ -7,6 +7,9 @@ A Solana smart contract implementing customizable bonding curves with fee distri
 
 This smart contract implements an launchpad using bonding curves. It supports multiple curve types, fee collection and distribution, and liquidity management features.
 
+-> Fair launch mechanism with fully customizable business logic
+
+
 ## Features
 
 ### Bonding Curve Types
@@ -47,13 +50,13 @@ yarn install
 ```
 
 2. Add your private key in the config folder
-2.1 Signer on `~/.config/solana/id.json` (default signer for anchor config)
 
+2.1 Signer on `~/.config/solana/id.json` (default signer for anchor config)
 
 2.2 Fee Recipient on `~/.config/solana/id2.json` and `~/.config/solana/id3.json`
 
 
-2. Run script to create token
+3. Run script to create token
 
 Noted: Fill the `SIGNER_PRIVATE_KEY` and `USER_PRIVATE_KEY` in the `.env` file
 
@@ -68,7 +71,7 @@ Mint: 3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu
 ATA: 5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa
 ```
 
-3. Run tests
+4. Run tests
 
 Noted: Replace your mint account in the `tests/bonding-curve.ts` file
 
