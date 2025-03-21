@@ -11,7 +11,7 @@ use crate::errors::CustomError;
 
 pub fn add_fee_recipients(ctx: Context<AddFeeRecipient>, recipients: Vec<Recipient>) -> Result<()> {
     msg!("Trying to add fee recipient");
-    // TODO: Implement buy function
+    
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.authority;
     if bonding_curve.creator != user.key() {

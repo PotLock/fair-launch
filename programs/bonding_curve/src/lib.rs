@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("FMxcVNYZxCv1Go7R6KeFYWFmGP9LeLzAz3ywecjM1yqA");
+declare_id!("2yqZJkpu66s6dtqKzniSGicSEdkQHUL3oowtpf6fko3E");
 
 #[program]
 pub mod bonding_curve {
@@ -23,6 +23,8 @@ pub mod bonding_curve {
         dao_quorum: u16,
         bonding_curve_type: u8,
         max_token_supply: u64,
+        liquidity_lock_period: i64,
+        liquidity_pool_percentage: u16,
     ) -> Result<()> {
         instructions::initialize(
             ctx,
@@ -32,7 +34,9 @@ pub mod bonding_curve {
             governance,
             dao_quorum,
             bonding_curve_type,
-            max_token_supply
+            max_token_supply,
+            liquidity_lock_period,
+            liquidity_pool_percentage
         )
     }
 

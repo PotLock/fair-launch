@@ -13,11 +13,16 @@ use crate::errors::CustomError;
 pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
     msg!("Trying to remove liquidity from the pool");
 
+    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
     if bonding_curve.creator != user.key() {
         return Err(CustomError::InvalidAuthority.into());
+    }
+    // only removing liquidity after the liquidity lock period
+    if bonding_curve_configuration.liquidity_lock_period > Clock::get()?.unix_timestamp {
+        return Err(CustomError::NotReadyToRemoveLiquidity.into());
     }
 
     let system_program = &ctx.accounts.system_program;

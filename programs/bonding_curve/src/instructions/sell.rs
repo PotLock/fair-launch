@@ -4,7 +4,7 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::state::{BondingCurve, CurveConfiguration, BondingCurveAccount, BondingCurveType, FeePool};
+use crate::state::{BondingCurve, CurveConfiguration, BondingCurveAccount, FeePool};
 use crate::consts::*;
 pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
 

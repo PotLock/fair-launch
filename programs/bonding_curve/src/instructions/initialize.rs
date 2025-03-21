@@ -32,11 +32,14 @@ pub fn initialize(
     dao_quorum: u16,
     bonding_curve_type: u8,
     max_token_supply: u64,
-
+    liquidity_lock_period: i64,
+    liquidity_pool_percentage: u16,
 ) -> Result<()> {
     let dex_config = &mut ctx.accounts.dex_configuration_account;
+    let current_time = Clock::get()?.unix_timestamp;
+    let liquidity_lock_period = current_time + liquidity_lock_period;
 
-    dex_config.set_inner(CurveConfiguration::new(initial_quorum, fee_percentage, target_liquidity, governance, dao_quorum, bonding_curve_type, max_token_supply));
+    dex_config.set_inner(CurveConfiguration::new(initial_quorum, fee_percentage, target_liquidity, governance, dao_quorum, bonding_curve_type, max_token_supply, liquidity_lock_period, liquidity_pool_percentage));
 
     Ok(())
 }

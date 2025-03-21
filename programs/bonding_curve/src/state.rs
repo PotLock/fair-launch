@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 
+
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BondingCurveType {
     Linear,
@@ -46,11 +47,13 @@ pub struct CurveConfiguration {
     pub fees_enabled: bool,     // Toggle for enabling/disabling fees
     pub bonding_curve_type: BondingCurveType,
     pub max_token_supply: u64,
+    pub liquidity_lock_period: i64, // Liquidity lock period in seconds. cant remove liquidity before this period
+    pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX 
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8)
-    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8;
+    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2)
+    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2;
 
     pub fn new(
         initial_quorum: u64,
@@ -60,6 +63,8 @@ impl CurveConfiguration {
         dao_quorum: u16,
         bonding_curve_type: u8,
         max_token_supply: u64,
+        liquidity_lock_period: i64,
+        liquidity_pool_percentage: u16,
     ) -> Self {
         let bonding_curve_type =
             BondingCurveType::try_from(bonding_curve_type).unwrap_or(BondingCurveType::Linear);
@@ -75,6 +80,8 @@ impl CurveConfiguration {
             fees_enabled: true,
             bonding_curve_type,
             max_token_supply,
+            liquidity_lock_period,
+            liquidity_pool_percentage,
         }
     }
 }

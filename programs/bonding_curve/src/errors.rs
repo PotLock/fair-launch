@@ -42,5 +42,9 @@ pub enum CustomError {
     InvalidAmount,
 
     #[msg("Invalid authority")]
-    InvalidAuthority
+    InvalidAuthority,
+
+    #[msg("Not ready to remove liquidity")]
+    NotReadyToRemoveLiquidity,
+
 }

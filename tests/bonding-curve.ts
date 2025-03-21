@@ -2,8 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve"
 import { Connection, PublicKey, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram, SYSVAR_RENT_PUBKEY, clusterApiUrl } from "@solana/web3.js"
-import { createMint, getOrCreateAssociatedTokenAccount, mintTo, getAssociatedTokenAddress } from "@solana/spl-token"
-import { expect } from "chai";
+
 import { BN } from "bn.js";
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
@@ -37,6 +36,7 @@ describe("bonding_curve", () => {
 
     try {
       const { curveConfig } = await getPDAs(signer.payer.publicKey, mint)
+      console.log("Curve Config : ", curveConfig.toBase58())
       // Fee Percentage : 100 = 1%
       const feePercentage = new BN(100);
       const initialQuorum = new BN(500);
@@ -44,12 +44,17 @@ describe("bonding_curve", () => {
       const daoQuorum = new BN(500);
       // 0 is linear, 1 is quadratic
       const bondingCurveType = 0;
+      const maxTokenSupply = new BN(10000000000);
+      const liquidityLockPeriod = new BN(60); // 30 days
+      const liquidityPoolPercentage = new BN(50); // 50%
       const tx = new Transaction()
         .add(
           await program.methods
-            .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType)
+              // @ts-ignore
+            .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage)
             .accounts({
-              dexConfigurationAccount: curveConfig,
+              // @ts-ignore
+              configurationAccount: curveConfig,
               admin: signer.payer.publicKey,
               rent: SYSVAR_RENT_PUBKEY,
               systemProgram: SystemProgram.programId
@@ -60,8 +65,6 @@ describe("bonding_curve", () => {
       tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
       const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
       console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      // let curveConfigAccount = await program.account.curveConfiguration.fetch(curveConfig)
-      // console.log("Curve Configuration Data : ", curveConfigAccount)
     } catch (error) {
       console.log("Error in initialization :", error)
     }
