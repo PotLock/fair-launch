@@ -43,7 +43,7 @@ describe("bonding_curve", () => {
       const targetLiquidity = new BN(10000000);
       const daoQuorum = new BN(500);
       // 0 is linear, 1 is quadratic
-      const bondingCurveType = 0;
+      const bondingCurveType = 1;
       const maxTokenSupply = new BN(10000000000);
       const liquidityLockPeriod = new BN(60); // 30 days
       const liquidityPoolPercentage = new BN(50); // 50%
@@ -385,7 +385,7 @@ describe("bonding_curve", () => {
       console.log("User Balance : ", userBalance)
       console.log("Pool Balance : ", poolBalance)
     } catch (error) {
-      console.log("Error in add liquidity :", error)
+      console.log("Error in remove liquidity :", error)
     }
   })
 
