@@ -550,6 +550,7 @@ pub struct Recipient {
     pub address: Pubkey,
     pub share: u16, // Share in basis points (e.g., 5000 = 50%)
     pub amount: u64,
+    pub locking_period: i64,
 }
 
 #[account]
@@ -560,11 +561,13 @@ pub struct FeePool {
 }
 
 impl FeePool {
+
     pub fn new(recipients: Vec<Recipient>, bump: u8) -> Result<Self> {
         let total_share: u16 = recipients.iter().map(|r| r.share).sum();
         if total_share != 10000 {
             return err!(CustomError::InvalidSharePercentage);
         }
+        let current_time = Clock::get()?.unix_timestamp;
 
         // make sure amount is 0 in all recipients in initial state
         let recipients = recipients
@@ -573,6 +576,7 @@ impl FeePool {
                 address: r.address,
                 share: r.share,
                 amount: 0,
+                locking_period: current_time + r.locking_period,
             })
             .collect();
 

@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("7JBbCbbZzEjL9CQxVwzcJAJG1rUkT2PQxjruCnwbgnWf");
+declare_id!("AbrWZmwT2t9Ch9RMrW1oTvJkzgEWGXMWL2Jy8dPw8Cjq");
 
 #[program]
 pub mod bonding_curve {
@@ -25,6 +25,7 @@ pub mod bonding_curve {
         max_token_supply: u64,
         liquidity_lock_period: i64,
         liquidity_pool_percentage: u16,
+        recipients: Vec<state::Recipient>
     ) -> Result<()> {
         instructions::initialize(
             ctx,
@@ -36,12 +37,13 @@ pub mod bonding_curve {
             bonding_curve_type,
             max_token_supply,
             liquidity_lock_period,
-            liquidity_pool_percentage
+            liquidity_pool_percentage,
+            recipients
         )
     }
 
-    pub fn create_pool(ctx: Context<CreateLiquidityPool>, recipients: Vec<state::Recipient>) -> Result<()> {
-        instructions::create_pool(ctx, recipients)
+    pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
+        instructions::create_pool(ctx)
     }
 
     pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {

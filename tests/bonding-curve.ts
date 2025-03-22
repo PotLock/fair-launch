@@ -35,7 +35,7 @@ describe("bonding_curve", () => {
   it("Initialize the contract", async () => {
 
     try {
-      const { curveConfig } = await getPDAs(signer.payer.publicKey, mint)
+      const { curveConfig, feePool } = await getPDAs(signer.payer.publicKey, mint)
       console.log("Curve Config : ", curveConfig.toBase58())
       // Fee Percentage : 100 = 1%
       const feePercentage = new BN(100);
@@ -47,14 +47,27 @@ describe("bonding_curve", () => {
       const maxTokenSupply = new BN(10000000000);
       const liquidityLockPeriod = new BN(60); // 30 days
       const liquidityPoolPercentage = new BN(50); // 50%
+
+      let recipients = [
+        {
+          address: feeRecipient.publicKey,
+          share: 10000,
+          amount: new BN(0),
+          lockingPeriod: new BN(60000),
+        },
+      ]
+
+
       const tx = new Transaction()
         .add(
           await program.methods
               // @ts-ignore
-            .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage)
+            .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, recipients)
             .accounts({
               // @ts-ignore
               configurationAccount: curveConfig,
+              tokenMint: mint,
+              feePoolAccount: feePool,
               admin: signer.payer.publicKey,
               rent: SYSVAR_RENT_PUBKEY,
               systemProgram: SystemProgram.programId
@@ -75,22 +88,14 @@ describe("bonding_curve", () => {
     try {
 
 
-      const { bondingCurve, feePool } = await getPDAs(signer.payer.publicKey, mint)
-      let recipients = [
-        {
-          address: feeRecipient.publicKey,
-          share: 10000,
-          amount: new BN(0),
-        },
-      ]
+      const { bondingCurve } = await getPDAs(signer.payer.publicKey, mint)
       const tx = new Transaction()
         .add(
           await program.methods
-            .createPool(recipients)
+            .createPool()
             .accounts({
               bondingCurveAccount: bondingCurve,
               tokenMint: mint,
-              feePoolAccount: feePool,
               payer: signer.payer.publicKey,
               tokenProgram: TOKEN_PROGRAM_ID,
               associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
@@ -124,18 +129,21 @@ describe("bonding_curve", () => {
           // 40%
           share: 4000,
           amount: new BN(0),
+          lockingPeriod: new BN(60000),
         },
         {
           address: feeRecipient2.publicKey,
           // 40%
           share: 4000,
           amount: new BN(0),
+          lockingPeriod: new BN(60000),
         },
         {
           address: multisig,
           // 20%
           share: 2000,
           amount: new BN(0),
+          lockingPeriod: new BN(60000),
         }
       ]
       const tx = new Transaction()
