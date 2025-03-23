@@ -46,5 +46,4 @@ pub enum CustomError {
 
     #[msg("Not ready to remove liquidity")]
     NotReadyToRemoveLiquidity,
-
 }

@@ -4,10 +4,9 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::state::{BondingCurve, CurveConfiguration, BondingCurveAccount, FeePool};
 use crate::consts::*;
+use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration, FeePool};
 pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
-
     // TODO: Implement sell function
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
@@ -18,7 +17,7 @@ pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
 
     let bonding_curve_type: u8 = bonding_curve_configuration.bonding_curve_type.into();
     let fee_percentage: u16 = bonding_curve_configuration.fee_percentage;
-    
+
     let fee_pool_account = &mut ctx.accounts.fee_pool_account;
     let fee_pool_vault = &mut ctx.accounts.fee_pool_vault;
 
@@ -28,11 +27,23 @@ pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
         &mut *ctx.accounts.user_token_account,
     );
 
-    bonding_curve.sell(token_one_accounts, pool_sol_vault, fee_pool_account, fee_pool_vault, amount,fee_percentage, bump, user, bonding_curve_type, token_program, system_program)?;
+    bonding_curve.sell(
+        token_one_accounts,
+        pool_sol_vault,
+        fee_pool_account,
+        fee_pool_vault,
+        amount,
+        fee_percentage,
+        bump,
+        user,
+        bonding_curve_type,
+        token_program,
+        system_program,
+    )?;
     Ok(())
 }
 
-#[derive(Accounts)] 
+#[derive(Accounts)]
 pub struct Sell<'info> {
     #[account(
         mut,
@@ -74,7 +85,6 @@ pub struct Sell<'info> {
     )]
     pub fee_pool_account: Box<Account<'info, FeePool>>,
 
-
     /// CHECK:
     #[account(
         mut,
@@ -82,7 +92,6 @@ pub struct Sell<'info> {
         bump
     )]
     pub fee_pool_vault: AccountInfo<'info>,
-
 
     #[account(
         mut,

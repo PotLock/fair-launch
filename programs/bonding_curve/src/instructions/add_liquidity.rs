@@ -1,15 +1,12 @@
-
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::state::{CurveConfiguration, BondingCurve, BondingCurveAccount};
 use crate::consts::*;
 use crate::errors::CustomError;
-
-
+use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
     msg!("Trying to add liquidity to the pool");
@@ -31,11 +28,16 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
         &mut *ctx.accounts.user_token_account,
     );
 
-    bonding_curve.add_liquidity(token_one_accounts, pool_sol_vault, amount, user, token_program, system_program)?;
+    bonding_curve.add_liquidity(
+        token_one_accounts,
+        pool_sol_vault,
+        amount,
+        user,
+        token_program,
+        system_program,
+    )?;
     Ok(())
 }
-
-
 
 #[derive(Accounts)]
 pub struct AddLiquidity<'info> {
@@ -85,5 +87,4 @@ pub struct AddLiquidity<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-
 }

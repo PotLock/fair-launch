@@ -1,14 +1,12 @@
-
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::state::{CurveConfiguration, BondingCurve, BondingCurveAccount};
 use crate::consts::*;
 use crate::errors::CustomError;
-
+use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
     msg!("Trying to remove liquidity from the pool");
@@ -35,11 +33,16 @@ pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
         &mut *ctx.accounts.user_token_account,
     );
 
-    bonding_curve.remove_liquidity(token_one_accounts, pool_sol_vault, user, bump, token_program, system_program)?;
+    bonding_curve.remove_liquidity(
+        token_one_accounts,
+        pool_sol_vault,
+        user,
+        bump,
+        token_program,
+        system_program,
+    )?;
     Ok(())
 }
-
-
 
 #[derive(Accounts)]
 pub struct RemoveLiquidity<'info> {
@@ -89,7 +92,4 @@ pub struct RemoveLiquidity<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-
 }
-
-
