@@ -5,7 +5,6 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 
-
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BondingCurveType {
     Linear,
@@ -48,7 +47,7 @@ pub struct CurveConfiguration {
     pub bonding_curve_type: BondingCurveType,
     pub max_token_supply: u64,
     pub liquidity_lock_period: i64, // Liquidity lock period in seconds. cant remove liquidity before this period
-    pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX 
+    pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX
 }
 
 impl CurveConfiguration {
@@ -108,7 +107,6 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
         self.fee_percentage = new_fee_percentage;
         Ok(())
     }
-
 }
 
 /// BONDING CURVE ACCOUNT
@@ -379,7 +377,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             &mut Account<'info, TokenAccount>,
             &mut Account<'info, TokenAccount>,
         ),
-        
+
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
         authority: &Signer<'info>,
@@ -390,7 +388,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         // Checking if the amount is greater than 0 and less than token balance
         let balance = token_accounts.2.amount;
         msg!("balance {}", balance);
-        if amount == 0 || amount > balance   {
+        if amount == 0 || amount > balance {
             return err!(CustomError::InvalidAmount);
         }
 
@@ -561,7 +559,6 @@ pub struct FeePool {
 }
 
 impl FeePool {
-
     pub fn new(recipients: Vec<Recipient>, bump: u8) -> Result<Self> {
         let total_share: u16 = recipients.iter().map(|r| r.share).sum();
         if total_share != 10000 {
@@ -618,13 +615,11 @@ impl<'info> FeePoolAccount<'info> for Account<'info, FeePool> {
     }
 
     fn add_fee_recipients(&mut self, new_recipients: Vec<Recipient>) -> Result<()> {
-
         let old_recipients = self.recipients.clone();
 
         let updated_recipients: Vec<Recipient> = new_recipients
             .into_iter()
             .map(|mut new_recipient| {
-
                 if let Some(old_recipient) = old_recipients
                     .iter()
                     .find(|r| r.address == new_recipient.address)

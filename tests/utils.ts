@@ -5,7 +5,7 @@ import { BondingCurve } from "../target/types/bonding_curve"
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import fs from "fs";
 
-const CURVE_CONFIGURATION_SEED = "curve_configuration"
+const CURVE_CONFIGURATION_SEED = "curve_config"
 const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
 const FEE_POOL_SEED_PREFIX = "fee_pool"
@@ -17,7 +17,7 @@ const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 export async function getPDAs(user: PublicKey, mint: PublicKey){
   const [curveConfig] = PublicKey.findProgramAddressSync(
-    [Buffer.from(CURVE_CONFIGURATION_SEED)],
+    [Buffer.from(CURVE_CONFIGURATION_SEED), mint.toBuffer()],
     program.programId,
     
   );

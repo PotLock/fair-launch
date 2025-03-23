@@ -1,10 +1,10 @@
+use crate::consts::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
+    token::{Mint, Token},
 };
-use crate::consts::*;
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let bonding_curve_account = &mut ctx.accounts.bonding_curve_account;
@@ -12,7 +12,7 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     bonding_curve_account.set_inner(BondingCurve::new(
         ctx.accounts.payer.key(),
         ctx.accounts.token_mint.key(),
-        ctx.bumps.bonding_curve_account
+        ctx.bumps.bonding_curve_account,
     ));
 
     Ok(())
@@ -39,4 +39,3 @@ pub struct CreateLiquidityPool<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
-

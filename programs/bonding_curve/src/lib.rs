@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("AbrWZmwT2t9Ch9RMrW1oTvJkzgEWGXMWL2Jy8dPw8Cjq");
+declare_id!("A8mJimPBA9YhNRciCbdSfTnW7WUML7BFb4Ps3KGJALkZ");
 
 #[program]
 pub mod bonding_curve {
@@ -25,7 +25,7 @@ pub mod bonding_curve {
         max_token_supply: u64,
         liquidity_lock_period: i64,
         liquidity_pool_percentage: u16,
-        recipients: Vec<state::Recipient>
+        recipients: Vec<state::Recipient>,
     ) -> Result<()> {
         instructions::initialize(
             ctx,
@@ -38,7 +38,7 @@ pub mod bonding_curve {
             max_token_supply,
             liquidity_lock_period,
             liquidity_pool_percentage,
-            recipients
+            recipients,
         )
     }
 
@@ -63,7 +63,10 @@ pub mod bonding_curve {
     }
 
     // Only DAO can grant this permission
-    pub fn add_fee_recipients(ctx: Context<AddFeeRecipient>, recipients: Vec<state::Recipient>) -> Result<()> {
+    pub fn add_fee_recipients(
+        ctx: Context<AddFeeRecipient>,
+        recipients: Vec<state::Recipient>,
+    ) -> Result<()> {
         instructions::add_fee_recipients(ctx, recipients)
     }
 

@@ -1,17 +1,13 @@
-
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::state::{CurveConfiguration, BondingCurve, FeePool, FeePoolAccount, Recipient};
 use crate::consts::*;
 use crate::errors::CustomError;
-
-
-
+use crate::state::{BondingCurve, CurveConfiguration, FeePool, FeePoolAccount, Recipient};
 
 pub fn add_fee_recipients(ctx: Context<AddFeeRecipient>, recipients: Vec<Recipient>) -> Result<()> {
     msg!("Trying to add fee recipient");
-    
+
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.authority;
     if bonding_curve.creator != user.key() {
@@ -35,8 +31,6 @@ pub fn claim_fee(ctx: Context<ClaimFee>, bump: u8) -> Result<()> {
     Ok(())
 }
 
-
-
 #[derive(Accounts)]
 pub struct AddFeeRecipient<'info> {
     #[account(
@@ -56,7 +50,6 @@ pub struct AddFeeRecipient<'info> {
     #[account(mut)]
     pub token_mint: Box<Account<'info, Mint>>,
 
-
     /// CHECK:
     #[account(
         mut,
@@ -64,7 +57,6 @@ pub struct AddFeeRecipient<'info> {
         bump
     )]
     pub fee_pool_account: Box<Account<'info, FeePool>>,
-
 
     /// CHECK:
     #[account(
@@ -76,9 +68,7 @@ pub struct AddFeeRecipient<'info> {
 
     #[account(mut)]
     pub authority: Signer<'info>,
-
 }
-
 
 #[derive(Accounts)]
 pub struct ClaimFee<'info> {
@@ -99,7 +89,6 @@ pub struct ClaimFee<'info> {
     #[account(mut)]
     pub token_mint: Box<Account<'info, Mint>>,
 
-
     /// CHECK:
     #[account(
         mut,
@@ -116,11 +105,8 @@ pub struct ClaimFee<'info> {
     )]
     pub fee_pool_vault: AccountInfo<'info>,
 
-
     #[account(mut)]
     pub user: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
-
-

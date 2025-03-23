@@ -23,14 +23,14 @@ describe("bonding_curve", () => {
   console.log("Fee address1 :", feeRecipient.publicKey.toBase58());
   console.log("Fee address2 :", feeRecipient2.publicKey.toBase58());
   // get existing TokenMint and TokenATA or we can create new token 
-  const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
+  // const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
   //5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa
+  const mint = new PublicKey("5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa");
 
   const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
 
   const feeRecipient3 = Keypair.generate();
   const governance = Keypair.generate();
-
 
   it("Initialize the contract", async () => {
 
@@ -83,129 +83,129 @@ describe("bonding_curve", () => {
     }
   });
 
-  it(" create bonding curve pool", async () => {
+  // it(" create bonding curve pool", async () => {
 
-    try {
-
-
-      const { bondingCurve } = await getPDAs(signer.payer.publicKey, mint)
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .createPool()
-            .accounts({
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              payer: signer.payer.publicKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully created pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      // let bondingCurveAccount = await program.account.bondingCurve.fetch(bondingCurve)
-      // console.log("Bonding Curve Data : ", bondingCurveAccount)
-    } catch (error) {
-      console.log("Error in initialization :", error)
-    }
-
-  })
-
-  it(" add fee recipients", async () => {
-
-    try {
+  //   try {
 
 
-      const { curveConfig, bondingCurve, feePool } = await getPDAs(signer.payer.publicKey, mint)
+  //     const { bondingCurve } = await getPDAs(signer.payer.publicKey, mint,id )
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .createPool()
+  //           .accounts({
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             payer: signer.payer.publicKey,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully created pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     // let bondingCurveAccount = await program.account.bondingCurve.fetch(bondingCurve)
+  //     // console.log("Bonding Curve Data : ", bondingCurveAccount)
+  //   } catch (error) {
+  //     console.log("Error in initialization :", error)
+  //   }
 
-      let recipients = [
-        {
-          address: feeRecipient.publicKey,
-          // 40%
-          share: 4000,
-          amount: new BN(0),
-          lockingPeriod: new BN(60000),
-        },
-        {
-          address: feeRecipient2.publicKey,
-          // 40%
-          share: 4000,
-          amount: new BN(0),
-          lockingPeriod: new BN(60000),
-        },
-        {
-          address: multisig,
-          // 20%
-          share: 2000,
-          amount: new BN(0),
-          lockingPeriod: new BN(60000),
-        }
-      ]
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .addFeeRecipients(recipients)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              feePoolAccount: feePool,
-              authority: signer.payer.publicKey,
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully add fee recipients : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-    } catch (error) {
-      console.log("Error in add fee recipients :", error)
-    }
+  // })
 
-  })
+  // it(" add fee recipients", async () => {
+
+  //   try {
 
 
-  it(" add liquidity to the pool by user created a pool", async () => {
+  //     const { curveConfig, bondingCurve, feePool } = await getPDAs(signer.payer.publicKey, mint, id)
 
-    try {
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
-      let amount = new BN(100000000000); // 100 SPL token 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .addLiquidity(amount)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully add liquidity : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
-    } catch (error) {
-      console.log("Error in add liquidity :", error)
-    }
-  })
+  //     let recipients = [
+  //       {
+  //         address: feeRecipient.publicKey,
+  //         // 40%
+  //         share: 4000,
+  //         amount: new BN(0),
+  //         lockingPeriod: new BN(60000),
+  //       },
+  //       {
+  //         address: feeRecipient2.publicKey,
+  //         // 40%
+  //         share: 4000,
+  //         amount: new BN(0),
+  //         lockingPeriod: new BN(60000),
+  //       },
+  //       {
+  //         address: multisig,
+  //         // 20%
+  //         share: 2000,
+  //         amount: new BN(0),
+  //         lockingPeriod: new BN(60000),
+  //       }
+  //     ]
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .addFeeRecipients(recipients)
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             feePoolAccount: feePool,
+  //             authority: signer.payer.publicKey,
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully add fee recipients : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in add fee recipients :", error)
+  //   }
+
+  // })
+
+
+  // it(" add liquidity to the pool by user created a pool", async () => {
+
+  //   try {
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint, id)
+  //     let amount = new BN(100000000000); // 100 SPL token 
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .addLiquidity(amount)
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully add liquidity : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance : ", userBalance)
+  //     console.log("Pool Balance : ", poolBalance)
+  //   } catch (error) {
+  //     console.log("Error in add liquidity :", error)
+  //   }
+  // })
 
 
   // Should be error because the user not created a pool
@@ -247,155 +247,155 @@ describe("bonding_curve", () => {
   // })
 
 
-  it(" buy from the pool", async () => {
+  // it(" buy from the pool", async () => {
 
-    try {
-
-
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, feePool } = await getPDAs(signer.payer.publicKey, mint)
-
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .buy(new BN(100000000))
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              feePoolAccount: feePool,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
-    } catch (error) {
-      console.log("Error in buy from pool :", error)
-    }
-  })
+  //   try {
 
 
-  it(" sell from the pool", async () => {
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, feePool } = await getPDAs(signer.payer.publicKey, mint, id)
 
-    try {
-
-
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump, feePool } = await getPDAs(signer.payer.publicKey, mint)
-
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .sell(new BN(1000000), poolSolVaultBump)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              feePoolAccount: feePool,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
-    } catch (error) {
-      console.log("Error in sell from pool :", error)
-    }
-  })
-
-  it(" claim fee from the fee pool", async () => {
-
-    try {
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .buy(new BN(100000000))
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             feePoolAccount: feePool,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance : ", userBalance)
+  //     console.log("Pool Balance : ", poolBalance)
+  //   } catch (error) {
+  //     console.log("Error in buy from pool :", error)
+  //   }
+  // })
 
 
-      const { curveConfig, bondingCurve, feePool, feePoolVault, feePoolVaultBump } = await getPDAs(signer.payer.publicKey, mint)
+  // it(" sell from the pool", async () => {
 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .claimFee(feePoolVaultBump)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              feePoolAccount: feePool,
-              feePoolVault: feePoolVault,
-              tokenMint: mint,
-              user: feeRecipient.publicKey,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = feeRecipient.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [feeRecipient], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully claim fee from the pool fee : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-    } catch (error) {
-      console.log("Error in claim fee from the pool fee :", error)
-    }
-  })
+  //   try {
 
 
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump, feePool } = await getPDAs(signer.payer.publicKey, mint, id)
 
-  it(" remove liquidity to the pool", async () => {
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .sell(new BN(1000000), poolSolVaultBump)
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             feePoolAccount: feePool,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance : ", userBalance)
+  //     console.log("Pool Balance : ", poolBalance)
+  //   } catch (error) {
+  //     console.log("Error in sell from pool :", error)
+  //   }
+  // })
 
-    try {
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump } = await getPDAs(signer.payer.publicKey, mint)
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .removeLiquidity(poolSolVaultBump)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
-    } catch (error) {
-      console.log("Error in remove liquidity :", error)
-    }
-  })
+  // it(" claim fee from the fee pool", async () => {
+
+  //   try {
+
+
+  //     const { curveConfig, bondingCurve, feePool, feePoolVault, feePoolVaultBump } = await getPDAs(signer.payer.publicKey, mint, id)
+
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .claimFee(feePoolVaultBump)
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             feePoolAccount: feePool,
+  //             feePoolVault: feePoolVault,
+  //             tokenMint: mint,
+  //             user: feeRecipient.publicKey,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = feeRecipient.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [feeRecipient], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully claim fee from the pool fee : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in claim fee from the pool fee :", error)
+  //   }
+  // })
+
+
+
+  // it(" remove liquidity to the pool", async () => {
+
+  //   try {
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump } = await getPDAs(signer.payer.publicKey, mint)
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .removeLiquidity(poolSolVaultBump)
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance : ", userBalance)
+  //     console.log("Pool Balance : ", poolBalance)
+  //   } catch (error) {
+  //     console.log("Error in remove liquidity :", error)
+  //   }
+  // })
 
 
 });
