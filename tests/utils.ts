@@ -17,7 +17,7 @@ const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 export async function getPDAs(user: PublicKey, mint: PublicKey){
   const [curveConfig] = PublicKey.findProgramAddressSync(
-    [Buffer.from(CURVE_CONFIGURATION_SEED), mint.toBuffer()],
+    [Buffer.from(CURVE_CONFIGURATION_SEED), mint.toBuffer(), user.toBuffer()],
     program.programId,
     
   );
