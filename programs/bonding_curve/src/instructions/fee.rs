@@ -8,11 +8,6 @@ use crate::state::{BondingCurve, CurveConfiguration, FeePool, FeePoolAccount, Re
 pub fn add_fee_recipients(ctx: Context<AddFeeRecipient>, recipients: Vec<Recipient>) -> Result<()> {
     msg!("Trying to add fee recipient");
 
-    let bonding_curve = &mut ctx.accounts.bonding_curve_account;
-    let user = &ctx.accounts.authority;
-    if bonding_curve.creator != user.key() {
-        return Err(CustomError::InvalidAuthority.into());
-    }
     let fee_pool = &mut ctx.accounts.fee_pool_account;
 
     fee_pool.add_fee_recipients(recipients)?;
@@ -33,12 +28,9 @@ pub fn claim_fee(ctx: Context<ClaimFee>, bump: u8) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct AddFeeRecipient<'info> {
-    #[account(
-        mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
-        bump,
-    )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+
+    /// Which bonding curve config the pool belongs to.
+    pub curve_config: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,
@@ -66,18 +58,14 @@ pub struct AddFeeRecipient<'info> {
     )]
     pub fee_pool_vault: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(constraint = authority.key() == bonding_curve_account.creator @ CustomError::InvalidAuthority)]
     pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct ClaimFee<'info> {
-    #[account(
-        mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
-        bump,
-    )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    /// Which bonding curve config the pool belongs to.
+    pub curve_config: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,

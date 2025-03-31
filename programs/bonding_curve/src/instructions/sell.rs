@@ -9,7 +9,7 @@ use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration, FeePoo
 pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
     // TODO: Implement sell function
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
-    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
+    let bonding_curve_configuration = &ctx.accounts.curve_config;
     let user = &ctx.accounts.user;
     let system_program = &ctx.accounts.system_program;
     let token_program = &ctx.accounts.token_program;
@@ -45,12 +45,8 @@ pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct Sell<'info> {
-    #[account(
-        mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
-        bump,
-    )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    /// Which bonding curve config the pool belongs to.
+    pub curve_config: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,

@@ -11,7 +11,7 @@ use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
     msg!("Trying to remove liquidity from the pool");
 
-    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
+    let bonding_curve_configuration = &ctx.accounts.curve_config;
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
@@ -46,12 +46,8 @@ pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct RemoveLiquidity<'info> {
-    #[account(
-        mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
-        bump,
-    )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    /// Which bonding curve config the pool belongs to.
+    pub curve_config: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,

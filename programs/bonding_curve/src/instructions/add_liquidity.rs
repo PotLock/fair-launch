@@ -41,12 +41,8 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct AddLiquidity<'info> {
-    #[account(
-        mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
-        bump,
-    )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    /// Which bonding curve config the pool belongs to.
+    pub curve_config: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,

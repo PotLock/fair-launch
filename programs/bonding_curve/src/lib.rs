@@ -16,6 +16,7 @@ pub mod bonding_curve {
 
     pub fn initialize(
         ctx: Context<InitializeBondingCurve>,
+        index: u16,
         fee_percentage: u16,
         initial_quorum: u64,
         target_liquidity: u64,
@@ -29,6 +30,7 @@ pub mod bonding_curve {
     ) -> Result<()> {
         instructions::initialize(
             ctx,
+            index,
             fee_percentage,
             initial_quorum,
             target_liquidity,

@@ -48,6 +48,7 @@ pub struct CurveConfiguration {
     pub max_token_supply: u64,
     pub liquidity_lock_period: i64, // Liquidity lock period in seconds. cant remove liquidity before this period
     pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX
+    pub index: u16,
 }
 
 impl CurveConfiguration {
@@ -55,6 +56,7 @@ impl CurveConfiguration {
     pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2;
 
     pub fn new(
+        index: u16,
         initial_quorum: u64,
         fee_percentage: u16,
         target_liquidity: u64,
@@ -81,6 +83,7 @@ impl CurveConfiguration {
             max_token_supply,
             liquidity_lock_period,
             liquidity_pool_percentage,
+            index,
         }
     }
 }
