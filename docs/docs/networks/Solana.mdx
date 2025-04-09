@@ -1,0 +1,222 @@
+---
+sidebar_position: 3
+---
+
+# Solana
+
+The Fair LaunchPad platform is built on a series of Solana smart contracts that handle token creation, allocation, vesting, bonding curves, and liquidity provision. This document explains the technical architecture and contract interactions that power the platform.
+
+## Contract Architecture Overview
+
+The Fair LaunchPad system consists of several interconnected smart contracts that work together to provide a complete token launch solution:
+
+```mermaid
+graph TD
+    A[Token Factory Contract] --> B[Token Metadata Contract]
+    A --> C[Allocation Contract]
+    C --> D[Vesting Contract]
+    A --> E[Bonding Curve Contract]
+    E --> F[Liquidity Contract]
+    F --> G[Launchpad Contract]
+    A --> H[Fee Contract]
+```
+
+## Token Creation Flow
+
+When a user creates a new token through the Fair LaunchPad interface, the following sequence of contract interactions occurs:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Fair LaunchPad UI
+    participant TF as Token Factory
+    participant TMC as Token Metadata Contract
+    participant SPL as SPL Token Program
+    
+    User->>UI: Configure token parameters
+    UI->>TF: Create token request
+    TF->>SPL: Create mint instruction
+    SPL-->>TF: Return mint address
+    TF->>TMC: Set token metadata
+    TMC-->>TF: Confirm metadata
+    TF->>SPL: Mint initial supply
+    SPL-->>TF: Confirm mint
+    TF-->>UI: Return token details
+    UI-->>User: Display token creation success
+```
+
+## Allocation and Vesting Flow
+
+When configuring token allocations and vesting schedules:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Fair LaunchPad UI
+    participant AC as Allocation Contract
+    participant VC as Vesting Contract
+    participant Token as Token Account
+    
+    User->>UI: Configure allocations & vesting
+    UI->>AC: Create allocation instructions
+    AC->>Token: Reserve token allocations
+    Token-->>AC: Confirm reservations
+    AC->>VC: Create vesting schedules
+    VC->>VC: Store vesting parameters on-chain
+    VC-->>AC: Confirm vesting setup
+    AC-->>UI: Return allocation details
+    UI-->>User: Display allocation success
+```
+
+## Bonding Curve Mechanism
+
+The bonding curve contract manages token price discovery:
+
+```mermaid
+sequenceDiagram
+    participant Buyer
+    participant UI as Fair LaunchPad UI
+    participant BC as Bonding Curve Contract
+    participant Token as Token Account
+    participant Treasury as Treasury Account
+    
+    Buyer->>UI: Purchase tokens
+    UI->>BC: Execute purchase
+    BC->>BC: Calculate token price based on curve
+    BC->>Treasury: Deposit payment
+    Treasury-->>BC: Confirm deposit
+    BC->>Token: Transfer tokens to buyer
+    Token-->>BC: Confirm transfer
+    BC-->>UI: Return purchase details
+    UI-->>Buyer: Display purchase success
+```
+
+## Liquidity Provision Flow
+
+When the token is ready for DEX listing:
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant UI as Fair LaunchPad UI
+    participant LC as Liquidity Contract
+    participant DEX as Decentralized Exchange
+    participant Token as Token Account
+    
+    Admin->>UI: Initiate liquidity provision
+    UI->>LC: Execute liquidity setup
+    LC->>Token: Reserve tokens for liquidity
+    Token-->>LC: Confirm reservation
+    LC->>DEX: Create liquidity pool
+    DEX-->>LC: Return pool address
+    LC->>DEX: Add initial liquidity
+    DEX-->>LC: Confirm liquidity added
+    LC-->>UI: Return liquidity details
+    UI-->>Admin: Display liquidity success
+```
+
+## Launchpad Sale Flow
+
+The public token sale process:
+
+```mermaid
+sequenceDiagram
+    participant Investor
+    participant UI as Fair LaunchPad UI
+    participant LP as Launchpad Contract
+    participant Token as Token Account
+    participant Treasury as Treasury Account
+    
+    Investor->>UI: Participate in token sale
+    UI->>LP: Submit investment
+    LP->>LP: Verify eligibility (whitelist, caps)
+    LP->>Treasury: Deposit investment funds
+    Treasury-->>LP: Confirm deposit
+    LP->>Token: Calculate token allocation
+    LP->>LP: Record investor allocation
+    LP-->>UI: Return investment details
+    UI-->>Investor: Display investment success
+```
+
+## Fee Management Flow
+
+The fee collection mechanism:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Token as Token Contract
+    participant FC as Fee Contract
+    participant Treasury as Fee Treasury
+    
+    User->>Token: Execute token transaction
+    Token->>FC: Calculate fee amount
+    FC->>Token: Deduct fee from transaction
+    Token->>Treasury: Transfer fee amount
+    Treasury-->>FC: Confirm fee collection
+    FC-->>Token: Allow transaction to complete
+    Token-->>User: Return transaction result
+```
+
+## Security Features
+
+The Fair LaunchPad contracts implement several security features:
+
+### Mint Authority Revocation
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant UI as Fair LaunchPad UI
+    participant Token as Token Contract
+    participant SPL as SPL Token Program
+    
+    Admin->>UI: Request mint authority revocation
+    UI->>Token: Initiate revocation
+    Token->>SPL: Set mint authority to null
+    SPL-->>Token: Confirm authority change
+    Token-->>UI: Return revocation status
+    UI-->>Admin: Display revocation success
+```
+
+### Liquidity Locking
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant UI as Fair LaunchPad UI
+    participant LC as Liquidity Contract
+    participant Timelock as Timelock Contract
+    
+    Admin->>UI: Configure liquidity lock
+    UI->>LC: Set lock parameters
+    LC->>Timelock: Create timelock for LP tokens
+    Timelock-->>LC: Return timelock address
+    LC-->>UI: Return lock details
+    UI-->>Admin: Display lock confirmation
+```
+
+## Technical Specifications
+
+The Fair LaunchPad contracts are built with the following technical specifications:
+
+- **Language**: Rust
+- **Framework**: Anchor
+- **Token Standard**: SPL Token
+- **Metadata Standard**: Metaplex
+- **State Management**: Account-based storage with PDAs
+- **Security**: Program-derived addresses for secure cross-program invocation
+
+## Contract Addresses
+
+| Program | Devnet Address | Mainnet Address |
+|----------|----------------|-----------------|
+| Vesting | `5FtaV9dQwBq9s9PiGEUfGk6SbvRQtwqyzF8Ycc7i6YGv` |  |
+| Bonding Curve | `4FtaV9dQwBq9s9PiGEUfGk6SbvRQtwqyzF8Ycc7i6YGv` |  |
+| Liquidity | `3FtaV9dQwBq9s9PiGEUfGk6SbvRQtwqyzF8Ycc7i6YGv` |  |
+| Launchpad | `2FtaV9dQwBq9s9PiGEUfGk6SbvRQtwqyzF8Ycc7i6YGv` |  |
+| Fee | `1FtaV9dQwBq9s9PiGEUfGk6SbvRQtwqyzF8Ycc7i6YGv` |  |
+
+## Audit Status
+
+
