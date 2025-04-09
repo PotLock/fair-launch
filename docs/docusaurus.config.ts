@@ -72,7 +72,7 @@ const config: Config = {
     mermaid: {
       theme: { light: "neutral", dark: "dark" },
     },
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/launch.png',
     navbar: {
       title: 'Fair LaunchPad',
       logo: {
