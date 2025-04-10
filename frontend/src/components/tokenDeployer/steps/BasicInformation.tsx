@@ -30,7 +30,11 @@ interface BasicInformationProps {
     currentStep: number;
 }
 
-const BasicInformation = ({setCurrentStep, currentStep}: BasicInformationProps) => {
+const BasicInformation = (
+{   
+    setCurrentStep, 
+    currentStep
+}: BasicInformationProps) => {
     const [logoPrompt, setLogoPrompt] = useState<string|null>(null);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [generatedLogo, setGeneratedLogo] = useState<string | null>(null);
@@ -525,12 +529,16 @@ const BasicInformation = ({setCurrentStep, currentStep}: BasicInformationProps) 
                                 </div>
                                 <p className="text-xs text-gray-500">Prevent additional token supply to increase investors trust.</p>
                             </div>
-                            <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
-                                <ShieldCheck className="w-5 h-5 text-blue-500" />
-                                <p className="text-sm">
-                                    <span className="font-medium text-blue-500">Recommend!</span> Revoke right to mint new coins, this shows buyer of your coin that supply is fixed and cannot grow. DEX scanners will mark your coin as safe.
-                                </p>
-                            </div>
+                            {
+                                revokeMintEnabled && (
+                                    <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
+                                        <ShieldCheck className="w-5 h-5 text-blue-500" />
+                                        <p className="text-sm">
+                                            <span className="font-medium text-blue-500">Recommend!</span> Revoke right to mint new coins, this shows buyer of your coin that supply is fixed and cannot grow. DEX scanners will mark your coin as safe.
+                                        </p>
+                                    </div>
+                                )
+                            }
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -557,12 +565,16 @@ const BasicInformation = ({setCurrentStep, currentStep}: BasicInformationProps) 
                                 </div>
                                 <p className="text-xs text-gray-500">Prevent token freezing.</p>
                             </div>
-                            <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
-                                <ShieldCheck className="w-5 h-5 text-blue-500" />
-                                <p className="text-sm">
-                                    <span className="font-medium text-blue-500">Recommend!</span> Revoke freeze right, you will make coin safer for potential buyers of your coin and get more sales. DEX scanners will mark your coin as safe.
-                                </p>
-                            </div>
+                            {
+                                revokeFreezeEnabled && (
+                                    <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
+                                        <ShieldCheck className="w-5 h-5 text-blue-500" />
+                                        <p className="text-sm">
+                                            <span className="font-medium text-blue-500">Recommend!</span> Revoke freeze right, you will make coin safer for potential buyers of your coin and get more sales. DEX scanners will mark your coin as safe.
+                                        </p>
+                                    </div>
+                                )
+                            }
                         </div>
 
                         <div className="flex items-center justify-between bg-white">

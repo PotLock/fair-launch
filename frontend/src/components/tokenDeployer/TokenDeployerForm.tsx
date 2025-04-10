@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import TokenDeployerSteps from './TokenDeployerSteps';
 import BasicInformation from './steps/BasicInformation';
-
+import Allocation from './steps/Allocation';
+import Vesting from './steps/Vesting';
+import BondingCurve from './steps/BondingCurve';
 
 const TokenDeployerForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -15,6 +17,12 @@ const TokenDeployerForm: React.FC = () => {
     switch (step) {
       case 0:
         return <BasicInformation setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+      case 1:
+        return <Allocation setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+      case 2:
+        return <Vesting setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+      case 3:
+        return <BondingCurve setCurrentStep={setCurrentStep} currentStep={currentStep}/>
       default:
         return null;
     }
