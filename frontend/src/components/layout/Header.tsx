@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { IconChevronDown, IconWallet } from '@tabler/icons-react';
+import { WalletButton } from '../customs/WalletButton';
 
 interface NetworkOption {
     id: string;
@@ -72,11 +73,12 @@ export default function Header() {
                             )}
                         </div>
 
-                        <button className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
+                        {/* <button className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
                             <IconWallet className='w-4 h-4' />
                             <span className='text-sm'>{walletAddress}</span>
                             <IconChevronDown className='w-4 h-4' />
-                        </button>
+                        </button> */}
+                        <WalletButton />
                     </div>
                 </div>
             </div>

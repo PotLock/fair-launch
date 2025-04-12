@@ -1,9 +1,16 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
+import { pluginNodePolyfill } from '@rsbuild/plugin-node-polyfill';
 
 export default defineConfig({
-  plugins: [pluginReact()],
+  plugins: [
+    pluginReact(),
+    pluginNodePolyfill()
+  ],
   source: {
+    define: {
+      'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK)
+    },
     entry: {
       index: "./src/main.tsx"
     }
@@ -24,5 +31,5 @@ export default defineConfig({
   },
   dev: {
     writeToDisk: true,
-  },
+  }
 });

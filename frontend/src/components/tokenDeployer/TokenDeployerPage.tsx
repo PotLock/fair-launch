@@ -1,15 +1,18 @@
 import React from 'react';
 import TokenDeployerForm from './TokenDeployerForm';
 import TokenDeployerHeader from './TokenDeployerHeader';
+import { TokenDeployerProvider } from '../../context/TokenDeployerContext';
 
 const TokenDeployerPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <TokenDeployerHeader />
-        <TokenDeployerForm />
+    <TokenDeployerProvider>
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <TokenDeployerHeader />
+          <TokenDeployerForm />
+        </div>
       </div>
-    </div>
+    </TokenDeployerProvider>
   );
 };
 

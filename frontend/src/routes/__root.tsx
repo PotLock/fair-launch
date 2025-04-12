@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import React from "react";
 import Header from "../components/layout/Header";
-
+import WalletContextProvider from "../context/WalletProviderContext";
 
 const queryClient = new QueryClient();
 
@@ -23,9 +23,11 @@ function RootComponent() {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <Header />
-        <Outlet />
-        <TanStackRouterDevtools position="bottom-right" />
+        <WalletContextProvider>
+          <Header />
+          <Outlet />
+          <TanStackRouterDevtools position="bottom-right" />
+        </WalletContextProvider>
       </QueryClientProvider>
     </>
   );
