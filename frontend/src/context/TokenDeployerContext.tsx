@@ -667,12 +667,10 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             [step]: {
                 ...prev[step],
                 enabled,
-                // Reset validation state when disabling
                 ...(enabled ? {} : { isValid: true, errors: {} })
             }
         }));
 
-        // Validate the step if it's being enabled
         if (enabled) {
             switch (step) {
                 case 'basicInfo':
