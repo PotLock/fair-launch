@@ -1,6 +1,7 @@
 import { IconArrowLeft, IconChevronDown } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTokenDeployer } from '../../../context/TokenDeployerContext';
+import { useDeployToken } from '../../../hook/useDeployToken';
 
 interface ReviewAndDeployProps {
     setCurrentStep: (step: number) => void;
@@ -9,6 +10,8 @@ interface ReviewAndDeployProps {
 
 const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) => {
     const { state } = useTokenDeployer();
+    const { deployToken } = useDeployToken();
+    const [isDeploying, setIsDeploying] = useState(false);
     const [openSections, setOpenSections] = useState({
         tokenDetails: true,
         tokenAllocation: false,
@@ -24,6 +27,17 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
             ...prev,
             [section]: !prev[section]
         }));
+    };
+
+    const handleDeploy = async () => {
+        try {
+            setIsDeploying(true);
+            await deployToken();
+        } catch (error) {
+            console.error('Deploy error:', error);
+        } finally {
+            setIsDeploying(false);
+        }
     };
 
     return (
@@ -159,7 +173,9 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                                                 <p className='font-medium'>{vesting.description || `Schedule #${index + 1}`}</p>
                                                 <span className='font-medium'>{vesting.percentage}%</span>
                                             </div>
-                                            <p className='text-sm text-gray-500'>Lockup Period: {vesting.lockupPeriod} days</p>
+                                            <p className='text-sm text-gray-500'>Cliff Period: {vesting.cliffPeriod} days</p>
+                                            <p className='text-sm text-gray-500'>Vesting Duration: {vesting.vestingDuration} days</p>
+                                            <p className='text-sm text-gray-500'>Vesting Interval: {vesting.vestingInterval} days</p>
                                         </div>
                                     ))}
                                 </div>
@@ -305,8 +321,8 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                                         <div>
                                             <p className='text-sm text-gray-500'>Selected DEX</p>
                                             <div className='flex items-center gap-2 mt-1'>
-                                                <img src={state.liquidity.data.selectedDex.icon} alt={state.liquidity.data.selectedDex.name} className="w-5 h-5 rounded-full" />
-                                                <p className='font-medium'>{state.liquidity.data.selectedDex.name}</p>
+                                                <img src={state.liquidity.data.launchLiquidityOn.icon} alt={state.liquidity.data.launchLiquidityOn.name} className="w-5 h-5 rounded-full" />
+                                                <p className='font-medium'>{state.liquidity.data.launchLiquidityOn.name}</p>
                                             </div>
                                         </div>
                                         <div>
@@ -327,11 +343,11 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                                     <div className='grid grid-cols-2 gap-4'>
                                         <div>
                                             <p className='text-sm text-gray-500'>Lockup Period</p>
-                                            <p className='font-medium'>{state.liquidity.data.lockupPeriod} days</p>
+                                            <p className='font-medium'>{state.liquidity.data.liquidityLockupPeriod} days</p>
                                         </div>
                                         <div>
-                                            <p className='text-sm text-gray-500'>Auto Lock</p>
-                                            <p className='font-medium'>{state.liquidity.data.autoLock ? 'Yes' : 'No'}</p>
+                                            <p className='text-sm text-gray-500'>Auto Bot Protection</p>
+                                            <p className='font-medium'>{state.liquidity.data.isAutoBotProtectionEnabled ? 'Enabled' : 'Disabled'}</p>
                                         </div>
                                     </div>
                                     <div className='space-y-2'>
@@ -339,19 +355,19 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                                         <div className='grid grid-cols-2 gap-4'>
                                             <div>
                                                 <p className='text-sm'>Auto Listing</p>
-                                                <p className='text-sm font-medium'>{state.liquidity.data.autoListing ? 'Enabled' : 'Disabled'}</p>
+                                                <p className='text-sm font-medium'>{state.liquidity.data.isAutoListingEnabled ? 'Enabled' : 'Disabled'}</p>
                                             </div>
                                             <div>
                                                 <p className='text-sm'>Price Protection</p>
-                                                <p className='text-sm font-medium'>{state.liquidity.data.priceProtection ? 'Enabled' : 'Disabled'}</p>
+                                                <p className='text-sm font-medium'>{state.liquidity.data.isPriceProtectionEnabled ? 'Enabled' : 'Disabled'}</p>
                                             </div>
                                             <div>
                                                 <p className='text-sm'>Market Making</p>
-                                                <p className='text-sm font-medium'>{state.liquidity.data.marketMaking ? 'Enabled' : 'Disabled'}</p>
+                                                <p className='text-sm font-medium'>{state.liquidity.data.isMarketMakingEnabled ? 'Enabled' : 'Disabled'}</p>
                                             </div>
                                             <div>
                                                 <p className='text-sm'>Anti-Bot Protection</p>
-                                                <p className='text-sm font-medium'>{state.liquidity.data.antiBotProtection ? 'Enabled' : 'Disabled'}</p>
+                                                <p className='text-sm font-medium'>{state.liquidity.data.isAutoBotProtectionEnabled ? 'Enabled' : 'Disabled'}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -374,15 +390,17 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                 <button 
                     className="border border-gray-300 text-gray-500 py-2 px-4 rounded-md hover:bg-gray-100 transition-colors flex flex-row gap-2 items-center justify-center" 
                     onClick={() => setCurrentStep(currentStep - 1)}
-                    disabled={currentStep === 0}
+                    disabled={currentStep === 0 || isDeploying}
                 >
                     <IconArrowLeft className="w-4 h-4" />
                     Previous
                 </button>
                 <button 
-                    className="bg-black text-white py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors flex flex-row gap-2 items-center justify-center" 
+                    className="bg-black text-white py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors flex flex-row gap-2 items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" 
+                    onClick={handleDeploy}
+                    disabled={isDeploying}
                 >
-                    Deploy Token
+                    {isDeploying ? 'Deploying...' : 'Deploy Token'}
                 </button>
             </div>
         </div>

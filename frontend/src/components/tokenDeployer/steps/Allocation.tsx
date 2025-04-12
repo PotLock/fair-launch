@@ -9,14 +9,13 @@ interface AllocationItem {
     lockupPeriod: number;
 }
 
-
 interface AllocationProps {
     setCurrentStep: (step: number) => void;
     currentStep: number;
 }
 
 const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
-    const { state, updateAllocation, setStepEnabled } = useTokenDeployer();
+    const { state, updateAllocation, setStepEnabled, validateAllocation } = useTokenDeployer();
 
     const remainingPercentage = 100 - state.allocation.data.reduce((sum, item) => sum + item.percentage, 0);
 
@@ -37,6 +36,12 @@ const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
         const newAllocations = [...state.allocation.data];
         newAllocations[index] = { ...newAllocations[index], [field]: value };
         updateAllocation(newAllocations);
+    };
+
+    const handleNext = () => {
+        if (!state.allocation.enabled || validateAllocation()) {
+            setCurrentStep(currentStep + 1);
+        }
     };
 
     return (
@@ -64,6 +69,12 @@ const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
 
             {state.allocation.enabled && (
                 <>
+                    {state.allocation.errors?.totalPercentage && (
+                        <div className="text-red-500 text-sm mt-2">
+                            {state.allocation.errors.totalPercentage}
+                        </div>
+                    )}
+
                     <button
                         onClick={handleAddAllocation}
                         disabled={remainingPercentage <= 0}
@@ -121,8 +132,17 @@ const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
                                             placeholder="Solana Wallet address"
                                             value={allocation.walletAddress}
                                             onChange={(e) => updateAllocationItem(index, 'walletAddress', e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-sm"
+                                            className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-sm ${
+                                                state.allocation.errors?.walletAddresses?.[index] 
+                                                ? 'border-red-500' 
+                                                : 'border-gray-300'
+                                            }`}
                                         />
+                                        {state.allocation.errors?.walletAddresses?.[index] && (
+                                            <div className="text-red-500 text-sm">
+                                                {state.allocation.errors.walletAddresses[index]}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className='space-y-2'>
@@ -153,7 +173,7 @@ const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
                 </button>
                 <button 
                     className="bg-black text-white py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors flex flex-row gap-2 items-center justify-center" 
-                    onClick={() => setCurrentStep(currentStep + 1)}
+                    onClick={handleNext}
                     disabled={currentStep === 3}
                 >
                     Next

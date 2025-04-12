@@ -38,9 +38,96 @@ interface AllocationItem {
 interface VestingItem {
     description: string;
     percentage: number;
-    walletAddress: string;
-    lockupPeriod: number;
+    cliffPeriod: number;
+    vestingDuration: number;
+    vestingInterval: number;
 }
+
+
+interface LiquidityItem {
+    launchLiquidityOn: {
+        name: string;
+        icon: string;
+        status: 'trending' | 'popular' | 'new';
+    };
+    liquidityType: 'double' | 'single';
+    liquiditySource: 'bonding' | 'team' | 'external';
+    liquidityPercentage: number;
+    liquidityLockupPeriod: number;
+    isAutoBotProtectionEnabled: boolean;
+    isAutoListingEnabled: boolean;
+    isPriceProtectionEnabled: boolean;
+    isMarketMakingEnabled: boolean;
+}
+
+
+interface FeesType {
+    mintFee: number;
+    burnFee: number;
+    transferFee: number;
+    adminControls: boolean;
+    feeRecipientAddress: string;
+    adminAddress?: string;
+}
+
+export interface FeesErrors {
+    mintFee?: string;
+    burnFee?: string;
+    transferFee?: string;
+    feeRecipientAddress?: string;
+    adminAddress?: string;
+}
+
+interface LaunchpadType {
+    launchType: 'Whitelist' | 'Fair Launch';
+    softCap: number;
+    hardCap: number;
+    startTime: string;
+    endTime: string;
+    minContribution: number;
+    maxContribution: number;
+    whitelist: {
+        enabled: boolean;
+        data: {
+            tokenPrice: number;
+            whitelistDuration: number;
+            walletAddresses: string[];
+        };
+    };
+    fairLaunch: {
+        enabled: boolean;
+        data: {
+            tokenPrice: number;
+            maxTokensPerWallet: number;
+            distributionDelay: number;
+        };
+    };
+}
+
+export interface LaunchpadErrors {
+    launchType?: string;
+    softCap?: string;
+    hardCap?: string;
+    startTime?: string;
+    endTime?: string;
+    minContribution?: string;
+    maxContribution?: string;
+    whitelist?: {
+        enabled?: string;
+        tokenPrice?: string;
+        whitelistDuration?: string;
+        walletAddresses?: string[];
+    };
+    fairLaunch?: {
+        enabled?: string;
+        tokenPrice?: string;
+        maxTokensPerWallet?: string;
+        distributionDelay?: string;
+    };
+}
+
+
+
 
 export interface TokenDeployerState {
     basicInfo: {
@@ -52,10 +139,20 @@ export interface TokenDeployerState {
     allocation: {
         enabled: boolean;
         data: AllocationItem[];
+        isValid?: boolean;
+        errors?: {
+            totalPercentage?: string;
+            walletAddresses?: string[];
+        };
     };
     vesting: {
         enabled: boolean;
         data: VestingItem[];
+        isValid?: boolean;
+        errors?: {
+            totalPercentage?: string;
+            vestingPeriods?: string[];
+        };
     };
     bondingCurve: {
         enabled: boolean;
@@ -65,49 +162,33 @@ export interface TokenDeployerState {
             targetPrice: number;
             maxSupply: number;
         };
+        isValid?: boolean;
+        errors?: {
+            initialPrice?: string;
+            targetPrice?: string;
+            maxSupply?: string;
+        };
     };
     liquidity: {
         enabled: boolean;
-        data: {
-            liquidityType: 'double' | 'single';
-            liquiditySource: 'bonding' | 'team' | 'external';
-            liquidityPercentage: number;
-            lockupPeriod: number;
-            autoListing: boolean;
-            priceProtection: boolean;
-            marketMaking: boolean;
-            antiBotProtection: boolean;
-            selectedDex: {
-                name: string;
-                status: 'trending' | 'popular' | 'new';
-                icon: string;
-            };
-            initialTokenAmount?: number;
-            initialSolAmount?: number;
-            autoLock?: boolean;
+        data: LiquidityItem;
+        isValid?: boolean;
+        errors?: {
+            liquidityPercentage?: string;
+            liquidityLockupPeriod?: string;
         };
     };
     fees: {
         enabled: boolean;
-        data: {
-            mintFee: number;
-            burnFee: number;
-            transferFee: number;
-            adminControls: boolean;
-            feeRecipient: string;
-            adminAddress: string;
-        };
+        data: FeesType;
+        isValid?: boolean;
+        errors?: FeesErrors;
     };
     launchpad: {
         enabled: boolean;
-        data: {
-            startTime: string;
-            endTime: string;
-            softCap: number;
-            hardCap: number;
-            minContribution: number;
-            maxContribution: number;
-        };
+        data: LaunchpadType;
+        isValid?: boolean;
+        errors?: LaunchpadErrors;
     };
 }
 
@@ -115,6 +196,12 @@ interface TokenDeployerContextType {
     state: TokenDeployerState;
     updateBasicInfo: (data: Partial<TokenInfo>) => void;
     validateBasicInfo: () => boolean;
+    validateAllocation: () => boolean;
+    validateVesting: () => boolean;
+    validateFees: () => boolean;
+    validateLiquidity: () => boolean;
+    validateBondingCurve: () => boolean;
+    validateLaunchpad: () => boolean;
     updateAllocation: (data: AllocationItem[]) => void;
     updateVesting: (data: VestingItem[]) => void;
     updateBondingCurve: (data: Partial<TokenDeployerState['bondingCurve']['data']>) => void;
@@ -148,7 +235,9 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         },
         allocation: {
             enabled: true,
-            data: []
+            data: [],
+            isValid: false,
+            errors: {}
         },
         vesting: {
             enabled: true,
@@ -157,7 +246,7 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         bondingCurve: {
             enabled: true,
             data: {
-                curveType: '',
+                curveType: 'Linear',
                 initialPrice: 0,
                 targetPrice: 0,
                 maxSupply: 0
@@ -166,22 +255,19 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         liquidity: {
             enabled: true,
             data: {
+                launchLiquidityOn: {
+                    name: 'PumpSwap',
+                    icon: '/icons/pumpdotfun.png',
+                    status: 'trending'
+                },
                 liquidityType: 'double',
                 liquiditySource: 'bonding',
                 liquidityPercentage: 30,
-                lockupPeriod: 180,
-                autoListing: true,
-                priceProtection: true,
-                marketMaking: true,
-                antiBotProtection: true,
-                selectedDex: {
-                    name: 'PumpSwap',
-                    status: 'trending',
-                    icon: '/icons/pumpdotfun.png'
-                },
-                initialTokenAmount: 0,
-                initialSolAmount: 0,
-                autoLock: false
+                liquidityLockupPeriod: 180,
+                isAutoBotProtectionEnabled: true,
+                isAutoListingEnabled: true,
+                isPriceProtectionEnabled: true,
+                isMarketMakingEnabled: true
             }
         },
         fees: {
@@ -191,19 +277,36 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
                 burnFee: 0,
                 transferFee: 0,
                 adminControls: false,
-                feeRecipient: '',
+                feeRecipientAddress: '',
                 adminAddress: ''
             }
         },
         launchpad: {
             enabled: true,
             data: {
-                startTime: '',
-                endTime: '',
+                launchType: 'Whitelist',
                 softCap: 0,
                 hardCap: 0,
+                startTime: '',
+                endTime: '',
                 minContribution: 0,
-                maxContribution: 0
+                maxContribution: 0,
+                whitelist: {
+                    enabled: true,
+                    data: {
+                        tokenPrice: 0,
+                        whitelistDuration: 0,
+                        walletAddresses: []
+                    }
+                },
+                fairLaunch: {
+                    enabled: false,
+                    data: {
+                        tokenPrice: 0,
+                        maxTokensPerWallet: 0,
+                        distributionDelay: 0
+                    }
+                }
             }
         }
     });
@@ -248,6 +351,225 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             ...prev,
             basicInfo: {
                 ...prev.basicInfo,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateAllocation = () => {
+        if (!state.allocation.enabled) {
+            return true;
+        }
+
+        const errors: { totalPercentage?: string; walletAddresses?: string[] } = {};
+        const walletErrors: string[] = [];
+
+        if (state.allocation.data.length === 0) {
+            errors.totalPercentage = 'At least one allocation is required';
+        }
+
+        // Validate wallet addresses
+        state.allocation.data.forEach((item, index) => {
+            if (!item.walletAddress || !item.walletAddress.trim()) {
+                walletErrors[index] = 'Wallet address is required';
+            } else if (!/^[A-HJ-NP-Za-km-z1-9]*$/.test(item.walletAddress)) {
+                walletErrors[index] = 'Invalid Solana wallet address format';
+            }
+        });
+
+        if (walletErrors.length > 0) {
+            errors.walletAddresses = walletErrors;
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+
+        setState(prev => ({
+            ...prev,
+            allocation: {
+                ...prev.allocation,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateVesting = () => {
+        if (!state.vesting.enabled) return true;
+
+        const errors: { totalPercentage?: string; vestingPeriods?: string[] } = {};
+        const vestingErrors: string[] = [];
+
+        if (state.vesting.data.length === 0) {
+            errors.totalPercentage = 'At least one vesting schedule is required';
+        }
+
+        // Validate vesting periods
+        state.vesting.data.forEach((item, index) => {
+            if (item.percentage <= 0 || item.percentage > 100) {
+                vestingErrors[index] = 'Percentage must be between 0 and 100';
+            }
+            if (item.cliffPeriod < 0) {
+                vestingErrors[index] = 'Cliff period cannot be negative';
+            }
+            if (item.vestingDuration <= 0) {
+                vestingErrors[index] = 'Vesting duration must be greater than 0';
+            }
+            if (item.vestingInterval <= 0) {
+                vestingErrors[index] = 'Vesting interval must be greater than 0';
+            }
+        });
+
+        const totalPercentage = state.vesting.data.reduce((sum, item) => sum + item.percentage, 0);
+        if (totalPercentage !== 100) {
+            errors.totalPercentage = 'Total percentage must equal 100%';
+        }
+
+        const isValid = Object.keys(errors).length === 0 && vestingErrors.length === 0;
+
+        setState(prev => ({
+            ...prev,
+            vesting: {
+                ...prev.vesting,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateFees = () => {
+        if (!state.fees.enabled) return true;
+
+        const errors: { [key: string]: string } = {};
+        const { mintFee, burnFee, transferFee, adminControls, feeRecipientAddress, adminAddress } = state.fees.data;
+
+        if (mintFee < 0 || mintFee > 100) {
+            errors.mintFee = 'Mint fee must be between 0 and 100';
+        }
+        if (burnFee < 0 || burnFee > 100) {
+            errors.burnFee = 'Burn fee must be between 0 and 100';
+        }
+        if (transferFee < 0 || transferFee > 100) {
+            errors.transferFee = 'Transfer fee must be between 0 and 100';
+        }
+        if (!feeRecipientAddress || !/^[A-HJ-NP-Za-km-z1-9]*$/.test(feeRecipientAddress)) {
+            errors.feeRecipientAddress = 'Invalid fee recipient address';
+        }
+        if (adminControls && adminAddress && !/^[A-HJ-NP-Za-km-z1-9]*$/.test(adminAddress)) {
+            errors.adminAddress = 'Invalid admin address';
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+
+        setState(prev => ({
+            ...prev,
+            fees: {
+                ...prev.fees,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateLiquidity = () => {
+        if (!state.liquidity.enabled) return true;
+
+        const errors: { [key: string]: string } = {};
+        const { liquidityPercentage, liquidityLockupPeriod } = state.liquidity.data;
+
+        if (liquidityPercentage <= 0 || liquidityPercentage > 100) {
+            errors.liquidityPercentage = 'Liquidity percentage must be between 0 and 100';
+        }
+        if (liquidityLockupPeriod < 0) {
+            errors.liquidityLockupPeriod = 'Lockup period cannot be negative';
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+
+        setState(prev => ({
+            ...prev,
+            liquidity: {
+                ...prev.liquidity,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateBondingCurve = () => {
+        if (!state.bondingCurve.enabled) return true;
+
+        const errors: { [key: string]: string } = {};
+        const { initialPrice, targetPrice, maxSupply } = state.bondingCurve.data;
+
+        if (initialPrice <= 0) {
+            errors.initialPrice = 'Initial price must be greater than 0';
+        }
+        if (targetPrice <= initialPrice) {
+            errors.targetPrice = 'Target price must be greater than initial price';
+        }
+        if (maxSupply <= 0) {
+            errors.maxSupply = 'Max supply must be greater than 0';
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+
+        setState(prev => ({
+            ...prev,
+            bondingCurve: {
+                ...prev.bondingCurve,
+                isValid,
+                errors
+            }
+        }));
+
+        return isValid;
+    };
+
+    const validateLaunchpad = () => {
+        if (!state.launchpad.enabled) return true;
+
+        const errors: { [key: string]: string } = {};
+        const { startTime, endTime, softCap, hardCap, minContribution, maxContribution } = state.launchpad.data;
+
+        if (!startTime) {
+            errors.startTime = 'Start time is required';
+        }
+        if (!endTime) {
+            errors.endTime = 'End time is required';
+        }
+        if (new Date(startTime) >= new Date(endTime)) {
+            errors.endTime = 'End time must be after start time';
+        }
+        if (softCap <= 0) {
+            errors.softCap = 'Soft cap must be greater than 0';
+        }
+        if (hardCap <= softCap) {
+            errors.hardCap = 'Hard cap must be greater than soft cap';
+        }
+        if (minContribution <= 0) {
+            errors.minContribution = 'Minimum contribution must be greater than 0';
+        }
+        if (maxContribution <= minContribution) {
+            errors.maxContribution = 'Maximum contribution must be greater than minimum';
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+
+        setState(prev => ({
+            ...prev,
+            launchpad: {
+                ...prev.launchpad,
                 isValid,
                 errors
             }
@@ -320,13 +642,23 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
     };
 
     const updateLaunchpad = (data: Partial<TokenDeployerState['launchpad']['data']>) => {
-        setState(prev => ({
-            ...prev,
-            launchpad: {
-                ...prev.launchpad,
-                data: { ...prev.launchpad.data, ...data }
+        setState(prev => {
+            const newData = { ...prev.launchpad.data, ...data };
+            
+            // Sync whitelist and fairLaunch enabled states with launchType
+            if ('launchType' in data) {
+                newData.whitelist.enabled = data.launchType === 'Whitelist';
+                newData.fairLaunch.enabled = data.launchType === 'Fair Launch';
             }
-        }));
+
+            return {
+                ...prev,
+                launchpad: {
+                    ...prev.launchpad,
+                    data: newData
+                }
+            };
+        });
     };
 
     const setStepEnabled = (step: keyof TokenDeployerState, enabled: boolean) => {
@@ -334,9 +666,38 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             ...prev,
             [step]: {
                 ...prev[step],
-                enabled
+                enabled,
+                // Reset validation state when disabling
+                ...(enabled ? {} : { isValid: true, errors: {} })
             }
         }));
+
+        // Validate the step if it's being enabled
+        if (enabled) {
+            switch (step) {
+                case 'basicInfo':
+                    validateBasicInfo();
+                    break;
+                case 'allocation':
+                    validateAllocation();
+                    break;
+                case 'vesting':
+                    validateVesting();
+                    break;
+                case 'bondingCurve':
+                    validateBondingCurve();
+                    break;
+                case 'liquidity':
+                    validateLiquidity();
+                    break;
+                case 'fees':
+                    validateFees();
+                    break;
+                case 'launchpad':
+                    validateLaunchpad();
+                    break;
+            }
+        }
     };
 
     const updateLiquidityField = <K extends keyof TokenDeployerState['liquidity']['data']>(
@@ -360,6 +721,12 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             state,
             updateBasicInfo,
             validateBasicInfo,
+            validateAllocation,
+            validateVesting,
+            validateFees,
+            validateLiquidity,
+            validateBondingCurve,
+            validateLaunchpad,
             updateAllocation,
             updateVesting,
             updateBondingCurve,

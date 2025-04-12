@@ -1,6 +1,6 @@
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react';
 import { Terminal } from 'lucide-react';
-import { useTokenDeployer } from '../../../context/TokenDeployerContext';
+import { useTokenDeployer,FeesErrors } from '../../../context/TokenDeployerContext';
 
 interface FeesProps {
     setCurrentStep: (step: number) => void;
@@ -8,10 +8,21 @@ interface FeesProps {
 }
 
 const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
-    const { state, updateFees, setStepEnabled } = useTokenDeployer();
+    const { state, updateFees, setStepEnabled, validateFees } = useTokenDeployer();
 
     const handleFeeChange = (field: keyof typeof state.fees.data, value: string | boolean) => {
         updateFees({ [field]: value });
+        setTimeout(validateFees, 0);
+    };
+
+    const handleNext = () => {
+        if (validateFees()) {
+            setCurrentStep(currentStep + 1);
+        }
+    };
+
+    const getErrorClass = (field: keyof FeesErrors) => {
+        return state.fees.errors?.[field] ? 'border-red-500' : 'border-gray-200';
     };
 
     return (
@@ -49,8 +60,11 @@ const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
                                     max="100"
                                     value={state.fees.data.mintFee || ''}
                                     onChange={(e) => handleFeeChange('mintFee', e.target.value)}
-                                    className='w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black'
+                                    className={`w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black`}
                                 />
+                                {state.fees.errors?.mintFee && (
+                                    <p className="text-xs text-red-500">{state.fees.errors.mintFee}</p>
+                                )}
                                 <p className='text-xs text-gray-500'>The fee charged when a user mints new tokens.</p>
                             </div>
                             <div className='space-y-2 flex flex-col'>
@@ -81,19 +95,25 @@ const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
                                     max="100"
                                     value={state.fees.data.transferFee || ''}
                                     onChange={(e) => handleFeeChange('transferFee', e.target.value)}
-                                    className='w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black'
+                                    className={`w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black`}
                                 />
+                                {state.fees.errors?.transferFee && (
+                                    <p className="text-xs text-red-500">{state.fees.errors.transferFee}</p>
+                                )}
                                 <p className='text-xs text-gray-500'>Fee charged when tokens are transferred between wallets</p>
                             </div>
                             <div className='space-y-2 flex flex-col'>
                                 <h1 className='text-base font-semibold'>Fee Recipient Address <strong className='text-red-500'>*</strong></h1>
                                 <input 
                                     type="text" 
-                                    className='w-full border border-gray-200 rounded-md p-2' 
+                                    className={`w-full border rounded-md p-2 ${getErrorClass('feeRecipientAddress')}`}
                                     placeholder='wallet address to receive fees'
-                                    value={state.fees.data.feeRecipient}
-                                    onChange={(e) => handleFeeChange('feeRecipient', e.target.value)}
+                                    value={state.fees.data.feeRecipientAddress}
+                                    onChange={(e) => handleFeeChange('feeRecipientAddress', e.target.value)}
                                 />
+                                {state.fees.errors?.feeRecipientAddress && (
+                                    <p className="text-xs text-red-500">{state.fees.errors.feeRecipientAddress}</p>
+                                )}
                                 <span className='text-xs text-gray-500'>The wallet address that will receive the collected fees</span>
                             </div>
                         </div>
@@ -106,19 +126,26 @@ const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
                                     max="100"
                                     value={state.fees.data.burnFee || ''}
                                     onChange={(e) => handleFeeChange('burnFee', e.target.value)}
-                                    className='w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black'
+                                    className={`w-full h-2 bg-gray-200 rounded-full cursor-pointer accent-black`}
                                 />
+                                {state.fees.errors?.burnFee && (
+                                    <p className="text-xs text-red-500">{state.fees.errors.burnFee}</p>
+                                )}
                                 <p className='text-xs text-gray-500'>Fee charged when tokens are burned.</p>
                             </div>
                             <div className='space-y-2 flex flex-col'>
                                 <h1 className='text-base font-semibold'>Admin Address</h1>
                                 <input 
                                     type="text" 
-                                    className='w-full border border-gray-200 rounded-md p-2' 
+                                    className={`w-full border rounded-md p-2 ${getErrorClass('adminAddress')}`}
                                     placeholder='wallet address'
                                     value={state.fees.data.adminAddress}
                                     onChange={(e) => handleFeeChange('adminAddress', e.target.value)}
+                                    disabled={!state.fees.data.adminControls}
                                 />
+                                {state.fees.errors?.adminAddress && (
+                                    <p className="text-xs text-red-500">{state.fees.errors.adminAddress}</p>
+                                )}
                                 <span className='text-xs text-gray-500'>This address will have permission to change the fee recipient in the future. If left empty, the deployer account will be the default admin.</span>
                             </div>
                         </div>
@@ -143,8 +170,13 @@ const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
                     Previous
                 </button>
                 <button 
-                    className="bg-black text-white py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors flex flex-row gap-2 items-center justify-center" 
-                    onClick={() => setCurrentStep(currentStep + 1)}
+                    className={`
+                        bg-black text-white py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors 
+                        flex flex-row gap-2 items-center justify-center
+                        ${state.fees.enabled && !state.fees.isValid ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                    onClick={handleNext}
+                    disabled={state.fees.enabled && !state.fees.isValid}
                 >
                     Next
                     <IconArrowRight className="w-4 h-4" />

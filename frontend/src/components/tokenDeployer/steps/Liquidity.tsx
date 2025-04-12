@@ -76,12 +76,12 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 flex items-center justify-center">
                                             <div className="w-5 h-5 rounded-full flex items-center justify-center">
-                                                <img src={data.selectedDex.icon} alt={data.selectedDex.name} className="w-full h-full object-cover" />
+                                                <img src={data.launchLiquidityOn.icon} alt={data.launchLiquidityOn.name} className="w-full h-full object-cover" />
                                             </div>
                                         </div>
-                                        <span className="text-gray-900">{data.selectedDex.name}</span>
-                                        <span className={`text-xs px-2 py-0.5 rounded ${getStatusColor(data.selectedDex.status)}`}>
-                                            {data.selectedDex.status.charAt(0).toUpperCase() + data.selectedDex.status.slice(1)}
+                                        <span className="text-gray-900">{data.launchLiquidityOn.name}</span>
+                                        <span className={`text-xs px-2 py-0.5 rounded ${getStatusColor(data.launchLiquidityOn.status)}`}>
+                                            {data.launchLiquidityOn.status.charAt(0).toUpperCase() + data.launchLiquidityOn.status.slice(1)}
                                         </span>
                                     </div>
                                     <button className={`text-gray-400 hover:text-gray-600 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}>
@@ -96,10 +96,10 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                             <div
                                                 key={dex.name}
                                                 className={`flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer ${
-                                                    data.selectedDex.name === dex.name ? 'bg-gray-50' : ''
+                                                    data.launchLiquidityOn.name === dex.name ? 'bg-gray-50' : ''
                                                 }`}
                                                 onClick={() => {
-                                                    updateLiquidityField('selectedDex', dex);
+                                                    updateLiquidityField('launchLiquidityOn', dex);
                                                     setIsDropdownOpen(false);
                                                 }}
                                             >
@@ -263,8 +263,8 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                     </div>
                                     <input
                                         type="text"
-                                        value={data.lockupPeriod}
-                                        onChange={(e) => updateLiquidityField('lockupPeriod', parseInt(e.target.value) || 0)}
+                                        value={data.liquidityLockupPeriod}
+                                        onChange={(e) => updateLiquidityField('liquidityLockupPeriod', parseInt(e.target.value) || 0)}
                                         className="w-full border border-gray-200 rounded-md p-2"
                                         placeholder="180"
                                     />
@@ -279,13 +279,13 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                 <IconInfoCircle className="w-4 h-4 cursor-pointer" />
                             </div>
                             <button
-                                onClick={() => updateLiquidityField('antiBotProtection', !data.antiBotProtection)}
+                                onClick={() => updateLiquidityField('isAutoBotProtectionEnabled', !data.isAutoBotProtectionEnabled)}
                                 className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                                    data.antiBotProtection ? 'bg-black' : 'bg-gray-200'
+                                    data.isAutoBotProtectionEnabled ? 'bg-black' : 'bg-gray-200'
                                 }`}
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                    data.antiBotProtection ? 'translate-x-6' : 'translate-x-1'
+                                    data.isAutoBotProtectionEnabled ? 'translate-x-6' : 'translate-x-1'
                                 }`} />
                             </button>
                         </div>
@@ -303,13 +303,13 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                             <div className="font-medium">Auto-Listing</div>
                                         </div>
                                         <button
-                                            onClick={() => updateLiquidityField('autoListing', !data.autoListing)}
+                                            onClick={() => updateLiquidityField('isAutoListingEnabled', !data.isAutoListingEnabled)}
                                             className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                                                data.autoListing ? 'bg-black' : 'bg-gray-200'
+                                                data.isAutoListingEnabled ? 'bg-black' : 'bg-gray-200'
                                             }`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                                data.autoListing ? 'translate-x-6' : 'translate-x-1'
+                                                data.isAutoListingEnabled ? 'translate-x-6' : 'translate-x-1'
                                             }`} />
                                         </button>
                                     </div>
@@ -323,13 +323,13 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                             <div className="font-medium">Price Protection</div>
                                         </div>
                                         <button
-                                            onClick={() => updateLiquidityField('priceProtection', !data.priceProtection)}
+                                            onClick={() => updateLiquidityField('isPriceProtectionEnabled', !data.isPriceProtectionEnabled)}
                                             className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                                                data.priceProtection ? 'bg-black' : 'bg-gray-200'
+                                                data.isPriceProtectionEnabled ? 'bg-black' : 'bg-gray-200'
                                             }`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                                data.priceProtection ? 'translate-x-6' : 'translate-x-1'
+                                                data.isPriceProtectionEnabled ? 'translate-x-6' : 'translate-x-1'
                                             }`} />
                                         </button>
                                     </div>
@@ -342,13 +342,13 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                                             <div className="font-medium">Market Making</div>
                                         </div>
                                         <button
-                                            onClick={() => updateLiquidityField('marketMaking', !data.marketMaking)}
+                                            onClick={() => updateLiquidityField('isMarketMakingEnabled', !data.isMarketMakingEnabled)}
                                             className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                                                data.marketMaking ? 'bg-black' : 'bg-gray-200'
+                                                data.isMarketMakingEnabled ? 'bg-black' : 'bg-gray-200'
                                             }`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                                data.marketMaking ? 'translate-x-6' : 'translate-x-1'
+                                                data.isMarketMakingEnabled ? 'translate-x-6' : 'translate-x-1'
                                             }`} />
                                         </button>
                                     </div>

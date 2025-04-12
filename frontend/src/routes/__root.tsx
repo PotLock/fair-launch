@@ -3,7 +3,7 @@ import { Outlet, createRootRoute } from "@tanstack/react-router";
 import React from "react";
 import Header from "../components/layout/Header";
 import WalletContextProvider from "../context/WalletProviderContext";
-
+import { Toaster } from "react-hot-toast";
 const queryClient = new QueryClient();
 
 export const Route = createRootRoute({
@@ -27,6 +27,7 @@ function RootComponent() {
           <Header />
           <Outlet />
           <TanStackRouterDevtools position="bottom-right" />
+          <Toaster position="top-right" />
         </WalletContextProvider>
       </QueryClientProvider>
     </>

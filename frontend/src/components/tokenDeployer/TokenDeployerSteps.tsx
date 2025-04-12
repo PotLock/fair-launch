@@ -3,9 +3,8 @@ import { IconCircleCheck } from '@tabler/icons-react';
 import { steps } from '../../utils/comon';
 
 
-const TokenDeployerSteps: React.FC<{ currentStep: number; onStepClick: (index: number) => void }> = ({
+const TokenDeployerSteps: React.FC<{ currentStep: number }> = ({
   currentStep,
-  onStepClick,
 }) => {
   return (
     <div className="w-64 bg-white rounded-lg border border-gray-200">
@@ -16,8 +15,7 @@ const TokenDeployerSteps: React.FC<{ currentStep: number; onStepClick: (index: n
         {steps.map((step, index) => (
           <div
             key={index}
-            onClick={() => onStepClick(index)}
-            className={`cursor-pointer flex gap-3 group items-center rounded-lg p-2 ${index <= currentStep && 'bg-gray-100/80'}`}
+            className={`flex gap-3 group items-center rounded-lg p-2 ${index <= currentStep && 'bg-gray-100/80'}`}
           >
             {index <= currentStep ? (
               <IconCircleCheck className="w-5 h-5 text-green-500 mt-0.5" />
