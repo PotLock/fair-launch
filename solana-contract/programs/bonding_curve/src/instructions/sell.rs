@@ -37,6 +37,7 @@ pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
         bump,
         user,
         bonding_curve_type,
+        bonding_curve_configuration.target_liquidity,
         token_program,
         system_program,
     )?;

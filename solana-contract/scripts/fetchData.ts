@@ -3,7 +3,7 @@ import { Buffer } from "buffer";
 import { deserializeBondingCurve, deserializeCurveConfiguration, getKeypairFromFile, getPDAs } from "./utils";
 import os from "os";
 
-const programId = new PublicKey("ChNYPWh7iahysHscCesR37994jyGtALBhWevtAqay233");
+const programId = new PublicKey("J3wA1YF3mCnFVy9V54kU4P4xgmgPTyRzGfFBsjpXv28o");
 
 
 const connection = new Connection("https://api.devnet.solana.com", {

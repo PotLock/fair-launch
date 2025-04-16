@@ -135,6 +135,14 @@ impl BondingCurve {
             bump,
         }
     }
+
+    pub fn get_signer<'a>(bump: &'a u8, mint: &'a Pubkey) -> [&'a [u8]; 3] {
+        [
+            POOL_SEED_PREFIX.as_bytes(),
+            mint.as_ref(),
+            std::slice::from_ref(bump),
+        ]
+    }
 }
 
 pub trait BondingCurveAccount<'info> {
@@ -151,6 +159,7 @@ pub trait BondingCurveAccount<'info> {
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
+        locked_liquidity: bool,
         authority: &Signer<'info>,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
@@ -186,6 +195,8 @@ pub trait BondingCurveAccount<'info> {
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        // target liquidity for migration
+        target_liquidity: u64,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
@@ -206,6 +217,8 @@ pub trait BondingCurveAccount<'info> {
         bump: u8,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        // target liquidity for migration
+        target_liquidity: u64,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
@@ -288,15 +301,20 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        // target liquidity for migration
+        target_liquidity: u64,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         let amount_out = self.calculate_buy_cost(amount, bonding_curve_type)?;
         let fee = amount_out * (fee_percentage as u64) / 10000;
 
-        msg!("amount_out {}", amount_out);
-
-        // TODO: update bonding curve account
+        msg!("amount_out: {}", amount_out);
+        msg!("fee: {}", fee);
+        // make sure the bonding curve SOL liquility is not hit target liquidity
+        if self.reserve_balance + amount > target_liquidity {
+            return err!(CustomError::TargetLiquidityReached);
+        }
         self.total_supply += amount;
         self.reserve_balance += amount;
         self.reserve_token -= amount;
@@ -332,6 +350,8 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         bump: u8,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        // target liquidity for migration
+        target_liquidity: u64,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
@@ -339,9 +359,15 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         let fee = amount_out * (fee_percentage as u64) / 10000;
 
         msg!("reward {}", amount_out);
+        // make sure the bonding curve SOL liquility is not hit target liquidity
+        if self.reserve_balance + amount > target_liquidity {
+            return err!(CustomError::TargetLiquidityReached);
+        }
+
         if self.reserve_balance < amount_out {
             return err!(CustomError::NotEnoughSolInVault);
         }
+
 
         self.total_supply -= amount;
         self.reserve_balance -= amount_out;
@@ -380,6 +406,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
 
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
+        locked_liquidity: bool,
         authority: &Signer<'info>,
         token_program: &Program<'info, Token>,
         system_program: &Program<'info, System>,
@@ -391,6 +418,12 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         if amount == 0 || amount > balance {
             return err!(CustomError::InvalidAmount);
         }
+        // unable to  add liquidity if the bonding curve locked 
+        if locked_liquidity {
+            return err!(CustomError::LiquidityLocked);
+        }
+        // make sure the reserve balance is not exceed the target liquidity
+        // TODO!
 
         self.transfer_token_to_pool(
             token_accounts.2,
@@ -682,4 +715,36 @@ impl<'info> FeePoolAccount<'info> for Account<'info, FeePool> {
 
         Ok(())
     }
+}
+
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+struct CpiPoolArgs {
+    token_a_amount: u64,
+    token_b_amount: u64,
+}
+
+pub fn get_pool_create_ix_data(amount_a: u64, amount_b: u64) -> Vec<u8> {
+    let hash = get_function_hash(
+        "global",
+        "initialize_permissionless_constant_product_pool_with",
+    );
+    let mut buf: Vec<u8> = vec![];
+    buf.extend_from_slice(&hash);
+    let args = CpiPoolArgs {
+        token_a_amount: amount_a,
+        token_b_amount: amount_b,
+    };
+
+    args.serialize(&mut buf).unwrap();
+    buf
+}
+
+pub fn get_function_hash(namespace: &str, name: &str) -> [u8; 8] {
+    let preimage = format!("{}:{}", namespace, name);
+    let mut sighash = [0u8; 8];
+    sighash.copy_from_slice(
+        &anchor_lang::solana_program::hash::hash(preimage.as_bytes()).to_bytes()[..8],
+    );
+    sighash
 }

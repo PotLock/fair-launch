@@ -9,7 +9,7 @@ pub struct InitializeBondingCurve<'info> {
         init,
         space = CurveConfiguration::ACCOUNT_SIZE,
         payer = admin,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes(), token_mint.key().as_ref(), admin.key().as_ref()],
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
         bump,
     )]
     pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,

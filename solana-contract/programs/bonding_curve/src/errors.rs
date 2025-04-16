@@ -46,4 +46,16 @@ pub enum CustomError {
 
     #[msg("Not ready to remove liquidity")]
     NotReadyToRemoveLiquidity,
+
+    #[msg("Target liquidity reached")]
+    TargetLiquidityReached,
+
+    #[msg("Liquidity locked")]
+    LiquidityLocked,
+
+    #[msg("Bonding curve token B mismatch")]
+    BondingCurveTokenMismatch,
+
+    #[msg("SOL token A mismatch")]
+    SOLMismatch,
 }

@@ -189,6 +189,20 @@
     bn.js "^5.2.1"
     decimal.js "^10.4.3"
 
+"@meteora-ag/vault-sdk@^2.3.1":
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/@meteora-ag/vault-sdk/-/vault-sdk-2.3.1.tgz#73728aff8b17107f6a16aa3e42327d1664697bd0"
+  integrity sha512-I42o02fTpXdBcD/po/mXHnrOfVshr8vj9i7r+s7KG/FNdwC9/z+KZXvjXSTakKe/2CnLm75u3UFJly3j0KraSg==
+  dependencies:
+    "@coral-xyz/anchor" "^0.28.0"
+    "@solana/buffer-layout" "^4.0.1"
+    "@solana/spl-token" "^0.4.6"
+    "@solana/web3.js" "^1.91.6"
+    bn.js "5.2.1"
+    cross-fetch "^3.1.5"
+    decimal.js "10.3.1"
+    jsbi "4.3.0"
+
 "@noble/curves@^1.4.2":
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.8.1.tgz#19bc3970e205c99e4bdb1c64a4785706bce497ff"

@@ -12,6 +12,7 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
     msg!("Trying to add liquidity to the pool");
 
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
+    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
     if bonding_curve.creator != user.key() {
@@ -32,6 +33,7 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
         token_one_accounts,
         pool_sol_vault,
         amount,
+        bonding_curve_configuration.locked_liquidity,
         user,
         token_program,
         system_program,

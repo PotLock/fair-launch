@@ -37,6 +37,7 @@ pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {
         fee_percentage,
         user,
         bonding_curve_type,
+        bonding_curve_configuration.target_liquidity,
         token_program,
         system_program,
     )?;

@@ -89,6 +89,14 @@ export function deserializeCurveConfiguration(data) {
     const bondingCurveType = data.readUInt8(offset);
     // offset += 1; // No need to increment further; we're at the end
 
+    const maxTokenSupply = data.readBigUInt64LE(offset);
+    offset += 8;
+
+    const liquidityLockPeriod = data.readBigInt64LE(offset);
+    offset += 8;
+
+    const liquidityPoolPercentage = data.readUInt16LE(offset);
+    offset += 2;
 
     return {
         initialQuorum: initialQuorum.toString(), // string (u64 as string to avoid precision loss)
@@ -100,6 +108,9 @@ export function deserializeCurveConfiguration(data) {
         feePercentage,                // number (u16)
         feesEnabled,                  // boolean
         bondingCurveType,             // number (u8, enum variant index)
+        maxTokenSupply: maxTokenSupply.toString(), // string (u64 as string)
+        liquidityLockPeriod: liquidityLockPeriod.toString(), // string (i64 as string)
+        liquidityPoolPercentage,      // number (u16)
     };
 }
 
