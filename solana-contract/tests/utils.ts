@@ -1,13 +1,17 @@
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, Idl } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve"
-import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import fs from "fs";
-import {getVaultPdas} from "@meteora-ag/vault-sdk"
+import { VaultMeteora, IDL } from "../idls/vault_meteora";
 
+import {
+  PROGRAM_ID as VAULT_PROGRAM_ID,
+  getVaultPdas
+} from '@mercurial-finance/vault-sdk';
 
-const CURVE_CONFIGURATION_SEED = "curve_config"
+const CURVE_CONFIGURATION_SEED = "curve_configuration"
 const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
 const FEE_POOL_SEED_PREFIX = "fee_pool"
@@ -17,16 +21,21 @@ const POOL_METEORA_PREFIX = "pool"
 const PROTOCOL_FEE_PREFIX = "fee"
 const LP_MINT_PREFIX = "lp_mint"
 const VAULT_PREFIX = "vault"
+const LOCK_ESCROW_PREFIX = "lock_escrow"
 
 export const METEORA_PROGRAM_ID = new PublicKey("Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB")
-export const METEORA_VAULT_PROGRAM_ID = new PublicKey("24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi")
+export const METEORA_VAULT_PROGRAM_ID = new PublicKey(VAULT_PROGRAM_ID);
 export const METAPLEX_PROGRAM = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
+
+// Need to create config pool 
+
+export const TEST_CONFIG = new PublicKey("BdfD7rrTZEWmf8UbEBPVpvM3wUqyrR8swjAy5SNT8gJ2")
 
 const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 
 
-export async function getPDAs(user: PublicKey, mint: PublicKey){
+export function getPDAs(user: PublicKey, mint: PublicKey){
   const [curveConfig] = PublicKey.findProgramAddressSync(
     [Buffer.from(CURVE_CONFIGURATION_SEED)],
     program.programId,
@@ -43,11 +52,11 @@ export async function getPDAs(user: PublicKey, mint: PublicKey){
     program.programId
   );
   
-  const poolTokenAccount = await getAssociatedTokenAddress(
-    mint, bondingCurve, true
+  const poolTokenAccount = getAssociatedTokenAddressSync(
+    mint, bondingCurve, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
   )
-  const userTokenAccount = await getAssociatedTokenAddress(
-    mint, user, true
+  const userTokenAccount = getAssociatedTokenAddressSync(
+    mint, user, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
   )
 
   const [feePool] = PublicKey.findProgramAddressSync(
@@ -73,6 +82,8 @@ export async function getPDAs(user: PublicKey, mint: PublicKey){
     feePoolVaultBump
   };
 }
+
+
 
 export async function getMeteoraPDA(tokenAMint: PublicKey, tokenBMint: PublicKey, payer: PublicKey) {
   const firstKey = getFirstKey(tokenAMint, tokenBMint)
@@ -105,15 +116,16 @@ export function getVaultPDA(tokenAMint: PublicKey, tokenBMint: PublicKey) {
   return {aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda}
 }
 
+
 export function getProtocolTokenFeePDA(tokenAMint: PublicKey, tokenBMint: PublicKey, poolKey: PublicKey) { 
   const [[protocolTokenAFee], [protocolTokenBFee]] = [
     PublicKey.findProgramAddressSync(
       [Buffer.from(PROTOCOL_FEE_PREFIX), tokenAMint.toBuffer(), poolKey.toBuffer()],
-      METEORA_VAULT_PROGRAM_ID
+      METEORA_PROGRAM_ID
     ),
     PublicKey.findProgramAddressSync(
       [Buffer.from(PROTOCOL_FEE_PREFIX), tokenBMint.toBuffer(), poolKey.toBuffer()],
-      METEORA_VAULT_PROGRAM_ID
+      METEORA_PROGRAM_ID
     ),
   ];
 
@@ -163,6 +175,21 @@ export function getSecondKey(key1: PublicKey, key2: PublicKey): PublicKey {
 
 export const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112")
 
+
 export const getAssociatedTokenAccount = (tokenMint: PublicKey, owner: PublicKey) => {
   return getAssociatedTokenAddressSync(tokenMint, owner, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 };
+
+
+
+export const createProgram = (connection: Connection) => {
+  const provider = new AnchorProvider(connection, {} as any, AnchorProvider.defaultOptions());
+  
+  const vaultProgram = new Program<VaultMeteora>(IDL as VaultMeteora, provider);
+
+  return { vaultProgram };
+};
+
+
+
+

@@ -4,6 +4,7 @@ use anchor_lang::solana_program::{
     program::{invoke, invoke_signed},
     system_instruction,
 };
+use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::consts::{
@@ -58,7 +59,7 @@ pub struct InitializeMeteoraPool<'info> {
     pub pool: UncheckedAccount<'info>,
 
     /// CHECK: Config for fee
-    // pub config: UncheckedAccount<'info>,
+    pub config: UncheckedAccount<'info>,
 
     #[account(mut)]
     /// CHECK: lp mint
@@ -78,21 +79,14 @@ pub struct InitializeMeteoraPool<'info> {
     /// CHECK: Vault accounts for token B
     pub b_vault: UncheckedAccount<'info>,
 
-    #[account(
-        mut,
-        seeds = [TOKEN_VAULT_SEED.as_bytes(), a_vault.key.as_ref()],
-        bump,
-        seeds::program = vault_program.key()
-    )]
-    pub a_token_vault: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        mut,
-        seeds = [TOKEN_VAULT_SEED.as_bytes(), b_vault.key.as_ref()],
-        bump,
-        seeds::program = vault_program.key()
-    )]
-    pub b_token_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    /// CHECK: Vault LP accounts and mints
+    pub a_token_vault: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: Vault LP accounts and mints for token B
+    pub b_token_vault: UncheckedAccount<'info>,
 
     #[account(mut)]
     /// CHECK: Vault LP accounts and mints for token A
@@ -199,6 +193,8 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
 
     let token_b_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
 
+    msg!("Start transfer token");
+
     token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -208,23 +204,43 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
         token_b_amount,
     )?;
 
+    msg!("Transfer token success");
+
+    msg!("Start wrap solana token");
+
     let token_a_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
 
     // wrap solana token
-    let sol_ix = system_instruction::transfer(
-        &ctx.accounts.pool_sol_vault.to_account_info().key,
-        &ctx.accounts.payer_token_a.to_account_info().key,
-        token_a_amount,
-    );
+    // let sol_ix = system_instruction::transfer(
+    //     &ctx.accounts.pool_sol_vault.to_account_info().key,
+    //     &ctx.accounts.payer_token_a.to_account_info().key,
+    //     token_a_amount,
+    // );
 
-    invoke_signed(
-        &sol_ix,
-        &[
-            ctx.accounts.pool_sol_vault.to_account_info().clone(),
-            ctx.accounts.payer_token_a.to_account_info().clone(),
+    // invoke_signed(
+    //     &sol_ix,
+    //     &[
+    //         ctx.accounts.pool_sol_vault.to_account_info().clone(),
+    //         ctx.accounts.payer_token_a.to_account_info().clone(),
+    //         ctx.accounts.system_program.to_account_info(),
+    //     ],
+    //     signer_seeds,
+    // )?;
+
+    system_program::transfer(
+        CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
-        ],
-        signer_seeds,
+            system_program::Transfer {
+                from: ctx.accounts.pool_sol_vault.to_account_info(),
+                to: ctx.accounts.payer_token_a.to_account_info(),
+            },
+            &[&[
+                SOL_VAULT_PREFIX.as_bytes(),
+                ctx.accounts.token_b_mint.key().as_ref(),
+                &[ctx.bumps.pool_sol_vault],
+            ]],
+        ),
+        token_a_amount,
     )?;
 
     let cpi_accounts = token::SyncNative {
@@ -235,13 +251,13 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     token::sync_native(cpi_ctx)?;
 
-    msg!("Start meteora");
+    msg!("Wrap solana token success");
 
-    msg!("started meteora");
+    msg!("Start meteora");
 
     let mut accounts = vec![
         AccountMeta::new(ctx.accounts.pool.key(), false),
-        // AccountMeta::new_readonly(ctx.accounts.config.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.config.key(), false),
         AccountMeta::new(ctx.accounts.lp_mint.key(), false),
         AccountMeta::new_readonly(ctx.accounts.token_a_mint.key(), false),
         AccountMeta::new_readonly(ctx.accounts.token_b_mint.key(), false),
@@ -286,7 +302,7 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
         &instruction,
         &[
             ctx.accounts.pool.to_account_info(),
-            // ctx.accounts.config.to_account_info(),
+            ctx.accounts.config.to_account_info(),
             ctx.accounts.lp_mint.to_account_info(),
             ctx.accounts.token_a_mint.to_account_info(),
             ctx.accounts.token_b_mint.to_account_info(),

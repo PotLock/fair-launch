@@ -1,13 +1,17 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve"
-import { Connection, PublicKey, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram, SYSVAR_RENT_PUBKEY, clusterApiUrl } from "@solana/web3.js"
+import { Connection, PublicKey, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram, SYSVAR_RENT_PUBKEY, clusterApiUrl, TransactionInstruction } from "@solana/web3.js"
 
 import { BN } from "bn.js";
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as os from "os";
-import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata } from "./utils";
+import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram } from "./utils";
+import { getOrCreateATAInstruction } from "@mercurial-finance/vault-sdk/dist/cjs/src/vault/utils";
+import { derivePoolAddressWithConfig } from "@mercurial-finance/dynamic-amm-sdk/dist/cjs/src/amm/utils";
+import VaultImpl from "@mercurial-finance/vault-sdk";
+import { NATIVE_MINT } from "@solana/spl-token";
 const connection = new Connection(clusterApiUrl("devnet"))
 
 
@@ -23,19 +27,20 @@ describe("bonding_curve", () => {
   console.log("Fee address1 :", feeRecipient.publicKey.toBase58());
   console.log("Fee address2 :", feeRecipient2.publicKey.toBase58());
   // get existing TokenMint and TokenATA or we can create new token 
-  const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
+  // const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
   //5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa
-  // const mint = new PublicKey("9CvJFX7EdfJjxBWP5ne8LK6Enk9xRwX5BY2MC8uTJ26N");
+  const mint = new PublicKey("9nNrWDKsbQZoHHU7bHkfNPC3iicvMFGasyWpEfEnXxAj");
 
   const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
 
   const feeRecipient3 = Keypair.generate();
   const governance = Keypair.generate();
+  const { vaultProgram } = createProgram(connection);
 
   // it("Initialize the contract", async () => {
 
   //   try {
-  //     const { curveConfig, feePool } = await getPDAs(signer.payer.publicKey, mint)
+  //     const { curveConfig, feePool } = getPDAs(signer.payer.publicKey, mint)
   //     console.log("Curve Config : ", curveConfig.toBase58())
   //     // Fee Percentage : 100 = 1%
   //     const feePercentage = new BN(100);
@@ -88,7 +93,7 @@ describe("bonding_curve", () => {
   //   try {
 
 
-  //     const { bondingCurve } = await getPDAs(signer.payer.publicKey, mint )
+  //     const { bondingCurve } = getPDAs(signer.payer.publicKey, mint )
   //     const tx = new Transaction()
   //       .add(
   //         await program.methods
@@ -111,7 +116,7 @@ describe("bonding_curve", () => {
   //     // let bondingCurveAccount = await program.account.bondingCurve.fetch(bondingCurve)
   //     // console.log("Bonding Curve Data : ", bondingCurveAccount)
   //   } catch (error) {
-  //     console.log("Error in initialization :", error)
+  //     console.log("Error in create pool :", error)
   //   }
 
   // })
@@ -170,101 +175,190 @@ describe("bonding_curve", () => {
   // })
 
 
-  it(" add liquidity to the pool by user created a pool", async () => {
-
-    try {
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
-      console.log("Curve Config : ", curveConfig.toBase58())
-
-      let amount = new BN(100000000000); // 100 SPL token 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .addLiquidity(amount)
-            .accounts({
-              dexConfigurationAccount: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully add liquidity : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
-    } catch (error) {
-      console.log("Error in add liquidity :", error)
-    }
-  })
-
-
-  // it(" migrate meteora pool", async () => {
+  // it(" add liquidity to the pool by user created a pool", async () => {
 
   //   try {
-  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
-  //     const { pool, lpMint, payerPoolLp } = await getMeteoraPDA(SOL_MINT, mint, signer.payer.publicKey);
-  //     const { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda } = getVaultPDA(SOL_MINT, mint);
-  //     const { protocolTokenAFee, protocolTokenBFee } = getProtocolTokenFeePDA(SOL_MINT, mint, pool);
-  //     const [mintMetadata, _mintMetadataBump] = deriveMintMetadata(lpMint);
-      
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } =  getPDAs(signer.payer.publicKey, mint)
+  //     console.log("Curve Config : ", curveConfig.toBase58())
+  //     console.log("Bonding Curve : ", bondingCurve.toBase58())
+  //     console.log("Pool Token Account : ", poolTokenAccount.toBase58())
+
   //     let amount = new BN(100000000000); // 100 SPL token 
   //     const tx = new Transaction()
   //       .add(
   //         await program.methods
-  //           .migrateMeteoraPool()
+  //           .addLiquidity(amount)
   //           .accounts({
   //             dexConfigurationAccount: curveConfig,
   //             bondingCurveAccount: bondingCurve,
   //             tokenMint: mint,
-  //             poolTokenAccount: poolTokenAccount,
-  //             poolSolVault: poolSolVault,
-  //             pool: pool,
-  //             lpMint: lpMint,
-  //             tokenAMint: SOL_MINT,
-  //             tokenBMint: mint,
-  //             aVault: aVault,
-  //             bVault: bVault,
-  //             aVaultLpMint: aLpMintPda,
-  //             bVaultLpMint: bLpMintPda,
-  //             aVaultLp: aTokenVault,
-  //             bVaultLp: bTokenVault,
-  //             payerTokenA: signer.payer.publicKey,
-  //             payerTokenB: signer.payer.publicKey,
-  //             payerPoolLp: payerPoolLp,
-  //             protocolTokenAFee: protocolTokenAFee,
-  //             protocolTokenBFee: protocolTokenBFee,
-  //             payer: signer.payer.publicKey,
-  //             rent: SYSVAR_RENT_PUBKEY,
-  //             mintMetadata: mintMetadata,
-  //             metadataProgram: METAPLEX_PROGRAM,
-  //             vaultProgram: METEORA_VAULT_PROGRAM_ID,
   //             tokenProgram: TOKEN_PROGRAM_ID,
   //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-  //             systemProgram: SystemProgram.programId,
-  //             meteoraProgram: METEORA_PROGRAM_ID
+  //             poolSolVault: poolSolVault,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
   //           })
   //           .instruction()
   //       )
   //     tx.feePayer = signer.payer.publicKey
   //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
   //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-  //     console.log("Successfully migrate meteora pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     console.log("Successfully add liquidity : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     // const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     // const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     // console.log("User Balance : ", userBalance)
+  //     // console.log("Pool Balance : ", poolBalance)
   //   } catch (error) {
-  //     console.log("Error in migrate meteora pool :", error)
+  //     console.log("Error in add liquidity :", error)
   //   }
   // })
+
+
+  it(" migrate meteora pool", async () => {
+
+    try {
+      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
+      // const { pool, lpMint, payerPoolLp } = await getMeteoraPDA(SOL_MINT, mint, signer.payer.publicKey);
+      const { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda } = getVaultPDA(SOL_MINT, mint);
+      console.log("aTokenVault", aTokenVault.toBase58());
+      console.log("aLpMintPda", aLpMintPda.toBase58());
+      console.log("aVault", aVault.toBase58());
+      console.log("bTokenVault", bTokenVault.toBase58());
+      console.log("bLpMintPda", bLpMintPda.toBase58());
+      console.log("bVault", bVault.toBase58());
+
+      let aVaultLpMint = aLpMintPda;
+      let bVaultLpMint = bLpMintPda;
+
+      // test pool key 
+      const pool = derivePoolAddressWithConfig(SOL_MINT, mint, TEST_CONFIG, METEORA_PROGRAM_ID);
+      console.log("pool", pool.toBase58());
+
+      const [lpMint] = PublicKey.findProgramAddressSync(
+        [Buffer.from("lp_mint"), pool.toBuffer()],
+        METEORA_PROGRAM_ID,
+      );
+      console.log("lpMint", lpMint.toBase58());
+
+      const payerPoolLp = getAssociatedTokenAccount(lpMint, signer.payer.publicKey);
+      console.log("payerPoolLp", payerPoolLp.toBase58());
+
+      let preInstructions: Array<TransactionInstruction> = [];
+
+      const [aVaultAccount, bVaultAccount] = await Promise.all([
+        vaultProgram.account.vault.fetchNullable(aVault),
+        vaultProgram.account.vault.fetchNullable(bVault),
+      ]);
+
+      if (!aVaultAccount) {
+        const createVaultAIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, SOL_MINT);
+        createVaultAIx && preInstructions.push(createVaultAIx);
+
+      } else {
+        aVaultLpMint = aVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
+      }
+      if (!bVaultAccount) {
+        const createVaultBIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, mint);
+        createVaultBIx && preInstructions.push(createVaultBIx);
+
+      } else {
+        bVaultLpMint = bVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
+      }
+
+
+      const [[aVaultLp], [bVaultLp]] = [
+        PublicKey.findProgramAddressSync([aVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
+        PublicKey.findProgramAddressSync([bVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
+      ];
+
+
+      const [[payerTokenA, createPayerTokenAIx], [payerTokenB, createPayerTokenBIx]] = await Promise.all([
+        getOrCreateATAInstruction(SOL_MINT, signer.payer.publicKey, connection),
+        getOrCreateATAInstruction(mint, signer.payer.publicKey, connection),
+      ]);
+
+      createPayerTokenAIx && preInstructions.push(createPayerTokenAIx);
+      createPayerTokenBIx && preInstructions.push(createPayerTokenBIx);
+
+
+      let latestBlockHash = await provider.connection.getLatestBlockhash(
+        "confirmed"
+      );
+
+      if (preInstructions.length) {
+        const preInstructionTx = new Transaction({
+          feePayer: signer.payer.publicKey,
+          ...latestBlockHash,
+        }).add(...preInstructions);
+
+        preInstructionTx.sign(signer.payer);
+        const preInxSim = await connection.simulateTransaction(preInstructionTx)
+
+        const txHash = await provider.sendAndConfirm(preInstructionTx, [], {
+          commitment: "confirmed",
+        });
+        console.log("Successfully create payer token A and B : ", `https://solscan.io/tx/${txHash}?cluster=devnet`)
+      }
+
+
+
+      const { protocolTokenAFee, protocolTokenBFee } = getProtocolTokenFeePDA(SOL_MINT, mint, pool);
+      const [mintMetadata, _mintMetadataBump] = deriveMintMetadata(lpMint);
+      const setComputeUnitLimitIx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+        units: 20_000_000,
+      });
+
+      const tx = new Transaction().add(setComputeUnitLimitIx)
+        .add(
+          await program.methods
+            .migrateMeteoraPool()
+            .accounts({
+              dexConfigurationAccount: curveConfig,
+              bondingCurveAccount: bondingCurve,
+              tokenMint: mint,
+              poolTokenAccount: poolTokenAccount,
+              poolSolVault: poolSolVault,
+              pool: pool,
+              config: TEST_CONFIG,
+              lpMint: lpMint,
+              tokenAMint: SOL_MINT,
+              tokenBMint: mint,
+              aVault: aVault,
+              bVault: bVault,
+              aVaultLpMint: aVaultLpMint,
+              bVaultLpMint: bVaultLpMint,
+              aVaultLp: aVaultLp,
+              bVaultLp: bVaultLp,
+              aTokenVault: aTokenVault,
+              bTokenVault: bTokenVault,
+              payerTokenA: payerTokenA,
+              payerTokenB: payerTokenB,
+              payerPoolLp: payerPoolLp,
+              protocolTokenAFee: protocolTokenAFee,
+              protocolTokenBFee: protocolTokenBFee,
+              payer: signer.payer.publicKey,
+              rent: SYSVAR_RENT_PUBKEY,
+              mintMetadata: mintMetadata,
+              metadataProgram: METAPLEX_PROGRAM,
+              vaultProgram: METEORA_VAULT_PROGRAM_ID,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+              meteoraProgram: METEORA_PROGRAM_ID
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true })
+      console.log("Successfully migrate meteora pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+    } catch (error) {
+      console.log("Error in migrate meteora pool :", error)
+    }
+  })
 
 
   // Should be error because the user not created a pool

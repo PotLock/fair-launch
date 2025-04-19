@@ -3,7 +3,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token},
+    token::{Mint, Token, TokenAccount},
 };
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
@@ -29,8 +29,17 @@ pub struct CreateLiquidityPool<'info> {
     )]
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
+
     #[account(mut)]
     pub token_mint: Box<Account<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = token_mint,
+        associated_token::authority = bonding_curve_account
+    )]
+    pub pool_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub payer: Signer<'info>,

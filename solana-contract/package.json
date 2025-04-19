@@ -13,7 +13,7 @@
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",
         "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
-        "@meteora-ag/vault-sdk": "^2.3.1",
+        "@mercurial-finance/vault-sdk": "^2.2.1",
         "@solana/spl-token": "^0.4.13",
         "@solana/web3.js": "^1.98.0",
         "@sqds/multisig": "^2.1.3",

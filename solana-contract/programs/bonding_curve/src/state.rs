@@ -727,7 +727,7 @@ struct CpiPoolArgs {
 pub fn get_pool_create_ix_data(amount_a: u64, amount_b: u64) -> Vec<u8> {
     let hash = get_function_hash(
         "global",
-        "initialize_permissionless_constant_product_pool_with",
+        "initialize_permissionless_constant_product_pool_with_config",
     );
     let mut buf: Vec<u8> = vec![];
     buf.extend_from_slice(&hash);
