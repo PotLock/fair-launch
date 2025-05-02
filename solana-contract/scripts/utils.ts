@@ -184,3 +184,16 @@ export async function fetchBalancePool(connection: Connection, poolSolVault: Pub
 
     return {solBalance, tokenBalance: tokenBalance.amount};
 }
+
+
+export const metadata = {
+    "name": "Fair Launch Test Token",
+    "symbol": "FLT",
+    "description": "Fair Launch Token",
+    "image": "https://magenta-impossible-turkey-605.mypinata.cloud/ipfs/bafybeigieesczeg7n36r3s4blkukdoaest4q3reg4azcr2syyycpwffbk4",
+    "showName": true,
+    "createdOn": "PortLock",
+    "twitter": "",
+    "telegram": "",
+    "website": ""
+}
