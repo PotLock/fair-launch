@@ -8,12 +8,17 @@
         "claim": "ts-node scripts/claim.ts",
         "createPool": "ts-node scripts/create-pool.ts",
         "fetchPool": "ts-node scripts/fetchPool.ts",
-        "swap": "ts-node scripts/swap.ts"
+        "swap": "ts-node scripts/swap.ts",
+        "createToken2022": "ts-node scripts/create-token2022.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",
         "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
         "@mercurial-finance/vault-sdk": "^2.2.1",
+        "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+        "@metaplex-foundation/umi": "^1.2.0",
+        "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+        "@metaplex-foundation/umi-web3js-adapters": "^1.2.0",
         "@solana/spl-token": "^0.4.13",
         "@solana/web3.js": "^1.98.0",
         "@sqds/multisig": "^2.1.3",
