@@ -1,8 +1,8 @@
-import { Connection, Keypair, PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program, Idl } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve"
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import fs from "fs";
 import { VaultMeteora, IDL } from "../idls/vault_meteora";
 
@@ -17,6 +17,7 @@ const SOL_VAULT_PREFIX = "liquidity_sol_vault"
 const FEE_POOL_SEED_PREFIX = "fee_pool"
 const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
 
+// Meteora 
 const POOL_METEORA_PREFIX = "pool"
 const PROTOCOL_FEE_PREFIX = "fee"
 const LP_MINT_PREFIX = "lp_mint"
@@ -31,6 +32,10 @@ export const METAPLEX_PROGRAM = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6
 
 export const TEST_CONFIG = new PublicKey("BdfD7rrTZEWmf8UbEBPVpvM3wUqyrR8swjAy5SNT8gJ2")
 
+
+// PumpSwap
+const POOL_PUMP_SWAP_PREFIX = "pool"
+export const PUMP_SWAP_PROGRAM_ID = new PublicKey("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
 const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 
@@ -189,6 +194,79 @@ export const createProgram = (connection: Connection) => {
 
   return { vaultProgram };
 };
+
+
+export const getPumpSwapPDA = (
+  index: number,
+  creator: PublicKey,
+  baseMint: PublicKey, 
+  quoteMint: PublicKey,
+) => {
+  const [pool] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from(POOL_PUMP_SWAP_PREFIX),
+      new anchor.BN(index).toArrayLike(Buffer, 'le', 2),
+      creator.toBuffer(),
+      baseMint.toBuffer(),
+      quoteMint.toBuffer()
+    ],
+    PUMP_SWAP_PROGRAM_ID
+  );
+
+  const poolBaseTokenAccount = getAssociatedTokenAddressSync(
+    baseMint,
+    pool,
+    true // allowOwnerOffCurve - set to true for PDAs
+  );
+  
+  const poolQuoteTokenAccount = getAssociatedTokenAddressSync(
+    quoteMint,
+    pool,
+    true // allowOwnerOffCurve - set to true for PDAs
+  );
+  const [lpMint] = PublicKey.findProgramAddressSync(
+    [Buffer.from("pool_lp_mint"), pool.toBuffer()],
+    PUMP_SWAP_PROGRAM_ID
+  );
+
+  const userBaseTokenAccount = getAssociatedTokenAddressSync(
+    baseMint,
+    creator,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    // TOKEN_2022_PROGRAM_ID
+  );
+
+  const userQuoteTokenAccount = getAssociatedTokenAddressSync(
+    quoteMint,
+    creator,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+    //TOKEN_2022_PROGRAM_ID
+  );
+
+  const userPoolTokenAccount = getAssociatedTokenAddressSync(
+    lpMint,
+    creator,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+    // TOKEN_2022_PROGRAM_ID
+  );
+  const [globalConfig] = PublicKey.findProgramAddressSync(
+    [Buffer.from("global_config")],
+    PUMP_SWAP_PROGRAM_ID,
+  );
+  return {pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig};
+}
+
+
+export async function accountExists(connection: Connection, account: PublicKey): Promise<boolean> {
+  const accountInfo = await connection.getAccountInfo(account);
+  return accountInfo !== null && !accountInfo.owner.equals(SystemProgram.programId);
+}
 
 
 

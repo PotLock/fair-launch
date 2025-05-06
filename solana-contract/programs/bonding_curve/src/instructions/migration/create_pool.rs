@@ -1,3 +1,10 @@
+use crate::consts::{
+    CURVE_CONFIGURATION_SEED, METEORA_PROGRAM_KEY, POOL_SEED_PREFIX, PUMP_SWAP_PROGRAM_KEY,
+    QUOTE_TOKEN_MINT, SOL_VAULT_PREFIX, TOKEN_VAULT_SEED,
+};
+use crate::errors::CustomError;
+use crate::state::{get_meteora_pool_create_ix_data, get_pump_pool_create_ix_data};
+use crate::state::{BondingCurve, CurveConfiguration};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
     instruction::Instruction,
@@ -6,14 +13,7 @@ use anchor_lang::solana_program::{
 };
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-
-use crate::consts::{
-    CURVE_CONFIGURATION_SEED, METEORA_PROGRAM_KEY, POOL_SEED_PREFIX, QUOTE_TOKEN_MINT,
-    SOL_VAULT_PREFIX, TOKEN_VAULT_SEED,
-};
-use crate::errors::CustomError;
-use crate::state::{get_pool_create_ix_data, BondingCurveAccount};
-use crate::state::{BondingCurve, CurveConfiguration};
+use anchor_spl::token_interface::{Token2022, TokenInterface};
 use std::str::FromStr;
 
 #[derive(Accounts)]
@@ -78,7 +78,6 @@ pub struct InitializeMeteoraPool<'info> {
     #[account(mut)]
     /// CHECK: Vault accounts for token B
     pub b_vault: UncheckedAccount<'info>,
-
 
     #[account(mut)]
     /// CHECK: Vault LP accounts and mints
@@ -151,7 +150,7 @@ pub struct InitializeMeteoraPool<'info> {
     pub meteora_program: AccountInfo<'info>,
 }
 
-pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
+pub fn initialize_pool_meteora_with_config(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
     // todo
     // 1. check bonding curve liquidity hit the target liquidity if yes then create the pool ( locked_liquidity = true)
     // if bonding_curve_configuration.locked_liquidity == true && bonding_curve.reserve_balance == bonding_curve_configuration.target_liquidity {
@@ -209,23 +208,6 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
     msg!("Start wrap solana token");
 
     let token_a_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
-
-    // wrap solana token
-    // let sol_ix = system_instruction::transfer(
-    //     &ctx.accounts.pool_sol_vault.to_account_info().key,
-    //     &ctx.accounts.payer_token_a.to_account_info().key,
-    //     token_a_amount,
-    // );
-
-    // invoke_signed(
-    //     &sol_ix,
-    //     &[
-    //         ctx.accounts.pool_sol_vault.to_account_info().clone(),
-    //         ctx.accounts.payer_token_a.to_account_info().clone(),
-    //         ctx.accounts.system_program.to_account_info(),
-    //     ],
-    //     signer_seeds,
-    // )?;
 
     system_program::transfer(
         CpiContext::new_with_signer(
@@ -290,7 +272,7 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
         is_writable: true,
     }));
 
-    let data = get_pool_create_ix_data(token_a_amount, token_b_amount);
+    let data = get_meteora_pool_create_ix_data(token_a_amount, token_b_amount);
 
     let instruction = Instruction {
         program_id: meteora_program_id,
@@ -330,6 +312,244 @@ pub fn initialize_pool_with_config(ctx: Context<InitializeMeteoraPool>) -> Resul
         ],
         signer_seeds,
     )?;
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct InitializePumpswapPool<'info> {
+    /// BEGINNING OF FAIRLAUNCH'S ACCOUNT
+
+    #[account(
+        mut,
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
+        bump,
+    )]
+    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+
+    #[account(
+        mut,
+        seeds = [POOL_SEED_PREFIX.as_bytes(), token_mint.key().as_ref()],
+        bump,
+    )]
+    pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
+
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    #[account(
+        mut,
+        associated_token::mint = token_mint,
+        associated_token::authority = bonding_curve_account
+    )]
+    pub pool_token_account: Box<Account<'info, TokenAccount>>,
+
+    /// CHECK:
+    #[account(
+        mut,
+        seeds = [SOL_VAULT_PREFIX.as_bytes(), token_mint.key().as_ref()],
+        bump
+    )]
+    pub pool_sol_vault: AccountInfo<'info>,
+
+    /// END OF FAIRLAUNCH'S ACCOUNT
+
+    /// BEGINNING OF PUMP SWAP'S ACCOUNT
+    #[account(mut)]
+    /// CHECK: Pool account (PDA address)
+    pub pool: UncheckedAccount<'info>,
+
+    /// CHECK: Config for fee
+    pub global_config: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    /// CHECK: Base mint
+    pub base_mint: UncheckedAccount<'info>,
+
+    /// CHECK: Quote mint
+    pub quote_mint: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: lp mint
+    pub lp_mint: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: user base token account
+    pub user_base_token_account: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: user quote token account
+    pub user_quote_token_account: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: user pool token account
+    pub user_pool_token_account: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: pool base token account
+    pub pool_base_token_account: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    /// CHECK: pool quote token account
+    pub pool_quote_token_account: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    /// CHECK: Associated token program account
+    pub associated_token_program: UncheckedAccount<'info>,
+
+    /// CHECK: Token program account
+    pub base_token_program: Program<'info, Token>,
+
+    /// CHECK: Quote token program account
+    pub quote_token_program: Program<'info, Token>,
+
+    /// CHECK: Pumpswap program
+    pub pumpswap_program: AccountInfo<'info>,
+}
+
+pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
+    let quote_mint: Pubkey = Pubkey::from_str(QUOTE_TOKEN_MINT).unwrap();
+
+    require!(
+        ctx.accounts.bonding_curve_account.token == ctx.accounts.quote_mint.key(),
+        CustomError::BondingCurveTokenMismatch
+    );
+
+    require!(
+        quote_mint.key() == ctx.accounts.base_mint.key(),
+        CustomError::SOLMismatch
+    );
+
+    // TODO!: make sure payer is authority
+
+    let pumpswap_program_id: Pubkey = Pubkey::from_str(PUMP_SWAP_PROGRAM_KEY).unwrap();
+
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.pool_token_account.to_account_info(),
+        to: ctx.accounts.user_quote_token_account.to_account_info(),
+        authority: ctx.accounts.bonding_curve_account.to_account_info(),
+    };
+
+    let signer = BondingCurve::get_signer(
+        &ctx.bumps.bonding_curve_account,
+        ctx.accounts.quote_mint.to_account_info().key,
+    );
+
+    let signer_seeds = &[&signer[..]];
+
+
+    let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
+    msg!("quote_token_amount: {}", quote_token_amount);
+    msg!("quote token: {:?}", ctx.accounts.quote_mint.to_account_info());
+    msg!("Pool Bonding Curve : {:?}", ctx.accounts.pool_token_account.to_account_info());
+
+    msg!("Start transfer token");
+
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.quote_token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        ),
+        quote_token_amount,
+    )?;
+
+    msg!("Transfer token success");
+
+    msg!("Start wrap solana token");
+
+    let base_token_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
+
+    msg!("base_token_amount: {}", base_token_amount);
+    msg!("pool_sol_vault: {:?}", ctx.accounts.pool_sol_vault.to_account_info());
+    system_program::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.pool_sol_vault.to_account_info(),
+                to: ctx.accounts.user_base_token_account.to_account_info(),
+            },
+            &[&[
+                SOL_VAULT_PREFIX.as_bytes(),
+                ctx.accounts.quote_mint.key().as_ref(),
+                &[ctx.bumps.pool_sol_vault],
+            ]],
+        ),
+        base_token_amount,
+    )?;
+
+    let cpi_accounts = token::SyncNative {
+        account: ctx.accounts.user_base_token_account.to_account_info(),
+    };
+
+    let cpi_program = ctx.accounts.base_token_program.to_account_info();
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    token::sync_native(cpi_ctx)?;
+
+    msg!("Wrap solana token success");
+
+    msg!("Start pumpswap");
+
+
+    let mut accounts = vec![
+        AccountMeta::new(ctx.accounts.pool.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.global_config.key(), false),
+        AccountMeta::new(ctx.accounts.creator.key(), true),
+        AccountMeta::new_readonly(ctx.accounts.base_mint.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.quote_mint.key(), false),
+        AccountMeta::new(ctx.accounts.lp_mint.key(), false),
+        AccountMeta::new(ctx.accounts.user_base_token_account.key(), false),
+        AccountMeta::new(ctx.accounts.user_quote_token_account.key(), false),
+        AccountMeta::new(ctx.accounts.user_pool_token_account.key(), false),
+        AccountMeta::new(ctx.accounts.pool_base_token_account.key(), false),
+        AccountMeta::new(ctx.accounts.pool_quote_token_account.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.associated_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.base_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.quote_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.pumpswap_program.key(), false),
+    ];
+
+
+    accounts.extend(ctx.remaining_accounts.iter().map(|acc| AccountMeta {
+        pubkey: *acc.key,
+        is_signer: false,
+        is_writable: true,
+    }));
+
+    let data = get_pump_pool_create_ix_data(index, base_token_amount, quote_token_amount);
+
+    let instruction = Instruction {
+        program_id: pumpswap_program_id,
+        accounts,
+        data,
+    };
+
+    invoke_signed(
+        &instruction,
+        &[
+            ctx.accounts.pool.to_account_info(),
+            ctx.accounts.global_config.to_account_info(),
+            ctx.accounts.lp_mint.to_account_info(),
+            ctx.accounts.base_mint.to_account_info(),
+            ctx.accounts.quote_mint.to_account_info(),
+            ctx.accounts.user_base_token_account.to_account_info(),
+            ctx.accounts.user_quote_token_account.to_account_info(),
+            ctx.accounts.user_pool_token_account.to_account_info(),
+            ctx.accounts.pool_base_token_account.to_account_info(),
+            ctx.accounts.pool_quote_token_account.to_account_info(),
+            ctx.accounts.creator.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+            ctx.accounts.associated_token_program.to_account_info(),
+            ctx.accounts.base_token_program.to_account_info(),
+            ctx.accounts.quote_token_program.to_account_info(),
+            ctx.accounts.pumpswap_program.to_account_info(),
+        ],
+        signer_seeds,
+    )?;
+
 
     Ok(())
 }

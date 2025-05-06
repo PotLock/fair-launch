@@ -3,7 +3,7 @@ import { Buffer } from "buffer";
 import { deserializeBondingCurve, deserializeCurveConfiguration, getKeypairFromFile, getPDAs } from "./utils";
 import os from "os";
 
-const programId = new PublicKey("J3wA1YF3mCnFVy9V54kU4P4xgmgPTyRzGfFBsjpXv28o");
+const programId = new PublicKey("8osGVKUMbLoejHL5nPMjBVppjHNfe7rRsD7L7jNYJN9n");
 
 
 const connection = new Connection("https://api.devnet.solana.com", {
@@ -31,7 +31,7 @@ async function getBondingCurveAccounts(mint: PublicKey) {
   const seeds = [Buffer.from("bonding_curve"), mint.toBuffer()];
 
 
-  const [bondingCurve, bump] = await PublicKey.findProgramAddressSync(seeds, programId);
+  const [bondingCurve, bump] = PublicKey.findProgramAddressSync(seeds, programId);
 
   console.log("PDA Address:", bondingCurve.toBase58());
 
@@ -47,7 +47,7 @@ async function getBondingCurveAccounts(mint: PublicKey) {
 
 }
 
-const mint = new PublicKey("BU38GveW5z5N61kuazeSJSPJCcQt9fn4SYZboBCxBVpz");
+const mint = new PublicKey("9nNrWDKsbQZoHHU7bHkfNPC3iicvMFGasyWpEfEnXxAj");
 
 
 

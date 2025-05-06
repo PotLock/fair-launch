@@ -7,11 +7,11 @@ import { BN } from "bn.js";
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as os from "os";
-import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram } from "./utils";
+import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram, getPumpSwapPDA, findPoolIndex, PUMP_SWAP_PROGRAM_ID, accountExists } from "./utils";
 import { getOrCreateATAInstruction } from "@mercurial-finance/vault-sdk/dist/cjs/src/vault/utils";
 import { derivePoolAddressWithConfig } from "@mercurial-finance/dynamic-amm-sdk/dist/cjs/src/amm/utils";
 import VaultImpl from "@mercurial-finance/vault-sdk";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { createAssociatedTokenAccountIdempotentInstruction, NATIVE_MINT, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 const connection = new Connection(clusterApiUrl("devnet"))
 
 
@@ -217,148 +217,237 @@ describe("bonding_curve", () => {
   // })
 
 
-  it(" migrate meteora pool", async () => {
+  // it(" migrate meteora pool", async () => {
+
+  //   try {
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
+  //     // const { pool, lpMint, payerPoolLp } = await getMeteoraPDA(SOL_MINT, mint, signer.payer.publicKey);
+  //     const { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda } = getVaultPDA(SOL_MINT, mint);
+  //     console.log("aTokenVault", aTokenVault.toBase58());
+  //     console.log("aLpMintPda", aLpMintPda.toBase58());
+  //     console.log("aVault", aVault.toBase58());
+  //     console.log("bTokenVault", bTokenVault.toBase58());
+  //     console.log("bLpMintPda", bLpMintPda.toBase58());
+  //     console.log("bVault", bVault.toBase58());
+
+  //     let aVaultLpMint = aLpMintPda;
+  //     let bVaultLpMint = bLpMintPda;
+
+  //     // test pool key 
+  //     const pool = derivePoolAddressWithConfig(SOL_MINT, mint, TEST_CONFIG, METEORA_PROGRAM_ID);
+  //     console.log("pool", pool.toBase58());
+
+  //     const [lpMint] = PublicKey.findProgramAddressSync(
+  //       [Buffer.from("lp_mint"), pool.toBuffer()],
+  //       METEORA_PROGRAM_ID,
+  //     );
+  //     console.log("lpMint", lpMint.toBase58());
+
+  //     const payerPoolLp = getAssociatedTokenAccount(lpMint, signer.payer.publicKey);
+  //     console.log("payerPoolLp", payerPoolLp.toBase58());
+
+  //     let preInstructions: Array<TransactionInstruction> = [];
+
+  //     const [aVaultAccount, bVaultAccount] = await Promise.all([
+  //       vaultProgram.account.vault.fetchNullable(aVault),
+  //       vaultProgram.account.vault.fetchNullable(bVault),
+  //     ]);
+
+  //     if (!aVaultAccount) {
+  //       const createVaultAIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, SOL_MINT);
+  //       createVaultAIx && preInstructions.push(createVaultAIx);
+
+  //     } else {
+  //       aVaultLpMint = aVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
+  //     }
+  //     if (!bVaultAccount) {
+  //       const createVaultBIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, mint);
+  //       createVaultBIx && preInstructions.push(createVaultBIx);
+
+  //     } else {
+  //       bVaultLpMint = bVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
+  //     }
+
+
+  //     const [[aVaultLp], [bVaultLp]] = [
+  //       PublicKey.findProgramAddressSync([aVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
+  //       PublicKey.findProgramAddressSync([bVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
+  //     ];
+
+
+  //     const [[payerTokenA, createPayerTokenAIx], [payerTokenB, createPayerTokenBIx]] = await Promise.all([
+  //       getOrCreateATAInstruction(SOL_MINT, signer.payer.publicKey, connection),
+  //       getOrCreateATAInstruction(mint, signer.payer.publicKey, connection),
+  //     ]);
+
+  //     createPayerTokenAIx && preInstructions.push(createPayerTokenAIx);
+  //     createPayerTokenBIx && preInstructions.push(createPayerTokenBIx);
+
+
+  //     let latestBlockHash = await provider.connection.getLatestBlockhash(
+  //       "confirmed"
+  //     );
+
+  //     if (preInstructions.length) {
+  //       const preInstructionTx = new Transaction({
+  //         feePayer: signer.payer.publicKey,
+  //         ...latestBlockHash,
+  //       }).add(...preInstructions);
+
+  //       preInstructionTx.sign(signer.payer);
+  //       const preInxSim = await connection.simulateTransaction(preInstructionTx)
+
+  //       const txHash = await provider.sendAndConfirm(preInstructionTx, [], {
+  //         commitment: "confirmed",
+  //       });
+  //       console.log("Successfully create payer token A and B : ", `https://solscan.io/tx/${txHash}?cluster=devnet`)
+  //     }
+
+
+
+  //     const { protocolTokenAFee, protocolTokenBFee } = getProtocolTokenFeePDA(SOL_MINT, mint, pool);
+  //     const [mintMetadata, _mintMetadataBump] = deriveMintMetadata(lpMint);
+  //     const setComputeUnitLimitIx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+  //       units: 20_000_000,
+  //     });
+
+  //     const tx = new Transaction().add(setComputeUnitLimitIx)
+  //       .add(
+  //         await program.methods
+  //           .migrateMeteoraPool()
+  //           .accounts({
+  //             dexConfigurationAccount: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             poolTokenAccount: poolTokenAccount,
+  //             poolSolVault: poolSolVault,
+  //             pool: pool,
+  //             config: TEST_CONFIG,
+  //             lpMint: lpMint,
+  //             tokenAMint: SOL_MINT,
+  //             tokenBMint: mint,
+  //             aVault: aVault,
+  //             bVault: bVault,
+  //             aVaultLpMint: aVaultLpMint,
+  //             bVaultLpMint: bVaultLpMint,
+  //             aVaultLp: aVaultLp,
+  //             bVaultLp: bVaultLp,
+  //             aTokenVault: aTokenVault,
+  //             bTokenVault: bTokenVault,
+  //             payerTokenA: payerTokenA,
+  //             payerTokenB: payerTokenB,
+  //             payerPoolLp: payerPoolLp,
+  //             protocolTokenAFee: protocolTokenAFee,
+  //             protocolTokenBFee: protocolTokenBFee,
+  //             payer: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             mintMetadata: mintMetadata,
+  //             metadataProgram: METAPLEX_PROGRAM,
+  //             vaultProgram: METEORA_VAULT_PROGRAM_ID,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             systemProgram: SystemProgram.programId,
+  //             meteoraProgram: METEORA_PROGRAM_ID
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true })
+  //     console.log("Successfully migrate meteora pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in migrate meteora pool :", error)
+  //   }
+  // })
+
+
+  it("migrate pumpswap pool", async () => {
 
     try {
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
-      // const { pool, lpMint, payerPoolLp } = await getMeteoraPDA(SOL_MINT, mint, signer.payer.publicKey);
-      const { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda } = getVaultPDA(SOL_MINT, mint);
-      console.log("aTokenVault", aTokenVault.toBase58());
-      console.log("aLpMintPda", aLpMintPda.toBase58());
-      console.log("aVault", aVault.toBase58());
-      console.log("bTokenVault", bTokenVault.toBase58());
-      console.log("bLpMintPda", bLpMintPda.toBase58());
-      console.log("bVault", bVault.toBase58());
-
-      let aVaultLpMint = aLpMintPda;
-      let bVaultLpMint = bLpMintPda;
-
-      // test pool key 
-      const pool = derivePoolAddressWithConfig(SOL_MINT, mint, TEST_CONFIG, METEORA_PROGRAM_ID);
+      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
+      // const mintToken2022 = new PublicKey("AemQbKzYPhZmx3gM1ehc6q9MzDBSmcSKTCii74x2ACsx")
+      const { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig } = getPumpSwapPDA(0, signer.payer.publicKey, SOL_MINT, mint)
       console.log("pool", pool.toBase58());
-
-      const [lpMint] = PublicKey.findProgramAddressSync(
-        [Buffer.from("lp_mint"), pool.toBuffer()],
-        METEORA_PROGRAM_ID,
-      );
+      console.log("poolBaseTokenAccount", poolBaseTokenAccount.toBase58());
+      console.log("poolQuoteTokenAccount", poolQuoteTokenAccount.toBase58());
       console.log("lpMint", lpMint.toBase58());
-
-      const payerPoolLp = getAssociatedTokenAccount(lpMint, signer.payer.publicKey);
-      console.log("payerPoolLp", payerPoolLp.toBase58());
-
-      let preInstructions: Array<TransactionInstruction> = [];
-
-      const [aVaultAccount, bVaultAccount] = await Promise.all([
-        vaultProgram.account.vault.fetchNullable(aVault),
-        vaultProgram.account.vault.fetchNullable(bVault),
-      ]);
-
-      if (!aVaultAccount) {
-        const createVaultAIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, SOL_MINT);
-        createVaultAIx && preInstructions.push(createVaultAIx);
-
-      } else {
-        aVaultLpMint = aVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
-      }
-      if (!bVaultAccount) {
-        const createVaultBIx = await VaultImpl.createPermissionlessVaultInstruction(provider.connection, signer.payer.publicKey, mint);
-        createVaultBIx && preInstructions.push(createVaultBIx);
-
-      } else {
-        bVaultLpMint = bVaultAccount?.lpMint; // Old vault doesn't have lp mint pda
-      }
-
-
-      const [[aVaultLp], [bVaultLp]] = [
-        PublicKey.findProgramAddressSync([aVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
-        PublicKey.findProgramAddressSync([bVault.toBuffer(), pool.toBuffer()], METEORA_PROGRAM_ID),
-      ];
-
-
-      const [[payerTokenA, createPayerTokenAIx], [payerTokenB, createPayerTokenBIx]] = await Promise.all([
-        getOrCreateATAInstruction(SOL_MINT, signer.payer.publicKey, connection),
-        getOrCreateATAInstruction(mint, signer.payer.publicKey, connection),
-      ]);
-
-      createPayerTokenAIx && preInstructions.push(createPayerTokenAIx);
-      createPayerTokenBIx && preInstructions.push(createPayerTokenBIx);
-
-
-      let latestBlockHash = await provider.connection.getLatestBlockhash(
-        "confirmed"
-      );
-
-      if (preInstructions.length) {
-        const preInstructionTx = new Transaction({
-          feePayer: signer.payer.publicKey,
-          ...latestBlockHash,
-        }).add(...preInstructions);
-
-        preInstructionTx.sign(signer.payer);
-        const preInxSim = await connection.simulateTransaction(preInstructionTx)
-
-        const txHash = await provider.sendAndConfirm(preInstructionTx, [], {
-          commitment: "confirmed",
-        });
-        console.log("Successfully create payer token A and B : ", `https://solscan.io/tx/${txHash}?cluster=devnet`)
-      }
-
-
-
-      const { protocolTokenAFee, protocolTokenBFee } = getProtocolTokenFeePDA(SOL_MINT, mint, pool);
-      const [mintMetadata, _mintMetadataBump] = deriveMintMetadata(lpMint);
+      console.log("userBaseTokenAccount", userBaseTokenAccount.toBase58());
+      console.log("userQuoteTokenAccount", userQuoteTokenAccount.toBase58());
+      console.log("userPoolTokenAccount", userPoolTokenAccount.toBase58());
+      console.log("globalConfig", globalConfig.toBase58());
       const setComputeUnitLimitIx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
         units: 20_000_000,
       });
-
       const tx = new Transaction().add(setComputeUnitLimitIx)
-        .add(
+
+      const index = 0;
+
+
+
+      if (!(await accountExists(connection, poolBaseTokenAccount))) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            signer.payer.publicKey,
+            poolBaseTokenAccount,
+            pool,
+            SOL_MINT,
+            TOKEN_PROGRAM_ID
+          )
+        );
+      }
+
+      if (!(await accountExists(connection, poolQuoteTokenAccount))) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            signer.payer.publicKey,
+            poolQuoteTokenAccount,
+            pool,
+            mint,
+            TOKEN_PROGRAM_ID
+          )
+        );
+      }
+
+      tx.add(
           await program.methods
-            .migrateMeteoraPool()
+            .migratePumpswapPool(index)
             .accounts({
               dexConfigurationAccount: curveConfig,
               bondingCurveAccount: bondingCurve,
               tokenMint: mint,
               poolTokenAccount: poolTokenAccount,
               poolSolVault: poolSolVault,
-              pool: pool,
-              config: TEST_CONFIG,
-              lpMint: lpMint,
-              tokenAMint: SOL_MINT,
-              tokenBMint: mint,
-              aVault: aVault,
-              bVault: bVault,
-              aVaultLpMint: aVaultLpMint,
-              bVaultLpMint: bVaultLpMint,
-              aVaultLp: aVaultLp,
-              bVaultLp: bVaultLp,
-              aTokenVault: aTokenVault,
-              bTokenVault: bTokenVault,
-              payerTokenA: payerTokenA,
-              payerTokenB: payerTokenB,
-              payerPoolLp: payerPoolLp,
-              protocolTokenAFee: protocolTokenAFee,
-              protocolTokenBFee: protocolTokenBFee,
-              payer: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              mintMetadata: mintMetadata,
-              metadataProgram: METAPLEX_PROGRAM,
-              vaultProgram: METEORA_VAULT_PROGRAM_ID,
-              tokenProgram: TOKEN_PROGRAM_ID,
+              pool: pool,                                // Pool PDA from getPumpSwapPDA
+              globalConfig: globalConfig,                 // Config account
+              creator: signer.publicKey,                             // Signer
+              baseMint: SOL_MINT,                       // Base token mint
+              quoteMint: mint,                          // Quote token mint
+              lpMint: lpMint,                           // LP token mint
+              userBaseTokenAccount: userBaseTokenAccount,      // User's base token account
+              userQuoteTokenAccount: userQuoteTokenAccount,   // User's quote token account
+              userPoolTokenAccount: userPoolTokenAccount,// User's pool token account
+              poolBaseTokenAccount: poolBaseTokenAccount,         // Pool's base token account
+              poolQuoteTokenAccount: poolQuoteTokenAccount,       // Pool's quote token account
+
+              // Programs
+              systemProgram: anchor.web3.SystemProgram.programId,
               associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-              meteoraProgram: METEORA_PROGRAM_ID
+              baseTokenProgram: TOKEN_PROGRAM_ID,
+              quoteTokenProgram: TOKEN_PROGRAM_ID,
+              pumpswapProgram: PUMP_SWAP_PROGRAM_ID
+
             })
             .instruction()
         )
       tx.feePayer = signer.payer.publicKey
       tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
       const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true })
-      console.log("Successfully migrate meteora pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+      console.log("Successfully migrate pumpwap pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
     } catch (error) {
-      console.log("Error in migrate meteora pool :", error)
+      console.log("Error in migrate pumpwap pool :", error)
     }
   })
+
 
 
   // Should be error because the user not created a pool

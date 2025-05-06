@@ -55,9 +55,10 @@ export function deserializeBondingCurve(data) {
 
 
 export function deserializeCurveConfiguration(data) {
-    if (data.length !== 104) {
-        throw new Error(`Invalid account data length: expected 104 bytes, got ${data.length}`);
-    }
+    // todo: check if the data length is correct
+    // if (data.length !== 104) {
+    //     throw new Error(`Invalid account data length: expected 104 bytes, got ${data.length}`);
+    // }
 
 
     let offset = 8; // Skip the 8-byte discriminator

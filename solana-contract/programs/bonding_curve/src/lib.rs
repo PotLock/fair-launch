@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("8osGVKUMbLoejHL5nPMjBVppjHNfe7rRsD7L7jNYJN9n");
+declare_id!("AEpAbhrKQZ1DKuxm2gx74SQfds6AydYMuDrhvxXQUahp");
 
 #[program]
 pub mod bonding_curve {
@@ -75,7 +75,11 @@ pub mod bonding_curve {
     }
 
     pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
-        instructions::initialize_pool_with_config(ctx)
+        instructions::initialize_pool_meteora_with_config(ctx)
+    }
+
+    pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
+        instructions::initialize_pool_pumpswap(ctx, index)
     }
 
 }
