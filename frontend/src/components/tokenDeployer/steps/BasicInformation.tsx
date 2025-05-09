@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IconCloudUpload, IconArrowLeft,IconArrowRight } from '@tabler/icons-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
 import {ShieldCheck} from "lucide-react"
@@ -34,27 +34,60 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
     const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            updateBasicInfo({ logo: file });
+            // When uploading a file, clear the URL immediately
+            updateBasicInfo({ logo: file, logoUrl: undefined });
+        } else {
+            // If no file selected, clear both states
+            updateBasicInfo({ logo: null, logoUrl: undefined });
         }
     };
 
     const handleLogoUrlChange = (url: string) => {
         setLogoUrl(url);
         if (url) {
-            fetch(url)
-            .then(response => response.blob())
-            .then(blob => {
-                const file = new File([blob], 'logo.png', { type: 'image/png' });
-                updateBasicInfo({ logo: file });
-            })
-            .catch(error => {
-                console.error('Error loading logo from URL:', error);
+            try {
+                // Validate URL format
+                new URL(url);
+                
+                // Check if URL ends with common image extensions, ignoring query parameters
+                const validImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+                const urlWithoutQuery = url.split('?')[0];
+                const hasValidExtension = validImageExtensions.some(ext => urlWithoutQuery.toLowerCase().endsWith(ext));
+                
+                if (!hasValidExtension) {
+                    throw new Error('URL must end with a valid image extension (.png, .jpg, .jpeg, .gif, .webp, .svg)');
+                }
+
+                // Update both logoUrl and clear logo
+                updateBasicInfo({ 
+                    logoUrl: url,
+                    logo: null,
+                    isLogoUrl: true
+                });
+            } catch (error) {
+                console.error('Invalid URL:', error);
+                // Clear both states
+                updateBasicInfo({ 
+                    logoUrl: undefined,
+                    logo: null,
+                    isLogoUrl: false
+                });
+            }
+        } else {
+            // Clear both states
+            updateBasicInfo({ 
+                logoUrl: undefined,
+                logo: null,
+                isLogoUrl: false
             });
         }
     };
 
     const handleTagAdd = (tag: string) => {
         const currentTags = state.basicInfo.data.tags || [];
+        if (currentTags.length >= 3) {
+            return;
+        }
         updateBasicInfo({ tags: [...currentTags, tag] });
     };
 
@@ -83,6 +116,13 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
             setCurrentStep(currentStep + 1);
         }
     };
+
+    // Update useEffect to handle state synchronization
+    useEffect(() => {
+        if (logoUrl !== state.basicInfo.data.logoUrl) {
+            setLogoUrl(state.basicInfo.data.logoUrl || '');
+        }
+    }, [state.basicInfo.data.logoUrl, logoUrl]);
 
     return(
         <div className="space-y-6">
@@ -219,14 +259,30 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
                                     />
                                     <button
                                         onClick={() => {
-                                            updateBasicInfo({ logo: undefined });
+                                            updateBasicInfo({ logo: null });
                                         }}
                                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                     >
                                         <IconX className="w-4 h-4" />
                                     </button>
                                 </div>
-                            ):(
+                            ) : state.basicInfo.data.logoUrl ? (
+                                <div className="mt-4 relative">
+                                    <img
+                                        src={state.basicInfo.data.logoUrl}
+                                        alt="Preview"
+                                        className="h-20 w-20 object-cover rounded-xl"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            updateBasicInfo({ logoUrl: undefined });
+                                        }}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                    >
+                                        <IconX className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
                                 <div className={`flex justify-center rounded-xl border-2 ${state.basicInfo.errors.logo ? 'border-red-500' : 'border-gray-200'} px-6 py-8 bg-gray-100 w-[100px]`}>
                                     <div className="text-center">
                                         <div className="cursor-pointer">
@@ -322,6 +378,7 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
                     type="text"
                     placeholder="Enter tag"
                     className="px-3 py-2 border rounded-md text-sm placeholder:text-sm"
+                    disabled={(state.basicInfo.data.tags || []).length >= 3}
                     onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                         handleTagAdd((e.target as HTMLInputElement).value);
@@ -437,8 +494,7 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
                                 `}
                             >
                                 <span
-                                className={`
-                                    inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out
+                                className={`                                    inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out
                                     ${state.basicInfo.data.revokeMintEnabled ? 'translate-x-6' : 'translate-x-1'}
                                 `}
                                 />
@@ -449,16 +505,12 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
                     </div>
                     <span className="text-sm text-gray-500">Fee: 0.1 SOL</span>
                 </div>
-                {
-                    state.basicInfo.data.revokeMintEnabled && (
-                        <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
-                            <ShieldCheck className="w-5 h-5 text-blue-500" />
-                            <p className="text-sm">
-                                <span className="font-medium text-blue-500">Recommend!</span> Revoke right to mint new coins, this shows buyer of your coin that supply is fixed and cannot grow. DEX scanners will mark your coin as safe.
-                            </p>
-                        </div>
-                    )
-                }
+                <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
+                    <ShieldCheck className="w-5 h-5 text-blue-500" />
+                    <p className="text-sm">
+                        <span className="font-medium text-blue-500">Recommend!</span> Revoke right to mint new coins, this shows buyer of your coin that supply is fixed and cannot grow. DEX scanners will mark your coin as safe.
+                    </p>
+                </div>
 
                 <div className="flex items-start justify-between">
                     <div className="flex flex-col space-y-1">
@@ -483,24 +535,19 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
                     </div>
                     <span className="text-sm text-gray-500">Fee: 0.1 SOL</span>
                 </div>
-                {
-                    state.basicInfo.data.revokeFreezeEnabled && (
-                        <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
-                            <ShieldCheck className="w-5 h-5 text-blue-500" />
-                            <p className="text-sm">
-                                <span className="font-medium text-blue-500">Recommend!</span> Revoke freeze right, you will make coin safer for potential buyers of your coin and get more sales. DEX scanners will mark your coin as safe.
-                            </p>
-                        </div>
-                    )
-                }
+                <div className="mt-2 p-3 flex flex-row gap-2 items-center bg-blue-50 rounded-md border border-blue-500">
+                    <ShieldCheck className="w-5 h-5 text-blue-500" />
+                    <p className="text-sm">
+                        <span className="font-medium text-blue-500">Recommend!</span> Revoke freeze right, you will make coin safer for potential buyers of your coin and get more sales. DEX scanners will mark your coin as safe.
+                    </p>
+                </div>
 
                 <div className="flex items-center justify-between bg-white">
                     <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                             <button
                                 onClick={() => handleInputChange('governanceEnabled', !state.basicInfo.data.governanceEnabled)}
-                                className={`
-                                relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out
+                                className={`                                relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out
                                 ${state.basicInfo.data.governanceEnabled ? 'bg-black' : 'bg-gray-200'}
                                 `}
                             >
@@ -540,3 +587,4 @@ const BasicInformation = ({ setCurrentStep, currentStep }: BasicInformationProps
 };
 
 export default BasicInformation;
+

@@ -19,7 +19,9 @@ const BondingCurve = ({ setCurrentStep, currentStep }: BondingCurveProps) => {
     };
 
     const handlePriceChange = (field: 'initialPrice' | 'targetPrice', value: string) => {
-        updateBondingCurve({ [field]: parseFloat(value) || 0 });
+        const numValue = value.replace(/,/g, '.');
+        
+        updateBondingCurve({ [field]: numValue });
     };
 
     return (
@@ -85,13 +87,11 @@ const BondingCurve = ({ setCurrentStep, currentStep }: BondingCurveProps) => {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Initial Price(SOL)</label>
                                 <input
-                                    type="number"
-                                    value={state.bondingCurve.data.initialPrice || ''}
+                                    type="text"
+                                    value={state.bondingCurve.data.initialPrice}
                                     placeholder='0.02'
                                     onChange={(e) => handlePriceChange('initialPrice', e.target.value)}
                                     className="w-full p-2 border border-gray-300 rounded-md"
-                                    step="0.01"
-                                    min="0"
                                 />
                                 <p className="text-xs text-gray-500">The starting price of the token</p>
                             </div>

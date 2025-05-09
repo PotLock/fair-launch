@@ -273,22 +273,70 @@ const Liquidity = ({ setCurrentStep, currentStep }: LiquidityProps) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between border border-gray-200 rounded-lg p-4 bg-gray-50">
-                            <div className="flex items-center gap-2">
-                                <div className="font-medium">Anti-Bot Protection</div>
-                                <IconInfoCircle className="w-4 h-4 cursor-pointer" />
+                        <div className="flex flex-col gap-2 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="font-medium">Anti-Bot Protection</div>
+                                    <IconInfoCircle className="w-4 h-4 cursor-pointer" />
+                                </div>
+                                <button
+                                    onClick={() => updateLiquidityField('isAutoBotProtectionEnabled', !data.isAutoBotProtectionEnabled)}
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
+                                        data.isAutoBotProtectionEnabled ? 'bg-black' : 'bg-gray-200'
+                                    }`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                                        data.isAutoBotProtectionEnabled ? 'translate-x-6' : 'translate-x-1'
+                                    }`} />
+                                </button>
                             </div>
-                            <button
-                                onClick={() => updateLiquidityField('isAutoBotProtectionEnabled', !data.isAutoBotProtectionEnabled)}
-                                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                                    data.isAutoBotProtectionEnabled ? 'bg-black' : 'bg-gray-200'
-                                }`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                    data.isAutoBotProtectionEnabled ? 'translate-x-6' : 'translate-x-1'
-                                }`} />
-                            </button>
+                            {data.isAutoBotProtectionEnabled && (
+                                <div className="space-y-4 border-gray-200  bg-gray-50 mt-2">
+                                    <div>
+                                        <label className="block text-sm font-medium">Custom Slippage Tolerance (%)</label>
+                                        <input
+                                            type="number"
+                                            min={0.1}
+                                            max={10}
+                                            step={0.1}
+                                            className="w-full border border-gray-200 rounded-md p-2"
+                                            placeholder="0.5"
+                                            value={data.antiBotSlippageTolerance ?? ''}
+                                            onChange={e => updateLiquidityField('antiBotSlippageTolerance', parseFloat(e.target.value) || 0)}
+                                        />
+                                        <span className="text-xs text-gray-500">Maximum allowed price movement to prevent bot-driven exploits (0.1% - 10%)</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium">Max Transaction Amount (%)</label>
+                                        <input
+                                            type="number"
+                                            min={0.1}
+                                            max={100}
+                                            step={0.1}
+                                            className="w-full border border-gray-200 rounded-md p-2"
+                                            placeholder="1"
+                                            value={data.antiBotMaxTxAmount ?? ''}
+                                            onChange={e => updateLiquidityField('antiBotMaxTxAmount', parseFloat(e.target.value) || 0)}
+                                        />
+                                        <span className="text-xs text-gray-500">Maximum percentage of total supply that can be transacted at once</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium">Trading Cooldown (seconds)</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className="w-full border border-gray-200 rounded-md p-2"
+                                            placeholder="180"
+                                            value={data.antiBotCooldown ?? ''}
+                                            onChange={e => updateLiquidityField('antiBotCooldown', parseInt(e.target.value) || 0)}
+                                        />
+                                        <span className="text-xs text-gray-500">Minimum time between transactions from the same wallet (0 for no cooldown)</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
+                        
 
                         <div className="space-y-4">
                             <div className='space-y-1'>

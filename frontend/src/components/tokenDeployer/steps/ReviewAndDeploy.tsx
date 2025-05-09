@@ -380,7 +380,7 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                 <div className='bg-gray-50 p-4 rounded-lg'>
                     <p className='text-sm text-gray-500'>Estimated Deployment Cost</p>
                     <div className='flex items-center gap-2 mt-1'>
-                        <p className='font-medium'>0.005 SOL</p>
+                        <p className='font-medium flex flex-row gap-2 items-center'>0.005 SOL <img src="/chains/sol.jpeg" alt="Solana" className="w-4 h-4" /></p>
                         <span className='text-gray-500'>≈ $0.75 USD</span>
                     </div>
                 </div>

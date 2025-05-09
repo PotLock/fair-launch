@@ -2,6 +2,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react';
 import { InfoIcon, UploadIcon } from 'lucide-react';
 import { useTokenDeployer } from '../../../context/TokenDeployerContext';
+import { PublicKey } from '@solana/web3.js';
 
 interface LaunchpadProps {
     setCurrentStep: (step: number) => void;
@@ -45,12 +46,41 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
     // };
 
     const handleAddressChange = (index: number, value: string) => {
-        const newAddresses = [...data.whitelist.data.walletAddresses];
-        newAddresses[index] = value;
-        updateField('whitelist', {
-            ...data.whitelist,
-            data: { ...data.whitelist.data, walletAddresses: newAddresses }
-        });
+        try {
+            // Only validate if there's a value
+            if (value.trim()) {
+                new PublicKey(value);
+            }
+            
+            const newAddresses = [...data.whitelist.data.walletAddresses];
+            newAddresses[index] = value;
+            updateField('whitelist', {
+                ...data.whitelist,
+                data: { ...data.whitelist.data, walletAddresses: newAddresses },
+                errors: {
+                    ...data.whitelist.errors,
+                    walletAddresses: {
+                        ...data.whitelist.errors?.walletAddresses,
+                        [index]: undefined // Clear error when address is valid
+                    }
+                }
+            });
+        } catch (error) {
+            // If validation fails, still update the value but mark it as invalid
+            const newAddresses = [...data.whitelist.data.walletAddresses];
+            newAddresses[index] = value;
+            updateField('whitelist', {
+                ...data.whitelist,
+                data: { ...data.whitelist.data, walletAddresses: newAddresses },
+                errors: {
+                    ...data.whitelist.errors,
+                    walletAddresses: {
+                        ...data.whitelist.errors?.walletAddresses,
+                        [index]: 'Invalid Solana wallet address'
+                    }
+                }
+            });
+        }
     };
 
     const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -157,9 +187,9 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                             <div className='space-y-2 mb-2'>
                                 <label className="block text-sm font-medium">Soft Cap (SOL)</label>
                                 <input 
-                                    type="number" 
+                                    type="text" 
                                     value={data.softCap || ''}
-                                    onChange={(e) => updateField('softCap', Number(e.target.value))}
+                                    onChange={(e) => updateField('softCap', e.target.value)}
                                     placeholder="0.02"
                                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
                                 />
@@ -170,9 +200,9 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                             <div className='space-y-2 mb-2'>
                                 <label className="block text-sm font-medium">Hard Cap (SOL)</label>
                                 <input 
-                                    type="number" 
+                                    type="text" 
                                     value={data.hardCap || ''}
-                                    onChange={(e) => updateField('hardCap', Number(e.target.value))}
+                                    onChange={(e) => updateField('hardCap', e.target.value)}
                                     placeholder="750"
                                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
                                 />
@@ -206,9 +236,9 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                         <div className="space-y-2">
                             <label className="block text-sm font-medium">Minimum Contribution (SOL)</label>
                             <input 
-                                type="number" 
+                                type="text" 
                                 value={data.minContribution || ''}
-                                onChange={(e) => updateField('minContribution', Number(e.target.value))}
+                                onChange={(e) => updateField('minContribution', e.target.value)}
                                 placeholder="0.1"
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
                             />
@@ -217,9 +247,9 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                         <div className="space-y-2">
                             <label className="block text-sm font-medium">Maximum Contribution (SOL)</label>
                             <input 
-                                type="number" 
+                                type="text" 
                                 value={data.maxContribution || ''}
-                                onChange={(e) => updateField('maxContribution', Number(e.target.value))}
+                                onChange={(e) => updateField('maxContribution', e.target.value)}
                                 placeholder="10"
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
                             />
@@ -237,11 +267,11 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium">Token Price</label>
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         value={data.whitelist.data.tokenPrice || ''}
                                         onChange={(e) => updateField('whitelist', { 
                                             ...data.whitelist,
-                                            data: { ...data.whitelist.data, tokenPrice: Number(e.target.value) }
+                                            data: { ...data.whitelist.data, tokenPrice: e.target.value }
                                         })}
                                         placeholder="0.1"
                                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
@@ -251,11 +281,11 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium">Whitelist Duration (days)</label>
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         value={data.whitelist.data.whitelistDuration || ''}
                                         onChange={(e) => updateField('whitelist', {
                                             ...data.whitelist,
-                                            data: { ...data.whitelist.data, whitelistDuration: Number(e.target.value) }
+                                            data: { ...data.whitelist.data, whitelistDuration: e.target.value }
                                         })}
                                         placeholder="10"
                                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black" 
@@ -277,8 +307,17 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                                                 value={address}
                                                 onChange={(e) => handleAddressChange(index, e.target.value)}
                                                 placeholder="Type wallet address here"
-                                                className="flex-1 focus:outline-none" 
+                                                className={`flex-1 focus:outline-none ${
+                                                    data.whitelist.errors?.walletAddresses?.[index] 
+                                                    ? 'border-b border-red-500' 
+                                                    : 'border-b border-gray-200'
+                                                }`}
                                             />
+                                            {data.whitelist.errors?.walletAddresses?.[index] && (
+                                                <div className="text-red-500 text-sm">
+                                                    {data.whitelist.errors.walletAddresses[index]}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -333,11 +372,11 @@ const Launchpad = ({ setCurrentStep, currentStep }: LaunchpadProps) => {
                                     <div className='space-y-2'>
                                         <label className="block text-sm font-medium">Token Price</label>
                                         <input 
-                                            type="number" 
+                                            type="text" 
                                             value={data.fairLaunch.data.tokenPrice || ''}
                                             onChange={(e) => updateField('fairLaunch', {
                                                 ...data.fairLaunch,
-                                                data: { ...data.fairLaunch.data, tokenPrice: Number(e.target.value) }
+                                                data: { ...data.fairLaunch.data, tokenPrice: e.target.value }
                                             })}
                                             placeholder='0.1' 
                                             className='w-full p-2 border border-gray-300 rounded-md focus:ring-black focus:border-black' 

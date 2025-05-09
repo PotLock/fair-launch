@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { PublicKey } from "@solana/web3.js";
 
 interface TokenInfo {
     name: string;
@@ -6,7 +7,8 @@ interface TokenInfo {
     description?: string;
     supply: string;
     decimals: string;
-    logo: File | null;
+    logo?: File | null;
+    logoUrl?: string;
     socialEnabled?: boolean;
     socialLinks?: {
         website?: string;
@@ -18,6 +20,7 @@ interface TokenInfo {
     revokeMintEnabled?: boolean;
     revokeFreezeEnabled?: boolean;
     governanceEnabled?: boolean;
+    isLogoUrl?: boolean;
 }
 
 interface ValidationErrors {
@@ -58,6 +61,9 @@ interface LiquidityItem {
     isAutoListingEnabled: boolean;
     isPriceProtectionEnabled: boolean;
     isMarketMakingEnabled: boolean;
+    antiBotSlippageTolerance?: number;
+    antiBotMaxTxAmount?: number;
+    antiBotCooldown?: number;
 }
 
 
@@ -92,6 +98,9 @@ interface LaunchpadType {
             tokenPrice: number;
             whitelistDuration: number;
             walletAddresses: string[];
+        };
+        errors?: {
+            walletAddresses?: { [key: number]: string };
         };
     };
     fairLaunch: {
@@ -213,109 +222,298 @@ interface TokenDeployerContextType {
         field: K,
         value: TokenDeployerState['liquidity']['data'][K]
     ) => void;
+    clearSavedState: () => void;
 }
 
 const TokenDeployerContext = createContext<TokenDeployerContextType | undefined>(undefined);
 
-export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => {
-    const [state, setState] = useState<TokenDeployerState>({
+const STORAGE_KEY = 'token_deployer_state';
+
+// Helper function to convert File to base64
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+    });
+};
+
+// Helper function to prepare state for storage
+const prepareStateForStorage = async (state: TokenDeployerState) => {
+    const stateToStore = { ...state };
+    
+    // Handle logo file
+    if (stateToStore.basicInfo.data.logo instanceof File) {
+        try {
+            const base64String = await fileToBase64(stateToStore.basicInfo.data.logo);
+            stateToStore.basicInfo.data.logoUrl = base64String;
+            stateToStore.basicInfo.data.logo = null;
+        } catch (error) {
+            console.error('Error converting logo to base64:', error);
+        }
+    }
+    
+    return stateToStore;
+};
+
+// Helper function to restore state from storage
+const restoreStateFromStorage = (savedState: any): TokenDeployerState => {
+    return {
+        ...savedState,
         basicInfo: {
-            enabled: true,
+            ...savedState.basicInfo,
             data: {
-                name: '',
-                symbol: '',
-                description: '',
-                supply: '',
-                decimals: '',
-                logo: null,
-                socialEnabled: false,
+                ...savedState.basicInfo.data,
+                logo: null, // Ensure logo is null when restoring
+                logoUrl: savedState.basicInfo.data.logoUrl || undefined // Keep the base64 URL if it exists
+            }
+        }
+    };
+};
+
+export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => {
+    const [state, setState] = useState<TokenDeployerState>(() => {
+        // Try to load state from localStorage on initial render
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        if (savedState) {
+            try {
+                const parsedState = JSON.parse(savedState);
+                return restoreStateFromStorage(parsedState);
+            } catch (error) {
+                console.error('Error parsing saved state:', error);
+            }
+        }
+        
+        // Return default state if no saved state exists
+        return {
+            basicInfo: {
+                enabled: true,
+                data: {
+                    name: '',
+                    symbol: '',
+                    description: '',
+                    supply: '',
+                    decimals: '',
+                    logo: null,
+                    logoUrl: undefined,
+                    socialEnabled: false,
+                    isLogoUrl: false,
+                },
+                isValid: false,
+                errors: {}
             },
-            isValid: false,
-            errors: {}
-        },
-        allocation: {
-            enabled: true,
-            data: [],
-            isValid: false,
-            errors: {}
-        },
-        vesting: {
-            enabled: true,
-            data: []
-        },
-        bondingCurve: {
-            enabled: true,
-            data: {
-                curveType: 'Linear',
-                initialPrice: 0,
-                targetPrice: 0,
-                maxSupply: 0
-            }
-        },
-        liquidity: {
-            enabled: true,
-            data: {
-                launchLiquidityOn: {
-                    name: 'PumpSwap',
-                    icon: '/icons/pumpdotfun.png',
-                    status: 'trending'
-                },
-                liquidityType: 'double',
-                liquiditySource: 'bonding',
-                liquidityPercentage: 30,
-                liquidityLockupPeriod: 180,
-                isAutoBotProtectionEnabled: true,
-                isAutoListingEnabled: true,
-                isPriceProtectionEnabled: true,
-                isMarketMakingEnabled: true
-            }
-        },
-        fees: {
-            enabled: true,
-            data: {
-                mintFee: 0,
-                burnFee: 0,
-                transferFee: 0,
-                adminControls: false,
-                feeRecipientAddress: '',
-                adminAddress: ''
-            }
-        },
-        launchpad: {
-            enabled: true,
-            data: {
-                launchType: 'Whitelist',
-                softCap: 0,
-                hardCap: 0,
-                startTime: '',
-                endTime: '',
-                minContribution: 0,
-                maxContribution: 0,
-                whitelist: {
-                    enabled: true,
-                    data: {
-                        tokenPrice: 0,
-                        whitelistDuration: 0,
-                        walletAddresses: []
-                    }
-                },
-                fairLaunch: {
-                    enabled: false,
-                    data: {
-                        tokenPrice: 0,
-                        maxTokensPerWallet: 0,
-                        distributionDelay: 0
+            allocation: {
+                enabled: true,
+                data: [{
+                    description: '',
+                    percentage: 100,
+                    walletAddress: '',
+                    lockupPeriod: 0
+                }],
+                isValid: false,
+                errors: {}
+            },
+            vesting: {
+                enabled: true,
+                data: []
+            },
+            bondingCurve: {
+                enabled: true,
+                data: {
+                    curveType: 'Linear',
+                    initialPrice: 0,
+                    targetPrice: 0,
+                    maxSupply: 0
+                }
+            },
+            liquidity: {
+                enabled: true,
+                data: {
+                    launchLiquidityOn: {
+                        name: 'PumpSwap',
+                        icon: '/icons/pumpdotfun.png',
+                        status: 'trending'
+                    },
+                    liquidityType: 'double',
+                    liquiditySource: 'bonding',
+                    liquidityPercentage: 30,
+                    liquidityLockupPeriod: 180,
+                    isAutoBotProtectionEnabled: true,
+                    isAutoListingEnabled: true,
+                    isPriceProtectionEnabled: true,
+                    isMarketMakingEnabled: true,
+                    antiBotSlippageTolerance: 1,
+                    antiBotMaxTxAmount: 1,
+                    antiBotCooldown: 180
+                }
+            },
+            fees: {
+                enabled: true,
+                data: {
+                    mintFee: 0,
+                    burnFee: 0,
+                    transferFee: 0,
+                    adminControls: false,
+                    feeRecipientAddress: '',
+                    adminAddress: ''
+                }
+            },
+            launchpad: {
+                enabled: true,
+                data: {
+                    launchType: 'Whitelist',
+                    softCap: 0,
+                    hardCap: 0,
+                    startTime: '',
+                    endTime: '',
+                    minContribution: 0,
+                    maxContribution: 0,
+                    whitelist: {
+                        enabled: true,
+                        data: {
+                            tokenPrice: 0,
+                            whitelistDuration: 0,
+                            walletAddresses: []
+                        }
+                    },
+                    fairLaunch: {
+                        enabled: false,
+                        data: {
+                            tokenPrice: 0,
+                            maxTokensPerWallet: 0,
+                            distributionDelay: 0
+                        }
                     }
                 }
             }
-        }
+        };
     });
 
-    console.log(state);
+    // Save state to localStorage whenever it changes
+    useEffect(() => {
+        const saveState = async () => {
+            try {
+                const stateToStore = await prepareStateForStorage(state);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToStore));
+            } catch (error) {
+                console.error('Error saving state to localStorage:', error);
+            }
+        };
+        
+        saveState();
+    }, [state]);
+
+    // Add function to clear saved state
+    const clearSavedState = () => {
+        localStorage.removeItem(STORAGE_KEY);
+        setState({
+            basicInfo: {
+                enabled: true,
+                data: {
+                    name: '',
+                    symbol: '',
+                    description: '',
+                    supply: '',
+                    decimals: '',
+                    logo: null,
+                    logoUrl: undefined,
+                    socialEnabled: false,
+                    isLogoUrl: false,
+                },
+                isValid: false,
+                errors: {}
+            },
+            allocation: {
+                enabled: true,
+                data: [{
+                    description: '',
+                    percentage: 100,
+                    walletAddress: '',
+                    lockupPeriod: 0
+                }],
+                isValid: false,
+                errors: {}
+            },
+            vesting: {
+                enabled: true,
+                data: []
+            },
+            bondingCurve: {
+                enabled: true,
+                data: {
+                    curveType: 'Linear',
+                    initialPrice: 0,
+                    targetPrice: 0,
+                    maxSupply: 0
+                }
+            },
+            liquidity: {
+                enabled: true,
+                data: {
+                    launchLiquidityOn: {
+                        name: 'PumpSwap',
+                        icon: '/icons/pumpdotfun.png',
+                        status: 'trending'
+                    },
+                    liquidityType: 'double',
+                    liquiditySource: 'bonding',
+                    liquidityPercentage: 30,
+                    liquidityLockupPeriod: 180,
+                    isAutoBotProtectionEnabled: true,
+                    isAutoListingEnabled: true,
+                    isPriceProtectionEnabled: true,
+                    isMarketMakingEnabled: true,
+                    antiBotSlippageTolerance: 1,
+                    antiBotMaxTxAmount: 1,
+                    antiBotCooldown: 180
+                }
+            },
+            fees: {
+                enabled: true,
+                data: {
+                    mintFee: 0,
+                    burnFee: 0,
+                    transferFee: 0,
+                    adminControls: false,
+                    feeRecipientAddress: '',
+                    adminAddress: ''
+                }
+            },
+            launchpad: {
+                enabled: true,
+                data: {
+                    launchType: 'Whitelist',
+                    softCap: 0,
+                    hardCap: 0,
+                    startTime: '',
+                    endTime: '',
+                    minContribution: 0,
+                    maxContribution: 0,
+                    whitelist: {
+                        enabled: true,
+                        data: {
+                            tokenPrice: 0,
+                            whitelistDuration: 0,
+                            walletAddresses: []
+                        }
+                    },
+                    fairLaunch: {
+                        enabled: false,
+                        data: {
+                            tokenPrice: 0,
+                            maxTokensPerWallet: 0,
+                            distributionDelay: 0
+                        }
+                    }
+                }
+            }
+        });
+    };
 
     const validateBasicInfo = () => {
         const errors: ValidationErrors = {};
-        const { name, symbol, supply, decimals, logo } = state.basicInfo.data;
+        const { name, symbol, supply, decimals, logo, logoUrl, isLogoUrl } = state.basicInfo.data;
 
         if (!name.trim()) {
             errors.name = 'Name is required';
@@ -341,9 +539,19 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             errors.decimals = 'Decimals must be between 0 and 18';
         }
 
-        if (!logo) {
-            errors.logo = 'Logo is required';
+        // Only validate logo if neither logo nor logoUrl exists
+        if (isLogoUrl) {
+            if (!logoUrl) {
+                errors.logo = 'Logo URL is required';
+            }
         }
+        
+        if (!isLogoUrl) {
+            if (!logo) {
+                errors.logo = 'Logo is required';
+            }
+        }
+
 
         const isValid = Object.keys(errors).length === 0;
 
@@ -367,16 +575,26 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         const errors: { totalPercentage?: string; walletAddresses?: string[] } = {};
         const walletErrors: string[] = [];
 
+        // Ensure there's at least one allocation
         if (state.allocation.data.length === 0) {
-            errors.totalPercentage = 'At least one allocation is required';
+            updateAllocation([{
+                description: '',
+                percentage: 100,
+                walletAddress: '',
+                lockupPeriod: 0
+            }]);
         }
 
         // Validate wallet addresses
         state.allocation.data.forEach((item, index) => {
             if (!item.walletAddress || !item.walletAddress.trim()) {
                 walletErrors[index] = 'Wallet address is required';
-            } else if (!/^[A-HJ-NP-Za-km-z1-9]*$/.test(item.walletAddress)) {
-                walletErrors[index] = 'Invalid Solana wallet address format';
+            } else {
+                try {
+                    new PublicKey(item.walletAddress);
+                } catch (error) {
+                    walletErrors[index] = 'Invalid Solana wallet address';
+                }
             }
         });
 
@@ -445,38 +663,7 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
 
     const validateFees = () => {
         if (!state.fees.enabled) return true;
-
-        const errors: { [key: string]: string } = {};
-        const { mintFee, burnFee, transferFee, adminControls, feeRecipientAddress, adminAddress } = state.fees.data;
-
-        if (mintFee < 0 || mintFee > 100) {
-            errors.mintFee = 'Mint fee must be between 0 and 100';
-        }
-        if (burnFee < 0 || burnFee > 100) {
-            errors.burnFee = 'Burn fee must be between 0 and 100';
-        }
-        if (transferFee < 0 || transferFee > 100) {
-            errors.transferFee = 'Transfer fee must be between 0 and 100';
-        }
-        if (!feeRecipientAddress || !/^[A-HJ-NP-Za-km-z1-9]*$/.test(feeRecipientAddress)) {
-            errors.feeRecipientAddress = 'Invalid fee recipient address';
-        }
-        if (adminControls && adminAddress && !/^[A-HJ-NP-Za-km-z1-9]*$/.test(adminAddress)) {
-            errors.adminAddress = 'Invalid admin address';
-        }
-
-        const isValid = Object.keys(errors).length === 0;
-
-        setState(prev => ({
-            ...prev,
-            fees: {
-                ...prev.fees,
-                isValid,
-                errors
-            }
-        }));
-
-        return isValid;
+        return state.fees.isValid ?? false;
     };
 
     const validateLiquidity = () => {
@@ -512,9 +699,7 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         const errors: { [key: string]: string } = {};
         const { initialPrice, targetPrice, maxSupply } = state.bondingCurve.data;
 
-        if (initialPrice <= 0) {
-            errors.initialPrice = 'Initial price must be greater than 0';
-        }
+
         if (targetPrice <= initialPrice) {
             errors.targetPrice = 'Target price must be greater than initial price';
         }
@@ -580,11 +765,14 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
 
     const updateBasicInfo = (data: Partial<TokenInfo>) => {
         setState(prev => {
+            const newData = { ...prev.basicInfo.data, ...data };
             const newState = {
                 ...prev,
                 basicInfo: {
                     ...prev.basicInfo,
-                    data: { ...prev.basicInfo.data, ...data }
+                    data: newData,
+                    // Clear errors when data changes
+                    errors: {}
                 }
             };
             return newState;
@@ -632,13 +820,54 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
     };
 
     const updateFees = (data: Partial<TokenDeployerState['fees']['data']>) => {
-        setState(prev => ({
-            ...prev,
-            fees: {
-                ...prev.fees,
-                data: { ...prev.fees.data, ...data }
+        setState(prev => {
+            const newFeesData = { ...prev.fees.data, ...data };
+            // Validate immediately after update
+            const errors: { [key: string]: string } = {};
+            const { mintFee, burnFee, transferFee, adminControls, feeRecipientAddress, adminAddress } = newFeesData;
+
+            if (mintFee < 0 || mintFee > 100) {
+                errors.mintFee = 'Mint fee must be between 0 and 100';
             }
-        }));
+            if (burnFee < 0 || burnFee > 100) {
+                errors.burnFee = 'Burn fee must be between 0 and 100';
+            }
+            if (transferFee < 0 || transferFee > 100) {
+                errors.transferFee = 'Transfer fee must be between 0 and 100';
+            }
+
+            // Validate fee recipient address
+            if (!feeRecipientAddress || feeRecipientAddress.trim() === '') {
+                errors.feeRecipientAddress = 'Fee recipient address is required';
+            } else {
+                try {
+                    new PublicKey(feeRecipientAddress.trim());
+                } catch (error) {
+                    errors.feeRecipientAddress = 'Invalid Solana wallet address';
+                }
+            }
+
+            // Validate admin address if admin controls are enabled
+            if (adminControls && adminAddress && adminAddress.trim() !== '') {
+                try {
+                    new PublicKey(adminAddress.trim());
+                } catch (error) {
+                    errors.adminAddress = 'Invalid Solana wallet address';
+                }
+            }
+
+            const isValid = Object.keys(errors).length === 0;
+
+            return {
+                ...prev,
+                fees: {
+                    ...prev.fees,
+                    data: newFeesData,
+                    isValid,
+                    errors
+                }
+            };
+        });
     };
 
     const updateLaunchpad = (data: Partial<TokenDeployerState['launchpad']['data']>) => {
@@ -732,7 +961,8 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             updateFees,
             updateLaunchpad,
             setStepEnabled,
-            updateLiquidityField
+            updateLiquidityField,
+            clearSavedState
         }}>
             {children}
         </TokenDeployerContext.Provider>

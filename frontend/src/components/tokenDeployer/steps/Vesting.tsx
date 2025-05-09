@@ -174,7 +174,12 @@ const Vesting = ({ setCurrentStep, currentStep }: VestingProps) => {
                                         </div>
 
                                         <div>
-                                            <label className="text-sm text-gray-600 font-medium block mb-2">Percentage: {vesting.percentage}%</label>
+                                            <label className="text-sm text-gray-600 font-medium block mb-2">
+                                                Percentage: {vesting.percentage}%
+                                                <span className="text-xs text-gray-500 ml-2">
+                                                    ({Math.round((vesting.percentage / 100) * Number(state.basicInfo.data.supply)).toLocaleString()} tokens)
+                                                </span>
+                                            </label>
                                             <div className="space-y-2">
                                                 <input
                                                     type="range"

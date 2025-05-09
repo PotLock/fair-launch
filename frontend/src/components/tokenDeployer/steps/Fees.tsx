@@ -12,7 +12,6 @@ const Fees = ({ setCurrentStep, currentStep }: FeesProps) => {
 
     const handleFeeChange = (field: keyof typeof state.fees.data, value: string | boolean) => {
         updateFees({ [field]: value });
-        setTimeout(validateFees, 0);
     };
 
     const handleNext = () => {

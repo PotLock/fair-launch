@@ -15,9 +15,9 @@ const TokenDeployerSteps: React.FC<{ currentStep: number }> = ({
         {steps.map((step, index) => (
           <div
             key={index}
-            className={`flex gap-3 group items-center rounded-lg p-2 ${index <= currentStep && 'bg-gray-100/80'}`}
+            className={`flex gap-3 group items-center rounded-lg p-2 ${index < currentStep && 'bg-gray-100/80'}`}
           >
-            {index <= currentStep ? (
+            {index < currentStep ? (
               <IconCircleCheck className="w-5 h-5 text-green-500 mt-0.5" />
             ) : (
               <div className={`w-4 h-4 rounded-full border-2 mt-0.5 ${
