@@ -110,7 +110,12 @@ const Allocation = ({ setCurrentStep, currentStep }: AllocationProps) => {
 
                                     <div>
                                         <div className="flex flex-col">
-                                            <label htmlFor="percentage" className="text-sm text-black font-medium mt-1 block">Percentage: {allocation.percentage}%</label>
+                                            <label htmlFor="percentage" className="text-sm text-black font-medium mt-1 block">
+                                                Percentage: {allocation.percentage}%
+                                                <span className="text-xs text-gray-500 ml-2">
+                                                    ({Math.round((allocation.percentage / 100) * Number(state.basicInfo.data.supply)).toLocaleString()} tokens)
+                                                </span>
+                                            </label>
                                             <div className="flex-1">
                                                 <input
                                                     type="range"

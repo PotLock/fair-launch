@@ -37,7 +37,7 @@ export const useDeployToken = () => {
     curveConfig: PublicKey
   ) => {
     if (!anchorWallet?.publicKey || !publicKey) {
-      toast.error("⚠️ Wallet is not ready! Please connect wallet.");
+      toast.error("Please connect wallet!");
       return;
     }
 
@@ -82,7 +82,7 @@ export const useDeployToken = () => {
   const deployToken = useCallback(async () => {
     try {
       if (!anchorWallet?.publicKey || !publicKey || !signTransaction) {
-        toast.error("⚠️ Wallet is not ready!");
+        toast.error("Please connect wallet!");
         return;
       }
 
