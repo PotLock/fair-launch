@@ -15,7 +15,6 @@ use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use anchor_spl::token_interface::{Token2022, TokenInterface};
 use std::str::FromStr;
-
 #[derive(Accounts)]
 pub struct InitializeMeteoraPool<'info> {
     /// BEGINNING OF FAIRLAUNCH'S ACCOUNT
@@ -317,6 +316,7 @@ pub fn initialize_pool_meteora_with_config(ctx: Context<InitializeMeteoraPool>) 
 }
 
 #[derive(Accounts)]
+#[instruction(index: u16)]
 pub struct InitializePumpswapPool<'info> {
     /// BEGINNING OF FAIRLAUNCH'S ACCOUNT
 
@@ -334,14 +334,11 @@ pub struct InitializePumpswapPool<'info> {
     )]
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
-    pub token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
-        associated_token::mint = token_mint,
-        associated_token::authority = bonding_curve_account
-    )]
-    pub pool_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK:
+    pub token_mint: UncheckedAccount<'info>,
+    /// CHECK:
+    #[account(mut)]
+    pub pool_token_account: UncheckedAccount<'info>,
 
     /// CHECK:
     #[account(
@@ -396,14 +393,20 @@ pub struct InitializePumpswapPool<'info> {
 
     pub system_program: Program<'info, System>,
 
+    /// Check: token 2022 program
+    pub token_2022_program: Program<'info, Token2022>,
+
     /// CHECK: Associated token program account
     pub associated_token_program: UncheckedAccount<'info>,
 
     /// CHECK: Token program account
-    pub base_token_program: Program<'info, Token>,
+    pub base_token_program: Interface<'info, TokenInterface>,
 
     /// CHECK: Quote token program account
-    pub quote_token_program: Program<'info, Token>,
+    pub quote_token_program: Interface<'info, TokenInterface>,
+
+    /// CHECK: Event authority
+    pub event_authority: UncheckedAccount<'info>,
 
     /// CHECK: Pumpswap program
     pub pumpswap_program: AccountInfo<'info>,
@@ -426,9 +429,10 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let pumpswap_program_id: Pubkey = Pubkey::from_str(PUMP_SWAP_PROGRAM_KEY).unwrap();
 
-    let cpi_accounts = Transfer {
+    let cpi_accounts = anchor_spl::token_interface::TransferChecked {
         from: ctx.accounts.pool_token_account.to_account_info(),
         to: ctx.accounts.user_quote_token_account.to_account_info(),
+        mint: ctx.accounts.quote_mint.to_account_info(),
         authority: ctx.accounts.bonding_curve_account.to_account_info(),
     };
 
@@ -443,17 +447,30 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
     msg!("quote_token_amount: {}", quote_token_amount);
     msg!("quote token: {:?}", ctx.accounts.quote_mint.to_account_info());
-    msg!("Pool Bonding Curve : {:?}", ctx.accounts.pool_token_account.to_account_info());
+    msg!("Pool Token Bonding Curve : {:?}", ctx.accounts.pool_token_account.to_account_info());
 
     msg!("Start transfer token");
+    let quote_amount_in = 10000000u64;
 
-    token::transfer(
+    // token::transfer(
+    //     CpiContext::new_with_signer(
+    //         ctx.accounts.quote_token_program.to_account_info(),
+    //         cpi_accounts,
+    //         signer_seeds,
+    //     ),
+    //     quote_token_amount,
+    // )?;
+
+    anchor_spl::token_interface::transfer_checked(
         CpiContext::new_with_signer(
             ctx.accounts.quote_token_program.to_account_info(),
             cpi_accounts,
             signer_seeds,
         ),
-        quote_token_amount,
+        quote_amount_in,
+        //todo 
+        6,
+
     )?;
 
     msg!("Transfer token success");
@@ -464,6 +481,8 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     msg!("base_token_amount: {}", base_token_amount);
     msg!("pool_sol_vault: {:?}", ctx.accounts.pool_sol_vault.to_account_info());
+    let base_amount_in = 10000000u64;
+    //todo 
     system_program::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
@@ -477,9 +496,10 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
                 &[ctx.bumps.pool_sol_vault],
             ]],
         ),
-        base_token_amount,
+        base_amount_in,
     )?;
-
+    msg!("go to here ");
+    msg!("user_base_token_account: {:?}", ctx.accounts.user_base_token_account.to_account_info());
     let cpi_accounts = token::SyncNative {
         account: ctx.accounts.user_base_token_account.to_account_info(),
     };
@@ -506,9 +526,11 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         AccountMeta::new(ctx.accounts.pool_base_token_account.key(), false),
         AccountMeta::new(ctx.accounts.pool_quote_token_account.key(), false),
         AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.associated_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.token_2022_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.base_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.quote_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.associated_token_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.event_authority.key(), false),
         AccountMeta::new_readonly(ctx.accounts.pumpswap_program.key(), false),
     ];
 
@@ -519,13 +541,15 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         is_writable: true,
     }));
 
-    let data = get_pump_pool_create_ix_data(index, base_token_amount, quote_token_amount);
-
+    let data = get_pump_pool_create_ix_data(index, base_amount_in, quote_amount_in);
+    msg!("data: {:?}", data);
     let instruction = Instruction {
         program_id: pumpswap_program_id,
         accounts,
         data,
     };
+
+    msg!("instruction: {:?}", instruction);
 
     invoke_signed(
         &instruction,
@@ -542,9 +566,11 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
             ctx.accounts.pool_quote_token_account.to_account_info(),
             ctx.accounts.creator.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.associated_token_program.to_account_info(),
+            ctx.accounts.token_2022_program.to_account_info(),
             ctx.accounts.base_token_program.to_account_info(),
             ctx.accounts.quote_token_program.to_account_info(),
+            ctx.accounts.associated_token_program.to_account_info(),
+            ctx.accounts.event_authority.to_account_info(),
             ctx.accounts.pumpswap_program.to_account_info(),
         ],
         signer_seeds,

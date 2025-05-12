@@ -16,5 +16,5 @@ pub use sell::*;
 
 
 
-// pub mod migration;
-// pub use migration::*;
+pub mod migration;
+pub use migration::*;

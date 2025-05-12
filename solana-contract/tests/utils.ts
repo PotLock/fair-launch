@@ -262,13 +262,15 @@ export const getPumpSwapPDA = (
   const poolBaseTokenAccount = getAssociatedTokenAddressSync(
     baseMint,
     pool,
-    true // allowOwnerOffCurve - set to true for PDAs
+    true, // allowOwnerOffCurve - set to true for PDAs
+    TOKEN_PROGRAM_ID
   );
   
   const poolQuoteTokenAccount = getAssociatedTokenAddressSync(
     quoteMint,
     pool,
-    true // allowOwnerOffCurve - set to true for PDAs
+    true, // allowOwnerOffCurve - set to true for PDAs
+    TOKEN_2022_PROGRAM_ID
   );
   const [lpMint] = PublicKey.findProgramAddressSync(
     [Buffer.from("pool_lp_mint"), pool.toBuffer()],
@@ -288,24 +290,27 @@ export const getPumpSwapPDA = (
     quoteMint,
     creator,
     true,
-    TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
-    //TOKEN_2022_PROGRAM_ID
   );
 
   const userPoolTokenAccount = getAssociatedTokenAddressSync(
     lpMint,
     creator,
     true,
-    TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
-    // TOKEN_2022_PROGRAM_ID
   );
   const [globalConfig] = PublicKey.findProgramAddressSync(
     [Buffer.from("global_config")],
     PUMP_SWAP_PROGRAM_ID,
   );
-  return {pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig};
+
+  const [eventAuthority] = PublicKey.findProgramAddressSync(
+    [Buffer.from("event_authority")],
+    PUMP_SWAP_PROGRAM_ID,
+  );
+  return {pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority};
 }
 
 

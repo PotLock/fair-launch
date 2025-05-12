@@ -78,8 +78,8 @@ pub mod bonding_curve {
     //     instructions::initialize_pool_meteora_with_config(ctx)
     // }
 
-    // pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
-    //     instructions::initialize_pool_pumpswap(ctx, index)
-    // }
+    pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
+        instructions::initialize_pool_pumpswap(ctx, index)
+    }
 
 }

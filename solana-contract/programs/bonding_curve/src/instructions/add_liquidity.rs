@@ -3,7 +3,6 @@ use anchor_spl::token_interface::{self, Mint, TokenInterface, TokenAccount, Toke
 use anchor_spl::associated_token::AssociatedToken;
 use crate::consts::*;
 use crate::errors::CustomError;
-use anchor_spl::token::{self, Token};
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
