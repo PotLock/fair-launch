@@ -3,7 +3,8 @@ use crate::errors::CustomError;
 use crate::utils::calc::*;
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use anchor_spl::token;
+use anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount};
 
 use super::BondingCurveType;
 
@@ -52,15 +53,15 @@ pub trait BondingCurveAccount<'info> {
     fn add_liquidity(
         &mut self,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, Mint>,
+            &mut InterfaceAccount<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
         locked_liquidity: bool,
         authority: &Signer<'info>,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
 
@@ -68,14 +69,17 @@ pub trait BondingCurveAccount<'info> {
     fn remove_liquidity(
         &mut self,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            // token mint
+            &mut InterfaceAccount<'info, Mint>,
+            // pool token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
+            // user token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_account: &mut AccountInfo<'info>,
         authority: &Signer<'info>,
         bump: u8,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
 
@@ -83,9 +87,9 @@ pub trait BondingCurveAccount<'info> {
         &mut self,
         // bonding_configuration_account: &Account<'info, CurveConfiguration>,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, Mint>,
+            &mut InterfaceAccount<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
@@ -96,7 +100,7 @@ pub trait BondingCurveAccount<'info> {
         bonding_curve_type: u8,
         // target liquidity for migration
         target_liquidity: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
 
@@ -104,9 +108,9 @@ pub trait BondingCurveAccount<'info> {
         &mut self,
         // bonding_configuration_account: &Account<'info, CurveConfiguration>,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, Mint>,
+            &mut InterfaceAccount<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
@@ -118,7 +122,7 @@ pub trait BondingCurveAccount<'info> {
         bonding_curve_type: u8,
         // target liquidity for migration
         target_liquidity: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()>;
 
@@ -142,19 +146,21 @@ pub trait BondingCurveAccount<'info> {
 
     fn transfer_token_from_pool(
         &self,
-        from: &Account<'info, TokenAccount>,
-        to: &Account<'info, TokenAccount>,
+        from: &InterfaceAccount<'info, TokenAccount>,
+        to: &InterfaceAccount<'info, TokenAccount>,
+        token_mint: &InterfaceAccount<'info, Mint>,
         amount: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
     ) -> Result<()>;
 
     fn transfer_token_to_pool(
         &self,
-        from: &Account<'info, TokenAccount>,
-        to: &Account<'info, TokenAccount>,
+        from: &InterfaceAccount<'info, TokenAccount>,
+        to: &InterfaceAccount<'info, TokenAccount>,
+        token_mint: &InterfaceAccount<'info, Mint>,
         amount: u64,
         authority: &Signer<'info>,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
     ) -> Result<()>;
 }
 
@@ -176,6 +182,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
             .map_err(|_| CustomError::InvalidBondingCurveType)?;
 
+        msg!("total supply  {:?}", self.total_supply);
         if bonding_curve_type == BondingCurveType::Linear {
             return linear_sell_cost(amount, self.reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
@@ -189,9 +196,9 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         &mut self,
         // bonding_configuration_account: &Account<'info, CurveConfiguration>,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, Mint>,
+            &mut InterfaceAccount<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
@@ -202,7 +209,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         bonding_curve_type: u8,
         // target liquidity for migration
         target_liquidity: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         let amount_out = self.calculate_buy_cost(amount, bonding_curve_type)?;
@@ -222,6 +229,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         self.transfer_token_from_pool(
             token_accounts.1,
             token_accounts.2,
+            token_accounts.0,
             amount_out,
             token_program,
         )?;
@@ -237,9 +245,9 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         &mut self,
         // bonding_configuration_account: &Account<'info, CurveConfiguration>,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, Mint>,
+            &mut InterfaceAccount<'info, TokenAccount>,
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
@@ -251,7 +259,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         bonding_curve_type: u8,
         // target liquidity for migration
         target_liquidity: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         let amount_out = self.calculate_sell_cost(amount, bonding_curve_type)?;
@@ -274,6 +282,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         self.transfer_token_to_pool(
             token_accounts.2,
             token_accounts.1,
+            token_accounts.0,
             amount as u64,
             authority,
             token_program,
@@ -298,16 +307,19 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
     fn add_liquidity(
         &mut self,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            // token mint
+            &mut InterfaceAccount<'info, Mint>,
+            // pool token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
+            // user token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
 
         pool_sol_vault: &mut AccountInfo<'info>,
         amount: u64,
         locked_liquidity: bool,
         authority: &Signer<'info>,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         msg!("Adding liquidity to the pool");
@@ -324,14 +336,18 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         // make sure the reserve balance is not exceed the target liquidity
         // TODO!
 
+        msg!("transfer token to pool");
         self.transfer_token_to_pool(
             token_accounts.2,
             token_accounts.1,
+            token_accounts.0,
             amount,
             authority,
             token_program,
         )?;
 
+
+        msg!("transfer sol to pool");
         self.transfer_sol_to_pool(
             authority,
             pool_sol_vault,
@@ -348,19 +364,23 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
     fn remove_liquidity(
         &mut self,
         token_accounts: (
-            &mut Account<'info, Mint>,
-            &mut Account<'info, TokenAccount>,
-            &mut Account<'info, TokenAccount>,
+            // token mint
+            &mut InterfaceAccount<'info, Mint>,
+            // pool token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
+            // user token account 
+            &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
         authority: &Signer<'info>,
         bump: u8,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         self.transfer_token_from_pool(
             token_accounts.1,
             token_accounts.2,
+            token_accounts.0,
             token_accounts.1.amount as u64,
             token_program,
         )?;
@@ -427,17 +447,19 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
 
     fn transfer_token_from_pool(
         &self,
-        from: &Account<'info, TokenAccount>,
-        to: &Account<'info, TokenAccount>,
+        from: &InterfaceAccount<'info, TokenAccount>,
+        to: &InterfaceAccount<'info, TokenAccount>,
+        token_mint: &InterfaceAccount<'info, Mint>,
         amount: u64,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
     ) -> Result<()> {
-        token::transfer(
+        anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 token_program.to_account_info(),
-                token::Transfer {
+                anchor_spl::token_interface::TransferChecked {
                     from: from.to_account_info(),
                     to: to.to_account_info(),
+                    mint: token_mint.to_account_info(),
                     authority: self.to_account_info(),
                 },
                 &[&[
@@ -447,28 +469,33 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
                 ]],
             ),
             amount,
+            token_mint.decimals,
+
         )?;
         Ok(())
     }
 
     fn transfer_token_to_pool(
         &self,
-        from: &Account<'info, TokenAccount>,
-        to: &Account<'info, TokenAccount>,
+        from: &InterfaceAccount<'info, TokenAccount>,
+        to: &InterfaceAccount<'info, TokenAccount>,
+        token_mint: &InterfaceAccount<'info, Mint>,
         amount: u64,
         authority: &Signer<'info>,
-        token_program: &Program<'info, Token>,
+        token_program: &Interface<'info, TokenInterface>,
     ) -> Result<()> {
-        token::transfer(
+        anchor_spl::token_interface::transfer_checked(
             CpiContext::new(
                 token_program.to_account_info(),
-                token::Transfer {
+                anchor_spl::token_interface::TransferChecked {
                     from: from.to_account_info(),
+                    mint: token_mint.to_account_info(),
                     to: to.to_account_info(),
                     authority: authority.to_account_info(),
                 },
             ),
             amount,
+            token_mint.decimals,
         )?;
         Ok(())
     }

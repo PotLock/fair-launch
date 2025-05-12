@@ -1,7 +1,8 @@
 use crate::consts::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
+
+
 
 #[derive(Accounts, Clone)]
 pub struct InitializeBondingCurve<'info> {
@@ -14,14 +15,12 @@ pub struct InitializeBondingCurve<'info> {
     )]
     pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
 
-    #[account(mut)]
-    pub token_mint: Box<Account<'info, Mint>>,
 
     #[account(
         init,
         space = 8+ 3000,
         payer = admin,
-        seeds = [FEE_POOL_SEED_PREFIX.as_bytes(), token_mint.key().as_ref()],
+        seeds = [FEE_POOL_SEED_PREFIX.as_bytes()],
         bump
     )]
     pub fee_pool_account: Box<Account<'info, FeePool>>,

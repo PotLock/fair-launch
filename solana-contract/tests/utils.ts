@@ -1,8 +1,8 @@
-import { Connection, Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import { clusterApiUrl, Connection, Keypair, PublicKey, Signer, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program, Idl } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve"
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import fs from "fs";
 import { VaultMeteora, IDL } from "../idls/vault_meteora";
 
@@ -10,13 +10,14 @@ import {
   PROGRAM_ID as VAULT_PROGRAM_ID,
   getVaultPdas
 } from '@mercurial-finance/vault-sdk';
+import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 
-const CURVE_CONFIGURATION_SEED = "curve_configuration"
+export const CURVE_CONFIGURATION_SEED = "curve_configuration"
 const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
-const FEE_POOL_SEED_PREFIX = "fee_pool"
+export const FEE_POOL_SEED_PREFIX = "fee_pool"
 const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
-
+const TOKEN_VAULT_PREFIX = "token_vault"
 // Meteora 
 const POOL_METEORA_PREFIX = "pool"
 const PROTOCOL_FEE_PREFIX = "fee"
@@ -39,6 +40,8 @@ export const PUMP_SWAP_PROGRAM_ID = new PublicKey("pAMMBay6oceH9fJKBRHGP5D4bD4sW
 const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 
+const connection = new Connection(clusterApiUrl("devnet"),'confirmed')
+
 
 export function getPDAs(user: PublicKey, mint: PublicKey){
   const [curveConfig] = PublicKey.findProgramAddressSync(
@@ -57,15 +60,31 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
     program.programId
   );
   
+  // const poolTokenAccount = await getOrCreateAssociatedTokenAccount(
+  //   connection, payer, mint, bondingCurve, true,'confirmed', null , TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+  // )
+  // console.log("Pool Token Account : ", poolTokenAccount)
+  // const [poolTokenAccount] = PublicKey.findProgramAddressSync(
+  //   [Buffer.from(TOKEN_VAULT_PREFIX), bondingCurve.toBuffer(), mint.toBuffer()],
+  //   program.programId
+  // )
+
   const poolTokenAccount = getAssociatedTokenAddressSync(
-    mint, bondingCurve, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
-  )
-  const userTokenAccount = getAssociatedTokenAddressSync(
-    mint, user, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+    mint, bondingCurve, true
   )
 
+
+  // const userTokenAccount = await getOrCreateAssociatedTokenAccount(
+  //   connection, payer, mint, user, true,'confirmed', null, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+  // )
+
+  const userTokenAccount = getAssociatedTokenAddressSync(
+    mint, user, true
+  )
+
+
   const [feePool] = PublicKey.findProgramAddressSync(
-    [Buffer.from(FEE_POOL_SEED_PREFIX), mint.toBuffer()],
+    [Buffer.from(FEE_POOL_SEED_PREFIX)],
     
     program.programId
   )
@@ -86,6 +105,33 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
     feePoolVault,
     feePoolVaultBump
   };
+}
+
+// export function associatedAddress({
+//   mint,
+//   owner,
+// }: {
+//   mint: PublicKey;
+//   owner: PublicKey;
+// }): PublicKey {
+//   return PublicKey.findProgramAddressSync(
+//     [owner.toBuffer(), TOKEN_2022_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+//     ASSOCIATED_PROGRAM_ID
+//   )[0];
+// }
+
+export async function getPoolTokenAccount2022(payer: Signer, mint: PublicKey, bondingCurve: PublicKey){
+  const poolTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection, payer, mint, bondingCurve, true,'confirmed', null , TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+  )
+  return poolTokenAccount
+}
+
+export async function getUserTokenAccount2022(payer: Signer, mint: PublicKey, user: PublicKey){
+  const userTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection, payer, mint, user, true,'confirmed', null , TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+  )
+  return userTokenAccount
 }
 
 

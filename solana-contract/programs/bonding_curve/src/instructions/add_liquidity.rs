@@ -1,11 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
-
+use anchor_spl::token_interface::{self, Mint, TokenInterface, TokenAccount, Token2022};
+use anchor_spl::associated_token::AssociatedToken;
 use crate::consts::*;
 use crate::errors::CustomError;
+use anchor_spl::token::{self, Token};
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
@@ -28,6 +26,8 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
         &mut *ctx.accounts.pool_token_account,
         &mut *ctx.accounts.user_token_account,
     );
+
+
 
     bonding_curve.add_liquidity(
         token_one_accounts,
@@ -58,14 +58,14 @@ pub struct AddLiquidity<'info> {
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
     #[account(mut)]
-    pub token_mint: Box<Account<'info, Mint>>,
+    pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(
-        mut,
+    #[account(mut,
+        associated_token::token_program = token_program,
         associated_token::mint = token_mint,
-        associated_token::authority = bonding_curve_account
+        associated_token::authority = bonding_curve_account,
     )]
-    pub pool_token_account: Box<Account<'info, TokenAccount>>,
+    pub pool_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK:
     #[account(
@@ -75,18 +75,17 @@ pub struct AddLiquidity<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-    #[account(
-        init_if_needed,
-        payer = user,
+    #[account(mut, 
         associated_token::mint = token_mint,
         associated_token::authority = user,
+        associated_token::token_program = token_program
     )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
+    pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
 
     #[account(mut)]
     pub user: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }

@@ -1,10 +1,8 @@
 use crate::consts::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let bonding_curve_account = &mut ctx.accounts.bonding_curve_account;
@@ -30,21 +28,25 @@ pub struct CreateLiquidityPool<'info> {
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
 
-    #[account(mut)]
-    pub token_mint: Box<Account<'info, Mint>>,
+    #[account(
+        mint::token_program = token_program
+    )]
+    pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init,
-        payer = payer,
+        init_if_needed,
+        token::token_program = token_program,
+        associated_token::token_program = token_program,
         associated_token::mint = token_mint,
-        associated_token::authority = bonding_curve_account
+        associated_token::authority = bonding_curve_account,
+        payer = payer,
     )]
-    pub pool_token_account: Box<Account<'info, TokenAccount>>,
+    pub pool_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }

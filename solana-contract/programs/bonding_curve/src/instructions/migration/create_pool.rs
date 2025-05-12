@@ -1,6 +1,6 @@
 use crate::consts::{
     CURVE_CONFIGURATION_SEED, METEORA_PROGRAM_KEY, POOL_SEED_PREFIX, PUMP_SWAP_PROGRAM_KEY,
-    QUOTE_TOKEN_MINT, SOL_VAULT_PREFIX, TOKEN_VAULT_SEED,
+    QUOTE_TOKEN_MINT, SOL_VAULT_PREFIX,
 };
 use crate::errors::CustomError;
 use crate::state::{get_meteora_pool_create_ix_data, get_pump_pool_create_ix_data};

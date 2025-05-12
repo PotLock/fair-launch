@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("AEpAbhrKQZ1DKuxm2gx74SQfds6AydYMuDrhvxXQUahp");
+declare_id!("HXecxEc8Xeabw4XJ1LKL6frXn1NNWUwiHVmBSU9mK6JA");
 
 #[program]
 pub mod bonding_curve {
@@ -62,24 +62,24 @@ pub mod bonding_curve {
         instructions::remove_liquidity(ctx, bump)
     }
 
-    // Only DAO can grant this permission
-    pub fn add_fee_recipients(
-        ctx: Context<AddFeeRecipient>,
-        recipients: Vec<state::Recipient>,
-    ) -> Result<()> {
-        instructions::add_fee_recipients(ctx, recipients)
-    }
+    // // Only DAO can grant this permission
+    // pub fn add_fee_recipients(
+    //     ctx: Context<AddFeeRecipient>,
+    //     recipients: Vec<state::Recipient>,
+    // ) -> Result<()> {
+    //     instructions::add_fee_recipients(ctx, recipients)
+    // }
 
-    pub fn claim_fee(ctx: Context<ClaimFee>, bump: u8) -> Result<()> {
-        instructions::claim_fee(ctx, bump)
-    }
+    // pub fn claim_fee(ctx: Context<ClaimFee>, bump: u8) -> Result<()> {
+    //     instructions::claim_fee(ctx, bump)
+    // }
 
-    pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
-        instructions::initialize_pool_meteora_with_config(ctx)
-    }
+    // pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
+    //     instructions::initialize_pool_meteora_with_config(ctx)
+    // }
 
-    pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
-        instructions::initialize_pool_pumpswap(ctx, index)
-    }
+    // pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
+    //     instructions::initialize_pool_pumpswap(ctx, index)
+    // }
 
 }
