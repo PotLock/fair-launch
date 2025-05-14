@@ -312,6 +312,11 @@ pub fn initialize_pool_meteora_with_config(ctx: Context<InitializeMeteoraPool>) 
         signer_seeds,
     )?;
 
+    // reset reserve token
+    ctx.accounts.bonding_curve_account.reserve_token = 0;
+    // reset reserve balance
+    ctx.accounts.bonding_curve_account.reserve_balance = 0;
+
     Ok(())
 }
 
@@ -492,6 +497,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     token::sync_native(cpi_ctx)?;
 
+
     msg!("Wrap solana token success");
 
     msg!("Start pumpswap");
@@ -558,6 +564,9 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         signer_seeds,
     )?;
 
-
+    // reset reserve token
+    ctx.accounts.bonding_curve_account.reserve_token = 0;
+    // reset reserve balance
+    ctx.accounts.bonding_curve_account.reserve_balance = 0;
     Ok(())
 }
