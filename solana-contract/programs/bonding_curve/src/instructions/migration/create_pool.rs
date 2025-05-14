@@ -13,7 +13,7 @@ use anchor_lang::solana_program::{
 };
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-use anchor_spl::token_interface::{Token2022, TokenInterface};
+use anchor_spl::token_interface::{Token2022, TokenInterface, Mint as MintInterface};
 use std::str::FromStr;
 #[derive(Accounts)]
 pub struct InitializeMeteoraPool<'info> {
@@ -334,8 +334,8 @@ pub struct InitializePumpswapPool<'info> {
     )]
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
-    /// CHECK:
-    pub token_mint: UncheckedAccount<'info>,
+
+    pub token_mint: Box<InterfaceAccount<'info, MintInterface>>,
     /// CHECK:
     #[account(mut)]
     pub pool_token_account: UncheckedAccount<'info>,
@@ -445,21 +445,10 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
 
     let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
-    msg!("quote_token_amount: {}", quote_token_amount);
-    msg!("quote token: {:?}", ctx.accounts.base_mint.to_account_info());
-    msg!("Pool Token Bonding Curve : {:?}", ctx.accounts.pool_token_account.to_account_info());
 
     msg!("Start transfer token");
     let base_amount_in = 10000000u64;
 
-    // token::transfer(
-    //     CpiContext::new_with_signer(
-    //         ctx.accounts.quote_token_program.to_account_info(),
-    //         cpi_accounts,
-    //         signer_seeds,
-    //     ),
-    //     quote_token_amount,
-    // )?;
 
     anchor_spl::token_interface::transfer_checked(
         CpiContext::new_with_signer(
@@ -469,7 +458,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         ),
         base_amount_in,
         //todo 
-        9,
+        ctx.accounts.token_mint.decimals,
 
     )?;
 
@@ -479,8 +468,6 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let base_token_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
 
-    msg!("base_token_amount: {}", base_token_amount);
-    msg!("pool_sol_vault: {:?}", ctx.accounts.pool_sol_vault.to_account_info());
     let quote_amount_in = 10000000u64;
     //todo 
     system_program::transfer(
@@ -542,14 +529,12 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     }));
 
     let data = get_pump_pool_create_ix_data(index, base_amount_in, quote_amount_in, ctx.accounts.creator.key());
-    msg!("data: {:?}", data);
     let instruction = Instruction {
         program_id: pumpswap_program_id,
         accounts,
         data,
     };
 
-    msg!("instruction: {:?}", instruction);
 
     invoke_signed(
         &instruction,
