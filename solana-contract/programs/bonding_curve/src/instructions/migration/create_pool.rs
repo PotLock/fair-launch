@@ -444,10 +444,9 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     let signer_seeds = &[&signer[..]];
 
 
-    let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
+    let base_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
 
     msg!("Start transfer token");
-    let base_amount_in = 10000000u64;
 
 
     anchor_spl::token_interface::transfer_checked(
@@ -456,7 +455,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
             cpi_accounts,
             signer_seeds,
         ),
-        base_amount_in,
+        base_token_amount,
         //todo 
         ctx.accounts.token_mint.decimals,
 
@@ -466,9 +465,8 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     msg!("Start wrap solana token");
 
-    let base_token_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
+    let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
 
-    let quote_amount_in = 10000000u64;
     //todo 
     system_program::transfer(
         CpiContext::new_with_signer(
@@ -483,10 +481,9 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
                 &[ctx.bumps.pool_sol_vault],
             ]],
         ),
-        quote_amount_in,
+        quote_token_amount,
     )?;
-    msg!("go to here ");
-    msg!("user_quote_token_account: {:?}", ctx.accounts.user_quote_token_account.to_account_info());
+
     let cpi_accounts = token::SyncNative {
         account: ctx.accounts.user_quote_token_account.to_account_info(),
     };
@@ -528,7 +525,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         is_writable: true,
     }));
 
-    let data = get_pump_pool_create_ix_data(index, base_amount_in, quote_amount_in, ctx.accounts.creator.key());
+    let data = get_pump_pool_create_ix_data(index, base_token_amount, quote_token_amount, ctx.accounts.creator.key());
     let instruction = Instruction {
         program_id: pumpswap_program_id,
         accounts,
