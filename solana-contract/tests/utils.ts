@@ -250,7 +250,7 @@ export const getPumpSwapPDA = (
 ) => {
   const [pool] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from(POOL_PUMP_SWAP_PREFIX),
+      Buffer.from("pool"),
       new anchor.BN(index).toArrayLike(Buffer, 'le', 2),
       creator.toBuffer(),
       baseMint.toBuffer(),
@@ -270,7 +270,7 @@ export const getPumpSwapPDA = (
     quoteMint,
     pool,
     true, // allowOwnerOffCurve - set to true for PDAs
-    TOKEN_2022_PROGRAM_ID
+    TOKEN_PROGRAM_ID
   );
   const [lpMint] = PublicKey.findProgramAddressSync(
     [Buffer.from("pool_lp_mint"), pool.toBuffer()],
@@ -290,7 +290,7 @@ export const getPumpSwapPDA = (
     quoteMint,
     creator,
     true,
-    TOKEN_2022_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
@@ -307,7 +307,7 @@ export const getPumpSwapPDA = (
   );
 
   const [eventAuthority] = PublicKey.findProgramAddressSync(
-    [Buffer.from("event_authority")],
+    [Buffer.from("__event_authority")],
     PUMP_SWAP_PROGRAM_ID,
   );
   return {pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority};

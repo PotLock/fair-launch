@@ -450,12 +450,13 @@ describe("bonding_curve", () => {
   // })
 
 
-  it("migrate pumpswap pool only support token 2022", async () => {
+  it("migrate pumpswap pool", async () => {
 
     try {
-      const { curveConfig, bondingCurve, poolSolVault } = getPDAs(signer.payer.publicKey, mintToken2022)
+      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount } = getPDAs(signer.payer.publicKey, mint)
+      console.log("bonding Curve", bondingCurve.toBase58());
       // const mintToken2022 = new PublicKey("AemQbKzYPhZmx3gM1ehc6q9MzDBSmcSKTCii74x2ACsx")
-      const { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority } = getPumpSwapPDA(0, signer.payer.publicKey, SOL_MINT, mintToken2022)
+      const { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority } = getPumpSwapPDA(0, signer.payer.publicKey, mint, SOL_MINT)
       console.log("pool", pool.toBase58());
       console.log("poolBaseTokenAccount", poolBaseTokenAccount.toBase58());
       console.log("poolQuoteTokenAccount", poolQuoteTokenAccount.toBase58());
@@ -472,7 +473,7 @@ describe("bonding_curve", () => {
       const tx = new Transaction().add(setComputeUnitLimitIx)
 
       const index = 0;
-      const poolTokenAccount = await getPoolTokenAccount2022(signer.payer, mintToken2022, bondingCurve)
+      // const poolTokenAccount = await getPoolTokenAccount2022(signer.payer, mintToken2022, bondingCurve)
       // const userTokenAccount = await getUserTokenAccount2022(signer.payer, mintToken2022, signer.payer.publicKey)
 
 
@@ -482,7 +483,7 @@ describe("bonding_curve", () => {
             signer.payer.publicKey,
             poolBaseTokenAccount,
             pool,
-            SOL_MINT,
+            mint,
             TOKEN_PROGRAM_ID
           )
         );
@@ -494,8 +495,8 @@ describe("bonding_curve", () => {
             signer.payer.publicKey,
             poolQuoteTokenAccount,
             pool,
-            mintToken2022,
-            TOKEN_2022_PROGRAM_ID
+            SOL_MINT,
+            TOKEN_PROGRAM_ID
           )
         );
       }
@@ -505,14 +506,14 @@ describe("bonding_curve", () => {
             .migratePumpswapPool(index)
             .accounts({
               bondingCurveAccount: bondingCurve,
-              tokenMint: mintToken2022,
-              poolTokenAccount: poolTokenAccount.address,
+              tokenMint: mint,
+              poolTokenAccount: poolTokenAccount,
               poolSolVault: poolSolVault,
               pool: pool,                                // Pool PDA from getPumpSwapPDA
               globalConfig: globalConfig,                 // Config account
               creator: signer.publicKey,                             // Signer
-              baseMint: SOL_MINT,                       // Base token mint
-              quoteMint: mintToken2022,                          // Quote token mint
+              baseMint: mint,                       // Base token mint
+              quoteMint: SOL_MINT,                          // Quote token mint
               lpMint: lpMint,                           // LP token mint
               userBaseTokenAccount: userBaseTokenAccount,      // User's base token account
               userQuoteTokenAccount: userQuoteTokenAccount,   // User's quote token account
@@ -524,7 +525,7 @@ describe("bonding_curve", () => {
               systemProgram: anchor.web3.SystemProgram.programId,
               token2022Program: TOKEN_2022_PROGRAM_ID,
               baseTokenProgram: TOKEN_PROGRAM_ID,
-              quoteTokenProgram: TOKEN_2022_PROGRAM_ID,
+              quoteTokenProgram: TOKEN_PROGRAM_ID,
               associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
               eventAuthority: eventAuthority,
               pumpswapProgram: PUMP_SWAP_PROGRAM_ID

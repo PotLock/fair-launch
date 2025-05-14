@@ -416,12 +416,12 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     let quote_mint: Pubkey = Pubkey::from_str(QUOTE_TOKEN_MINT).unwrap();
 
     require!(
-        ctx.accounts.bonding_curve_account.token == ctx.accounts.quote_mint.key(),
+        ctx.accounts.bonding_curve_account.token == ctx.accounts.base_mint.key(),
         CustomError::BondingCurveTokenMismatch
     );
 
     require!(
-        quote_mint.key() == ctx.accounts.base_mint.key(),
+        quote_mint.key() == ctx.accounts.quote_mint.key(),
         CustomError::SOLMismatch
     );
 
@@ -431,14 +431,14 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let cpi_accounts = anchor_spl::token_interface::TransferChecked {
         from: ctx.accounts.pool_token_account.to_account_info(),
-        to: ctx.accounts.user_quote_token_account.to_account_info(),
-        mint: ctx.accounts.quote_mint.to_account_info(),
+        to: ctx.accounts.user_base_token_account.to_account_info(),
+        mint: ctx.accounts.base_mint.to_account_info(),
         authority: ctx.accounts.bonding_curve_account.to_account_info(),
     };
 
     let signer = BondingCurve::get_signer(
         &ctx.bumps.bonding_curve_account,
-        ctx.accounts.quote_mint.to_account_info().key,
+        ctx.accounts.base_mint.to_account_info().key,
     );
 
     let signer_seeds = &[&signer[..]];
@@ -446,11 +446,11 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
     msg!("quote_token_amount: {}", quote_token_amount);
-    msg!("quote token: {:?}", ctx.accounts.quote_mint.to_account_info());
+    msg!("quote token: {:?}", ctx.accounts.base_mint.to_account_info());
     msg!("Pool Token Bonding Curve : {:?}", ctx.accounts.pool_token_account.to_account_info());
 
     msg!("Start transfer token");
-    let quote_amount_in = 10000000u64;
+    let base_amount_in = 10000000u64;
 
     // token::transfer(
     //     CpiContext::new_with_signer(
@@ -463,13 +463,13 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     anchor_spl::token_interface::transfer_checked(
         CpiContext::new_with_signer(
-            ctx.accounts.quote_token_program.to_account_info(),
+            ctx.accounts.base_token_program.to_account_info(),
             cpi_accounts,
             signer_seeds,
         ),
-        quote_amount_in,
+        base_amount_in,
         //todo 
-        6,
+        9,
 
     )?;
 
@@ -481,30 +481,30 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     msg!("base_token_amount: {}", base_token_amount);
     msg!("pool_sol_vault: {:?}", ctx.accounts.pool_sol_vault.to_account_info());
-    let base_amount_in = 10000000u64;
+    let quote_amount_in = 10000000u64;
     //todo 
     system_program::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
                 from: ctx.accounts.pool_sol_vault.to_account_info(),
-                to: ctx.accounts.user_base_token_account.to_account_info(),
+                to: ctx.accounts.user_quote_token_account.to_account_info(),
             },
             &[&[
                 SOL_VAULT_PREFIX.as_bytes(),
-                ctx.accounts.quote_mint.key().as_ref(),
+                ctx.accounts.base_mint.key().as_ref(),
                 &[ctx.bumps.pool_sol_vault],
             ]],
         ),
-        base_amount_in,
+        quote_amount_in,
     )?;
     msg!("go to here ");
-    msg!("user_base_token_account: {:?}", ctx.accounts.user_base_token_account.to_account_info());
+    msg!("user_quote_token_account: {:?}", ctx.accounts.user_quote_token_account.to_account_info());
     let cpi_accounts = token::SyncNative {
-        account: ctx.accounts.user_base_token_account.to_account_info(),
+        account: ctx.accounts.user_quote_token_account.to_account_info(),
     };
 
-    let cpi_program = ctx.accounts.base_token_program.to_account_info();
+    let cpi_program = ctx.accounts.quote_token_program.to_account_info();
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     token::sync_native(cpi_ctx)?;
 
@@ -541,7 +541,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         is_writable: true,
     }));
 
-    let data = get_pump_pool_create_ix_data(index, base_amount_in, quote_amount_in);
+    let data = get_pump_pool_create_ix_data(index, base_amount_in, quote_amount_in, ctx.accounts.creator.key());
     msg!("data: {:?}", data);
     let instruction = Instruction {
         program_id: pumpswap_program_id,

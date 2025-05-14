@@ -5,9 +5,10 @@ struct CpiPumpPoolArgs {
     index: u16,
     base_amount_in: u64,
     quote_amount_in: u64,
+    coin_creator: Pubkey,
 }
 
-pub fn get_pump_pool_create_ix_data(index: u16, base_amount_in: u64, quote_amount_in: u64) -> Vec<u8> {
+pub fn get_pump_pool_create_ix_data(index: u16, base_amount_in: u64, quote_amount_in: u64, coin_creator: Pubkey) -> Vec<u8> {
     let hash = get_function_hash(
         "global",
         "create_pool",
@@ -18,6 +19,7 @@ pub fn get_pump_pool_create_ix_data(index: u16, base_amount_in: u64, quote_amoun
         index,
         base_amount_in,
         quote_amount_in,
+        coin_creator,
     };
 
     args.serialize(&mut buf).unwrap();
