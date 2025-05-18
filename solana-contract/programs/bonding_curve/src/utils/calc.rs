@@ -9,6 +9,22 @@ pub fn convert_from_float(value: f64, decimals: u8) -> u64 {
     value.mul(f64::powf(10.0, decimals as f64)) as u64
 }
 
+// calculate the initial reserve amount based on the initial price (SOL) and initial supply (token)
+pub fn calculate_initial_reserve_linear(initial_price: u64, initial_supply: u64, reserve_ratio: u16) -> Result<u64> {
+    // initial_price * initial_supply
+    let initial_market_cap: u128 = (initial_price as u128)
+        .checked_mul(initial_supply as u128)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    // initial_reserve_amount = (initial_market_cap * reserve_ratio) / 10000
+    let reserve_amount = initial_market_cap
+        .checked_mul(reserve_ratio as u128)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_div(10000)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+    Ok(reserve_amount as u64)
+}
 pub fn linear_buy_cost(amount: u64, reserve_ratio: u16, total_supply: u64) -> Result<u64> {
     let new_supply = total_supply
         .checked_add(amount)

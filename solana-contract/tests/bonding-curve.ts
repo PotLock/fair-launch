@@ -27,9 +27,9 @@ describe("bonding_curve", () => {
   console.log("Fee address1 :", feeRecipient.publicKey.toBase58());
   console.log("Fee address2 :", feeRecipient2.publicKey.toBase58());
   // get existing TokenMint and TokenATA or we can create new token 
-  const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
+  // const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
   //5ZoKnNrLwDw5FSgjuA7S7uSEsYPDHrhPzQ7bUTZxdtSa
-  // const mint = new PublicKey("9nNrWDKsbQZoHHU7bHkfNPC3iicvMFGasyWpEfEnXxAj");
+  const mint = new PublicKey("9nNrWDKsbQZoHHU7bHkfNPC3iicvMFGasyWpEfEnXxAj");
   const mintToken2022 = new PublicKey("AemQbKzYPhZmx3gM1ehc6q9MzDBSmcSKTCii74x2ACsx")
 
   const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
@@ -38,100 +38,105 @@ describe("bonding_curve", () => {
   const governance = Keypair.generate();
   const { vaultProgram } = createProgram(connection);
 
-  // it("Initialize the contract", async () => {
+  it("Initialize the contract", async () => {
 
-  //   try {
-  //     const [curveConfig] = PublicKey.findProgramAddressSync(
-  //       [Buffer.from(CURVE_CONFIGURATION_SEED)],
-  //       program.programId,
+    try {
+      const [curveConfig] = PublicKey.findProgramAddressSync(
+        [Buffer.from(CURVE_CONFIGURATION_SEED)],
+        program.programId,
         
-  //     );
-  //     const [feePool] = PublicKey.findProgramAddressSync(
-  //       [Buffer.from(FEE_POOL_SEED_PREFIX)],
+      );
+      const [feePool] = PublicKey.findProgramAddressSync(
+        [Buffer.from(FEE_POOL_SEED_PREFIX)],
         
-  //       program.programId
-  //     )
+        program.programId
+      )
       
-  //     // Fee Percentage : 100 = 1%
-  //     const feePercentage = new BN(100);
-  //     const initialQuorum = new BN(500);
-  //     const targetLiquidity = new BN(1000000000);
-  //     const daoQuorum = new BN(500);
-  //     // 0 is linear, 1 is quadratic
-  //     const bondingCurveType = 1;
-  //     const maxTokenSupply = new BN(10000000000);
-  //     const liquidityLockPeriod = new BN(60); // 30 days
-  //     const liquidityPoolPercentage = new BN(50); // 50%
+      // Fee Percentage : 100 = 1%
+      const feePercentage = new BN(100);
+      const initialQuorum = new BN(500);
+      const targetLiquidity = new BN(1000000000);
+      const daoQuorum = new BN(500);
+      // 0 is linear, 1 is quadratic
+      const bondingCurveType = 1;
+      const maxTokenSupply = new BN(10000000000);
+      const liquidityLockPeriod = new BN(60); // 30 days
+      const liquidityPoolPercentage = new BN(50); // 50%
+      const initialReserve = new BN(1000000000); // 0.1 SOL
+      const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
 
-  //     let recipients = [
-  //       {
-  //         address: feeRecipient.publicKey,
-  //         share: 10000,
-  //         amount: new BN(0),
-  //         lockingPeriod: new BN(60000),
-  //       },
-  //     ]
-
-
-  //     const tx = new Transaction()
-  //       .add(
-  //         await program.methods
-  //             // @ts-ignore
-  //           .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, recipients)
-  //           .accounts({
-  //             // @ts-ignore
-  //             configurationAccount: curveConfig,
-  //             feePoolAccount: feePool,
-  //             admin: signer.payer.publicKey,
-  //             rent: SYSVAR_RENT_PUBKEY,
-  //             systemProgram: SystemProgram.programId
-  //           })
-  //           .instruction()
-  //       )
-  //     tx.feePayer = signer.payer.publicKey
-  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
-  //     console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-  //   } catch (error) {
-  //     console.log("Error in initialization :", error)
-  //   }
-  // });
-
-  // it(" create bonding curve pool with SPL token ", async () => {
-
-  //   try {
+      let recipients = [
+        {
+          address: feeRecipient.publicKey,
+          share: 10000,
+          amount: new BN(0),
+          lockingPeriod: new BN(60000),
+        },
+      ]
 
 
-  //     const { bondingCurve, poolTokenAccount } = getPDAs(signer.payer.publicKey, mint)
-  //     console.log("Bonding Curve : ", bondingCurve.toBase58())
-  //     // console.log("Pool Token Account : ", poolTokenAccount.address)
-  //     const tx = new Transaction()
-  //       .add(
-  //         await program.methods
-  //           .createPool()
-  //           .accountsStrict({
-  //             bondingCurveAccount: bondingCurve,
-  //             tokenMint: mint,
-  //             poolTokenAccount: poolTokenAccount,
-  //             payer: signer.payer.publicKey,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             rent: SYSVAR_RENT_PUBKEY,
-  //             systemProgram: SystemProgram.programId,
-  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID
-  //           })
-  //           .instruction()
-  //       )
-  //     tx.feePayer = signer.payer.publicKey
-  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
-  //     console.log("Successfully created pool with SPL token : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-  //     // let bondingCurveAccount = await program.account.bondingCurve.fetch(bondingCurve)
-  //     // console.log("Bonding Curve Data : ", bondingCurveAccount)
-  //   } catch (error) {
-  //     console.log("Error in create pool :", error)
-  //   }
+      const tx = new Transaction()
+        .add(
+          await program.methods
+              // @ts-ignore
+            .initialize(initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients)
+            .accounts({
+              // @ts-ignore
+              configurationAccount: curveConfig,
+              feePoolAccount: feePool,
+              admin: signer.payer.publicKey,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
+      console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+    } catch (error) {
+      console.log("Error in initialization :", error)
+    }
+  });
 
-  // })
+  it(" create bonding curve pool with SPL token ", async () => {
+
+    try {
+
+
+      const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
+      console.log("Bonding Curve : ", bondingCurve.toBase58())
+      // console.log("Pool Token Account : ", poolTokenAccount.address)
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .createPool()
+            .accountsStrict({
+              dexConfigurationAccount: curveConfig,
+              bondingCurveAccount: bondingCurve,
+              tokenMint: mint,
+              poolTokenAccount: poolTokenAccount,
+              poolSolVault: poolSolVault,
+              userTokenAccount: userTokenAccount,
+              user: signer.payer.publicKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
+      console.log("Successfully created pool with SPL token : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+      // let bondingCurveAccount = await program.account.bondingCurve.fetch(bondingCurve)
+      // console.log("Bonding Curve Data : ", bondingCurveAccount)
+    } catch (error) {
+      console.log("Error in create pool :", error)
+    }
+
+  })
 
 
   // it(" create bonding curve pool with Token 2022  ", async () => {
@@ -309,7 +314,7 @@ describe("bonding_curve", () => {
   // it(" migrate meteora pool", async () => {
 
   //   try {
-  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = await getPDAs(signer.payer.publicKey, mint)
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
   //     // const { pool, lpMint, payerPoolLp } = await getMeteoraPDA(SOL_MINT, mint, signer.payer.publicKey);
   //     const { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda } = getVaultPDA(SOL_MINT, mint);
   //     console.log("aTokenVault", aTokenVault.toBase58());
@@ -450,97 +455,97 @@ describe("bonding_curve", () => {
   // })
 
 
-  it("migrate pumpswap pool", async () => {
+  // it("migrate pumpswap pool", async () => {
 
-    try {
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount } = getPDAs(signer.payer.publicKey, mint)
-      console.log("bonding Curve", bondingCurve.toBase58());
-      // const mintToken2022 = new PublicKey("AemQbKzYPhZmx3gM1ehc6q9MzDBSmcSKTCii74x2ACsx")
-      const { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority } = getPumpSwapPDA(0, signer.payer.publicKey, mint, SOL_MINT)
-      console.log("pool", pool.toBase58());
-      console.log("poolBaseTokenAccount", poolBaseTokenAccount.toBase58());
-      console.log("poolQuoteTokenAccount", poolQuoteTokenAccount.toBase58());
-      console.log("lpMint", lpMint.toBase58());
-      console.log("userBaseTokenAccount", userBaseTokenAccount.toBase58());
-      console.log("userQuoteTokenAccount", userQuoteTokenAccount.toBase58());
-      console.log("userPoolTokenAccount", userPoolTokenAccount.toBase58());
-      console.log("globalConfig", globalConfig.toBase58());
-
-
-      const setComputeUnitLimitIx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
-        units: 20_000_000,
-      });
-      const tx = new Transaction().add(setComputeUnitLimitIx)
-
-      const index = 0;
-      // const poolTokenAccount = await getPoolTokenAccount2022(signer.payer, mintToken2022, bondingCurve)
-      // const userTokenAccount = await getUserTokenAccount2022(signer.payer, mintToken2022, signer.payer.publicKey)
+  //   try {
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount } = getPDAs(signer.payer.publicKey, mint)
+  //     console.log("bonding Curve", bondingCurve.toBase58());
+  //     // const mintToken2022 = new PublicKey("AemQbKzYPhZmx3gM1ehc6q9MzDBSmcSKTCii74x2ACsx")
+  //     const { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority } = getPumpSwapPDA(2, signer.payer.publicKey, mint, SOL_MINT)
+  //     console.log("pool", pool.toBase58());
+  //     console.log("poolBaseTokenAccount", poolBaseTokenAccount.toBase58());
+  //     console.log("poolQuoteTokenAccount", poolQuoteTokenAccount.toBase58());
+  //     console.log("lpMint", lpMint.toBase58());
+  //     console.log("userBaseTokenAccount", userBaseTokenAccount.toBase58());
+  //     console.log("userQuoteTokenAccount", userQuoteTokenAccount.toBase58());
+  //     console.log("userPoolTokenAccount", userPoolTokenAccount.toBase58());
+  //     console.log("globalConfig", globalConfig.toBase58());
 
 
-      if (!(await accountExists(connection, poolBaseTokenAccount))) {
-        tx.add(
-          createAssociatedTokenAccountIdempotentInstruction(
-            signer.payer.publicKey,
-            poolBaseTokenAccount,
-            pool,
-            mint,
-            TOKEN_PROGRAM_ID
-          )
-        );
-      }
+  //     const setComputeUnitLimitIx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+  //       units: 20_000_000,
+  //     });
+  //     const tx = new Transaction().add(setComputeUnitLimitIx)
 
-      if (!(await accountExists(connection, poolQuoteTokenAccount))) {
-        tx.add(
-          createAssociatedTokenAccountIdempotentInstruction(
-            signer.payer.publicKey,
-            poolQuoteTokenAccount,
-            pool,
-            SOL_MINT,
-            TOKEN_PROGRAM_ID
-          )
-        );
-      }
+  //     const index = 2;
+  //     // const poolTokenAccount = await getPoolTokenAccount2022(signer.payer, mintToken2022, bondingCurve)
+  //     // const userTokenAccount = await getUserTokenAccount2022(signer.payer, mintToken2022, signer.payer.publicKey)
 
-      tx.add(
-          await program.methods
-            .migratePumpswapPool(index)
-            .accounts({
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              poolTokenAccount: poolTokenAccount,
-              poolSolVault: poolSolVault,
-              pool: pool,                                // Pool PDA from getPumpSwapPDA
-              globalConfig: globalConfig,                 // Config account
-              creator: signer.publicKey,                             // Signer
-              baseMint: mint,                       // Base token mint
-              quoteMint: SOL_MINT,                          // Quote token mint
-              lpMint: lpMint,                           // LP token mint
-              userBaseTokenAccount: userBaseTokenAccount,      // User's base token account
-              userQuoteTokenAccount: userQuoteTokenAccount,   // User's quote token account
-              userPoolTokenAccount: userPoolTokenAccount,// User's pool token account
-              poolBaseTokenAccount: poolBaseTokenAccount,         // Pool's base token account
-              poolQuoteTokenAccount: poolQuoteTokenAccount,       // Pool's quote token account
 
-              // Programs
-              systemProgram: anchor.web3.SystemProgram.programId,
-              token2022Program: TOKEN_2022_PROGRAM_ID,
-              baseTokenProgram: TOKEN_PROGRAM_ID,
-              quoteTokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              eventAuthority: eventAuthority,
-              pumpswapProgram: PUMP_SWAP_PROGRAM_ID
+  //     if (!(await accountExists(connection, poolBaseTokenAccount))) {
+  //       tx.add(
+  //         createAssociatedTokenAccountIdempotentInstruction(
+  //           signer.payer.publicKey,
+  //           poolBaseTokenAccount,
+  //           pool,
+  //           mint,
+  //           TOKEN_PROGRAM_ID
+  //         )
+  //       );
+  //     }
 
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "finalized" })
-      console.log("Successfully migrate pumpwap pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-    } catch (error) {
-      console.log("Error in migrate pumpwap pool :", error)
-    }
-  })
+  //     if (!(await accountExists(connection, poolQuoteTokenAccount))) {
+  //       tx.add(
+  //         createAssociatedTokenAccountIdempotentInstruction(
+  //           signer.payer.publicKey,
+  //           poolQuoteTokenAccount,
+  //           pool,
+  //           SOL_MINT,
+  //           TOKEN_PROGRAM_ID
+  //         )
+  //       );
+  //     }
+
+  //     tx.add(
+  //         await program.methods
+  //           .migratePumpswapPool(index)
+  //           .accounts({
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             poolTokenAccount: poolTokenAccount,
+  //             poolSolVault: poolSolVault,
+  //             pool: pool,                                // Pool PDA from getPumpSwapPDA
+  //             globalConfig: globalConfig,                 // Config account
+  //             creator: signer.publicKey,                             // Signer
+  //             baseMint: mint,                       // Base token mint
+  //             quoteMint: SOL_MINT,                          // Quote token mint
+  //             lpMint: lpMint,                           // LP token mint
+  //             userBaseTokenAccount: userBaseTokenAccount,      // User's base token account
+  //             userQuoteTokenAccount: userQuoteTokenAccount,   // User's quote token account
+  //             userPoolTokenAccount: userPoolTokenAccount,// User's pool token account
+  //             poolBaseTokenAccount: poolBaseTokenAccount,         // Pool's base token account
+  //             poolQuoteTokenAccount: poolQuoteTokenAccount,       // Pool's quote token account
+
+  //             // Programs
+  //             systemProgram: anchor.web3.SystemProgram.programId,
+  //             token2022Program: TOKEN_2022_PROGRAM_ID,
+  //             baseTokenProgram: TOKEN_PROGRAM_ID,
+  //             quoteTokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             eventAuthority: eventAuthority,
+  //             pumpswapProgram: PUMP_SWAP_PROGRAM_ID
+
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "finalized" })
+  //     console.log("Successfully migrate pumpwap pool : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in migrate pumpwap pool :", error)
+  //   }
+  // })
 
 
 

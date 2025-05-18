@@ -43,12 +43,14 @@ pub struct CurveConfiguration {
     pub bonding_curve_type: BondingCurveType,
     pub max_token_supply: u64,
     pub liquidity_lock_period: i64, // Liquidity lock period in seconds. cant remove liquidity before this period
-    pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX
+    pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX,
+    pub initial_reserve: u64, // Initial reserve of the token in SOL
+    pub initial_supply: u64, // Initial supply of the token
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2)
-    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2;
+    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
+    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8;
 
     pub fn new(
         initial_quorum: u64,
@@ -60,6 +62,8 @@ impl CurveConfiguration {
         max_token_supply: u64,
         liquidity_lock_period: i64,
         liquidity_pool_percentage: u16,
+        initial_reserve: u64,
+        initial_supply: u64,
     ) -> Self {
         let bonding_curve_type =
             BondingCurveType::try_from(bonding_curve_type).unwrap_or(BondingCurveType::Linear);
@@ -77,6 +81,8 @@ impl CurveConfiguration {
             max_token_supply,
             liquidity_lock_period,
             liquidity_pool_percentage,
+            initial_reserve,
+            initial_supply,
         }
     }
 }

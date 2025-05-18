@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("BCPfWSEgBCz6uEozdBG7YTHYa5oEkuKBBJABxymHL8Ma");
+declare_id!("6NjfDmmyYsRaWbfoGYXNYa7efGr7GRGWTQKDaDbUCEVs");
 
 #[program]
 pub mod bonding_curve {
@@ -25,6 +25,8 @@ pub mod bonding_curve {
         max_token_supply: u64,
         liquidity_lock_period: i64,
         liquidity_pool_percentage: u16,
+        initial_reserve: u64,
+        initial_supply: u64,
         recipients: Vec<state::Recipient>,
     ) -> Result<()> {
         instructions::initialize(
@@ -38,6 +40,8 @@ pub mod bonding_curve {
             max_token_supply,
             liquidity_lock_period,
             liquidity_pool_percentage,
+            initial_reserve,
+            initial_supply,
             recipients,
         )
     }
@@ -54,8 +58,8 @@ pub mod bonding_curve {
         instructions::sell(ctx, amount, bump)
     }
 
-    pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
-        instructions::add_liquidity(ctx, amount)
+    pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: u64) -> Result<()> {
+        instructions::add_liquidity(ctx, sol_amount, token_amount)
     }
 
     pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {

@@ -58,7 +58,8 @@ pub trait BondingCurveAccount<'info> {
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        amount: u64,
+        token_amount: u64,
+        sol_amount: u64,
         locked_liquidity: bool,
         authority: &Signer<'info>,
         token_program: &Interface<'info, TokenInterface>,
@@ -94,10 +95,11 @@ pub trait BondingCurveAccount<'info> {
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
         fee_pool_vault: &mut AccountInfo<'info>,
-        amount: u64,
+        sol_amount: u64,
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        reserve_ratio: u16,
         // target liquidity for migration
         target_liquidity: u64,
         token_program: &Interface<'info, TokenInterface>,
@@ -203,28 +205,36 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         pool_sol_vault: &mut AccountInfo<'info>,
         fee_pool_account: &mut Account<'info, FeePool>,
         fee_pool_vault: &mut AccountInfo<'info>,
-        amount: u64,
+        sol_amount: u64,
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
+        reserve_ratio: u16,
         // target liquidity for migration
         target_liquidity: u64,
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-        let amount_out = self.calculate_buy_cost(amount, bonding_curve_type)?;
+        // percentage of funds raised is kept in a reserve to back the token's value based on reserve ratio 
+        let reserve_amount = sol_amount.checked_mul(reserve_ratio as u64)
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?
+        .checked_div(10000)  // Divide by 10000 to get the percentage
+        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+        // todo :remaining sol amount is kept in the treasury
+        let treasury_amount = sol_amount.checked_sub(reserve_amount).ok_or(CustomError::OverFlowUnderFlowOccured)?;
+
+        let amount_out = self.calculate_buy_cost(reserve_amount, bonding_curve_type)?;
         let fee = amount_out * (fee_percentage as u64) / 10000;
 
-        msg!("amount_out: {}", amount_out);
-        msg!("fee: {}", fee);
         // make sure the bonding curve SOL liquility is not hit target liquidity
-        if self.reserve_balance + amount > target_liquidity {
+        if self.reserve_balance + reserve_amount > target_liquidity {
             return err!(CustomError::TargetLiquidityReached);
         }
-        self.total_supply += amount;
-        self.reserve_balance += amount;
-        self.reserve_token -= amount;
-        self.transfer_sol_to_pool(authority, pool_sol_vault, amount, system_program)?;
+        self.total_supply += reserve_amount;
+        self.reserve_balance += reserve_amount;
+        self.reserve_token -= amount_out;
+        self.transfer_sol_to_pool(authority, pool_sol_vault, reserve_amount, system_program)?;
 
         self.transfer_token_from_pool(
             token_accounts.1,
@@ -316,7 +326,8 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         ),
 
         pool_sol_vault: &mut AccountInfo<'info>,
-        amount: u64,
+        token_amount: u64,
+        sol_amount: u64,
         locked_liquidity: bool,
         authority: &Signer<'info>,
         token_program: &Interface<'info, TokenInterface>,
@@ -325,8 +336,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         msg!("Adding liquidity to the pool");
         // Checking if the amount is greater than 0 and less than token balance
         let balance = token_accounts.2.amount;
-        msg!("balance {}", balance);
-        if amount == 0 || amount > balance {
+        if token_amount == 0 || token_amount > balance {
             return err!(CustomError::InvalidAmount);
         }
         // unable to  add liquidity if the bonding curve locked 
@@ -341,7 +351,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             token_accounts.2,
             token_accounts.1,
             token_accounts.0,
-            amount,
+            token_amount,
             authority,
             token_program,
         )?;
@@ -351,11 +361,11 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         self.transfer_sol_to_pool(
             authority,
             pool_sol_vault,
-            INITIAL_LAMPORTS_FOR_POOL,
+            sol_amount,
             system_program,
         )?;
-        self.reserve_token += amount;
-        self.reserve_balance += INITIAL_LAMPORTS_FOR_POOL;
+        self.reserve_token += token_amount;
+        self.reserve_balance += sol_amount;
 
         Ok(())
     }

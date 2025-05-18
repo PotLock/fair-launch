@@ -5,7 +5,7 @@ use crate::consts::*;
 use crate::errors::CustomError;
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
-pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
+pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: u64) -> Result<()> {
     msg!("Trying to add liquidity to the pool");
 
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
@@ -31,7 +31,8 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
     bonding_curve.add_liquidity(
         token_one_accounts,
         pool_sol_vault,
-        amount,
+        token_amount,
+        sol_amount,
         bonding_curve_configuration.locked_liquidity,
         user,
         token_program,

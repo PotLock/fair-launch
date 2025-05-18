@@ -42,6 +42,8 @@ pub fn initialize(
     max_token_supply: u64,
     liquidity_lock_period: i64,
     liquidity_pool_percentage: u16,
+    initial_price: u64,
+    initial_supply: u64,
     fee_recipients: Vec<Recipient>,
 ) -> Result<()> {
     let dex_config = &mut ctx.accounts.dex_configuration_account;
@@ -59,6 +61,8 @@ pub fn initialize(
         max_token_supply,
         liquidity_lock_period,
         liquidity_pool_percentage,
+        initial_price,
+        initial_supply,
     ));
 
     fee_pool_account.set_inner(FeePool::new(fee_recipients, ctx.bumps.fee_pool_account)?);
