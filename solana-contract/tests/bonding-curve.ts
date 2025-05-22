@@ -11,7 +11,7 @@ import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_
 import { getOrCreateATAInstruction } from "@mercurial-finance/vault-sdk/dist/cjs/src/vault/utils";
 import { derivePoolAddressWithConfig } from "@mercurial-finance/dynamic-amm-sdk/dist/cjs/src/amm/utils";
 import VaultImpl from "@mercurial-finance/vault-sdk";
-import { createAssociatedTokenAccountIdempotentInstruction, NATIVE_MINT, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, NATIVE_MINT, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 const connection = new Connection(clusterApiUrl("devnet"), 'confirmed')
 
 
@@ -53,7 +53,7 @@ describe("bonding_curve", () => {
   //     const targetLiquidity = new BN(1000000000);
   //     const daoQuorum = new BN(500);
   //     // 0 is linear, 1 is quadratic
-  //     const bondingCurveType = 1;
+  //     const bondingCurveType = 0;
   //     const maxTokenSupply = new BN(10000000000);
   //     const liquidityLockPeriod = new BN(60); // 30 days
   //     const liquidityPoolPercentage = new BN(50); // 50%
@@ -582,14 +582,35 @@ describe("bonding_curve", () => {
   it(" buy from the pool with SPL token ", async () => {
 
     try {
-
-
+      console.log("Before Buy from the pool with SPL token");
       const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
 
+      const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+      console.log("User Balance Before Buy: ", userBalanceBefore);
+
+      const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+      console.log("Pool Balance Before Buy: ", poolBalanceBefore);
+
+
+
+
+      const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
+      console.log("Fee Recipient Balance Before Buy: ", feeRecipientBalanceBefore);
+
+
+      const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
+      console.log("Fee Recipient 2 Balance Before Buy: ", feeRecipient2BalanceBefore);
+
+
+      const multisigBalanceBefore = (await connection.getBalance(multisig));
+      console.log("Multisig Balance Before Buy: ", multisigBalanceBefore);
+
+      
+      const amount = new BN(100000000)
       const tx = new Transaction()
         .add(
           await program.methods
-            .buy(new BN(100000000))
+            .buy(amount)
             .accountsStrict({
               bondingCurveConfiguration: curveConfig,
               bondingCurveAccount: bondingCurve,
@@ -626,8 +647,17 @@ describe("bonding_curve", () => {
       console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
       const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
       const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
+      console.log("User Balance After Buy: ", userBalance)
+      console.log("Pool Balance After Buy: ", poolBalance)
+
+      const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
+      console.log("Fee Recipient Balance After Buy: ", feeRecipientBalanceAfter);
+      const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
+      console.log("Fee Recipient 2 Balance After Buy: ", feeRecipient2BalanceAfter);
+      const multisigBalanceAfter = (await connection.getBalance(multisig));
+      console.log("Multisig Balance After Buy : ", multisigBalanceAfter);
+
+
     } catch (error) {
       console.log("Error in buy from pool :", error)
     }
@@ -685,6 +715,27 @@ describe("bonding_curve", () => {
 
       const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump } = getPDAs(signer.payer.publicKey, mint)
 
+      const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+      console.log("User Balance Before Sell: ", userBalanceBefore);
+
+      const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+      console.log("Pool Balance Before Sell: ", poolBalanceBefore);
+
+
+
+
+      const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
+      console.log("Fee Recipient Balance Before Sell: ", feeRecipientBalanceBefore);
+
+
+      const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
+      console.log("Fee Recipient 2 Balance Before Sell: ", feeRecipient2BalanceBefore);
+
+
+      const multisigBalanceBefore = (await connection.getBalance(multisig));
+      console.log("Multisig Balance Before Sell: ", multisigBalanceBefore);
+
+
       const tx = new Transaction()
         .add(
           await program.methods
@@ -725,8 +776,15 @@ describe("bonding_curve", () => {
       console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
       const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
       const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance : ", userBalance)
-      console.log("Pool Balance : ", poolBalance)
+      console.log("User Balance After Sell: ", userBalance)
+      console.log("Pool Balance After Sell: ", poolBalance)
+
+      const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
+      console.log("Fee Recipient Balance After Sell: ", feeRecipientBalanceAfter);
+      const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
+      console.log("Fee Recipient 2 Balance After Sell: ", feeRecipient2BalanceAfter);
+      const multisigBalanceAfter = (await connection.getBalance(multisig));
+      console.log("Multisig Balance After Sell : ", multisigBalanceAfter);
     } catch (error) {
       console.log("Error in sell from pool :", error)
     }

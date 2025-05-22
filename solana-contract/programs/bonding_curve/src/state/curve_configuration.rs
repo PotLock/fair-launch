@@ -149,7 +149,6 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
         Ok(())
     }
     fn calculate_fee(&mut self, amount: u64) -> Result<()> {
-        msg!("calculating fee for amount {:?}", amount);
         // Update total fees collected
         self.total_fees_collected = self
             .total_fees_collected
@@ -159,8 +158,6 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
         for recipient in self.fee_recipients.iter_mut() {
             recipient.amount = amount * (recipient.share as u64) / 10000;
         }
-        msg!("total fees collected {}", self.total_fees_collected);
-        msg!("recipients {:?}", self.fee_recipients);
         Ok(())
     }
 

@@ -179,7 +179,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
             .map_err(|_| CustomError::InvalidBondingCurveType)?;
 
-        msg!("total supply  {:?}", self.total_supply);
         if bonding_curve_type == BondingCurveType::Linear {
             return linear_sell_cost(amount, self.reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
@@ -208,32 +207,21 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-        // percentage of funds raised is kept in a reserve to back the token's value based on reserve ratio
-        let reserve_amount = sol_amount
-            .checked_mul(reserve_ratio as u64)
-            .ok_or(CustomError::OverFlowUnderFlowOccured)?
-            .checked_div(10000) // Divide by 10000 to get the percentage
-            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
-        msg!("reserve amount {:?}", reserve_amount);
-        // todo :remaining sol amount is kept in the treasury
-        let treasury_amount = sol_amount
-            .checked_sub(reserve_amount)
-            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
-        msg!("treasury amount {:?}", treasury_amount);
-        msg!("total supply {:?}", self.total_supply);
-        let amount_out = self.calculate_buy_cost(reserve_amount, bonding_curve_type)?;
+
+        let amount_out = self.calculate_buy_cost(sol_amount, bonding_curve_type)?;
+
         msg!("amount out {:?}", amount_out);
         let fee_in_sol = amount_out * (fee_percentage as u64) / 10000;
         msg!("fee in sol {:?}", fee_in_sol);
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
-        if self.reserve_balance + reserve_amount > target_liquidity {
+        if self.reserve_balance + amount_out > target_liquidity {
             return err!(CustomError::TargetLiquidityReached);
         }
-        self.total_supply += reserve_amount;
-        self.reserve_balance += reserve_amount;
+        self.total_supply += amount_out;
+        self.reserve_balance += amount_out;
         self.reserve_token -= amount_out;
-        self.transfer_sol_to_pool(authority, pool_sol_vault, reserve_amount, system_program)?;
+        self.transfer_sol_to_pool(authority, pool_sol_vault, amount_out, system_program)?;
 
         self.transfer_token_from_pool(
             token_accounts.1,
@@ -274,7 +262,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         let amount_out = self.calculate_sell_cost(amount, bonding_curve_type)?;
         let fee = amount_out * (fee_percentage as u64) / 10000;
 
-        msg!("reward {}", amount_out);
         // make sure the bonding curve SOL liquility is not hit target liquidity
         if self.reserve_balance + amount > target_liquidity {
             return err!(CustomError::TargetLiquidityReached);
@@ -295,7 +282,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             authority,
             token_program,
         )?;
-        msg!("pool_sol_vault {:?}", pool_sol_vault);
+
         self.transfer_sol_from_pool(
             pool_sol_vault,
             authority,
