@@ -1,14 +1,18 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{Mint, TokenInterface, TokenAccount},
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{consts::*, errors::CustomError};
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
+use crate::{consts::*, errors::CustomError};
 use anchor_lang::system_program;
 
-pub fn sell<'info>(ctx: Context<'_, '_, '_, 'info, Sell<'info>>, amount: u64, bump: u8) -> Result<()> {
+pub fn sell<'info>(
+    ctx: Context<'_, '_, '_, 'info, Sell<'info>>,
+    amount: u64,
+    bump: u8,
+) -> Result<()> {
     // TODO: Implement sell function
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let bonding_curve_configuration = &mut ctx.accounts.bonding_curve_configuration;
@@ -19,7 +23,6 @@ pub fn sell<'info>(ctx: Context<'_, '_, '_, 'info, Sell<'info>>, amount: u64, bu
 
     let bonding_curve_type: u8 = bonding_curve_configuration.bonding_curve_type.into();
     let fee_percentage: u16 = bonding_curve_configuration.fee_percentage;
-
 
     let token_one_accounts = (
         &mut *ctx.accounts.token_mint,
@@ -41,33 +44,38 @@ pub fn sell<'info>(ctx: Context<'_, '_, '_, 'info, Sell<'info>>, amount: u64, bu
         system_program,
     )?;
 
-        // transfer fees to recipients
-        for recipient in ctx.remaining_accounts {
-
-            // check if recipient is a valid address in the fee recipients
-            if !bonding_curve_configuration.fee_recipients.iter().any(|r| r.address == recipient.clone().key()) {
-                return Err(CustomError::FeeRecipientNotFound.into());
-            }
-    
-    
-            let amount_each_gets = bonding_curve_configuration.fee_recipients.iter().find(|r| r.address == recipient.clone().key()).unwrap().amount;
-            msg!("amount each gets {:?}", amount_each_gets);
-            let cpi_accounts = system_program::Transfer {
-                from: ctx.accounts.user.to_account_info(),
-                to: recipient.to_account_info(),
-            };
-            let cpi_program = system_program.to_account_info();
-            let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
-    
-            let res = system_program::transfer(cpi_context, amount_each_gets);
-            if !res.is_ok() {
-                return Err(CustomError::TransferFailed.into());
-            }
-            msg!("transferred fees to recipient {:?}", recipient);
-            msg!("amount each gets {:?}", amount_each_gets);
+    // transfer fees to recipients
+    for recipient in ctx.remaining_accounts {
+        // check if recipient is a valid address in the fee recipients
+        if !bonding_curve_configuration
+            .fee_recipients
+            .iter()
+            .any(|r| r.address == recipient.clone().key())
+        {
+            return Err(CustomError::FeeRecipientNotFound.into());
         }
 
-        
+        let amount_each_gets = bonding_curve_configuration
+            .fee_recipients
+            .iter()
+            .find(|r| r.address == recipient.clone().key())
+            .unwrap()
+            .amount;
+
+        let cpi_accounts = system_program::Transfer {
+            from: ctx.accounts.user.to_account_info(),
+            to: recipient.to_account_info(),
+        };
+        let cpi_program = system_program.to_account_info();
+        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+
+        let res = system_program::transfer(cpi_context, amount_each_gets);
+        if !res.is_ok() {
+            return Err(CustomError::TransferFailed.into());
+        }
+
+    }
+
     Ok(())
 }
 
@@ -105,8 +113,7 @@ pub struct Sell<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-
-    #[account(mut, 
+    #[account(mut,
         associated_token::mint = token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program

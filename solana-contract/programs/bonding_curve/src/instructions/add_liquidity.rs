@@ -1,9 +1,9 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenInterface, TokenAccount, Token2022};
-use anchor_spl::associated_token::AssociatedToken;
 use crate::consts::*;
 use crate::errors::CustomError;
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: u64) -> Result<()> {
     msg!("Trying to add liquidity to the pool");
@@ -25,8 +25,6 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: 
         &mut *ctx.accounts.pool_token_account,
         &mut *ctx.accounts.user_token_account,
     );
-
-
 
     bonding_curve.add_liquidity(
         token_one_accounts,
@@ -75,13 +73,12 @@ pub struct AddLiquidity<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-    #[account(mut, 
+    #[account(mut,
         associated_token::mint = token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program
     )]
     pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
 
     #[account(mut)]
     pub user: Signer<'info>,

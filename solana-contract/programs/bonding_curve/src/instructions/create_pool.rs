@@ -28,7 +28,10 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
         &mut *ctx.accounts.pool_token_account,
         &mut *ctx.accounts.user_token_account,
     );
-    msg!("initial supply {:?}", bonding_curve_configuration.initial_supply);
+    msg!(
+        "initial supply {:?}",
+        bonding_curve_configuration.initial_supply
+    );
     // add the initial reserve amount to the new pool
     bonding_curve_account.add_liquidity(
         token_one_accounts,
@@ -61,7 +64,6 @@ pub struct CreateLiquidityPool<'info> {
     )]
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
-
     #[account(
         mint::token_program = token_program
     )]
@@ -84,8 +86,7 @@ pub struct CreateLiquidityPool<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-
-    #[account(mut, 
+    #[account(mut,
         associated_token::mint = token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program

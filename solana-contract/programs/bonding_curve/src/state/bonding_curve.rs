@@ -207,7 +207,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-
         let amount_out = self.calculate_buy_cost(sol_amount, bonding_curve_type)?;
 
         msg!("amount out {:?}", amount_out);
@@ -232,7 +231,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         )?;
         // Collect fees
         bonding_configuration_account.calculate_fee(fee_in_sol)?;
-
 
         Ok(())
     }
@@ -293,7 +291,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         )?;
 
         bonding_configuration_account.calculate_fee(fee)?;
-
 
         Ok(())
     }

@@ -1,12 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken
-};
 use anchor_lang::system_program;
+use anchor_spl::associated_token::AssociatedToken;
 
-use anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount};
-
-
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::consts::*;
 use crate::errors::CustomError;
@@ -17,7 +13,7 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
     // TODO: Implement buy function
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
     let bonding_curve_configuration = &mut ctx.accounts.bonding_curve_configuration;
-    
+
     let user = &ctx.accounts.user;
     let system_program = &ctx.accounts.system_program;
     let token_program = &ctx.accounts.token_program;
@@ -47,15 +43,22 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
 
     // transfer fees to recipients
     for recipient in ctx.remaining_accounts {
-
         // check if recipient is a valid address in the fee recipients
-        if !bonding_curve_configuration.fee_recipients.iter().any(|r| r.address == recipient.clone().key()) {
+        if !bonding_curve_configuration
+            .fee_recipients
+            .iter()
+            .any(|r| r.address == recipient.clone().key())
+        {
             return Err(CustomError::FeeRecipientNotFound.into());
         }
 
+        let amount_each_gets = bonding_curve_configuration
+            .fee_recipients
+            .iter()
+            .find(|r| r.address == recipient.clone().key())
+            .unwrap()
+            .amount;
 
-        let amount_each_gets = bonding_curve_configuration.fee_recipients.iter().find(|r| r.address == recipient.clone().key()).unwrap().amount;
-        msg!("amount each gets {:?}", amount_each_gets);
         let cpi_accounts = system_program::Transfer {
             from: ctx.accounts.user.to_account_info(),
             to: recipient.to_account_info(),
@@ -67,10 +70,8 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
         if !res.is_ok() {
             return Err(CustomError::TransferFailed.into());
         }
-        msg!("transferred fees to recipient {:?}", recipient);
-        msg!("amount each gets {:?}", amount_each_gets);
-    }
 
+    }
 
     Ok(())
 }
@@ -109,8 +110,7 @@ pub struct Buy<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-
-    #[account(mut, 
+    #[account(mut,
         associated_token::mint = token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program

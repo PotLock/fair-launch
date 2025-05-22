@@ -2,8 +2,6 @@ use crate::consts::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
 
-
-
 #[derive(Accounts, Clone)]
 pub struct InitializeBondingCurve<'info> {
     #[account(
@@ -14,7 +12,6 @@ pub struct InitializeBondingCurve<'info> {
         bump,
     )]
     pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,
-
 
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -57,7 +54,6 @@ pub fn initialize(
         initial_supply,
         fee_recipients,
     )?);
-
 
     Ok(())
 }

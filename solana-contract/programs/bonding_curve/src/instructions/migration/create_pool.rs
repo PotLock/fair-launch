@@ -6,14 +6,10 @@ use crate::errors::CustomError;
 use crate::state::{get_meteora_pool_create_ix_data, get_pump_pool_create_ix_data};
 use crate::state::{BondingCurve, CurveConfiguration};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{
-    instruction::Instruction,
-    program::{invoke, invoke_signed},
-    system_instruction,
-};
+use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-use anchor_spl::token_interface::{Token2022, TokenInterface, Mint as MintInterface};
+use anchor_spl::token_interface::{Mint as MintInterface, Token2022, TokenInterface};
 use std::str::FromStr;
 #[derive(Accounts)]
 pub struct InitializeMeteoraPool<'info> {
@@ -339,7 +335,6 @@ pub struct InitializePumpswapPool<'info> {
     )]
     pub bonding_curve_account: Box<Account<'info, BondingCurve>>,
 
-
     pub token_mint: Box<InterfaceAccount<'info, MintInterface>>,
     /// CHECK:
     #[account(mut)]
@@ -448,11 +443,9 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let signer_seeds = &[&signer[..]];
 
-
     let base_token_amount = *&ctx.accounts.bonding_curve_account.reserve_token;
 
     msg!("Start transfer token");
-
 
     anchor_spl::token_interface::transfer_checked(
         CpiContext::new_with_signer(
@@ -461,9 +454,8 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
             signer_seeds,
         ),
         base_token_amount,
-        //todo 
+        //todo
         ctx.accounts.token_mint.decimals,
-
     )?;
 
     msg!("Transfer token success");
@@ -472,7 +464,7 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     let quote_token_amount = *&ctx.accounts.bonding_curve_account.reserve_balance;
 
-    //todo 
+    //todo
     system_program::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
@@ -497,11 +489,9 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     token::sync_native(cpi_ctx)?;
 
-
     msg!("Wrap solana token success");
 
     msg!("Start pumpswap");
-
 
     let mut accounts = vec![
         AccountMeta::new(ctx.accounts.pool.key(), false),
@@ -524,20 +514,23 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
         AccountMeta::new_readonly(ctx.accounts.pumpswap_program.key(), false),
     ];
 
-
     accounts.extend(ctx.remaining_accounts.iter().map(|acc| AccountMeta {
         pubkey: *acc.key,
         is_signer: false,
         is_writable: true,
     }));
 
-    let data = get_pump_pool_create_ix_data(index, base_token_amount, quote_token_amount, ctx.accounts.creator.key());
+    let data = get_pump_pool_create_ix_data(
+        index,
+        base_token_amount,
+        quote_token_amount,
+        ctx.accounts.creator.key(),
+    );
     let instruction = Instruction {
         program_id: pumpswap_program_id,
         accounts,
         data,
     };
-
 
     invoke_signed(
         &instruction,

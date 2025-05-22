@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::utils::get_function_hash;
+
 #[derive(AnchorSerialize, AnchorDeserialize)]
 struct CpiPumpPoolArgs {
     index: u16,
@@ -8,11 +10,13 @@ struct CpiPumpPoolArgs {
     coin_creator: Pubkey,
 }
 
-pub fn get_pump_pool_create_ix_data(index: u16, base_amount_in: u64, quote_amount_in: u64, coin_creator: Pubkey) -> Vec<u8> {
-    let hash = get_function_hash(
-        "global",
-        "create_pool",
-    );
+pub fn get_pump_pool_create_ix_data(
+    index: u16,
+    base_amount_in: u64,
+    quote_amount_in: u64,
+    coin_creator: Pubkey,
+) -> Vec<u8> {
+    let hash = get_function_hash("global", "create_pool");
     let mut buf: Vec<u8> = vec![];
     buf.extend_from_slice(&hash);
     let args = CpiPumpPoolArgs {
@@ -25,16 +29,3 @@ pub fn get_pump_pool_create_ix_data(index: u16, base_amount_in: u64, quote_amoun
     args.serialize(&mut buf).unwrap();
     buf
 }
-
-pub fn get_function_hash(namespace: &str, name: &str) -> [u8; 8] {
-    let preimage = format!("{}:{}", namespace, name);
-    let mut sighash = [0u8; 8];
-    sighash.copy_from_slice(
-        &anchor_lang::solana_program::hash::hash(preimage.as_bytes()).to_bytes()[..8],
-    );
-    sighash
-}
-
-
-
-

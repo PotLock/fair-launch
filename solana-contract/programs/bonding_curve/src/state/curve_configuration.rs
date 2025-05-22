@@ -1,7 +1,5 @@
 use crate::errors::CustomError;
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022::{self, TransferChecked};
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BondingCurveType {
@@ -187,5 +185,4 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
 
         Ok(())
     }
-
 }

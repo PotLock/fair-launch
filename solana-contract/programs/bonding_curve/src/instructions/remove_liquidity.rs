@@ -1,10 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::
-    associated_token::AssociatedToken
-;
+use anchor_spl::associated_token::AssociatedToken;
 
-use anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount};
-
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::consts::*;
 use crate::errors::CustomError;
@@ -80,13 +77,12 @@ pub struct RemoveLiquidity<'info> {
     )]
     pub pool_sol_vault: AccountInfo<'info>,
 
-    #[account(mut, 
+    #[account(mut,
         associated_token::mint = token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program
     )]
     pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
 
     #[account(mut)]
     pub user: Signer<'info>,

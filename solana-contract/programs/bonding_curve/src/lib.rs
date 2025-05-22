@@ -58,11 +58,19 @@ pub mod bonding_curve {
         instructions::buy(ctx, amount)
     }
 
-    pub fn sell<'info>(ctx: Context<'_, '_, '_, 'info, Sell<'info>>, amount: u64, bump: u8) -> Result<()> {
+    pub fn sell<'info>(
+        ctx: Context<'_, '_, '_, 'info, Sell<'info>>,
+        amount: u64,
+        bump: u8,
+    ) -> Result<()> {
         instructions::sell(ctx, amount, bump)
     }
 
-    pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: u64) -> Result<()> {
+    pub fn add_liquidity(
+        ctx: Context<AddLiquidity>,
+        sol_amount: u64,
+        token_amount: u64,
+    ) -> Result<()> {
         instructions::add_liquidity(ctx, sol_amount, token_amount)
     }
 
@@ -85,5 +93,4 @@ pub mod bonding_curve {
     pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
         instructions::initialize_pool_pumpswap(ctx, index)
     }
-
 }
