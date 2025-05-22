@@ -13,17 +13,8 @@ pub struct InitializeBondingCurve<'info> {
         seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
         bump,
     )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,
 
-
-    #[account(
-        init,
-        space = 8+ 3000,
-        payer = admin,
-        seeds = [FEE_POOL_SEED_PREFIX.as_bytes()],
-        bump
-    )]
-    pub fee_pool_account: Box<Account<'info, FeePool>>,
 
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -33,6 +24,7 @@ pub struct InitializeBondingCurve<'info> {
 
 pub fn initialize(
     ctx: Context<InitializeBondingCurve>,
+    admin: Pubkey,
     fee_percentage: u16,
     initial_quorum: u64,
     target_liquidity: u64,
@@ -46,12 +38,12 @@ pub fn initialize(
     initial_supply: u64,
     fee_recipients: Vec<Recipient>,
 ) -> Result<()> {
-    let dex_config = &mut ctx.accounts.dex_configuration_account;
-    let fee_pool_account = &mut ctx.accounts.fee_pool_account;
+    let dex_config = &mut ctx.accounts.bonding_curve_configuration;
     let current_time = Clock::get()?.unix_timestamp;
     let liquidity_lock_period = current_time + liquidity_lock_period;
 
     dex_config.set_inner(CurveConfiguration::new(
+        admin,
         initial_quorum,
         fee_percentage,
         target_liquidity,
@@ -63,9 +55,9 @@ pub fn initialize(
         liquidity_pool_percentage,
         initial_price,
         initial_supply,
-    ));
+        fee_recipients,
+    )?);
 
-    fee_pool_account.set_inner(FeePool::new(fee_recipients, ctx.bumps.fee_pool_account)?);
 
     Ok(())
 }

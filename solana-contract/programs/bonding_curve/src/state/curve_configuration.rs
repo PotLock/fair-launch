@@ -1,5 +1,7 @@
 use crate::errors::CustomError;
 use anchor_lang::prelude::*;
+use anchor_spl::token_2022::{self, TransferChecked};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BondingCurveType {
@@ -29,9 +31,18 @@ impl From<BondingCurveType> for u8 {
     }
 }
 
+#[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct Recipient {
+    pub address: Pubkey,
+    pub share: u16, // Share in basis points (e.g., 5000 = 50%)
+    pub amount: u64,
+    pub locking_period: i64,
+}
+
 /// CURVE CONFIGURATION ACCOUNT
 #[account]
 pub struct CurveConfiguration {
+    pub admin: Pubkey,
     pub initial_quorum: u64,
     pub use_dao: bool,
     pub governance: Pubkey,     // Shared governance contract address
@@ -44,15 +55,20 @@ pub struct CurveConfiguration {
     pub max_token_supply: u64,
     pub liquidity_lock_period: i64, // Liquidity lock period in seconds. cant remove liquidity before this period
     pub liquidity_pool_percentage: u16, // Percentage of the bonding curve liquidity pool that is migrated to the DEX,
-    pub initial_reserve: u64, // Initial reserve of the token in SOL
-    pub initial_supply: u64, // Initial supply of the token
+    pub initial_reserve: u64,           // Initial reserve of the token in SOL
+    pub initial_supply: u64,            // Initial supply of the token,
+    pub fee_recipients: Vec<Recipient>,
+    pub total_fees_collected: u64,
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
-    pub const ACCOUNT_SIZE: usize = 8 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8;
+    // Discriminator (8) + Pubkey(32) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
+    // todo : limit number of fee recipients for init account
+    pub const ACCOUNT_SIZE: usize =
+        8 + 32 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
 
     pub fn new(
+        admin: Pubkey,
         initial_quorum: u64,
         fee_percentage: u16,
         target_liquidity: u64,
@@ -64,11 +80,30 @@ impl CurveConfiguration {
         liquidity_pool_percentage: u16,
         initial_reserve: u64,
         initial_supply: u64,
-    ) -> Self {
+        fee_recipients: Vec<Recipient>,
+    ) -> Result<Self> {
         let bonding_curve_type =
             BondingCurveType::try_from(bonding_curve_type).unwrap_or(BondingCurveType::Linear);
 
-        Self {
+        let total_share: u16 = fee_recipients.iter().map(|r| r.share).sum();
+        if total_share != 10000 {
+            return Err(CustomError::InvalidSharePercentage.into());
+        }
+        let current_time = Clock::get()?.unix_timestamp;
+
+        // make sure amount is 0 in all recipients in initial state
+        let recipients = fee_recipients
+            .iter()
+            .map(|r| Recipient {
+                address: r.address,
+                share: r.share,
+                amount: 0,
+                locking_period: current_time + r.locking_period,
+            })
+            .collect();
+
+        Ok(Self {
+            admin,
             initial_quorum,
             use_dao: false,
             governance,
@@ -83,19 +118,23 @@ impl CurveConfiguration {
             liquidity_pool_percentage,
             initial_reserve,
             initial_supply,
-        }
+            fee_recipients: recipients,
+            total_fees_collected: 0,
+        })
     }
 }
 
 pub trait CurveConfigurationAccount<'info> {
     fn toggle_dao(&mut self) -> Result<()>;
     fn update_fee_percentage(&mut self, new_fee_percentage: u16) -> Result<()>;
+    fn calculate_fee(&mut self, amount: u64) -> Result<()>;
+    fn add_fee_recipients(&mut self, new_recipients: Vec<Recipient>) -> Result<()>;
 }
 
 impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfiguration> {
     fn toggle_dao(&mut self) -> Result<()> {
         if self.use_dao {
-            return err!(CustomError::DAOAlreadyActivated);
+            return Err(CustomError::DAOAlreadyActivated.into());
         }
         self.use_dao = true;
         Ok(())
@@ -104,10 +143,52 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
     fn update_fee_percentage(&mut self, new_fee_percentage: u16) -> Result<()> {
         // Maximum fee is 10%
         if new_fee_percentage <= 1000_u16 {
-            return err!(CustomError::InvalidFee);
+            return Err(CustomError::InvalidFee.into());
         }
         self.fee_percentage = new_fee_percentage;
         Ok(())
     }
-}
+    fn calculate_fee(&mut self, amount: u64) -> Result<()> {
+        msg!("calculating fee for amount {:?}", amount);
+        // Update total fees collected
+        self.total_fees_collected = self
+            .total_fees_collected
+            .checked_add(amount)
+            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
 
+        for recipient in self.fee_recipients.iter_mut() {
+            recipient.amount = amount * (recipient.share as u64) / 10000;
+        }
+        msg!("total fees collected {}", self.total_fees_collected);
+        msg!("recipients {:?}", self.fee_recipients);
+        Ok(())
+    }
+
+    fn add_fee_recipients(&mut self, new_recipients: Vec<Recipient>) -> Result<()> {
+        let old_recipients = self.fee_recipients.clone();
+
+        let updated_recipients: Vec<Recipient> = new_recipients
+            .into_iter()
+            .map(|mut new_recipient| {
+                if let Some(old_recipient) = old_recipients
+                    .iter()
+                    .find(|r| r.address == new_recipient.address)
+                {
+                    new_recipient.amount = old_recipient.amount;
+                }
+                new_recipient
+            })
+            .collect();
+
+        let total_share: u16 = updated_recipients.iter().map(|r| r.share).sum();
+        if total_share != 10000 {
+            return Err(CustomError::InvalidSharePercentage.into());
+        }
+        msg!("updated recipients {:?}", updated_recipients);
+        // Update recipients list
+        self.fee_recipients = updated_recipients;
+
+        Ok(())
+    }
+
+}

@@ -7,7 +7,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let bonding_curve_account = &mut ctx.accounts.bonding_curve_account;
-    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
+    let bonding_curve_configuration = &ctx.accounts.bonding_curve_configuration;
     bonding_curve_account.set_inner(BondingCurve::new(
         ctx.accounts.user.key(),
         ctx.accounts.token_mint.key(),
@@ -19,14 +19,16 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
         bonding_curve_configuration.initial_reserve,
         bonding_curve_configuration.initial_supply,
         bonding_curve_account.reserve_ratio,
+        ctx.accounts.token_mint.decimals,
     )?;
+    msg!("initial reserve amount {:?}", initial_reserve_amount);
 
     let token_one_accounts = (
         &mut *ctx.accounts.token_mint,
         &mut *ctx.accounts.pool_token_account,
         &mut *ctx.accounts.user_token_account,
     );
-
+    msg!("initial supply {:?}", bonding_curve_configuration.initial_supply);
     // add the initial reserve amount to the new pool
     bonding_curve_account.add_liquidity(
         token_one_accounts,
@@ -48,7 +50,7 @@ pub struct CreateLiquidityPool<'info> {
         seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
         bump,
     )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         init,
@@ -81,6 +83,7 @@ pub struct CreateLiquidityPool<'info> {
         bump
     )]
     pub pool_sol_vault: AccountInfo<'info>,
+
 
     #[account(mut, 
         associated_token::mint = token_mint,

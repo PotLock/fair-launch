@@ -1,16 +1,12 @@
-use crate::errors::CustomError;
+use crate::{errors::CustomError};
 use anchor_lang::prelude::*;
-use std::ops::{Div, Mul};
-pub fn convert_to_float(value: u64, decimals: u8) -> f64 {
-    (value as f64).div(f64::powf(10.0, decimals as f64))
-}
 
-pub fn convert_from_float(value: f64, decimals: u8) -> u64 {
-    value.mul(f64::powf(10.0, decimals as f64)) as u64
-}
+
 
 // calculate the initial reserve amount based on the initial price (SOL) and initial supply (token)
-pub fn calculate_initial_reserve_linear(initial_price: u64, initial_supply: u64, reserve_ratio: u16) -> Result<u64> {
+pub fn calculate_initial_reserve_linear(initial_price: u64, initial_supply: u64, reserve_ratio: u16, token_decimals: u8) -> Result<u64> {
+    let initial_supply = initial_supply.checked_div(10u64.pow(token_decimals as u32)).ok_or(CustomError::OverFlowUnderFlowOccured)?;
+    
     // initial_price * initial_supply
     let initial_market_cap: u128 = (initial_price as u128)
         .checked_mul(initial_supply as u128)

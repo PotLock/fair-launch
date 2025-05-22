@@ -9,7 +9,7 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: 
     msg!("Trying to add liquidity to the pool");
 
     let bonding_curve = &mut ctx.accounts.bonding_curve_account;
-    let bonding_curve_configuration = &ctx.accounts.dex_configuration_account;
+    let bonding_curve_configuration = &ctx.accounts.bonding_curve_configuration;
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
     if bonding_curve.creator != user.key() {
@@ -48,7 +48,7 @@ pub struct AddLiquidity<'info> {
         seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
         bump,
     )]
-    pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
+    pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,
 
     #[account(
         mut,

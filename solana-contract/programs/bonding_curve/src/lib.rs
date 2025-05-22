@@ -7,15 +7,18 @@ pub mod state;
 pub mod utils;
 
 use crate::instructions::*;
-
-declare_id!("6NjfDmmyYsRaWbfoGYXNYa7efGr7GRGWTQKDaDbUCEVs");
+use crate::state::Recipient;
+declare_id!("5koT498Y2YoC32B9eejQo1R2HKv5T8MwtheRYEwFi5ps");
 
 #[program]
 pub mod bonding_curve {
+    use crate::state::Recipient;
+
     use super::*;
 
     pub fn initialize(
         ctx: Context<InitializeBondingCurve>,
+        admin: Pubkey,
         fee_percentage: u16,
         initial_quorum: u64,
         target_liquidity: u64,
@@ -27,10 +30,11 @@ pub mod bonding_curve {
         liquidity_pool_percentage: u16,
         initial_reserve: u64,
         initial_supply: u64,
-        recipients: Vec<state::Recipient>,
+        recipients: Vec<Recipient>,
     ) -> Result<()> {
         instructions::initialize(
             ctx,
+            admin,
             fee_percentage,
             initial_quorum,
             target_liquidity,
@@ -50,11 +54,11 @@ pub mod bonding_curve {
         instructions::create_pool(ctx)
     }
 
-    pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {
+    pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> Result<()> {
         instructions::buy(ctx, amount)
     }
 
-    pub fn sell(ctx: Context<Sell>, amount: u64, bump: u8) -> Result<()> {
+    pub fn sell<'info>(ctx: Context<'_, '_, '_, 'info, Sell<'info>>, amount: u64, bump: u8) -> Result<()> {
         instructions::sell(ctx, amount, bump)
     }
 
@@ -67,16 +71,12 @@ pub mod bonding_curve {
     }
 
     // // Only DAO can grant this permission
-    // pub fn add_fee_recipients(
-    //     ctx: Context<AddFeeRecipient>,
-    //     recipients: Vec<state::Recipient>,
-    // ) -> Result<()> {
-    //     instructions::add_fee_recipients(ctx, recipients)
-    // }
-
-    // pub fn claim_fee(ctx: Context<ClaimFee>, bump: u8) -> Result<()> {
-    //     instructions::claim_fee(ctx, bump)
-    // }
+    pub fn add_fee_recipients(
+        ctx: Context<AddFeeRecipient>,
+        recipients: Vec<Recipient>,
+    ) -> Result<()> {
+        instructions::add_fee_recipients(ctx, recipients)
+    }
 
     pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
         instructions::initialize_pool_meteora_with_config(ctx)

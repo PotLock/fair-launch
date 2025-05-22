@@ -1,13 +1,12 @@
 use crate::consts::*;
 use crate::errors::CustomError;
+use crate::state::curve_configuration::{
+    BondingCurveType, CurveConfiguration, CurveConfigurationAccount,
+};
 use crate::utils::calc::*;
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token;
-use anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount};
-
-use super::BondingCurveType;
-
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 /// BONDING CURVE ACCOUNT
 #[account]
@@ -72,9 +71,9 @@ pub trait BondingCurveAccount<'info> {
         token_accounts: (
             // token mint
             &mut InterfaceAccount<'info, Mint>,
-            // pool token account 
+            // pool token account
             &mut InterfaceAccount<'info, TokenAccount>,
-            // user token account 
+            // user token account
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_account: &mut AccountInfo<'info>,
@@ -86,15 +85,13 @@ pub trait BondingCurveAccount<'info> {
 
     fn buy(
         &mut self,
-        // bonding_configuration_account: &Account<'info, CurveConfiguration>,
+        bonding_configuration_account: &mut Account<'info, CurveConfiguration>,
         token_accounts: (
             &mut InterfaceAccount<'info, Mint>,
             &mut InterfaceAccount<'info, TokenAccount>,
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        fee_pool_account: &mut Account<'info, FeePool>,
-        fee_pool_vault: &mut AccountInfo<'info>,
         sol_amount: u64,
         fee_percentage: u16,
         authority: &Signer<'info>,
@@ -108,15 +105,13 @@ pub trait BondingCurveAccount<'info> {
 
     fn sell(
         &mut self,
-        // bonding_configuration_account: &Account<'info, CurveConfiguration>,
+        bonding_configuration_account: &mut Account<'info, CurveConfiguration>,
         token_accounts: (
             &mut InterfaceAccount<'info, Mint>,
             &mut InterfaceAccount<'info, TokenAccount>,
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        fee_pool_account: &mut Account<'info, FeePool>,
-        fee_pool_vault: &mut AccountInfo<'info>,
         amount: u64,
         fee_percentage: u16,
         bump: u8,
@@ -196,15 +191,13 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
 
     fn buy(
         &mut self,
-        // bonding_configuration_account: &Account<'info, CurveConfiguration>,
+        bonding_configuration_account: &mut Account<'info, CurveConfiguration>,
         token_accounts: (
             &mut InterfaceAccount<'info, Mint>,
             &mut InterfaceAccount<'info, TokenAccount>,
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        fee_pool_account: &mut Account<'info, FeePool>,
-        fee_pool_vault: &mut AccountInfo<'info>,
         sol_amount: u64,
         fee_percentage: u16,
         authority: &Signer<'info>,
@@ -215,17 +208,23 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-        // percentage of funds raised is kept in a reserve to back the token's value based on reserve ratio 
-        let reserve_amount = sol_amount.checked_mul(reserve_ratio as u64)
-        .ok_or(CustomError::OverFlowUnderFlowOccured)?
-        .checked_div(10000)  // Divide by 10000 to get the percentage
-        .ok_or(CustomError::OverFlowUnderFlowOccured)?;
-
+        // percentage of funds raised is kept in a reserve to back the token's value based on reserve ratio
+        let reserve_amount = sol_amount
+            .checked_mul(reserve_ratio as u64)
+            .ok_or(CustomError::OverFlowUnderFlowOccured)?
+            .checked_div(10000) // Divide by 10000 to get the percentage
+            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+        msg!("reserve amount {:?}", reserve_amount);
         // todo :remaining sol amount is kept in the treasury
-        let treasury_amount = sol_amount.checked_sub(reserve_amount).ok_or(CustomError::OverFlowUnderFlowOccured)?;
-
+        let treasury_amount = sol_amount
+            .checked_sub(reserve_amount)
+            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+        msg!("treasury amount {:?}", treasury_amount);
+        msg!("total supply {:?}", self.total_supply);
         let amount_out = self.calculate_buy_cost(reserve_amount, bonding_curve_type)?;
-        let fee = amount_out * (fee_percentage as u64) / 10000;
+        msg!("amount out {:?}", amount_out);
+        let fee_in_sol = amount_out * (fee_percentage as u64) / 10000;
+        msg!("fee in sol {:?}", fee_in_sol);
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
         if self.reserve_balance + reserve_amount > target_liquidity {
@@ -244,24 +243,24 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             token_program,
         )?;
         // Collect fees
-        fee_pool_account.calculate_fee(fee)?;
-        // transfer fees to fee pool
-        self.transfer_sol_to_pool(authority, fee_pool_vault, fee, system_program)?;
+        bonding_configuration_account.calculate_fee(fee_in_sol)?;
+
 
         Ok(())
     }
 
     fn sell(
         &mut self,
-        // bonding_configuration_account: &Account<'info, CurveConfiguration>,
+        bonding_configuration_account: &mut Account<'info, CurveConfiguration>,
         token_accounts: (
+            // token mint
             &mut InterfaceAccount<'info, Mint>,
+            // pool token account
             &mut InterfaceAccount<'info, TokenAccount>,
+            // user token account
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        fee_pool_account: &mut Account<'info, FeePool>,
-        fee_pool_vault: &mut AccountInfo<'info>,
         amount: u64,
         fee_percentage: u16,
         bump: u8,
@@ -285,7 +284,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             return err!(CustomError::NotEnoughSolInVault);
         }
 
-
         self.total_supply -= amount;
         self.reserve_balance -= amount_out;
         self.reserve_token += amount;
@@ -307,9 +305,8 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             SOL_VAULT_PREFIX.as_bytes(),
         )?;
 
-        fee_pool_account.calculate_fee(fee)?;
-        // transfer fees to fee pool
-        self.transfer_sol_to_pool(authority, fee_pool_vault, fee, system_program)?;
+        bonding_configuration_account.calculate_fee(fee)?;
+
 
         Ok(())
     }
@@ -319,9 +316,9 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_accounts: (
             // token mint
             &mut InterfaceAccount<'info, Mint>,
-            // pool token account 
+            // pool token account
             &mut InterfaceAccount<'info, TokenAccount>,
-            // user token account 
+            // user token account
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
 
@@ -339,7 +336,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         if token_amount == 0 || token_amount > balance {
             return err!(CustomError::InvalidAmount);
         }
-        // unable to  add liquidity if the bonding curve locked 
+        // unable to  add liquidity if the bonding curve locked
         if locked_liquidity {
             return err!(CustomError::LiquidityLocked);
         }
@@ -356,14 +353,8 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             token_program,
         )?;
 
-
         msg!("transfer sol to pool");
-        self.transfer_sol_to_pool(
-            authority,
-            pool_sol_vault,
-            sol_amount,
-            system_program,
-        )?;
+        self.transfer_sol_to_pool(authority, pool_sol_vault, sol_amount, system_program)?;
         self.reserve_token += token_amount;
         self.reserve_balance += sol_amount;
 
@@ -376,9 +367,9 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_accounts: (
             // token mint
             &mut InterfaceAccount<'info, Mint>,
-            // pool token account 
+            // pool token account
             &mut InterfaceAccount<'info, TokenAccount>,
-            // user token account 
+            // user token account
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
@@ -480,7 +471,6 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             ),
             amount,
             token_mint.decimals,
-
         )?;
         Ok(())
     }
@@ -510,146 +500,3 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         Ok(())
     }
 }
-
-/// FEE POOL ACCOUNT
-#[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct Recipient {
-    pub address: Pubkey,
-    pub share: u16, // Share in basis points (e.g., 5000 = 50%)
-    pub amount: u64,
-    pub locking_period: i64,
-}
-
-#[account]
-pub struct FeePool {
-    pub recipients: Vec<Recipient>,
-    pub total_fees_collected: u64,
-    pub bump: u8,
-}
-
-impl FeePool {
-    pub fn new(recipients: Vec<Recipient>, bump: u8) -> Result<Self> {
-        let total_share: u16 = recipients.iter().map(|r| r.share).sum();
-        if total_share != 10000 {
-            return err!(CustomError::InvalidSharePercentage);
-        }
-        let current_time = Clock::get()?.unix_timestamp;
-
-        // make sure amount is 0 in all recipients in initial state
-        let recipients = recipients
-            .iter()
-            .map(|r| Recipient {
-                address: r.address,
-                share: r.share,
-                amount: 0,
-                locking_period: current_time + r.locking_period,
-            })
-            .collect();
-
-        Ok(Self {
-            recipients,
-            total_fees_collected: 0,
-            bump,
-        })
-    }
-}
-
-pub trait FeePoolAccount<'info> {
-    fn calculate_fee(&mut self, amount: u64) -> Result<()>;
-    fn add_fee_recipients(&mut self, recipients: Vec<Recipient>) -> Result<()>;
-    fn claim_fee(
-        &mut self,
-        user: &Signer<'info>,
-        fee_pool_vault: &mut AccountInfo<'info>,
-        token: &mut AccountInfo<'info>,
-        system_program: &Program<'info, System>,
-        bump: u8,
-    ) -> Result<()>;
-}
-
-impl<'info> FeePoolAccount<'info> for Account<'info, FeePool> {
-    fn calculate_fee(&mut self, amount: u64) -> Result<()> {
-        // Update total fees collected
-        self.total_fees_collected = self
-            .total_fees_collected
-            .checked_add(amount)
-            .ok_or(error!(CustomError::OverFlowUnderFlowOccured))?;
-
-        for recipient in self.recipients.iter_mut() {
-            recipient.amount = amount * (recipient.share as u64) / 10000;
-        }
-        msg!("total fees collected {}", self.total_fees_collected);
-        msg!("recipients {:?}", self.recipients);
-        Ok(())
-    }
-
-    fn add_fee_recipients(&mut self, new_recipients: Vec<Recipient>) -> Result<()> {
-        let old_recipients = self.recipients.clone();
-
-        let updated_recipients: Vec<Recipient> = new_recipients
-            .into_iter()
-            .map(|mut new_recipient| {
-                if let Some(old_recipient) = old_recipients
-                    .iter()
-                    .find(|r| r.address == new_recipient.address)
-                {
-                    new_recipient.amount = old_recipient.amount;
-                }
-                new_recipient
-            })
-            .collect();
-
-        let total_share: u16 = updated_recipients.iter().map(|r| r.share).sum();
-        if total_share != 10000 {
-            return err!(CustomError::InvalidSharePercentage);
-        }
-        msg!("updated recipients {:?}", updated_recipients);
-        // Update recipients list
-        self.recipients = updated_recipients;
-
-        Ok(())
-    }
-
-    fn claim_fee(
-        &mut self,
-        user: &Signer<'info>,
-        fee_pool_vault: &mut AccountInfo<'info>,
-        token: &mut AccountInfo<'info>,
-        system_program: &Program<'info, System>,
-        bump: u8,
-    ) -> Result<()> {
-        let public_key = user.key();
-        let recipient = self
-            .recipients
-            .iter()
-            .find(|r| r.address == public_key)
-            .ok_or(CustomError::FeeRecipientNotFound)?;
-        let amount = recipient.amount;
-        system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                system_program::Transfer {
-                    from: fee_pool_vault.to_account_info().clone(),
-                    to: user.to_account_info().clone(),
-                },
-                &[&[
-                    FEE_POOL_VAULT_PREFIX.as_bytes(),
-                    token.key().as_ref(),
-                    &[bump],
-                ]],
-            ),
-            amount,
-        )?;
-
-        // update amount in fee pool
-        self.recipients
-            .iter_mut()
-            .find(|r| r.address == public_key)
-            .unwrap()
-            .amount = 0;
-        self.total_fees_collected -= amount;
-
-        Ok(())
-    }
-}
-

@@ -3,7 +3,7 @@ import { Buffer } from "buffer";
 import { deserializeBondingCurve, deserializeCurveConfiguration, getKeypairFromFile, getPDAs } from "./utils";
 import os from "os";
 
-const programId = new PublicKey("8osGVKUMbLoejHL5nPMjBVppjHNfe7rRsD7L7jNYJN9n");
+const programId = new PublicKey("BCPfWSEgBCz6uEozdBG7YTHYa5oEkuKBBJABxymHL8Ma");
 
 
 const connection = new Connection("https://api.devnet.solana.com", {
@@ -47,7 +47,7 @@ async function getBondingCurveAccounts(mint: PublicKey) {
 
 }
 
-const mint = new PublicKey("9nNrWDKsbQZoHHU7bHkfNPC3iicvMFGasyWpEfEnXxAj");
+const mint = new PublicKey("3YChZhQqYpriRAiNunKLRxF5jnTuj97RE4SHBBHNAJsu");
 
 
 

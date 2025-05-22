@@ -83,17 +83,6 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
   )
 
 
-  const [feePool] = PublicKey.findProgramAddressSync(
-    [Buffer.from(FEE_POOL_SEED_PREFIX)],
-    
-    program.programId
-  )
-
-  const [feePoolVault, feePoolVaultBump] = PublicKey.findProgramAddressSync(
-    [Buffer.from(FEE_POOL_VAULT_PREFIX), mint.toBuffer()],
-    program.programId
-  )
-
   return {
     userTokenAccount,
     curveConfig,
@@ -101,9 +90,6 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
     poolSolVault,
     poolSolVaultBump,
     poolTokenAccount,
-    feePool,
-    feePoolVault,
-    feePoolVaultBump
   };
 }
 

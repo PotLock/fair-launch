@@ -58,4 +58,10 @@ pub enum CustomError {
 
     #[msg("SOL token A mismatch")]
     SOLMismatch,
+
+    #[msg("Invalid recipient amount")]
+    InvalidRecipientAmount,
+
+    #[msg("Transfer failed")]
+    TransferFailed,
 }
