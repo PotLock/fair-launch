@@ -8,13 +8,17 @@ pub mod utils;
 
 use crate::instructions::*;
 use crate::state::Recipient;
-declare_id!("7bQSomZtcGWy7K6f5hjFx3HmYDSCP2keUL9jD1NsfmtM");
+declare_id!("7zovTtSwiStemrV4qWrL6b872w3G8pq9GbFNX1RKqdKm");
 
 #[program]
 pub mod bonding_curve {
     use crate::state::Recipient;
 
     use super::*;
+
+    // ============================================================================
+    // Bonding Curve Functions
+    // ============================================================================
 
     pub fn initialize(
         ctx: Context<InitializeBondingCurve>,
@@ -86,6 +90,11 @@ pub mod bonding_curve {
         instructions::add_fee_recipients(ctx, recipients)
     }
 
+    // ============================================================================
+    // Migrate Liquidity Pool Bonding Curve to DEX
+    // ============================================================================
+
+
     pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
         instructions::initialize_pool_meteora_with_config(ctx)
     }
@@ -93,4 +102,30 @@ pub mod bonding_curve {
     pub fn migrate_pumpswap_pool(ctx: Context<InitializePumpswapPool>, index: u16) -> Result<()> {
         instructions::initialize_pool_pumpswap(ctx, index)
     }
+
+
+    // ============================================================================
+    // Launchpad Functions
+    // ============================================================================
+
+    pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64) -> Result<()> {
+        instructions::create_launchpad(ctx, token_price, purchase_limit_per_wallet)
+    }
+    pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
+        instructions::add_whitelist(ctx, user)
+    }
+
+    pub fn remove_whitelist(ctx: Context<RemoveWhitelist>, user: Pubkey) -> Result<()> {
+        instructions::remove_whitelist(ctx, user)
+    }
+
+    pub fn pause_launchpad(ctx: Context<PauseLaunchPad>) -> Result<()> {
+        instructions::pause_launchpad(ctx)
+    }
+
+    pub fn unpause_launchpad(ctx: Context<UnpauseLaunchPad>) -> Result<()> {
+        instructions::unpause_launchpad(ctx)
+    }
+
+
 }

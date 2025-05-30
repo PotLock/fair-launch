@@ -1,0 +1,40 @@
+use anchor_lang::prelude::*;
+use crate::state::{BuyerAccount, LaunchPadAccount};
+
+#[derive(Accounts)]
+pub struct RemoveWhitelist<'info> {
+    #[account(
+        mut,
+        seeds = [b"launchpad".as_ref(), authority.key().as_ref()],
+        bump = launch_pad_account.bump
+    )]
+    pub launch_pad_account: Account<'info, LaunchPadAccount>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        init_if_needed,
+        seeds = [b"buyer", launch_pad_account.key().as_ref(), user.key().as_ref()],
+        bump,
+        payer = authority,
+        space = 8 + std::mem::size_of::<BuyerAccount>(),
+    )]
+    pub buyer_account: Account<'info, BuyerAccount>,
+    
+    /// CHECK:
+    pub user: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+pub fn remove_whitelist(ctx: Context<RemoveWhitelist>, user: Pubkey) -> Result<()> {
+    let launch_pad_account = &mut ctx.accounts.launch_pad_account;
+    let buyer_account = &mut ctx.accounts.buyer_account;
+
+
+    buyer_account.whitelisted = false;
+
+    launch_pad_account.whitelisted_users.retain(|&x| x != user);
+    Ok(())
+}
+
+
+

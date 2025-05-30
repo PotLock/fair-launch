@@ -7,7 +7,7 @@ import { BN } from "bn.js";
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as os from "os";
-import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram, getPumpSwapPDA, PUMP_SWAP_PROGRAM_ID, accountExists, CURVE_CONFIGURATION_SEED, getPoolTokenAccount2022, getUserTokenAccount2022, FEE_POOL_SEED_PREFIX } from "./utils";
+import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram, getPumpSwapPDA, PUMP_SWAP_PROGRAM_ID, accountExists, CURVE_CONFIGURATION_SEED, getPoolTokenAccount2022, getUserTokenAccount2022, getLaunchPadPDAs } from "./utils";
 import { getOrCreateATAInstruction } from "@mercurial-finance/vault-sdk/dist/cjs/src/vault/utils";
 import { derivePoolAddressWithConfig } from "@mercurial-finance/dynamic-amm-sdk/dist/cjs/src/amm/utils";
 import VaultImpl from "@mercurial-finance/vault-sdk";
@@ -579,89 +579,89 @@ describe("bonding_curve", () => {
   // })
 
 
-  it(" buy from the pool with SPL token ", async () => {
+  // it(" buy from the pool with SPL token ", async () => {
 
-    try {
-      console.log("Before Buy from the pool with SPL token");
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
+  //   try {
+  //     console.log("Before Buy from the pool with SPL token");
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(signer.payer.publicKey, mint)
 
-      const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      console.log("User Balance Before Buy: ", userBalanceBefore);
+  //     const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     console.log("User Balance Before Buy: ", userBalanceBefore);
 
-      const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("Pool Balance Before Buy: ", poolBalanceBefore);
-
-
+  //     const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("Pool Balance Before Buy: ", poolBalanceBefore);
 
 
-      const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
-      console.log("Fee Recipient Balance Before Buy: ", feeRecipientBalanceBefore);
 
 
-      const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
-      console.log("Fee Recipient 2 Balance Before Buy: ", feeRecipient2BalanceBefore);
+  //     const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
+  //     console.log("Fee Recipient Balance Before Buy: ", feeRecipientBalanceBefore);
 
 
-      const multisigBalanceBefore = (await connection.getBalance(multisig));
-      console.log("Multisig Balance Before Buy: ", multisigBalanceBefore);
+  //     const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
+  //     console.log("Fee Recipient 2 Balance Before Buy: ", feeRecipient2BalanceBefore);
+
+
+  //     const multisigBalanceBefore = (await connection.getBalance(multisig));
+  //     console.log("Multisig Balance Before Buy: ", multisigBalanceBefore);
 
       
-      const amount = new BN(100000000)
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .buy(amount)
-            .accountsStrict({
-              bondingCurveConfiguration: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              systemProgram: SystemProgram.programId
-            }).remainingAccounts([
-              {
-                pubkey: feeRecipient.publicKey,
-                isWritable: true,
-                isSigner: false,
-              },
-              {
-                pubkey: feeRecipient2.publicKey,
-                isWritable: true,
-                isSigner: false,
-              },
-              {
-                pubkey: multisig,
-                isWritable: true,
-                isSigner: false,
-              },
-            ])
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance After Buy: ", userBalance)
-      console.log("Pool Balance After Buy: ", poolBalance)
+  //     const amount = new BN(100000000)
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .buy(amount)
+  //           .accountsStrict({
+  //             bondingCurveConfiguration: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             systemProgram: SystemProgram.programId
+  //           }).remainingAccounts([
+  //             {
+  //               pubkey: feeRecipient.publicKey,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //             {
+  //               pubkey: feeRecipient2.publicKey,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //             {
+  //               pubkey: multisig,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //           ])
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance After Buy: ", userBalance)
+  //     console.log("Pool Balance After Buy: ", poolBalance)
 
-      const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
-      console.log("Fee Recipient Balance After Buy: ", feeRecipientBalanceAfter);
-      const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
-      console.log("Fee Recipient 2 Balance After Buy: ", feeRecipient2BalanceAfter);
-      const multisigBalanceAfter = (await connection.getBalance(multisig));
-      console.log("Multisig Balance After Buy : ", multisigBalanceAfter);
+  //     const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
+  //     console.log("Fee Recipient Balance After Buy: ", feeRecipientBalanceAfter);
+  //     const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
+  //     console.log("Fee Recipient 2 Balance After Buy: ", feeRecipient2BalanceAfter);
+  //     const multisigBalanceAfter = (await connection.getBalance(multisig));
+  //     console.log("Multisig Balance After Buy : ", multisigBalanceAfter);
 
 
-    } catch (error) {
-      console.log("Error in buy from pool :", error)
-    }
-  })
+  //   } catch (error) {
+  //     console.log("Error in buy from pool :", error)
+  //   }
+  // })
 
   // it(" buy from the pool with  token 2022 ", async () => {
 
@@ -708,87 +708,87 @@ describe("bonding_curve", () => {
 
 
 
-  it(" sell from the pool with SPL token ", async () => {
+  // it(" sell from the pool with SPL token ", async () => {
 
-    try {
-
-
-      const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump } = getPDAs(signer.payer.publicKey, mint)
-
-      const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      console.log("User Balance Before Sell: ", userBalanceBefore);
-
-      const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("Pool Balance Before Sell: ", poolBalanceBefore);
+  //   try {
 
 
+  //     const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount, poolSolVaultBump } = getPDAs(signer.payer.publicKey, mint)
+
+  //     const userBalanceBefore = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     console.log("User Balance Before Sell: ", userBalanceBefore);
+
+  //     const poolBalanceBefore = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("Pool Balance Before Sell: ", poolBalanceBefore);
 
 
-      const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
-      console.log("Fee Recipient Balance Before Sell: ", feeRecipientBalanceBefore);
 
 
-      const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
-      console.log("Fee Recipient 2 Balance Before Sell: ", feeRecipient2BalanceBefore);
+  //     const feeRecipientBalanceBefore = (await connection.getBalance(feeRecipient.publicKey))
+  //     console.log("Fee Recipient Balance Before Sell: ", feeRecipientBalanceBefore);
 
 
-      const multisigBalanceBefore = (await connection.getBalance(multisig));
-      console.log("Multisig Balance Before Sell: ", multisigBalanceBefore);
+  //     const feeRecipient2BalanceBefore = (await connection.getBalance(feeRecipient2.publicKey))
+  //     console.log("Fee Recipient 2 Balance Before Sell: ", feeRecipient2BalanceBefore);
 
 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .sell(new BN(1000000), poolSolVaultBump)
-            .accountsStrict({
-              bondingCurveConfiguration: curveConfig,
-              bondingCurveAccount: bondingCurve,
-              tokenMint: mint,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              poolSolVault: poolSolVault,
-              poolTokenAccount: poolTokenAccount,
-              userTokenAccount: userTokenAccount,
-              user: signer.payer.publicKey,
-              systemProgram: SystemProgram.programId
-            }).remainingAccounts([
-              {
-                pubkey: feeRecipient.publicKey,
-                isWritable: true,
-                isSigner: false,
-              },
-              {
-                pubkey: feeRecipient2.publicKey,
-                isWritable: true,
-                isSigner: false,
-              },
-              {
-                pubkey: multisig,
-                isWritable: true,
-                isSigner: false,
-              },
-            ])
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-      const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
-      const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
-      console.log("User Balance After Sell: ", userBalance)
-      console.log("Pool Balance After Sell: ", poolBalance)
+  //     const multisigBalanceBefore = (await connection.getBalance(multisig));
+  //     console.log("Multisig Balance Before Sell: ", multisigBalanceBefore);
 
-      const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
-      console.log("Fee Recipient Balance After Sell: ", feeRecipientBalanceAfter);
-      const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
-      console.log("Fee Recipient 2 Balance After Sell: ", feeRecipient2BalanceAfter);
-      const multisigBalanceAfter = (await connection.getBalance(multisig));
-      console.log("Multisig Balance After Sell : ", multisigBalanceAfter);
-    } catch (error) {
-      console.log("Error in sell from pool :", error)
-    }
-  })
+
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .sell(new BN(1000000), poolSolVaultBump)
+  //           .accountsStrict({
+  //             bondingCurveConfiguration: curveConfig,
+  //             bondingCurveAccount: bondingCurve,
+  //             tokenMint: mint,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             poolSolVault: poolSolVault,
+  //             poolTokenAccount: poolTokenAccount,
+  //             userTokenAccount: userTokenAccount,
+  //             user: signer.payer.publicKey,
+  //             systemProgram: SystemProgram.programId
+  //           }).remainingAccounts([
+  //             {
+  //               pubkey: feeRecipient.publicKey,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //             {
+  //               pubkey: feeRecipient2.publicKey,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //             {
+  //               pubkey: multisig,
+  //               isWritable: true,
+  //               isSigner: false,
+  //             },
+  //           ])
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //     const userBalance = (await connection.getTokenAccountBalance(userTokenAccount)).value.uiAmount
+  //     const poolBalance = (await connection.getTokenAccountBalance(poolTokenAccount)).value.uiAmount
+  //     console.log("User Balance After Sell: ", userBalance)
+  //     console.log("Pool Balance After Sell: ", poolBalance)
+
+  //     const feeRecipientBalanceAfter = (await connection.getBalance(feeRecipient.publicKey));
+  //     console.log("Fee Recipient Balance After Sell: ", feeRecipientBalanceAfter);
+  //     const feeRecipient2BalanceAfter = (await connection.getBalance(feeRecipient2.publicKey));
+  //     console.log("Fee Recipient 2 Balance After Sell: ", feeRecipient2BalanceAfter);
+  //     const multisigBalanceAfter = (await connection.getBalance(multisig));
+  //     console.log("Multisig Balance After Sell : ", multisigBalanceAfter);
+  //   } catch (error) {
+  //     console.log("Error in sell from pool :", error)
+  //   }
+  // })
 
   // it(" sell from the pool with token2022 token ", async () => {
 
@@ -830,40 +830,6 @@ describe("bonding_curve", () => {
   //     console.log("Error in sell from pool :", error)
   //   }
   // })
-
-
-
-  // it(" claim fee from the fee pool", async () => {
-
-  //   try {
-
-
-  //     const { curveConfig, bondingCurve, feePool, feePoolVault, feePoolVaultBump } = await getPDAs(signer.payer.publicKey, mint, id)
-
-  //     const tx = new Transaction()
-  //       .add(
-  //         await program.methods
-  //           .claimFee(feePoolVaultBump)
-  //           .accounts({
-  //             dexConfigurationAccount: curveConfig,
-  //             bondingCurveAccount: bondingCurve,
-  //             feePoolAccount: feePool,
-  //             feePoolVault: feePoolVault,
-  //             tokenMint: mint,
-  //             user: feeRecipient.publicKey,
-  //             systemProgram: SystemProgram.programId
-  //           })
-  //           .instruction()
-  //       )
-  //     tx.feePayer = feeRecipient.publicKey
-  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-  //     const sig = await sendAndConfirmTransaction(connection, tx, [feeRecipient], { skipPreflight: true , commitment: "confirmed"})
-  //     console.log("Successfully claim fee from the pool fee : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-  //   } catch (error) {
-  //     console.log("Error in claim fee from the pool fee :", error)
-  //   }
-  // })
-
 
 
   // it(" remove liquidity to the pool with SPL token ", async () => {
@@ -938,8 +904,153 @@ describe("bonding_curve", () => {
   //   }
   // })
 
+  it(" create launchpad ", async () => {
+
+    try {
+      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+      const { launchpad, launchpadTokenAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+      let tokenPrice = new BN(100000000); // 0.1 SOL
+      let purchaseLimitPerWallet = new BN(100000000000000);
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .createLaunchpad(tokenPrice, purchaseLimitPerWallet)
+            .accountsStrict({
+              launchPadAccount: launchpad,
+              tokenMint: mint,
+              launchpadVault: launchpadTokenAccount,
+              authority: signer.payer.publicKey,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+      console.log("Successfully created launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in create launchpad :", error)
+    }
+  })
 
 
+  it(" add whitelist to launchpad ", async () => {
+
+    try {
+      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+      const { launchpad, buyerAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+
+
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .addWhitelist(user)
+            .accountsStrict({
+              launchPadAccount: launchpad,
+              authority: signer.payer.publicKey,
+              buyerAccount: buyerAccount,
+              user: user,
+              systemProgram: SystemProgram.programId,
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+      console.log("Successfully add whitelist to launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in add whitelist to launchpad :", error)
+    }
+  })
+
+  it(" remove whitelist to launchpad ", async () => {
+
+    try {
+      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+      const { launchpad, buyerAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+
+
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .removeWhitelist(user)
+            .accountsStrict({
+              launchPadAccount: launchpad,
+              authority: signer.payer.publicKey,
+              buyerAccount: buyerAccount,
+              user: user,
+              systemProgram: SystemProgram.programId,
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+      console.log("Successfully remove whitelist to launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in remove whitelist to launchpad :", error)
+    }
+  })
+
+
+  it(" pause launchpad ", async () => {
+
+    try {
+      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+      const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+
+
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .pauseLaunchpad()
+            .accountsStrict({
+              launchPadAccount: launchpad,
+              authority: signer.payer.publicKey,
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+      console.log("Successfully pause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in pause launchpad :", error)
+    }
+  })
+
+  it(" unpause launchpad ", async () => {
+
+    try {
+      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+      const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+
+      const tx = new Transaction()
+        .add(
+          await program.methods
+            .unpauseLaunchpad()
+            .accountsStrict({
+              launchPadAccount: launchpad,
+              authority: signer.payer.publicKey,
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+      console.log("Successfully unpause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in unpause launchpad :", error)
+    }
+  })
 });
 
 

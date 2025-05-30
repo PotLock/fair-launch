@@ -17,3 +17,6 @@ pub use migration::*;
 
 pub mod admin;
 pub use admin::*;
+
+pub mod launchpad;
+pub use launchpad::*;

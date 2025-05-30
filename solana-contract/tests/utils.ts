@@ -15,8 +15,6 @@ import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 export const CURVE_CONFIGURATION_SEED = "curve_configuration"
 const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
-export const FEE_POOL_SEED_PREFIX = "fee_pool"
-const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
 const TOKEN_VAULT_PREFIX = "token_vault"
 // Meteora 
 const POOL_METEORA_PREFIX = "pool"
@@ -33,6 +31,9 @@ export const METAPLEX_PROGRAM = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6
 
 export const TEST_CONFIG = new PublicKey("BdfD7rrTZEWmf8UbEBPVpvM3wUqyrR8swjAy5SNT8gJ2")
 
+// Launchpad
+const LAUNCHPAD_SEED_PREFIX = "launchpad"
+const BUYER_SEED_PREFIX = "buyer"
 
 // PumpSwap
 const POOL_PUMP_SWAP_PREFIX = "pool"
@@ -59,29 +60,14 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
     [Buffer.from(SOL_VAULT_PREFIX), mint.toBuffer()],
     program.programId
   );
-  
-  // const poolTokenAccount = await getOrCreateAssociatedTokenAccount(
-  //   connection, payer, mint, bondingCurve, true,'confirmed', null , TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
-  // )
-  // console.log("Pool Token Account : ", poolTokenAccount)
-  // const [poolTokenAccount] = PublicKey.findProgramAddressSync(
-  //   [Buffer.from(TOKEN_VAULT_PREFIX), bondingCurve.toBuffer(), mint.toBuffer()],
-  //   program.programId
-  // )
 
   const poolTokenAccount = getAssociatedTokenAddressSync(
     mint, bondingCurve, true
   )
 
-
-  // const userTokenAccount = await getOrCreateAssociatedTokenAccount(
-  //   connection, payer, mint, user, true,'confirmed', null, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
-  // )
-
   const userTokenAccount = getAssociatedTokenAddressSync(
     mint, user, true
   )
-
 
   return {
     userTokenAccount,
@@ -93,18 +79,33 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
   };
 }
 
-// export function associatedAddress({
-//   mint,
-//   owner,
-// }: {
-//   mint: PublicKey;
-//   owner: PublicKey;
-// }): PublicKey {
-//   return PublicKey.findProgramAddressSync(
-//     [owner.toBuffer(), TOKEN_2022_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-//     ASSOCIATED_PROGRAM_ID
-//   )[0];
-// }
+
+export function getLaunchPadPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey){
+  const [launchpad] = PublicKey.findProgramAddressSync(
+    [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+    program.programId
+  );
+
+  const [buyerAccount] = PublicKey.findProgramAddressSync(
+    [Buffer.from(BUYER_SEED_PREFIX), launchpad.toBuffer(), buyer.toBuffer()],
+    program.programId
+  );
+
+  const launchpadTokenAccount = getAssociatedTokenAddressSync(
+    mint, launchpad, true
+  )
+
+  return {
+    launchpad,
+    launchpadTokenAccount,
+    buyerAccount,
+  };
+}
+
+
+
+
+
 
 export async function getPoolTokenAccount2022(payer: Signer, mint: PublicKey, bondingCurve: PublicKey){
   const poolTokenAccount = await getOrCreateAssociatedTokenAccount(
