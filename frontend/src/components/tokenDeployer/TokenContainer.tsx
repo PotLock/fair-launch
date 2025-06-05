@@ -7,6 +7,7 @@ import { TokenSaleSetup } from "./steps/TokenSaleSetup";
 import { AdminSetup } from "./steps/AdminSetup";
 import { Button } from "../ui/button";
 import { Fuel } from "lucide-react";
+import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
 
 export const TokenContainer = () => {
     return (
@@ -22,6 +23,7 @@ export const TokenContainer = () => {
             <Fees />
             <TokenSaleSetup />
             <AdminSetup />
+            <ReviewAndDeploy />
             <div className="border border-gray-200 bg-gray-50 rounded-lg p-3 flex flex-row justify-between items-center">
                 <div className="flex flex-col">
                     <label className="text-sm font-medium">Estimated Deployment Cost</label>
