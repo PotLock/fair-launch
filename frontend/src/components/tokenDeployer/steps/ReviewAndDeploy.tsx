@@ -34,6 +34,7 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
             setIsDeploying(true);
             await deployToken();
         } catch (error) {
+            setIsDeploying(false);
             console.error('Deploy error:', error);
         } finally {
             setIsDeploying(false);
@@ -50,9 +51,9 @@ const ReviewAndDeploy = ({ setCurrentStep, currentStep }: ReviewAndDeployProps) 
                 {/* Token Header */}
                 <div className='flex items-center gap-4 bg-gray-50 p-4 rounded-lg'>
                     <div className='w-16 h-16 rounded-lg'>
-                        {state.basicInfo.data.logo && (
+                        {state.basicInfo.data.logoUrl && (
                             <img 
-                                src={URL.createObjectURL(state.basicInfo.data.logo)} 
+                                src={typeof state.basicInfo.data.logoUrl === 'string' ? state.basicInfo.data.logoUrl : URL.createObjectURL(state.basicInfo.data.logoUrl)} 
                                 alt="Token Logo" 
                                 className="w-full h-full object-cover rounded-lg"
                             />

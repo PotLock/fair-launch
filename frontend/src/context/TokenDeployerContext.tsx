@@ -7,8 +7,7 @@ interface TokenInfo {
     description?: string;
     supply: string;
     decimals: string;
-    logo?: File | null;
-    logoUrl?: string;
+    logoUrl?: string | File;
     socialEnabled?: boolean;
     socialLinks?: {
         website?: string;
@@ -20,7 +19,6 @@ interface TokenInfo {
     revokeMintEnabled?: boolean;
     revokeFreezeEnabled?: boolean;
     governanceEnabled?: boolean;
-    isLogoUrl?: boolean;
 }
 
 interface ValidationErrors {
@@ -36,6 +34,14 @@ interface AllocationItem {
     percentage: number;
     walletAddress: string;
     lockupPeriod: number;
+    vesting?: {
+        enabled: boolean;
+        description: string;
+        percentage: number;
+        cliff: number;
+        duration: number;
+        interval: number;
+    };
 }
 
 interface VestingItem {
@@ -54,7 +60,7 @@ interface LiquidityItem {
         status: 'trending' | 'popular' | 'new';
     };
     liquidityType: 'double' | 'single';
-    liquiditySource: 'bonding' | 'team' | 'external';
+    liquiditySource: 'wallet' | 'sale' | 'bonding' | 'team' | 'external' | 'hybrid';
     liquidityPercentage: number;
     liquidityLockupPeriod: number;
     isAutoBotProtectionEnabled: boolean;
@@ -64,6 +70,7 @@ interface LiquidityItem {
     antiBotSlippageTolerance?: number;
     antiBotMaxTxAmount?: number;
     antiBotCooldown?: number;
+    walletLiquidityAmount?: string;
 }
 
 
@@ -244,11 +251,10 @@ const prepareStateForStorage = async (state: TokenDeployerState) => {
     const stateToStore = { ...state };
     
     // Handle logo file
-    if (stateToStore.basicInfo.data.logo instanceof File) {
+    if (stateToStore.basicInfo.data.logoUrl) {
         try {
-            const base64String = await fileToBase64(stateToStore.basicInfo.data.logo);
+            const base64String = await fileToBase64(new File([], ''));
             stateToStore.basicInfo.data.logoUrl = base64String;
-            stateToStore.basicInfo.data.logo = null;
         } catch (error) {
             console.error('Error converting logo to base64:', error);
         }
@@ -265,11 +271,42 @@ const restoreStateFromStorage = (savedState: any): TokenDeployerState => {
             ...savedState.basicInfo,
             data: {
                 ...savedState.basicInfo.data,
-                logo: null, // Ensure logo is null when restoring
                 logoUrl: savedState.basicInfo.data.logoUrl || undefined // Keep the base64 URL if it exists
             }
         }
     };
+};
+
+// Add this function before the TokenDeployerProvider
+const uploadLogoToPinata = async (file: File): Promise<string> => {
+  try {
+    // Create form data
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Upload to Pinata
+    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.IpfsHash) {
+      return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+    }
+    throw new Error('Failed to upload to Pinata');
+  } catch (error) {
+    console.error('Error uploading to Pinata:', error);
+    throw error;
+  }
 };
 
 export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => {
@@ -295,10 +332,8 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
                     description: '',
                     supply: '',
                     decimals: '',
-                    logo: null,
                     logoUrl: undefined,
-                    socialEnabled: false,
-                    isLogoUrl: false,
+                    socialEnabled: false
                 },
                 isValid: false,
                 errors: {}
@@ -416,10 +451,8 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
                     description: '',
                     supply: '',
                     decimals: '',
-                    logo: null,
                     logoUrl: undefined,
-                    socialEnabled: false,
-                    isLogoUrl: false,
+                    socialEnabled: false
                 },
                 isValid: false,
                 errors: {}
@@ -513,7 +546,7 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
 
     const validateBasicInfo = () => {
         const errors: ValidationErrors = {};
-        const { name, symbol, supply, decimals, logo, logoUrl, isLogoUrl } = state.basicInfo.data;
+        const { name, symbol, supply, decimals, logoUrl } = state.basicInfo.data;
 
         if (!name.trim()) {
             errors.name = 'Name is required';
@@ -539,19 +572,10 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             errors.decimals = 'Decimals must be between 0 and 18';
         }
 
-        // Only validate logo if neither logo nor logoUrl exists
-        if (isLogoUrl) {
-            if (!logoUrl) {
-                errors.logo = 'Logo URL is required';
-            }
+        // Logo validation
+        if (!logoUrl) {
+            errors.logo = 'Logo URL is required';
         }
-        
-        if (!isLogoUrl) {
-            if (!logo) {
-                errors.logo = 'Logo is required';
-            }
-        }
-
 
         const isValid = Object.keys(errors).length === 0;
 
@@ -763,19 +787,38 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         return isValid;
     };
 
-    const updateBasicInfo = (data: Partial<TokenInfo>) => {
+    const updateBasicInfo = async (data: Partial<TokenInfo>) => {
         setState(prev => {
             const newData = { ...prev.basicInfo.data, ...data };
-            const newState = {
+            
+            // Handle logo upload if a new file is provided
+            if (data.logoUrl && typeof data.logoUrl === 'object' && data.logoUrl instanceof File) {
+                uploadLogoToPinata(data.logoUrl)
+                    .then(ipfsLink => {
+                        setState(currentState => ({
+                            ...currentState,
+                            basicInfo: {
+                                ...currentState.basicInfo,
+                                data: {
+                                    ...currentState.basicInfo.data,
+                                    logoUrl: ipfsLink
+                                }
+                            }
+                        }));
+                    })
+                    .catch(error => {
+                        console.error('Error uploading logo:', error);
+                    });
+            }
+
+            return {
                 ...prev,
                 basicInfo: {
                     ...prev.basicInfo,
                     data: newData,
-                    // Clear errors when data changes
                     errors: {}
                 }
             };
-            return newState;
         });
     };
 

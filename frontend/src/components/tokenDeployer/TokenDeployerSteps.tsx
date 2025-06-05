@@ -1,44 +1,49 @@
 import React from 'react';
-import { IconCircleCheck } from '@tabler/icons-react';
-import { steps } from '../../utils/comon';
 
+interface TokenDeployerStepsProps {
+  currentStep: number;
+}
 
-const TokenDeployerSteps: React.FC<{ currentStep: number }> = ({
-  currentStep,
-}) => {
+const steps = [
+  {
+    label: 'Select Token template',
+    description: 'Choose a template that best fits your token\'s purpose',
+  },
+  {
+    label: 'Select Token Template',
+    description: 'Choose who and how your token will be distributed before it goes to decentralized exchanges',
+  },
+  {
+    label: 'Select Pricing Mechanism',
+    description: 'Set up a vesting schedule for your token',
+  },
+  {
+    label: 'Review Your Selection',
+    description: 'Review your selection and deploy your token'
+  }
+]
+
+const TokenDeployerSteps = ({ currentStep }: TokenDeployerStepsProps) => {
   return (
-    <div className="w-64 bg-white rounded-lg border border-gray-200">
-      <div className='bg-gray-100 rounded-t-lg p-3'>
-        <h2 className="text-lg font-semibold">Form Sections</h2>
-      </div>
-      <div className='p-4 space-y-2'>
-        {steps.map((step, index) => (
-          <div
-            key={index}
-            className={`flex gap-3 group items-center rounded-lg p-2 ${index < currentStep && 'bg-gray-100/80'}`}
-          >
-            {index < currentStep ? (
-              <IconCircleCheck className="w-5 h-5 text-green-500 mt-0.5" />
-            ) : (
-              <div className={`w-4 h-4 rounded-full border-2 mt-0.5 ${
-                currentStep === index 
-                  ? 'border-gray-900' 
-                  : 'border-gray-300'
-              }`} />
-            )}
-            <div>
-              <h3 className={`text-sm font-medium text-gray-900`}>
-                {step.title}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">{step.description}</p>
+    <div className="flex flex-col gap-12 mb-4">
+      <div className="flex items-center justify-center">
+        {steps.map((_, index) => (
+          <React.Fragment key={index}>
+            <div
+              className={`w-7 h-7 rounded-full flex items-center text-sm justify-center text-white 
+                ${currentStep === index ? 'bg-green-500' : index < currentStep ? 'bg-green-500' : 'bg-gray-400'}`}
+            >
+              {index + 1}
             </div>
-          </div>
+            {index !== steps.length - 1 && (
+              <div className="w-36 h-0.5 bg-gray-200 mx-2" />
+            )}
+          </React.Fragment>
         ))}
       </div>
-      
-      <div className="mt-6 pt-4 border-t border-gray-100 p-4 bg-blue-50">
-        <p className="text-sm text-blue-600">Need help?</p>
-        <p className="text-xs text-blue-500">Fields marked with <strong className='font-semibold text-red-500'>*</strong> are required</p>
+      <div className="flex flex-col">
+        <h2 className="text-xl font-semibold mb-1">{steps[currentStep].label}</h2>
+        <p className="text-gray-500 mb-6">{steps[currentStep].description}</p>
       </div>
     </div>
   );

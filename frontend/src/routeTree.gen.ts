@@ -12,12 +12,19 @@
 
 import { Route as rootRoute } from "./routes/__root";
 import { Route as IndexImport } from "./routes/index";
+import { Route as TokenImport } from "./routes/token";
 
 // Create/Update Routes
 
 const IndexRoute = IndexImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const TokenRoute = TokenImport.update({
+  id: "/token",
+  path: "/token",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -32,6 +39,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IndexImport;
       parentRoute: typeof rootRoute;
     };
+    "/token": {
+      id: "/token";
+      path: "/token";
+      fullPath: "/token";
+      preLoaderRoute: typeof TokenImport;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -39,35 +53,42 @@ declare module "@tanstack/react-router" {
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
+  "/token": typeof TokenRoute;
 }
 
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
+  "/token": typeof TokenRoute;
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute;
   "/": typeof IndexRoute;
+  "/token": typeof TokenRoute;
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
+    | "/token"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" ;
+  to: "/" | "/token";
   id:
     | "__root__"
     | "/"
+    | "/token"
   fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  TokenRoute: typeof TokenRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TokenRoute: TokenRoute,
 };
 
 export const routeTree = rootRoute
