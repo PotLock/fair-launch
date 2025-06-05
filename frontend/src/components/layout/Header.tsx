@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { IconChevronDown, IconWallet } from '@tabler/icons-react';
-import { WalletButton } from '../customs/WalletButton';
+import { IconChevronDown } from '@tabler/icons-react';
+import { WalletButton } from '../WalletButton';
 
 interface NetworkOption {
     id: string;
@@ -12,7 +12,6 @@ interface NetworkOption {
 
 export default function Header() {
     const [selectedNetwork, setSelectedNetwork] = useState('Solana');
-    const [walletAddress, setWalletAddress] = useState('78d41a...25d2');
     const [isNetworkDropdownOpen, setIsNetworkDropdownOpen] = useState(false);
 
     const networks: NetworkOption[] = [
@@ -26,13 +25,13 @@ export default function Header() {
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 <div className="flex items-center">
                     <Link to="/" className="text-2xl font-semibold">
-                        Unnamed
+                        Solana Forge
                     </Link>
                 </div>
 
                 <div className="flex items-center space-x-20">
                     <nav className="hidden md:flex items-center space-x-8">
-                        <Link to="/" className="text-gray-600 hover:text-gray-900">
+                        <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Token Creator</span>
                         </Link>
                         <Link to="/" className="text-gray-600 hover:text-gray-900">
@@ -72,12 +71,6 @@ export default function Header() {
                                 </div>
                             )}
                         </div>
-
-                        {/* <button className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
-                            <IconWallet className='w-4 h-4' />
-                            <span className='text-sm'>{walletAddress}</span>
-                            <IconChevronDown className='w-4 h-4' />
-                        </button> */}
                         <WalletButton />
                     </div>
                 </div>

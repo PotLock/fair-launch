@@ -26,6 +26,34 @@ import { useTokenDeployer } from "../context/TokenDeployerContext";
 import useAnchorProvider from "./useAnchorProvider";
 import { getPDAs } from "../utils/sol";
 
+const uploadMetadataToPinata = async (metadata: {
+    name: string;
+    symbol: string;
+    description?: string;
+    image?: string;
+}) => {
+    try {
+        const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
+            },
+            body: JSON.stringify(metadata)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+    } catch (error) {
+        console.error('Error uploading metadata to Pinata:', error);
+        throw error;
+    }
+};
+
 export const useDeployToken = () => {
   const { state } = useTokenDeployer();
   const walletSol = useWallet();
@@ -47,12 +75,21 @@ export const useDeployToken = () => {
     const bondingCurveType = 1;
     const maxTokenSupply = new BN(10000000000);
 
-    const recipients = state.allocation.data.map((item) => ({
-      share: item.percentage * 100,
-      address: new PublicKey(item.walletAddress),
-      lockingPeriod: new BN(item.lockupPeriod),
-      amount: new BN(0),
-    }));
+    const recipients = state.allocation.data.map((item) => {
+      if (!item.walletAddress) {
+        throw new Error(`Invalid wallet address: address is empty`);
+      }
+      try {
+        return {
+          share: item.percentage * 100,
+          address: new PublicKey(item.walletAddress),
+          lockingPeriod: new BN(item.lockupPeriod),
+          amount: new BN(0),
+        };
+      } catch (error) {
+        throw new Error(`Invalid wallet address: ${item.walletAddress}`);
+      }
+    });
 
     return program.methods
       .initialize(
@@ -100,9 +137,24 @@ export const useDeployToken = () => {
 
       const accountInfo = await connection.getAccountInfo(curveConfig);
       if (accountInfo !== null) {
-        toast.error("⚠️ Configuration account already exists!");
+        toast.error("Configuration account already exists!");
         return;
       }
+
+      // Check if mint account already exists
+      const mintAccountInfo = await connection.getAccountInfo(mintKeypair.publicKey);
+      if (mintAccountInfo !== null) {
+        toast.error('Mint account already exists!');
+        return;
+      }
+
+      // Upload metadata to Pinata
+      const metadataUri = await uploadMetadataToPinata({
+        name: state.basicInfo.data.name,
+        symbol: state.basicInfo.data.symbol,
+        description: state.basicInfo.data.description || "",
+        image: typeof state.basicInfo.data.logoUrl === 'string' ? state.basicInfo.data.logoUrl : ""
+      });
 
       const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
 
@@ -119,7 +171,7 @@ export const useDeployToken = () => {
             data: {
               name: state.basicInfo.data.name,
               symbol: state.basicInfo.data.symbol,
-              uri: state.basicInfo.data.logo ? URL.createObjectURL(state.basicInfo.data.logo) : "",
+              uri: metadataUri,
               sellerFeeBasisPoints: 0,
               creators: null,
               collection: null,
@@ -187,17 +239,26 @@ export const useDeployToken = () => {
 
       createNewTokenTransaction.add(curveConfigIns as TransactionInstruction);
 
-      const result = await sendTransaction(
-        createNewTokenTransaction,
-        connection,
-        { signers: [mintKeypair] }
-      );
+      // Get the latest blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      createNewTokenTransaction.recentBlockhash = blockhash;
+      createNewTokenTransaction.feePayer = publicKey;
 
-      toast.success(`🚀 Created token ${state.basicInfo.data.name} Successfully!`);
-      return result;
+      // Sign with mintKeypair
+      createNewTokenTransaction.partialSign(mintKeypair);
+
+      // Sign with wallet
+      const signedTx = await signTransaction(createNewTokenTransaction);
+
+      // Send raw transaction
+      const txid = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction(txid);
+
+      toast.success(`🚀 Created token ${state.basicInfo?.data?.name || 'Token'} Successfully!`);
+      return txid;
     } catch (error) {
-      toast.error(`Create token failed!`);
-      console.error("Deploy token error:", error);
+      toast.error('Create token failed!');
+      console.error('Deploy token error:', error);
     }
   }, [publicKey, connection, signTransaction, sendTransaction, state]);
 

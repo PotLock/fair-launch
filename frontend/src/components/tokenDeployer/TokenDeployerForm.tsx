@@ -1,43 +1,46 @@
-import React, { useState } from 'react';
-import { BasicInformation, Allocation, Vesting, BondingCurve, Liquidity, Fees, Launchpad, ReviewAndDeploy } from './steps';
+import { useState } from 'react';
 import TokenDeployerSteps from './TokenDeployerSteps';
+import { TokenTemplate } from './steps/TokenTemplate';
+import { Exchanges } from './steps/Exchanges';
+import { PricingMechaism } from './steps/PricingMechaism';
+import { PreviewSelection } from './steps/PreviewSelection';
+import { TokenCreation } from './TokenCreation';
 
-const TokenDeployerForm: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<number>(0);
+interface TokenDeployerFormProps {
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+}
 
+const TokenDeployerForm = ({ currentStep }: TokenDeployerFormProps) => {
+  
+  const [selected, setSelected] = useState<string>('meme');
 
   const renderComponents = (step: number) => {
     switch (step) {
       case 0:
-        return <BasicInformation setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+        return <TokenTemplate selected={selected} setSelected={setSelected}/>
       case 1:
-        return <Allocation setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+        return <Exchanges />
       case 2:
-        return <Vesting setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+        return <PricingMechaism />
       case 3:
-        return <BondingCurve setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+        return <PreviewSelection />
       case 4:
-        return <Liquidity setCurrentStep={setCurrentStep} currentStep={currentStep}/>
-      case 5:
-        return <Fees setCurrentStep={setCurrentStep} currentStep={currentStep}/>
-      case 6:
-        return <Launchpad setCurrentStep={setCurrentStep} currentStep={currentStep}/>
-      case 7:
-        return <ReviewAndDeploy setCurrentStep={setCurrentStep} currentStep={currentStep}/>
+        return <TokenCreation />
       default:
         return null;
     }
   };
 
   return (
-    <div className="flex gap-8">
-      <div className="flex-shrink-0">
-        <TokenDeployerSteps currentStep={currentStep} />
-      </div>
-      <div className="flex-grow bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        {renderComponents(currentStep)}
-      </div>
-    </div>
+    <>
+      {
+        currentStep <= 3 && (
+          <TokenDeployerSteps currentStep={currentStep} />
+        )
+      }
+      {renderComponents(currentStep)}
+    </>
   );
 };
 
