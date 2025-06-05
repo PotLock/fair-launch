@@ -8,7 +8,7 @@ export const BasicInformation = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div>
                 <div 
                     className="flex items-center justify-between cursor-pointer"

@@ -4,7 +4,7 @@ import { TokenTemplate } from './steps/TokenTemplate';
 import { Exchanges } from './steps/Exchanges';
 import { PricingMechaism } from './steps/PricingMechaism';
 import { PreviewSelection } from './steps/PreviewSelection';
-import { TokenCreation } from './steps/TokenCreation';
+import { TokenCreation } from './TokenCreation';
 
 interface TokenDeployerFormProps {
   currentStep: number;

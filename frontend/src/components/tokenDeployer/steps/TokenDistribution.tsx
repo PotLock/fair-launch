@@ -193,7 +193,7 @@ export const TokenDistribution = () => {
                                 </div>
                                 {/* Vesting Schedule Toggle */}
                                 <div className="flex items-center gap-2 mt-4">
-                                    <label className="text-sm font-medium">Enable Vesting Schedule</label>
+                                    <label className="text-sm font-medium"></label>
                                     <button
                                         type="button"
                                         onClick={() => toggleVesting(index)}
