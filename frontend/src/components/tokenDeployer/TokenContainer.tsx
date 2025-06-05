@@ -5,9 +5,9 @@ import { DEXListing } from "./steps/DEXListing";
 import { Fees } from "./steps/Fees";
 import { TokenSaleSetup } from "./steps/TokenSaleSetup";
 import { AdminSetup } from "./steps/AdminSetup";
+import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
 import { Button } from "../ui/button";
 import { Fuel } from "lucide-react";
-import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
 
 export const TokenContainer = () => {
     return (

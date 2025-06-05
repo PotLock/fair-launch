@@ -31,14 +31,11 @@ export default function Header() {
 
                 <div className="flex items-center space-x-20">
                     <nav className="hidden md:flex items-center space-x-8">
-                        <Link to="/" className="text-gray-600 hover:text-gray-900">
+                        <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Token Creator</span>
                         </Link>
                         <Link to="/" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
-                        </Link>
-                        <Link to="/token" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>My Token</span>
                         </Link>
                     </nav>
                     

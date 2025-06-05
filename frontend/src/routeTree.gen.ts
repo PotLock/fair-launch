@@ -11,22 +11,22 @@
 // Import Routes
 
 import { Route as rootRoute } from "./routes/__root";
-import { Route as IndexImport } from "./routes/index";
-import { Route as TokenImport } from "./routes/token";
+import { Route as CreateTokenImport } from "./routes/create-token";
+import { Route as TokenImport } from "./routes";
 
 // Create/Update Routes
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = TokenImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => rootRoute,
 } as any);
 
-const TokenRoute = TokenImport.update({
-  id: "/token",
-  path: "/token",
+const CreateTokenRoute = CreateTokenImport.update({
+  id: "/create",
+  path: "/create",
   getParentRoute: () => rootRoute,
 } as any);
+
 
 // Populate the FileRoutesByPath interface
 
@@ -39,11 +39,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IndexImport;
       parentRoute: typeof rootRoute;
     };
-    "/token": {
-      id: "/token";
-      path: "/token";
-      fullPath: "/token";
-      preLoaderRoute: typeof TokenImport;
+    "/create": {
+      id: "/create";
+      path: "/create";
+      fullPath: "/create";
+      preLoaderRoute: typeof CreateTokenRoute;
       parentRoute: typeof rootRoute;
     };
   }
@@ -53,42 +53,42 @@ declare module "@tanstack/react-router" {
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
-  "/token": typeof TokenRoute;
+  "/create": typeof CreateTokenRoute;
 }
 
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
-  "/token": typeof TokenRoute;
+  "/create": typeof CreateTokenRoute;
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute;
   "/": typeof IndexRoute;
-  "/token": typeof TokenRoute;
+  "/create": typeof CreateTokenRoute;
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
-    | "/token"
+    | "/create"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/token";
+  to: "/" | "/create";
   id:
     | "__root__"
     | "/"
-    | "/token"
+    | "/create"
   fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
-  TokenRoute: typeof TokenRoute;
+  CreateTokenRoute: typeof CreateTokenRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  TokenRoute: TokenRoute,
+  CreateTokenRoute: CreateTokenRoute,
 };
 
 export const routeTree = rootRoute
