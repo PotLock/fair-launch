@@ -6,7 +6,7 @@ import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 
 export const BasicInformation = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(true);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
