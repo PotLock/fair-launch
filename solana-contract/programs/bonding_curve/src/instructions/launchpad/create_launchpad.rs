@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use crate::{consts::CURVE_CONFIGURATION_SEED, state::{CurveConfiguration, LaunchPadAccount}};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use crate::errors::CustomError;
 
 #[derive(Accounts)]
 pub struct CreateLaunchPad<'info> {
@@ -35,10 +36,18 @@ pub struct CreateLaunchPad<'info> {
 }
 
 
-pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64) -> Result<()> {
+pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
     let launch_pad_account = &mut ctx.accounts.launch_pad_account;
 
     let (_, bump) = Pubkey::find_program_address(&[b"launchpad".as_ref(), ctx.accounts.authority.key().as_ref()], ctx.program_id);
+    let current_time = Clock::get()?.unix_timestamp;
+    msg!("current time: {}", current_time);
+    // make sure current time is between start and end time
+    if current_time > start_time || current_time > end_time {
+        return Err(CustomError::InvalidTimeRange.into());
+    }
+
+    let whitelist_duration = current_time.checked_add(whitelist_duration).ok_or(CustomError::OverFlowUnderFlowOccured)?;
 
     launch_pad_account.set_inner(LaunchPadAccount::new(
         ctx.accounts.authority.key(),
@@ -46,6 +55,9 @@ pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchas
         ctx.accounts.launchpad_vault.key(),
         token_price,
         purchase_limit_per_wallet,
+        whitelist_duration,
+        start_time,
+        end_time,
         bump,
     ));
     Ok(())

@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{BuyerAccount, LaunchPadAccount};
+use crate::{errors::CustomError, state::{BuyerAccount, LaunchPadAccount}};
 
 #[derive(Accounts)]
 pub struct RemoveWhitelist<'info> {
@@ -29,6 +29,12 @@ pub fn remove_whitelist(ctx: Context<RemoveWhitelist>, user: Pubkey) -> Result<(
     let launch_pad_account = &mut ctx.accounts.launch_pad_account;
     let buyer_account = &mut ctx.accounts.buyer_account;
 
+    // check whitelist duration is not over
+    let current_time = Clock::get()?.unix_timestamp;
+    msg!("whitelist duration: {}", launch_pad_account.whitelist_duration);
+    if current_time > launch_pad_account.whitelist_duration {
+        return Err(CustomError::WhitelistDurationOver.into());
+    }
 
     buyer_account.whitelisted = false;
 

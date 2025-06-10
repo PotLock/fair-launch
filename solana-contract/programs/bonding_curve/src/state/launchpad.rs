@@ -13,13 +13,17 @@ pub struct LaunchPadAccount {
     pub whitelisted_users: Vec<Pubkey>,
     pub buyers: Vec<Pubkey>,
     pub paused: bool,
+    pub whitelist_duration: i64,
+    pub start_time: i64,
+    pub end_time: i64,
+
 }
 
 
 impl LaunchPadAccount {
     pub const ACCOUNT_SIZE: usize = 5000;
 
-    pub fn new(authority: Pubkey, token_mint: Pubkey, vault: Pubkey, token_price: u64, purchase_limit_per_wallet: u64, bump: u8) -> Self {
+    pub fn new(authority: Pubkey, token_mint: Pubkey, vault: Pubkey, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64, bump: u8) -> Self {
         Self {
             authority,
             token_mint,
@@ -32,6 +36,9 @@ impl LaunchPadAccount {
             whitelisted_users: vec![],
             buyers: vec![],
             paused: false,
+            whitelist_duration,
+            start_time,
+            end_time,
         }
     }
 }

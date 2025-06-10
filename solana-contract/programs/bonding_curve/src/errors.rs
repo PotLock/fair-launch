@@ -64,4 +64,10 @@ pub enum CustomError {
 
     #[msg("Transfer failed")]
     TransferFailed,
+
+    #[msg("Invalid time range")]
+    InvalidTimeRange,
+
+    #[msg("Whitelist duration over")]
+    WhitelistDurationOver,
 }

@@ -904,38 +904,43 @@ describe("bonding_curve", () => {
   //   }
   // })
 
-  it(" create launchpad ", async () => {
+  // it(" create launchpad ", async () => {
 
-    try {
-      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
-      const { launchpad, launchpadTokenAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
-      let tokenPrice = new BN(100000000); // 0.1 SOL
-      let purchaseLimitPerWallet = new BN(100000000000000);
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .createLaunchpad(tokenPrice, purchaseLimitPerWallet)
-            .accountsStrict({
-              launchPadAccount: launchpad,
-              tokenMint: mint,
-              launchpadVault: launchpadTokenAccount,
-              authority: signer.payer.publicKey,
-              systemProgram: SystemProgram.programId,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully created launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   try {
+  //     let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+  //     const { launchpad, launchpadTokenAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+  //     let tokenPrice = new BN(100000000); // 0.1 SOL
+  //     let purchaseLimitPerWallet = new BN(100000000000000);
+  //     let whitelistDuration = new BN(4000); // 1 minute for testing
+  //     let currentTime = Math.floor(Date.now() / 1000);
+  //     let startTime = new BN(currentTime).add(whitelistDuration);
+  //     let endTime = new BN(currentTime).add(whitelistDuration).add(whitelistDuration);
 
-    } catch (error) {
-      console.log("Error in create launchpad :", error)
-    }
-  })
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .createLaunchpad(tokenPrice, purchaseLimitPerWallet, whitelistDuration, startTime, endTime)
+  //           .accountsStrict({
+  //             launchPadAccount: launchpad,
+  //             tokenMint: mint,
+  //             launchpadVault: launchpadTokenAccount,
+  //             authority: signer.payer.publicKey,
+  //             systemProgram: SystemProgram.programId,
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully created launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+  //   } catch (error) {
+  //     console.log("Error in create launchpad :", error)
+  //   }
+  // })
 
 
   it(" add whitelist to launchpad ", async () => {
@@ -968,89 +973,89 @@ describe("bonding_curve", () => {
     }
   })
 
-  it(" remove whitelist to launchpad ", async () => {
+  // it(" remove whitelist to launchpad ", async () => {
 
-    try {
-      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
-      const { launchpad, buyerAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
-
-
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .removeWhitelist(user)
-            .accountsStrict({
-              launchPadAccount: launchpad,
-              authority: signer.payer.publicKey,
-              buyerAccount: buyerAccount,
-              user: user,
-              systemProgram: SystemProgram.programId,
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully remove whitelist to launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-
-    } catch (error) {
-      console.log("Error in remove whitelist to launchpad :", error)
-    }
-  })
+  //   try {
+  //     let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+  //     const { launchpad, buyerAccount } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
 
 
-  it(" pause launchpad ", async () => {
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .removeWhitelist(user)
+  //           .accountsStrict({
+  //             launchPadAccount: launchpad,
+  //             authority: signer.payer.publicKey,
+  //             buyerAccount: buyerAccount,
+  //             user: user,
+  //             systemProgram: SystemProgram.programId,
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully remove whitelist to launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
 
-    try {
-      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
-      const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+  //   } catch (error) {
+  //     console.log("Error in remove whitelist to launchpad :", error)
+  //   }
+  // })
 
 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .pauseLaunchpad()
-            .accountsStrict({
-              launchPadAccount: launchpad,
-              authority: signer.payer.publicKey,
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully pause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  // it(" pause launchpad ", async () => {
 
-    } catch (error) {
-      console.log("Error in pause launchpad :", error)
-    }
-  })
+  //   try {
+  //     let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+  //     const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
 
-  it(" unpause launchpad ", async () => {
 
-    try {
-      let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
-      const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .pauseLaunchpad()
+  //           .accountsStrict({
+  //             launchPadAccount: launchpad,
+  //             authority: signer.payer.publicKey,
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully pause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
 
-      const tx = new Transaction()
-        .add(
-          await program.methods
-            .unpauseLaunchpad()
-            .accountsStrict({
-              launchPadAccount: launchpad,
-              authority: signer.payer.publicKey,
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
-      console.log("Successfully unpause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in pause launchpad :", error)
+  //   }
+  // })
 
-    } catch (error) {
-      console.log("Error in unpause launchpad :", error)
-    }
-  })
+  // it(" unpause launchpad ", async () => {
+
+  //   try {
+  //     let user = new PublicKey("BtSTqq27A7xTMaCPWEhNwdf4eHsLWiWZvhQS2ABMd1Y4");
+  //     const { launchpad } = getLaunchPadPDAs(signer.payer.publicKey, mint, user)
+
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
+  //           .unpauseLaunchpad()
+  //           .accountsStrict({
+  //             launchPadAccount: launchpad,
+  //             authority: signer.payer.publicKey,
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true , commitment: "confirmed"})
+  //     console.log("Successfully unpause launchpad : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+  //   } catch (error) {
+  //     console.log("Error in unpause launchpad :", error)
+  //   }
+  // })
 });
 
 

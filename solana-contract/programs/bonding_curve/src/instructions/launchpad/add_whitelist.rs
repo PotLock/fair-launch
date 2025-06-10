@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{BuyerAccount, LaunchPadAccount};
+use crate::{errors::CustomError, state::{BuyerAccount, LaunchPadAccount}};
 
 #[derive(Accounts)]
 pub struct AddWhitelist<'info> {
@@ -12,7 +12,7 @@ pub struct AddWhitelist<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     #[account(
-        init,
+        init_if_needed,
         seeds = [b"buyer", launch_pad_account.key().as_ref(), user.key().as_ref()],
         bump,
         payer = authority,
@@ -27,6 +27,13 @@ pub struct AddWhitelist<'info> {
 pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
     let launch_pad_account = &mut ctx.accounts.launch_pad_account;
     let buyer_account = &mut ctx.accounts.buyer_account;
+
+    // check whitelist duration is not over
+    let current_time = Clock::get()?.unix_timestamp;
+    msg!("whitelist duration: {}", launch_pad_account.whitelist_duration);
+    if current_time > launch_pad_account.whitelist_duration {
+        return Err(CustomError::WhitelistDurationOver.into());
+    }
 
     buyer_account.buyer = user;
     buyer_account.amount = 0;

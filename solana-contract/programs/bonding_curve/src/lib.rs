@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 use crate::state::Recipient;
-declare_id!("7zovTtSwiStemrV4qWrL6b872w3G8pq9GbFNX1RKqdKm");
+declare_id!("6DSTtpw58Duszpy9CKcwcKjuQmXXhg5N9QfRAmrDPMcd");
 
 #[program]
 pub mod bonding_curve {
@@ -108,8 +108,8 @@ pub mod bonding_curve {
     // Launchpad Functions
     // ============================================================================
 
-    pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64) -> Result<()> {
-        instructions::create_launchpad(ctx, token_price, purchase_limit_per_wallet)
+    pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
+        instructions::create_launchpad(ctx, token_price, purchase_limit_per_wallet, whitelist_duration, start_time, end_time)
     }
     pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
         instructions::add_whitelist(ctx, user)
