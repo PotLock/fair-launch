@@ -1,12 +1,102 @@
-
-import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
+import { useDeployStore } from '../../../stores/deployStores';
+import { toast } from 'react-hot-toast';
 
 export const BasicInformation = () => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState<boolean>(true);
+    const [isUploading, setIsUploading] = useState<boolean>(false);
+    const { basicInfo, updateBasicInfo, validationErrors, validateBasicInfo } = useDeployStore();
+    const { name, symbol, description, supply, decimals, avatarUrl, bannerUrl } = basicInfo;
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+    const handleInputChange = (field: string, value: string) => {
+        updateBasicInfo({ [field]: value });
+        validateBasicInfo();
+    };
+
+    const uploadToPinata = async (file: File): Promise<string | null> => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            setIsUploading(true);
+            const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${process.env.PUBLIC_JWT_PINATA_SECRET}`,
+                },
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error('Pinata error:', errorData);
+                throw new Error(errorData.error?.message || 'Upload failed');
+            }
+
+            const data = await res.json();
+            if (!data.IpfsHash) {
+                toast.error('Upload failed');
+                return null;
+            }
+            
+            return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+        } catch (error) {
+            console.error('Upload error:', error);
+            toast.error('Failed to upload file');
+            return null;
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleImageUpload = async (type: 'avatar' | 'banner', file: File) => {
+        if (file) {
+            try {
+                const pinataRes = await uploadToPinata(file);
+                
+                if (pinataRes) {
+                    if (type === 'avatar') {
+                        setAvatarPreview(pinataRes);
+                        updateBasicInfo({ avatarUrl: pinataRes });
+                    } else {
+                        setBannerPreview(pinataRes);
+                        updateBasicInfo({ bannerUrl: pinataRes });
+                    }
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+            }
+        }
+    };
+
+    const handleImageClick = (type: 'avatar' | 'banner') => {
+        const inputRef = type === 'avatar' ? avatarInputRef : bannerInputRef;
+        inputRef.current?.click();
+    };
+
+    const handleImageDrop = (type: 'avatar' | 'banner', e: React.DragEvent) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            handleImageUpload(type, file);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+    };
+
+    const avatarDisplay = avatarUrl || avatarPreview;
+    const bannerDisplay = bannerUrl || bannerPreview;
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
@@ -28,22 +118,49 @@ export const BasicInformation = () => {
                         <div className="space-y-4">
                             <div>
                                 <div className="text-sm font-medium mb-1">Token Name</div>
-                                <Input placeholder="Token Name" />
+                                <Input 
+                                    placeholder="Token Name" 
+                                    value={name}
+                                    onChange={(e) => handleInputChange('name', e.target.value)}
+                                />
+                                {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Token Symbol</div>
-                                <Input placeholder="Token Symbol" />
+                                <Input 
+                                    placeholder="Token Symbol" 
+                                    value={symbol}
+                                    onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
+                                />
+                                {validationErrors.symbol && <p className="text-red-500 text-xs mt-1">{validationErrors.symbol}</p>}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Total Supply</div>
-                                <Input placeholder="Total Supply" />
+                                <Input 
+                                    placeholder="Total Supply" 
+                                    type="number"
+                                    value={supply}
+                                    onChange={(e) => handleInputChange('supply', e.target.value)}
+                                />
+                                {validationErrors.supply && <p className="text-red-500 text-xs mt-1">{validationErrors.supply}</p>}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Decimal</div>
-                                <Input placeholder="Decimal" />
+                                <Input 
+                                    placeholder="Decimal" 
+                                    type="number"
+                                    value={decimals}
+                                    onChange={(e) => handleInputChange('decimals', e.target.value)}
+                                />
+                                {validationErrors.decimals && <p className="text-red-500 text-xs mt-1">{validationErrors.decimals}</p>}
                             </div>
                             <div>
-                                <Textarea rows={3} placeholder="Describe your token's purpose" />
+                                <Textarea 
+                                    rows={3} 
+                                    placeholder="Describe your token's purpose"
+                                    value={description}
+                                    onChange={(e) => handleInputChange('description', e.target.value)}
+                                />
                             </div>
                         </div>
                     </>
@@ -53,22 +170,48 @@ export const BasicInformation = () => {
             {
                 isExpanded && (
                     <div className="mb-6 space-y-2">
-                        <div 
-                            className="flex items-center justify-between cursor-pointer"
-                        >
-                            <div className="text-sm font-semibold">Token Branding</div>
-                        </div>
+                        <div className="text-sm font-semibold mt-3">Token Branding</div>
                         <div className="flex gap-4 mb-2 flex-col md:flex-row">
                             <div className='flex flex-col gap-1'>
-                                <div className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px]">
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-12 h-12 flex items-center justify-center mb-2">
-                                            <img src="/icons/add-image.svg" alt="add-image" />
+                                <input
+                                    type="file"
+                                    ref={avatarInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => e.target.files?.[0] && handleImageUpload('avatar', e.target.files[0])}
+                                />
+                                <div 
+                                    className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer hover:border-gray-300 transition-colors relative"
+                                    onClick={() => handleImageClick('avatar')}
+                                    onDrop={(e) => handleImageDrop('avatar', e)}
+                                    onDragOver={handleDragOver}
+                                >
+                                    {isUploading && (
+                                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                                            <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
                                         </div>
-                                        <div className="text-sm font-medium text-gray-700 mb-1">Token Logo</div>
-                                        <div className="text-xs text-gray-500 mb-2">Drop your image here or browse</div>
+                                    )}
+                                    <div className="flex flex-col items-center">
+                                        {avatarDisplay ? (
+                                            <img 
+                                                src={avatarDisplay} 
+                                                alt="avatar" 
+                                                className="w-24 h-24 object-cover rounded-full mb-2"
+                                            />
+                                        ) : (
+                                            <>
+                                                <div className="w-12 h-12 flex items-center justify-center mb-2">
+                                                    <img src="/icons/add-image.svg" alt="add-image" />
+                                                </div>
+                                                <div className="text-sm font-medium text-gray-700 mb-1">Token Logo</div>
+                                                <div className="text-xs text-gray-500 mb-2">Drop your image here or browse</div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
+                                {validationErrors.avatarUrl && (
+                                    <p className="text-red-500 text-xs mt-1">{validationErrors.avatarUrl}</p>
+                                )}
                                 <Tabs defaultValue="upload" className="w-full">
                                     <TabsList className="w-full">
                                         <TabsTrigger value="upload" className="flex-1 data-[state=active]:bg-white">Upload</TabsTrigger>
@@ -82,15 +225,45 @@ export const BasicInformation = () => {
                                     </TabsContent>
                                 </Tabs>
                             </div>
-                            <div className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px]">
-                                <div className="flex flex-col items-center">
-                                    <div className="w-12 h-12 flex items-center justify-center mb-2">
-                                        <img src="/icons/add-image.svg" alt="add-image" />
+                            <input
+                                type="file"
+                                ref={bannerInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={(e) => e.target.files?.[0] && handleImageUpload('banner', e.target.files[0])}
+                            />
+                            <div 
+                                className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer hover:border-gray-300 transition-colors relative"
+                                onClick={() => handleImageClick('banner')}
+                                onDrop={(e) => handleImageDrop('banner', e)}
+                                onDragOver={handleDragOver}
+                            >
+                                {isUploading && (
+                                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                                        <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
                                     </div>
-                                    <div className="text-sm font-medium text-gray-700 mb-1">Banner image</div>
-                                    <div className="text-xs text-gray-500 mb-2">Drop your image here or browse</div>
+                                )}
+                                <div className="flex flex-col items-center">
+                                    {bannerDisplay ? (
+                                        <img 
+                                            src={bannerDisplay} 
+                                            alt="banner" 
+                                            className="w-full h-32 object-cover rounded-lg mb-2"
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="w-12 h-12 flex items-center justify-center mb-2">
+                                                <img src="/icons/add-image.svg" alt="add-image" />
+                                            </div>
+                                            <div className="text-sm font-medium text-gray-700 mb-1">Banner image</div>
+                                            <div className="text-xs text-gray-500 mb-2">Drop your image here or browse</div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
+                            {validationErrors.bannerUrl && (
+                                <p className="text-red-500 text-xs mt-1">{validationErrors.bannerUrl}</p>
+                            )}
                         </div>
                     </div>
                 )

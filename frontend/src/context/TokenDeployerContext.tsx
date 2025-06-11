@@ -7,7 +7,8 @@ interface TokenInfo {
     description?: string;
     supply: string;
     decimals: string;
-    logoUrl?: string | File;
+    avatarUrl?: string | File;
+    bannerUrl?: string | File;
     socialEnabled?: boolean;
     socialLinks?: {
         website?: string;
@@ -19,7 +20,6 @@ interface TokenInfo {
     revokeMintEnabled?: boolean;
     revokeFreezeEnabled?: boolean;
     governanceEnabled?: boolean;
-    isLogoUrl?: boolean;
 }
 
 interface ValidationErrors {
@@ -235,51 +235,7 @@ interface TokenDeployerContextType {
 
 const TokenDeployerContext = createContext<TokenDeployerContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'token_deployer_state';
-
-// Helper function to convert File to base64
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-    });
-};
-
-// Helper function to prepare state for storage
-const prepareStateForStorage = async (state: TokenDeployerState) => {
-    const stateToStore = { ...state };
-    
-    // Handle logo file
-    if (stateToStore.basicInfo.data.logoUrl) {
-        try {
-            const base64String = await fileToBase64(new File([], ''));
-            stateToStore.basicInfo.data.logoUrl = base64String;
-        } catch (error) {
-            console.error('Error converting logo to base64:', error);
-        }
-    }
-    
-    return stateToStore;
-};
-
-// Helper function to restore state from storage
-const restoreStateFromStorage = (savedState: any): TokenDeployerState => {
-    return {
-        ...savedState,
-        basicInfo: {
-            ...savedState.basicInfo,
-            data: {
-                ...savedState.basicInfo.data,
-                logoUrl: savedState.basicInfo.data.logoUrl || undefined // Keep the base64 URL if it exists
-            }
-        }
-    };
-};
-
-// Add this function before the TokenDeployerProvider
-const uploadLogoToPinata = async (file: File): Promise<string> => {
+const uploadImageToPinata = async (file: File): Promise<string> => {
   try {
     // Create form data
     const formData = new FormData();
@@ -312,18 +268,7 @@ const uploadLogoToPinata = async (file: File): Promise<string> => {
 
 export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => {
     const [state, setState] = useState<TokenDeployerState>(() => {
-        // Try to load state from localStorage on initial render
-        const savedState = localStorage.getItem(STORAGE_KEY);
-        if (savedState) {
-            try {
-                const parsedState = JSON.parse(savedState);
-                return restoreStateFromStorage(parsedState);
-            } catch (error) {
-                console.error('Error parsing saved state:', error);
-            }
-        }
-        
-        // Return default state if no saved state exists
+        // Luôn trả về state mặc định, không lấy từ localStorage
         return {
             basicInfo: {
                 enabled: true,
@@ -333,7 +278,8 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
                     description: '',
                     supply: '',
                     decimals: '',
-                    logoUrl: undefined,
+                    avatarUrl: undefined,
+                    bannerUrl: undefined,
                     socialEnabled: false
                 },
                 isValid: false,
@@ -426,128 +372,9 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         };
     });
 
-    // Save state to localStorage whenever it changes
-    useEffect(() => {
-        const saveState = async () => {
-            try {
-                const stateToStore = await prepareStateForStorage(state);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToStore));
-            } catch (error) {
-                console.error('Error saving state to localStorage:', error);
-            }
-        };
-        
-        saveState();
-    }, [state]);
-
-    // Add function to clear saved state
-    const clearSavedState = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setState({
-            basicInfo: {
-                enabled: true,
-                data: {
-                    name: '',
-                    symbol: '',
-                    description: '',
-                    supply: '',
-                    decimals: '',
-                    logoUrl: undefined,
-                    socialEnabled: false
-                },
-                isValid: false,
-                errors: {}
-            },
-            allocation: {
-                enabled: true,
-                data: [{
-                    description: '',
-                    percentage: 100,
-                    walletAddress: '',
-                    lockupPeriod: 0
-                }],
-                isValid: false,
-                errors: {}
-            },
-            vesting: {
-                enabled: true,
-                data: []
-            },
-            bondingCurve: {
-                enabled: true,
-                data: {
-                    curveType: 'Linear',
-                    initialPrice: 0,
-                    targetPrice: 0,
-                    maxSupply: 0
-                }
-            },
-            liquidity: {
-                enabled: true,
-                data: {
-                    launchLiquidityOn: {
-                        name: 'PumpSwap',
-                        icon: '/icons/pumpdotfun.png',
-                        status: 'trending'
-                    },
-                    liquidityType: 'double',
-                    liquiditySource: 'bonding',
-                    liquidityPercentage: 30,
-                    liquidityLockupPeriod: 180,
-                    isAutoBotProtectionEnabled: true,
-                    isAutoListingEnabled: true,
-                    isPriceProtectionEnabled: true,
-                    isMarketMakingEnabled: true,
-                    antiBotSlippageTolerance: 1,
-                    antiBotMaxTxAmount: 1,
-                    antiBotCooldown: 180
-                }
-            },
-            fees: {
-                enabled: true,
-                data: {
-                    mintFee: 0,
-                    burnFee: 0,
-                    transferFee: 0,
-                    adminControls: false,
-                    feeRecipientAddress: '',
-                    adminAddress: ''
-                }
-            },
-            launchpad: {
-                enabled: true,
-                data: {
-                    launchType: 'Whitelist',
-                    softCap: 0,
-                    hardCap: 0,
-                    startTime: '',
-                    endTime: '',
-                    minContribution: 0,
-                    maxContribution: 0,
-                    whitelist: {
-                        enabled: true,
-                        data: {
-                            tokenPrice: 0,
-                            whitelistDuration: 0,
-                            walletAddresses: []
-                        }
-                    },
-                    fairLaunch: {
-                        enabled: false,
-                        data: {
-                            tokenPrice: 0,
-                            maxTokensPerWallet: 0,
-                            distributionDelay: 0
-                        }
-                    }
-                }
-            }
-        });
-    };
-
     const validateBasicInfo = () => {
         const errors: ValidationErrors = {};
-        const { name, symbol, supply, decimals, logoUrl } = state.basicInfo.data;
+        const { name, symbol, supply, decimals, avatarUrl, bannerUrl } = state.basicInfo.data;
 
         if (!name.trim()) {
             errors.name = 'Name is required';
@@ -573,9 +400,14 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             errors.decimals = 'Decimals must be between 0 and 18';
         }
 
-        // Logo validation
-        if (!logoUrl) {
-            errors.logo = 'Logo URL is required';
+        // Avatar validation
+        if (!avatarUrl) {
+            errors.logo = 'Avatar URL is required';
+        }
+
+        // Banner validation
+        if (!bannerUrl) {
+            errors.logo = 'Banner URL is required';
         }
         
         const isValid = Object.keys(errors).length === 0;
@@ -788,39 +620,58 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
         return isValid;
     };
 
-    const updateBasicInfo = async (data: Partial<TokenInfo>) => {
-        setState(prev => {
-            const newData = { ...prev.basicInfo.data, ...data };
-            
-            // Handle logo upload if a new file is provided
-            if (data.logoUrl && typeof data.logoUrl === 'object' && data.logoUrl instanceof File) {
-                uploadLogoToPinata(data.logoUrl)
-                    .then(ipfsLink => {
-                        setState(currentState => ({
-                            ...currentState,
-                            basicInfo: {
-                                ...currentState.basicInfo,
-                                data: {
-                                    ...currentState.basicInfo.data,
-                                    logoUrl: ipfsLink
-                                }
+    const updateBasicInfo = (data: Partial<TokenInfo>) => {
+        // Nếu có avatar là file, upload và chỉ cập nhật avatarUrl
+        if (data.avatarUrl && data.avatarUrl instanceof File) {
+            uploadImageToPinata(data.avatarUrl)
+                .then(ipfsLink => {
+                    setState(currentState => ({
+                        ...currentState,
+                        basicInfo: {
+                            ...currentState.basicInfo,
+                            data: {
+                                ...currentState.basicInfo.data,
+                                avatarUrl: ipfsLink
                             }
-                        }));
-                    })
-                    .catch(error => {
-                        console.error('Error uploading logo:', error);
-                    });
-            }
+                        }
+                    }));
+                })
+                .catch(error => {
+                    console.error('Error uploading avatar:', error);
+                });
+            return;
+        }
 
-            return {
-                ...prev,
-                basicInfo: {
-                    ...prev.basicInfo,
-                    data: newData,
-                    errors: {}
-                }
-            };
-        });
+        // Nếu có banner là file, upload và chỉ cập nhật bannerUrl
+        if (data.bannerUrl && data.bannerUrl instanceof File) {
+            uploadImageToPinata(data.bannerUrl)
+                .then(ipfsLink => {
+                    setState(currentState => ({
+                        ...currentState,
+                        basicInfo: {
+                            ...currentState.basicInfo,
+                            data: {
+                                ...currentState.basicInfo.data,
+                                bannerUrl: ipfsLink
+                            }
+                        }
+                    }));
+                })
+                .catch(error => {
+                    console.error('Error uploading banner:', error);
+                });
+            return;
+        }
+
+        // Nếu chỉ cập nhật các trường khác (không phải file), thì merge như cũ
+        setState(prev => ({
+            ...prev,
+            basicInfo: {
+                ...prev.basicInfo,
+                data: { ...prev.basicInfo.data, ...data },
+                errors: {}
+            }
+        }));
     };
 
     const updateAllocation = (data: AllocationItem[]) => {
@@ -1006,7 +857,7 @@ export const TokenDeployerProvider = ({ children }: { children: ReactNode }) => 
             updateLaunchpad,
             setStepEnabled,
             updateLiquidityField,
-            clearSavedState
+            clearSavedState: () => {}
         }}>
             {children}
         </TokenDeployerContext.Provider>

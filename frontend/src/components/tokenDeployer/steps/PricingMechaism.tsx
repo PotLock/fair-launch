@@ -1,53 +1,22 @@
-import { useState } from "react";
 import { Badge } from "../../ui/badge";
 import { InfoIcon } from "lucide-react";
-
-const saleTypes = [
-  {
-    label: "Fair Launch",
-    icon: <img src="/icons/rocket.svg" alt="Rocket" className="w-4 h-4 mr-1" />,
-    color: "bg-emerald-50 text-green-600",
-    value: "fair-launch",
-  },
-  {
-    label: "Whitelist Sale",
-    icon: <img src="/icons/list.svg" alt="List" className="w-4 h-4 mr-1" />,
-    color: "bg-indigo-50 text-indigo-600",
-    value: "whitelist-sale",
-  },
-  {
-    label: "Fixed Price Sale",
-    icon: <img src="/icons/tag.svg" alt="Tag" className="w-4 h-4 mr-1" />,
-    color: "bg-yellow-50 text-yellow-700",
-    value: "fixed-price-sale",
-  },
-];
-
-const pricingOptions = [
-  {
-    key: "fixed-price",
-    title: "Fixed Price",
-    desc: "Set a specific price per token that doesn't change during the sale",
-    badges: [saleTypes[0], saleTypes[1], saleTypes[2]],
-  },
-  {
-    key: "bonding-curve",
-    title: "Bonding Curve",
-    desc: "Price increases automatically as more tokens are sold",
-    badges: [saleTypes[0], saleTypes[1], saleTypes[2]],
-  },
-];
+import { pricingOptions } from "../../../lib/pricings";
+import { useDeployStore } from "../../../stores/deployStores";
 
 export const PricingMechaism = () => {
-  const [selected, setSelected] = useState<string>("fixed-price");
+  const { selectedPricing, setSelectedPricing } = useDeployStore();
+
+  const handleSelect = (key: string) => {
+    setSelectedPricing(key);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {pricingOptions.map((option) => (
         <div
           key={option.key}
-          className={`h-full border transition-all p-3 rounded-lg cursor-pointer ${selected === option.key ? "border-gray-500 bg-gray-50" : "border-gray-200"}`}
-          onClick={() => setSelected(option.key)}
+          className={`h-full border transition-all p-3 rounded-lg cursor-pointer ${selectedPricing === option.key ? "border-gray-500 bg-gray-50" : "border-gray-200"}`}
+          onClick={() => handleSelect(option.key)}
         >
           <div className="flex flex-col h-36 relative">
             <div className="flex items-center gap-2 mb-2">
@@ -64,7 +33,7 @@ export const PricingMechaism = () => {
                     key={badge.label}
                     className={`flex items-center px-2 py-1 border border-gray-200 rounded-2xl text-xs shadow-none font-medium ${badge.color}`}
                   >
-                    {badge.icon}
+                    <img src={badge.icon as string} alt={badge.label} className="w-4 h-4 mr-1" />
                     {badge.label}
                   </Badge>
                 ))}

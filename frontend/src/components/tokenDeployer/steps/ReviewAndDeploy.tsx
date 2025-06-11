@@ -37,7 +37,7 @@ export const ReviewAndDeploy = () => {
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div
-                className="flex items-center justify-between cursor-pointer"
+                className="flex items-start justify-between cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex flex-col">

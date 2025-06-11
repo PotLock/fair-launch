@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import TokenDeployerSteps from './TokenDeployerSteps';
 import { TokenTemplate } from './steps/TokenTemplate';
 import { Exchanges } from './steps/Exchanges';
@@ -12,13 +11,10 @@ interface TokenDeployerFormProps {
 }
 
 const TokenDeployerForm = ({ currentStep }: TokenDeployerFormProps) => {
-  
-  const [selected, setSelected] = useState<string>('meme');
-
   const renderComponents = (step: number) => {
     switch (step) {
       case 0:
-        return <TokenTemplate selected={selected} setSelected={setSelected}/>
+        return <TokenTemplate/>
       case 1:
         return <Exchanges />
       case 2:

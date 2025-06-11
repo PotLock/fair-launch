@@ -1,4 +1,26 @@
+import { useDeployStore } from '../../../stores/deployStores';
+import { tokenTemplates } from '../../../lib/templates';
+import { exchanges } from '../../../lib/exchanges';
+
 export const PreviewSelection = () => {
+    const { selectedTemplate, selectedPricing, selectedExchange } = useDeployStore();
+
+    const getTemplateDisplay = (template: string) => {
+        const templateData = tokenTemplates.find(t => t.key === template);
+        return templateData?.label || template.charAt(0).toUpperCase() + template.slice(1);
+    };
+
+    const getPricingDisplay = (pricing: string) => {
+        return pricing.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
+
+    const getExchangeDisplay = (exchange: string) => {
+        const exchangeData = exchanges.find(e => e.value === exchange);
+        return exchangeData?.title || exchange.charAt(0).toUpperCase() + exchange.slice(1);
+    };
+
     return (
         <div className="w-full">
             {/* Header Section */}
@@ -8,18 +30,18 @@ export const PreviewSelection = () => {
                     <span className="text-gray-400 text-sm font-medium mb-1">Token Template</span>
                     <div className="flex items-center gap-2">
                         <img src="/icons/meme-token.svg" alt="Rocket" className="w-6 h-6 mr-1" />
-                        <span className="font-bold text-base">Meme Coin</span>
+                        <span className="font-bold text-base">{getTemplateDisplay(selectedTemplate)}</span>
                     </div>
                 </div>
                 {/* Launch Type */}
                 <div className="flex flex-col items-start w-1/3">
                     <span className="text-gray-400 text-sm font-medium mb-1">Launch Type</span>
-                    <span className="font-bold text-base">Fair Launch</span>
+                    <span className="font-bold text-base">{getExchangeDisplay(selectedExchange)}</span>
                 </div>
                 {/* Pricing Mechanism */}
                 <div className="flex flex-col items-start w-1/3">
                     <span className="text-gray-400 text-sm font-medium mb-1">Pricing Mechanism</span>
-                    <span className="font-bold text-base">Fixed Price</span>
+                    <span className="font-bold text-base">{getPricingDisplay(selectedPricing)}</span>
                 </div>
             </div>
             {/* Info Box */}

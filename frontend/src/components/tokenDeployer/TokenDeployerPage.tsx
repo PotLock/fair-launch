@@ -1,13 +1,22 @@
 import { ArrowRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import TokenDeployerForm from './TokenDeployerForm';
-import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useDeployStore } from '../../stores/deployStores';
 
 
 const TokenDeployerPage = () => {
-  const [currentStep, setCurrentStep] = useState<number>(0);
+  const { currentStep, setCurrentStep } = useDeployStore();
   const navigate = useNavigate();
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      navigate({ to: '/' });
+    }
+  };
+
   return (
     <div className="flex flex-col pt-14 bg-white">
       <div className={`w-full px-4 ${currentStep <= 3 ? 'max-w-4xl mx-auto' : 'container mx-auto'}`}>
@@ -26,9 +35,9 @@ const TokenDeployerPage = () => {
               <Button 
                 variant="outline" 
                 className="px-8" 
-                onClick={() => navigate({ to: '/' })}
+                onClick={handlePrevious}
               >
-                Cancel
+                {currentStep > 0 ? 'Previous' : 'Cancel'}
               </Button>
               <Button 
                 className="px-8 flex items-center gap-2 bg-black text-white" 
