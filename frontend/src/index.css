@@ -79,7 +79,7 @@
     --sidebar-ring: oklch(0.439 0 0);
 }
 
-@theme inline {
+@theme {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -213,3 +213,16 @@ body{
     color: #6b7280 !important;
 }
 
+.bg-primary{
+    background-color: #000000 !important;
+}
+
+
+.border-ring {
+    border-color: #000000 !important;
+    border-width: 0.5px !important;
+}
+
+.fill-primary {
+    fill: #000000 !important;
+}

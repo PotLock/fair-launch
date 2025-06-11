@@ -2,7 +2,7 @@ import { BasicInformation } from "./steps/BasicInformation";
 import { Social } from "./steps/Social";
 import { TokenDistribution } from "./steps/TokenDistribution";
 import { DEXListing } from "./steps/DEXListing";
-import { Fees } from "./steps/Fees";
+import { FeesStep } from "./steps/Fees";
 import { TokenSaleSetup } from "./steps/TokenSaleSetup";
 import { AdminSetup } from "./steps/AdminSetup";
 import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
@@ -20,7 +20,7 @@ export const TokenContainer = () => {
             <Social />
             <TokenDistribution />
             <DEXListing />
-            <Fees />
+            <FeesStep />
             <TokenSaleSetup />
             <AdminSetup />
             <ReviewAndDeploy />

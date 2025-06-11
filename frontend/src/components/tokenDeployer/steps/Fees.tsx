@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useTokenDeployer } from '../../../context/TokenDeployerContext';
+import { useDeployStore } from '../../../stores/deployStores';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Input } from '../../ui/input';
+import type { Fees } from '../../../types';
 
-export const Fees = () => {
+export const FeesStep = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
-    const { state, updateFees } = useTokenDeployer();
+    const { fees, updateFees } = useDeployStore();
 
-    const handleFeeChange = (field: keyof typeof state.fees.data, value: string | boolean) => {
-        updateFees({ [field]: value });
+    const handleFeeChange = (field: keyof Fees, value: any) => {
+        if (field === 'adminControls') {
+            updateFees({ adminControls: value });
+        } else {
+            updateFees({ [field]: value });
+        }
     };
 
     return (
@@ -45,34 +50,25 @@ export const Fees = () => {
                                     <div className='space-y-2'>
                                         <h1 className='text-sm font-medium'>Mint Fee (1.5%)</h1>
                                         <SliderCustom
-                                            value={[Number(state.fees.data.mintFee) || 0]}
+                                            value={[Number(fees.mintFee) || 0]}
                                             onValueChange={(value) => handleFeeChange('mintFee', value[0].toString())}
                                         />
-                                        {state.fees.errors?.mintFee && (
-                                            <p className="text-xs text-red-500">{state.fees.errors.mintFee}</p>
-                                        )}
                                         <p className='text-xs text-gray-500'>The fee charged when a user mints new tokens.</p>
                                     </div>
                                     <div className='space-y-2'>
                                         <h1 className='text-sm font-medium'>Transfer Fee (0.5%)</h1>
                                         <SliderCustom
-                                            value={[Number(state.fees.data.transferFee) || 0]}
+                                            value={[Number(fees.transferFee) || 0]}
                                             onValueChange={(value) => handleFeeChange('transferFee', value[0].toString())}
                                         />
-                                        {state.fees.errors?.transferFee && (
-                                            <p className="text-xs text-red-500">{state.fees.errors.transferFee}</p>
-                                        )}
                                         <p className='text-xs text-gray-500'>Fee charged when tokens are transferred between wallets</p>
                                     </div>
                                     <div className='space-y-2'>
                                         <h1 className='text-sm font-medium'>Burn Fee (0%)</h1>
                                         <SliderCustom
-                                            value={[Number(state.fees.data.burnFee) || 0]}
+                                            value={[Number(fees.burnFee) || 0]}
                                             onValueChange={(value) => handleFeeChange('burnFee', value[0].toString())}
                                         />
-                                        {state.fees.errors?.burnFee && (
-                                            <p className="text-xs text-red-500">{state.fees.errors.burnFee}</p>
-                                        )}
                                         <p className='text-xs text-gray-500'>Fee charged when tokens are burned.</p>
                                     </div>
                                 </div>
@@ -89,7 +85,7 @@ export const Fees = () => {
                                             type="text"
                                             placeholder='Wallet address to receive fees'
                                             className='text-xs'
-                                            value={state.fees.data.feeRecipientAddress}
+                                            value={fees.feeRecipientAddress}
                                             onChange={(e) => handleFeeChange('feeRecipientAddress', e.target.value)}
                                         />
                                     </div>
@@ -101,16 +97,16 @@ export const Fees = () => {
                                             <span className='text-xs text-gray-500'>Allow changing fees after deployment</span>
                                         </div>
                                         <button
-                                            onClick={() => handleFeeChange('adminControls', !state.fees.data.adminControls)}
+                                            onClick={() => handleFeeChange('adminControls', { ...fees.adminControls, isEnabled: !fees.adminControls.isEnabled })}
                                             className={`
                                                 relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out
-                                                ${state.fees.data.adminControls ? 'bg-black' : 'bg-gray-200'}
+                                                ${fees.adminControls.isEnabled ? 'bg-black' : 'bg-gray-200'}
                                             `}
                                         >
                                             <span
                                                 className={`
                                                     inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out
-                                                    ${state.fees.data.adminControls ? 'translate-x-6' : 'translate-x-1'}
+                                                    ${fees.adminControls.isEnabled ? 'translate-x-6' : 'translate-x-1'}
                                                 `}
                                             />
                                         </button>
@@ -121,8 +117,9 @@ export const Fees = () => {
                                             type="text"
                                             placeholder='Wallet address to receive fees'
                                             className='text-xs'
-                                            value={state.fees.data.feeRecipientAddress}
-                                            onChange={(e) => handleFeeChange('feeRecipientAddress', e.target.value)}
+                                            value={fees.adminControls.walletAddress}
+                                            disabled={!fees.adminControls.isEnabled}
+                                            onChange={(e) => handleFeeChange('adminControls', { ...fees.adminControls, walletAddress: e.target.value })}
                                         />
                                     </div>
                                     <div className='flex flex-col gap-1'>

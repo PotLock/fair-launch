@@ -1,8 +1,5 @@
 import React from 'react';
-
-interface TokenDeployerStepsProps {
-  currentStep: number;
-}
+import type { TokenDeployerSteps } from '../../types';
 
 const steps = [
   {
@@ -23,7 +20,7 @@ const steps = [
   }
 ]
 
-const TokenDeployerSteps = ({ currentStep }: TokenDeployerStepsProps) => {
+const TokenDeployerSteps = ({ currentStep }: TokenDeployerSteps) => {
   return (
     <div className="flex flex-col gap-12 mb-4">
       <div className="flex items-center justify-center">
