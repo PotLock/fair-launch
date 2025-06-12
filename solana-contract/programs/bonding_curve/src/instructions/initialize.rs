@@ -31,9 +31,10 @@ pub fn initialize(
     max_token_supply: u64,
     liquidity_lock_period: i64,
     liquidity_pool_percentage: u16,
-    initial_price: u64,
+    initial_reserve: u64,
     initial_supply: u64,
     fee_recipients: Vec<Recipient>,
+    reserve_ratio: u16,
 ) -> Result<()> {
     let dex_config = &mut ctx.accounts.bonding_curve_configuration;
     let current_time = Clock::get()?.unix_timestamp;
@@ -50,9 +51,10 @@ pub fn initialize(
         max_token_supply,
         liquidity_lock_period,
         liquidity_pool_percentage,
-        initial_price,
+        initial_reserve,
         initial_supply,
         fee_recipients,
+        reserve_ratio,
     )?);
 
     Ok(())

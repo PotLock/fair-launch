@@ -16,7 +16,6 @@ pub struct BondingCurve {
     pub reserve_balance: u64, // Tracks the SOL reserve balance
     pub reserve_token: u64,   // Tracks the token reserve balance
     pub token: Pubkey,        // Public key of the token in the liquidity pool
-    pub reserve_ratio: u16,   // Reserve ratio in basis points (default: 50%)
     pub bump: u8,             // Bump seed for PDA
 }
 
@@ -30,7 +29,6 @@ impl BondingCurve {
             reserve_balance: 0,
             reserve_token: 0,
             token,
-            reserve_ratio: 5000,
             bump,
         }
     }
@@ -45,8 +43,18 @@ impl BondingCurve {
 }
 
 pub trait BondingCurveAccount<'info> {
-    fn calculate_buy_cost(&mut self, amount: u64, bonding_curve_type: u8) -> Result<u64>;
-    fn calculate_sell_cost(&mut self, amount: u64, bonding_curve_type: u8) -> Result<u64>;
+    fn calculate_buy_cost(
+        &mut self,
+        amount: u64,
+        bonding_curve_type: u8,
+        reserve_ratio: u16,
+    ) -> Result<u64>;
+    fn calculate_sell_cost(
+        &mut self,
+        amount: u64,
+        bonding_curve_type: u8,
+        reserve_ratio: u16,
+    ) -> Result<u64>;
 
     // Allows adding liquidity by depositing an amount of two tokens and getting back pool shares
     fn add_liquidity(
@@ -96,7 +104,6 @@ pub trait BondingCurveAccount<'info> {
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
-        reserve_ratio: u16,
         // target liquidity for migration
         target_liquidity: u64,
         token_program: &Interface<'info, TokenInterface>,
@@ -162,27 +169,37 @@ pub trait BondingCurveAccount<'info> {
 }
 
 impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
-    fn calculate_buy_cost(&mut self, amount: u64, bonding_curve_type: u8) -> Result<u64> {
+    fn calculate_buy_cost(
+        &mut self,
+        amount: u64,
+        bonding_curve_type: u8,
+        reserve_ratio: u16,
+    ) -> Result<u64> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
             .map_err(|_| CustomError::InvalidBondingCurveType)?;
 
         if bonding_curve_type == BondingCurveType::Linear {
-            return linear_buy_cost(amount, self.reserve_ratio, self.total_supply);
+            return linear_buy_cost(amount, reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
-            return quadratic_buy_cost(amount, self.reserve_ratio, self.total_supply);
+            return quadratic_buy_cost(amount, reserve_ratio, self.total_supply);
         } else {
             return Err(CustomError::InvalidBondingCurveType.into());
         }
     }
 
-    fn calculate_sell_cost(&mut self, amount: u64, bonding_curve_type: u8) -> Result<u64> {
+    fn calculate_sell_cost(
+        &mut self,
+        amount: u64,
+        bonding_curve_type: u8,
+        reserve_ratio: u16,
+    ) -> Result<u64> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
             .map_err(|_| CustomError::InvalidBondingCurveType)?;
 
         if bonding_curve_type == BondingCurveType::Linear {
-            return linear_sell_cost(amount, self.reserve_ratio, self.total_supply);
+            return linear_sell_cost(amount, reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
-            return quadratic_sell_cost(amount, self.reserve_ratio, self.total_supply);
+            return quadratic_sell_cost(amount, reserve_ratio, self.total_supply);
         } else {
             return Err(CustomError::InvalidBondingCurveType.into());
         }
@@ -201,20 +218,19 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         fee_percentage: u16,
         authority: &Signer<'info>,
         bonding_curve_type: u8,
-        reserve_ratio: u16,
         // target liquidity for migration
         target_liquidity: u64,
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-        let amount_out = self.calculate_buy_cost(sol_amount, bonding_curve_type)?;
+        let amount_out = self.calculate_buy_cost(sol_amount, bonding_curve_type, bonding_configuration_account.reserve_ratio)?;
 
         msg!("amount out {:?}", amount_out);
         let fee_in_sol = amount_out * (fee_percentage as u64) / 10000;
         msg!("fee in sol {:?}", fee_in_sol);
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
-        if self.reserve_balance + amount_out > target_liquidity {
+        if self.reserve_balance + sol_amount > target_liquidity {
             return err!(CustomError::TargetLiquidityReached);
         }
         self.total_supply += amount_out;
@@ -247,7 +263,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             &mut InterfaceAccount<'info, TokenAccount>,
         ),
         pool_sol_vault: &mut AccountInfo<'info>,
-        amount: u64,
+        token_amount: u64,
         fee_percentage: u16,
         bump: u8,
         authority: &Signer<'info>,
@@ -257,11 +273,15 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         token_program: &Interface<'info, TokenInterface>,
         system_program: &Program<'info, System>,
     ) -> Result<()> {
-        let amount_out = self.calculate_sell_cost(amount, bonding_curve_type)?;
+        let amount_out = self.calculate_sell_cost(
+            token_amount,
+            bonding_curve_type,
+            bonding_configuration_account.reserve_ratio,
+        )?;
         let fee = amount_out * (fee_percentage as u64) / 10000;
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
-        if self.reserve_balance + amount > target_liquidity {
+        if self.reserve_balance + amount_out > target_liquidity {
             return err!(CustomError::TargetLiquidityReached);
         }
 
@@ -269,14 +289,14 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
             return err!(CustomError::NotEnoughSolInVault);
         }
 
-        self.total_supply -= amount;
+        self.total_supply -= token_amount;
         self.reserve_balance -= amount_out;
-        self.reserve_token += amount;
+        self.reserve_token += token_amount;
         self.transfer_token_to_pool(
             token_accounts.2,
             token_accounts.1,
             token_accounts.0,
-            amount as u64,
+            token_amount as u64,
             authority,
             token_program,
         )?;

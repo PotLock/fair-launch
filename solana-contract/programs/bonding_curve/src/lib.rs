@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 use crate::state::Recipient;
-declare_id!("6DSTtpw58Duszpy9CKcwcKjuQmXXhg5N9QfRAmrDPMcd");
+declare_id!("6qR9UPXArNpBR2m9uBfh97LXcQQQwJpKmV1ULHmxzNeW");
 
 #[program]
 pub mod bonding_curve {
@@ -35,6 +35,7 @@ pub mod bonding_curve {
         initial_reserve: u64,
         initial_supply: u64,
         recipients: Vec<Recipient>,
+        reserve_ratio: u16,
     ) -> Result<()> {
         instructions::initialize(
             ctx,
@@ -51,6 +52,7 @@ pub mod bonding_curve {
             initial_reserve,
             initial_supply,
             recipients,
+            reserve_ratio,
         )
     }
 

@@ -57,13 +57,14 @@ pub struct CurveConfiguration {
     pub initial_supply: u64,            // Initial supply of the token,
     pub fee_recipients: Vec<Recipient>,
     pub total_fees_collected: u64,
+    pub reserve_ratio: u16,   // Reserve ratio in basis points (default: 50%)
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + Pubkey(32) + u64(8) + bool(1) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
+    // Discriminator (8) + Pubkey(32) + u64(8) + bool(1) + u16(2) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
     // todo : limit number of fee recipients for init account
     pub const ACCOUNT_SIZE: usize =
-        8 + 32 + 8 + 1 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
+        8 + 32 + 8 + 1 + 2 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
 
     pub fn new(
         admin: Pubkey,
@@ -79,6 +80,7 @@ impl CurveConfiguration {
         initial_reserve: u64,
         initial_supply: u64,
         fee_recipients: Vec<Recipient>,
+        reserve_ratio: u16,
     ) -> Result<Self> {
         let bonding_curve_type =
             BondingCurveType::try_from(bonding_curve_type).unwrap_or(BondingCurveType::Linear);
@@ -118,6 +120,7 @@ impl CurveConfiguration {
             initial_supply,
             fee_recipients: recipients,
             total_fees_collected: 0,
+            reserve_ratio,
         })
     }
 }

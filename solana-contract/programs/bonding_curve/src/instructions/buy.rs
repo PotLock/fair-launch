@@ -35,7 +35,6 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
         fee_percentage,
         user,
         bonding_curve_type,
-        bonding_curve.reserve_ratio,
         bonding_curve_configuration.target_liquidity,
         token_program,
         system_program,

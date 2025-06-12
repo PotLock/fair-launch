@@ -18,7 +18,7 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let initial_reserve_amount = calculate_initial_reserve_linear(
         bonding_curve_configuration.initial_reserve,
         bonding_curve_configuration.initial_supply,
-        bonding_curve_account.reserve_ratio,
+        bonding_curve_configuration.reserve_ratio,
         ctx.accounts.token_mint.decimals,
     )?;
     msg!("initial reserve amount {:?}", initial_reserve_amount);
