@@ -6,10 +6,27 @@ import { FeesStep } from "./steps/Fees";
 import { TokenSaleSetup } from "./steps/TokenSaleSetup";
 import { AdminSetup } from "./steps/AdminSetup";
 import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
-import { Button } from "../ui/button";
 import { Fuel } from "lucide-react";
+import { useDeployToken } from "../../hook/useDeployToken";
+import { useWallet } from "@solana/wallet-adapter-react";
+import toast from "react-hot-toast";
 
 export const TokenContainer = () => {
+    const { deployToken } = useDeployToken();
+    const { publicKey } = useWallet();
+
+    const handleDeployToken = async () => {
+        if (!publicKey) {
+            toast.error("Please connect your wallet first!");
+            return;
+        }
+        try {
+            await deployToken();
+        } catch (error) {
+            console.error("Deploy token error:", error);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-2 w-full pb-10">
             <div className="flex flex-col gap-2 text-center mb-10">
@@ -34,7 +51,12 @@ export const TokenContainer = () => {
                         <span>$0.75 USD</span>
                     </div>
                 </div>
-                <Button variant="default" className="border border-gray-200 shadow-none">Deploy Token</Button>
+                <button 
+                    onClick={handleDeployToken}
+                    className="border p-2 px-3 bg-gray-100 rounded-md text-sm border-gray-300 shadow-none hover:bg-gray-200 transition-colors"
+                >
+                    Deploy Token
+                </button>
             </div>
         </div>
     );

@@ -318,7 +318,7 @@ export const DEXListing = () => {
                                 <div className="text-base font-semibold mb-2">Liquidity Type</div>
                                 <div className="relative">
                                     <select
-                                        className="w-full border border-gray-200 rounded-lg p-3 text-base bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        className="w-full text-sm border border-gray-200 rounded-lg p-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
                                         value={dexListing.liquidityType || ''}
                                         onChange={e => updateLiquidityField('liquidityType', e.target.value as 'double' | 'single')}
                                     >
@@ -348,7 +348,7 @@ export const DEXListing = () => {
 
                         <div className='space-y-2'>
                             <h1 className='text-base font-semibold'>Liquidity Lookup Period (days)</h1>
-                            <Input className='w-full border border-gray-200 rounded-md p-2' placeholder='10'/>
+                            <Input className='w-full border border-gray-200 rounded-md p-2' placeholder='10' value={dexListing.liquidityLockupPeriod} onChange={e => updateLiquidityField('liquidityLockupPeriod', e.target.value)}/>
                             <span className='text-sm text-gray-500'>Period during which the initial liquidity cannot be removed (minimum 30n days)</span>
                         </div>
                         

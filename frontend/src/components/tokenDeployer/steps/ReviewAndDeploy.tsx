@@ -1,7 +1,8 @@
 import { IconChevronDown } from '@tabler/icons-react';
 import { useState } from 'react';
-import { useTokenDeployer } from '../../../context/TokenDeployerContext';
+import { useDeployStore } from '../../../stores/deployStores';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { getExchangeDisplay } from '../../../utils';
 
 type SectionKey = keyof typeof defaultExpanded;
 const defaultExpanded = {
@@ -24,7 +25,7 @@ const SectionHeader = ({ title, sectionKey, expanded, onClick }: { title: string
 );
 
 export const ReviewAndDeploy = () => {
-    const { state } = useTokenDeployer();
+    const state = useDeployStore();
     const [expanded, setExpanded] = useState<typeof defaultExpanded>(defaultExpanded);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const handleExpand = (section: SectionKey) => {
@@ -61,48 +62,48 @@ export const ReviewAndDeploy = () => {
                             <SectionHeader title="Token Details" sectionKey="tokenDetails" expanded={expanded.tokenDetails} onClick={handleExpand} />
                             {expanded.tokenDetails && (
                                 <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
-                                    <div>
-                                        <div className="text-xs text-gray-500">Name</div>
-                                        <div className="font-medium">{state.basicInfo.data.name}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Name</label>
+                                        <span className="font-medium">{state.basicInfo.name}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500">Symbol</div>
-                                        <div className="font-medium">{state.basicInfo.data.symbol}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Symbol</label>
+                                        <span className="font-medium">{state.basicInfo.symbol}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500">Supply</div>
-                                        <div className="font-medium">{state.basicInfo.data.supply}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Supply</label>
+                                        <span className="font-medium">{state.basicInfo.supply}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500">Decimal</div>
-                                        <div className="font-medium">{state.basicInfo.data.decimals}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Decimal</label>
+                                        <span className="font-medium">{state.basicInfo.decimals}</span>
                                     </div>
-                                    <div className="col-span-2 border-t pt-2 mt-2">
-                                        <div className="text-xs text-gray-500 mb-1">Description</div>
-                                        <div className="font-medium text-sm">{state.basicInfo.data.description}</div>
+                                    <div className="col-span-2 border-t pt-2 mt-2 flex flex-col gap-1">
+                                        <label className="text-xs text-gray-500 mb-1">Description</label>
+                                        <span className="font-medium text-sm">{state.basicInfo.description}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500">Revoke Mint Authority</div>
-                                        <div className="font-medium">{state.basicInfo.data.revokeMintEnabled ? 'Yes' : 'No'}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Revoke Mint Authority</label>
+                                        <span className="font-medium">{state.adminSetup.revokeMintAuthority.isEnabled ? 'Yes' : 'No'}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500">Revoke Freeze Authority</div>
-                                        <div className="font-medium">{state.basicInfo.data.revokeFreezeEnabled ? 'Yes' : 'No'}</div>
+                                    <div className='flex flex-col gap-1'>
+                                        <label className="text-xs text-gray-500">Revoke Freeze Authority</label>
+                                        <span className="font-medium">{state.adminSetup.revokeFreezeAuthority.isEnabled ? 'Yes' : 'No'}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {/* Token Distribution */}
-                        {state.allocation.enabled && (
+                        {state.allocation.length > 0 && (
                         <div className="border rounded-lg">
                             <SectionHeader title="Token Distribution" sectionKey="tokenDistribution" expanded={expanded.tokenDistribution} onClick={handleExpand} />
                             {expanded.tokenDistribution && (
                             <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
-                                {state.allocation.data.map((allocation, idx) => (
+                                {state.allocation.map((allocation, idx) => (
                                 <div key={idx} className="flex flex-col gap-1">
-                                    <div className="text-xs text-gray-500">{allocation.description || `Allocation #${idx + 1}`}</div>
-                                    <div className="font-medium">{allocation.percentage}%</div>
+                                    <label className="text-xs text-gray-500">{allocation.description || `Allocation #${idx + 1}`}</label>
+                                    <span className="font-medium">{allocation.percentage}%</span>
                                 </div>
                                 ))}
                             </div>
@@ -110,104 +111,78 @@ export const ReviewAndDeploy = () => {
                         </div>
                         )}
 
-                        {/* Token Release Schedule */}
-                        {state.vesting.enabled && (
-                        <div className="border rounded-lg">
-                            <SectionHeader title="Token Release Schedule" sectionKey="tokenReleaseSchedule" expanded={expanded.tokenReleaseSchedule} onClick={handleExpand} />
-                            {expanded.tokenReleaseSchedule && (
-                            <div className="p-4 bg-white rounded-b-lg space-y-3">
-                                {state.vesting.data.map((vesting, idx) => (
-                                <div key={idx} className="flex justify-between items-center">
-                                    <div>
-                                    <div className="text-xs text-gray-500">{vesting.description || `Schedule #${idx + 1}`}</div>
-                                    <div className="text-xs text-gray-400">{vesting.cliffPeriod} days cliff, {vesting.vestingDuration} days duration</div>
+                        {state.allocation.some(a => a.vesting.enabled) && (
+                            <div className="border rounded-lg">
+                                <SectionHeader title="Token Release Schedule" sectionKey="tokenReleaseSchedule" expanded={expanded.tokenReleaseSchedule} onClick={handleExpand} />
+                                {expanded.tokenReleaseSchedule && (
+                                <div className="p-4 bg-white rounded-b-lg space-y-3">
+                                    {state.allocation.filter(a => a.vesting.enabled).map((allocation, idx) => (
+                                    <div key={idx} className="flex justify-between items-center">
+                                        <div className='flex flex-col gap-1'>
+                                            <label className="text-xs text-gray-500">{allocation.vesting.description || `Schedule #${idx + 1}`}</label>
+                                            <span className="text-xs text-gray-400">{allocation.vesting.cliff} days cliff, {allocation.vesting.duration} days duration</span>
+                                        </div>
+                                        <span className="font-medium">{allocation.vesting.percentage}%</span>
                                     </div>
-                                    <div className="font-medium">{vesting.percentage}%</div>
+                                    ))}
                                 </div>
-                                ))}
+                                )}
                             </div>
-                            )}
-                        </div>
                         )}
 
-                        {/* Price Mechanism */}
-                        {state.bondingCurve.enabled && (
-                        <div className="border rounded-lg">
-                            <SectionHeader title="Price Mechanism" sectionKey="priceMechanism" expanded={expanded.priceMechanism} onClick={handleExpand} />
-                            {expanded.priceMechanism && (
-                            <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
-                                <div>
-                                    <div className="text-xs text-gray-500">Curve Type</div>
-                                    <div className="font-medium">{state.bondingCurve.data.curveType}</div>
+                        {state.dexListing && (
+                            <div className="mb-4 border rounded-lg">
+                                <SectionHeader title="DEX Listing Setup" sectionKey="dexListingSetup" expanded={expanded.dexListingSetup} onClick={handleExpand} />
+                                {expanded.dexListingSetup && (
+                                <div className="p-4 flex justify-between gap-4 bg-white rounded-b-lg">
+                                    <div className='flex flex-col gap-2'>
+                                        <div>
+                                            <label className="text-xs text-gray-500">DEX</label>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <img src={state.dexListing.launchLiquidityOn.icon} alt={state.dexListing.launchLiquidityOn.name} className="w-5 h-5 rounded-full" />
+                                                <span className="font-medium">{state.dexListing.launchLiquidityOn.name}</span>
+                                            </div>
+                                        </div>
+                                        <div className='flex flex-col gap-1'>
+                                            <label className="text-xs text-gray-500">Liquidity Percentage</label>
+                                            <span className="font-medium">{state.dexListing.liquidityPercentage}%</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                    <div className="text-xs text-gray-500">Initial Price</div>
-                                    <div className="font-medium">{state.bondingCurve.data.initialPrice} SOL</div>
+                                    <div className='flex flex-col gap-2'>
+                                        <div className='flex flex-col gap-1'>
+                                            <label className="text-xs text-gray-500">Liquidity Type</label>
+                                            <span className="font-medium capitalize">{state.dexListing.liquidityType}-Sided</span>
+                                        </div>
+                                        <div className='flex flex-col gap-1'>
+                                            <label className="text-xs text-gray-500">Lockup Period</label>
+                                            <span className="font-medium">{state.dexListing.liquidityLockupPeriod} days</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                    <div className="text-xs text-gray-500">Target Price</div>
-                                    <div className="font-medium">{state.bondingCurve.data.targetPrice} SOL</div>
-                                    </div>
-                                    <div>
-                                    <div className="text-xs text-gray-500">Max Supply</div>
-                                    <div className="font-medium">{state.bondingCurve.data.maxSupply}</div>
                                 </div>
+                                )}
                             </div>
-                            )}
-                        </div>
                         )}
 
-                        {/* DEX Listing Setup */}
-                        {state.liquidity.enabled && (
-                        <div className="mb-4 border rounded-lg">
-                            <SectionHeader title="DEX Listing Setup" sectionKey="dexListingSetup" expanded={expanded.dexListingSetup} onClick={handleExpand} />
-                            {expanded.dexListingSetup && (
-                            <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
-                                <div>
-                                <div className="text-xs text-gray-500">DEX</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <img src={state.liquidity.data.launchLiquidityOn.icon} alt={state.liquidity.data.launchLiquidityOn.name} className="w-5 h-5 rounded-full" />
-                                    <span className="font-medium">{state.liquidity.data.launchLiquidityOn.name}</span>
+                        {state.saleSetup && (
+                            <div className="border rounded-lg">
+                                <SectionHeader title="Token Sale Setup" sectionKey="tokenSaleSetup" expanded={expanded.tokenSaleSetup} onClick={handleExpand} />
+                                {expanded.tokenSaleSetup && (
+                                <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
+                                    <div>
+                                        <label className="text-xs text-gray-500">Launch Type</label>
+                                        <div className="font-medium">{getExchangeDisplay(state.selectedExchange)}</div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">Fundraising Target</label>
+                                        <div className="font-medium">{state.saleSetup.softCap} - {state.saleSetup.hardCap} SOL</div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">Contribution Limits</label>
+                                        <div className="font-medium">{state.saleSetup.minimumContribution} - {state.saleSetup.maximumContribution} SOL</div>
+                                    </div>
                                 </div>
-                                </div>
-                                <div>
-                                <div className="text-xs text-gray-500">Liquidity Type</div>
-                                <div className="font-medium capitalize">{state.liquidity.data.liquidityType}-Sided</div>
-                                </div>
-                                <div>
-                                <div className="text-xs text-gray-500">Liquidity Percentage</div>
-                                <div className="font-medium">{state.liquidity.data.liquidityPercentage}%</div>
-                                </div>
-                                <div>
-                                <div className="text-xs text-gray-500">Lockup Period</div>
-                                <div className="font-medium">{state.liquidity.data.liquidityLockupPeriod} days</div>
-                                </div>
+                                )}
                             </div>
-                            )}
-                        </div>
-                        )}
-
-                        {/* Token Sale Setup */}
-                        {state.launchpad.enabled && (
-                        <div className="border rounded-lg">
-                            <SectionHeader title="Token Sale Setup" sectionKey="tokenSaleSetup" expanded={expanded.tokenSaleSetup} onClick={handleExpand} />
-                            {expanded.tokenSaleSetup && (
-                            <div className="p-4 grid grid-cols-2 gap-4 bg-white rounded-b-lg">
-                                <div>
-                                <div className="text-xs text-gray-500">Launch Type</div>
-                                <div className="font-medium">{state.launchpad.data.launchType}</div>
-                                </div>
-                                <div>
-                                <div className="text-xs text-gray-500">Fundraising Target</div>
-                                <div className="font-medium">{state.launchpad.data.softCap} - {state.launchpad.data.hardCap} SOL</div>
-                                </div>
-                                <div>
-                                <div className="text-xs text-gray-500">Contribution Limits</div>
-                                <div className="font-medium">{state.launchpad.data.minContribution} - {state.launchpad.data.maxContribution} SOL</div>
-                                </div>
-                            </div>
-                            )}
-                        </div>
                         )}
                     </div>
                 )
