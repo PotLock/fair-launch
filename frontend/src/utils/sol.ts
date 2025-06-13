@@ -2,7 +2,7 @@ import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 // import * as anchor from "@project-serum/anchor";
 import { SOL_NETWORK } from "../configs/env.config";
 import { PublicKey } from "@solana/web3.js";
-import { PREFIX_TOKEN } from "./comon";
+import { PREFIX_TOKEN } from "./common";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 
 export const getProvider = () => {

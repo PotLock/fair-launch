@@ -219,8 +219,18 @@ export interface TokenSaleSetup {
 }
 
 export interface AdminSetup {
-    revokeMintAuthority: boolean;
-    revokeFreezeAuthority: boolean;
+    revokeMintAuthority: {
+        isEnabled: boolean;
+        walletAddress: string;
+    };
+    revokeFreezeAuthority: {
+        isEnabled: boolean;
+        walletAddress: string;
+    };
     adminWalletAddress: string;
-    adminStructure: string;
+    adminStructure: 'single' | 'multisig' | 'dao';
+    tokenOwnerWalletAddress: string;
+    numberOfSignatures: number;
+    mintAuthorityWalletAddress?: string;
+    freezeAuthorityWalletAddress?: string;
 }

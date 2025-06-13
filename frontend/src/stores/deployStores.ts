@@ -73,10 +73,20 @@ const initialDeploy = {
         distributionDelay: 0
     } as TokenSaleSetup,
     adminSetup: {
-        revokeMintAuthority: false,
-        revokeFreezeAuthority: false,
+        revokeMintAuthority: {
+            isEnabled: false,
+            walletAddress: ''
+        },
+        revokeFreezeAuthority: {
+            isEnabled: false,
+            walletAddress: ''
+        },
         adminWalletAddress: '',
-        adminStructure: 'single'
+        adminStructure: 'single',
+        tokenOwnerWalletAddress: '',
+        numberOfSignatures: 2,
+        mintAuthorityWalletAddress: '',
+        freezeAuthorityWalletAddress: ''
     } as AdminSetup,
     validationErrors: {} as ValidationErrors,
 };

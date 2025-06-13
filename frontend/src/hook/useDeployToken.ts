@@ -22,9 +22,9 @@ import {
 import { BN } from "bn.js";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
-import { useTokenDeployer } from "../context/TokenDeployerContext";
 import useAnchorProvider from "./useAnchorProvider";
 import { getPDAs } from "../utils/sol";
+import { useDeployStore } from "../stores/deployStores";
 
 const uploadMetadataToPinata = async (metadata: {
     name: string;
@@ -55,7 +55,7 @@ const uploadMetadataToPinata = async (metadata: {
 };
 
 export const useDeployToken = () => {
-  const { state } = useTokenDeployer();
+  const { basicInfo, allocation, dexListing, saleSetup, adminSetup } = useDeployStore();
   const walletSol = useWallet();
   const { publicKey, sendTransaction, signTransaction } = walletSol;
   const { anchorWallet, program, governanceKeypair, connection, mintKeypair } = useAnchorProvider();
@@ -69,19 +69,47 @@ export const useDeployToken = () => {
       return;
     }
 
+    // Debug logging
+    // console.log("Allocation data:", allocation);
+    // console.log("Total percentage:", allocation.reduce((sum, item) => sum + item.percentage, 0));
+
+    // Validate allocation data
+    if (!allocation || allocation.length === 0) {
+      toast.error("At least one allocation is required!");
+      return;
+    }
+
+    // Validate total percentage equals 100
+    const totalPercentage = allocation.reduce((sum, item) => sum + item.percentage, 0);
+    if (totalPercentage !== 100) {
+      toast.error(`Total allocation percentage must equal 100%. Current total: ${totalPercentage}%`);
+      return;
+    }
+
+    // Validate all wallet addresses
+    const invalidWallets = allocation.filter(item => !item.walletAddress || !item.walletAddress.trim());
+    if (invalidWallets.length > 0) {
+      toast.error("All allocations must have valid wallet addresses!");
+      return;
+    }
+
     const feePercentage = new BN(100);
     const initialQuorum = new BN(500);
     const daoQuorum = new BN(500);
     const bondingCurveType = 1;
     const maxTokenSupply = new BN(10000000000);
 
-    const recipients = state.allocation.data.map((item) => {
+    const recipients = allocation.map((item) => {
       if (!item.walletAddress) {
         throw new Error(`Invalid wallet address: address is empty`);
       }
       try {
+        // Convert percentage to basis points (1% = 100 basis points)
+        // For example: 100% = 10000 basis points, 50% = 5000 basis points
+        const share = Math.round(item.percentage * 100);
+        console.log(`Converting ${item.percentage}% to ${share} basis points`);
         return {
-          share: item.percentage * 100,
+          share,
           address: new PublicKey(item.walletAddress),
           lockingPeriod: new BN(item.lockupPeriod),
           amount: new BN(0),
@@ -91,17 +119,54 @@ export const useDeployToken = () => {
       }
     });
 
+    // Validate total share percentage equals 10000 (100%)
+    const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
+    // console.log(`Total share in basis points: ${totalShare}`);
+    if (totalShare !== 10000) {
+      toast.error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
+      return;
+    }
+
+    // Debug logging
+    // console.log("Final recipients:", recipients);
+    // console.log("Total share:", recipients.reduce((sum, item) => sum + item.share, 0));
+
+    // Get target liquidity based on liquidity source type
+    let targetLiquidity = new BN(1);
+    switch (dexListing.liquiditySource) {
+      case 'wallet':
+        targetLiquidity = new BN(dexListing.walletLiquidityAmount || 0);
+        break;
+      case 'sale':
+        targetLiquidity = new BN(saleSetup.softCap || 0);
+        break;
+      case 'bonding':
+        targetLiquidity = new BN(dexListing.liquidityPercentage);
+        break;
+      case 'team':
+        targetLiquidity = new BN(dexListing.liquidityPercentage);
+        break;
+      case 'external':
+        targetLiquidity = new BN(dexListing.liquidityPercentage);
+        break;
+      case 'hybrid':
+        targetLiquidity = new BN(dexListing.liquidityPercentage);
+        break;
+      default:
+        targetLiquidity = new BN(0);
+    }
+
     return program.methods
       .initialize(
         initialQuorum,
         feePercentage,
-        new BN(state.bondingCurve.data.targetPrice),
+        targetLiquidity,
         governanceKeypair.publicKey,
         daoQuorum,
         bondingCurveType,
         maxTokenSupply,
-        new BN(state.liquidity.data.liquidityLockupPeriod),
-        new BN(state.liquidity.data.liquidityPercentage),
+        new BN(dexListing.liquidityLockupPeriod),
+        new BN(dexListing.liquidityPercentage),
         recipients
       )
       .accounts({
@@ -150,10 +215,10 @@ export const useDeployToken = () => {
 
       // Upload metadata to Pinata
       const metadataUri = await uploadMetadataToPinata({
-        name: state.basicInfo.data.name,
-        symbol: state.basicInfo.data.symbol,
-        description: state.basicInfo.data.description || "",
-        image: typeof state.basicInfo.data.logoUrl === 'string' ? state.basicInfo.data.logoUrl : ""
+        name: basicInfo.name,
+        symbol: basicInfo.symbol,
+        description: basicInfo.description || "",
+        image: basicInfo.avatarUrl || ""
       });
 
       const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
@@ -169,8 +234,8 @@ export const useDeployToken = () => {
         {
           createMetadataAccountArgsV3: {
             data: {
-              name: state.basicInfo.data.name,
-              symbol: state.basicInfo.data.symbol,
+              name: basicInfo.name,
+              symbol: basicInfo.symbol,
               uri: metadataUri,
               sellerFeeBasisPoints: 0,
               creators: null,
@@ -195,7 +260,7 @@ export const useDeployToken = () => {
         }),
         createInitializeMintInstruction(
           mintKeypair.publicKey,
-          Number(state.basicInfo.data.decimals),
+          Number(basicInfo.decimals),
           publicKey,
           publicKey,
           TOKEN_PROGRAM_ID
@@ -210,29 +275,29 @@ export const useDeployToken = () => {
           mintKeypair.publicKey,
           tokenATA,
           publicKey,
-          Number(state.basicInfo.data.supply) * Math.pow(10, Number(state.basicInfo.data.decimals))
+          Number(basicInfo.supply) * Math.pow(10, Number(basicInfo.decimals))
         ),
         metadataInstruction
       );
 
-      if (state.basicInfo.data.revokeMintEnabled) {
+      if (adminSetup.revokeMintAuthority.isEnabled) {
         createNewTokenTransaction.add(
           createSetAuthorityInstruction(
             mintKeypair.publicKey,
             publicKey,
             AuthorityType.MintTokens,
-            publicKey // You may want to add a field for this in your context
+            new PublicKey(adminSetup.revokeMintAuthority.walletAddress)
           )
         );
       }
 
-      if (state.basicInfo.data.revokeFreezeEnabled) {
+      if (adminSetup.revokeFreezeAuthority.isEnabled) {
         createNewTokenTransaction.add(
           createSetAuthorityInstruction(
             mintKeypair.publicKey,
             publicKey,
             AuthorityType.FreezeAccount,
-            publicKey // You may want to add a field for this in your context
+            new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress)
           )
         );
       }
@@ -254,13 +319,13 @@ export const useDeployToken = () => {
       const txid = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(txid);
 
-      toast.success(`🚀 Created token ${state.basicInfo?.data?.name || 'Token'} Successfully!`);
+      toast.success(`🚀 Created token ${basicInfo.name} Successfully!`);
       return txid;
     } catch (error) {
       toast.error('Create token failed!');
       console.error('Deploy token error:', error);
     }
-  }, [publicKey, connection, signTransaction, sendTransaction, state]);
+  }, [publicKey, connection, signTransaction, sendTransaction, basicInfo, allocation, dexListing, adminSetup, saleSetup]);
 
   return { deployToken };
 };

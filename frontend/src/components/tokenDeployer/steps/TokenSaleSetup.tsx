@@ -2,17 +2,12 @@ import { Input } from "../../ui/input";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useDeployStore } from "../../../stores/deployStores";
-import { exchanges } from "../../../lib/exchanges";
 import { TokenSaleSetup as TokenSaleSetupType } from "../../../types";
+import { getExchangeDisplay } from "../../../utils";
 
 export const TokenSaleSetup = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const { selectedExchange, saleSetup, updateSaleSetup } = useDeployStore();
-
-    const getExchangeDisplay = (exchange: string) => {
-        const exchangeData = exchanges.find(e => e.value === exchange);
-        return exchangeData?.title || exchange.charAt(0).toUpperCase() + exchange.slice(1);
-    };
 
     const handleInputChange = (field: keyof TokenSaleSetupType, value: string | number) => {
         updateSaleSetup({ [field]: value });
