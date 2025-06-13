@@ -3,7 +3,7 @@ import { InfoIcon } from "lucide-react";
 import { pricingOptions } from "../../../lib/pricings";
 import { useDeployStore } from "../../../stores/deployStores";
 
-export const PricingMechaism = () => {
+export const TemplateCurve = () => {
   const { selectedPricing, setSelectedPricing } = useDeployStore();
 
   const handleSelect = (key: string) => {

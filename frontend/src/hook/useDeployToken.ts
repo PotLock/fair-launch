@@ -104,10 +104,8 @@ export const useDeployToken = () => {
         throw new Error(`Invalid wallet address: address is empty`);
       }
       try {
-        // Convert percentage to basis points (1% = 100 basis points)
-        // For example: 100% = 10000 basis points, 50% = 5000 basis points
         const share = Math.round(item.percentage * 100);
-        console.log(`Converting ${item.percentage}% to ${share} basis points`);
+        // console.log(`Converting ${item.percentage}% to ${share} basis points`);
         return {
           share,
           address: new PublicKey(item.walletAddress),

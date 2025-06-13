@@ -1,9 +1,5 @@
+import { TokenTemplate, Exchanges, TemplateCurve, PreviewSelection, TokenCreation } from './steps';
 import TokenDeployerSteps from './TokenDeployerSteps';
-import { TokenTemplate } from './steps/TokenTemplate';
-import { Exchanges } from './steps/Exchanges';
-import { PricingMechaism } from './steps/PricingMechaism';
-import { PreviewSelection } from './steps/PreviewSelection';
-import { TokenCreation } from './TokenCreation';
 
 interface TokenDeployerFormProps {
   currentStep: number;
@@ -18,7 +14,7 @@ const TokenDeployerForm = ({ currentStep }: TokenDeployerFormProps) => {
       case 1:
         return <Exchanges />
       case 2:
-        return <PricingMechaism />
+        return <TemplateCurve />
       case 3:
         return <PreviewSelection />
       case 4:
