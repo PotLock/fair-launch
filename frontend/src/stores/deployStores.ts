@@ -5,7 +5,7 @@ const initialDeploy = {
     selectedTemplate: 'meme',
     selectedPricing: 'fixed-price',
     selectedExchange: 'fair-launch',
-    currentStep: 4,
+    currentStep: 0,
     basicInfo: {
         name: '',
         symbol: '',
