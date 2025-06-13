@@ -1,11 +1,4 @@
-import { BasicInformation } from "./steps/BasicInformation";
-import { Social } from "./steps/Social";
-import { TokenDistribution } from "./steps/TokenDistribution";
-import { DEXListing } from "./steps/DEXListing";
-import { FeesStep } from "./steps/Fees";
-import { TokenSaleSetup } from "./steps/TokenSaleSetup";
-import { AdminSetup } from "./steps/AdminSetup";
-import { ReviewAndDeploy } from "./steps/ReviewAndDeploy";
+import { BasicInformation, Social, TokenDistribution, DEXListing, FeesStep, TokenSaleSetup, AdminSetup, ReviewAndDeploy, PricingMechanism } from "./steps";
 import { Fuel } from "lucide-react";
 import { useDeployToken } from "../../hook/useDeployToken";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -36,6 +29,7 @@ export const TokenContainer = () => {
             <BasicInformation />
             <Social />
             <TokenDistribution />
+            <PricingMechanism />
             <DEXListing />
             <FeesStep />
             <TokenSaleSetup />

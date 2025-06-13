@@ -1,15 +1,18 @@
-import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, CircleCheck, ChevronDown, ChevronUp  } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { Input } from '../../ui/input';
 import { TokenDistributionItem } from '../../../types';
 import { ChartNoAxesCombined } from 'lucide-react';
 
 export const TokenDistribution = () => {
-    const { allocation, addAllocation, removeAllocation, updateAllocationItem, updateVestingItem } = useDeployStore();
+    const { allocation, addAllocation, removeAllocation, updateAllocationItem, updateVestingItem, validationErrors, validateTokenDistribution } = useDeployStore();
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     
+    useEffect(() => {
+        validateTokenDistribution();
+    }, [allocation]);
+
     const handleAddAllocation = (e: React.MouseEvent) => {
         e.stopPropagation();
         addAllocation();
@@ -25,6 +28,11 @@ export const TokenDistribution = () => {
 
     const handleVestingChange = (index: number, field: keyof TokenDistributionItem['vesting'], value: any) => {
         updateVestingItem(index, field, value);
+    };
+
+    const getValidationError = (index: number, field: string) => {
+        const errorKey = `allocation_${index}_${field}`;
+        return validationErrors[errorKey];
     };
 
     return (
@@ -49,7 +57,9 @@ export const TokenDistribution = () => {
                             </button>
                         )
                     }
-                    {isExpanded ? (
+                    {Object.keys(validationErrors).length === 0 && allocation.length > 0 ? (
+                        <CircleCheck className="w-5 h-5 text-green-500" />
+                    ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />
                     ) : (
                         <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -59,6 +69,9 @@ export const TokenDistribution = () => {
             
             {isExpanded && (
                 <div className="space-y-6">
+                    {validationErrors.total_percentage && (
+                        <div className="text-red-500 text-sm">{validationErrors.total_percentage}</div>
+                    )}
                     {allocation.map((item, index) => (
                         <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
                             <div className="flex justify-between items-center">
@@ -98,6 +111,9 @@ export const TokenDistribution = () => {
                                                 className="w-full h-3 bg-gray-200 rounded-lg cursor-pointer accent-black"
                                             />
                                         </div>
+                                        {getValidationError(index, 'percentage') && (
+                                            <span className="text-red-500 text-xs mt-1">{getValidationError(index, 'percentage')}</span>
+                                        )}
                                     </div>
                                     <span className="text-xs text-gray-500 mt-1 block">Percentage of your token supply</span>
                                 </div>
@@ -108,7 +124,11 @@ export const TokenDistribution = () => {
                                         placeholder="Solana Wallet address"
                                         value={item.walletAddress}
                                         onChange={(e) => handleAllocationChange(index, 'walletAddress', e.target.value)}
+                                        className={getValidationError(index, 'wallet') ? 'border-red-500' : ''}
                                     />
+                                    {getValidationError(index, 'wallet') && (
+                                        <span className="text-red-500 text-xs">{getValidationError(index, 'wallet')}</span>
+                                    )}
                                 </div>
                                 
                                 <div className='space-y-2 border border-gray-200 rounded-lg'>
@@ -147,6 +167,9 @@ export const TokenDistribution = () => {
                                                         step={1}
                                                         className="w-full h-3 bg-gray-200 rounded-lg cursor-pointer accent-black"
                                                     />
+                                                    {getValidationError(index, 'vesting_percentage') && (
+                                                        <span className="text-red-500 text-xs">{getValidationError(index, 'vesting_percentage')}</span>
+                                                    )}
                                                     <span className="text-xs text-gray-500 mt-1 block">Percentage of Total Supply</span>
                                                 </div>
                                             </div>
@@ -159,7 +182,11 @@ export const TokenDistribution = () => {
                                                             value={item.vesting.cliff || 0}
                                                             onChange={(e) => handleVestingChange(index, 'cliff', Number(e.target.value))}
                                                             min={0}
+                                                            className={getValidationError(index, 'vesting_cliff') ? 'border-red-500' : ''}
                                                         />
+                                                        {getValidationError(index, 'vesting_cliff') && (
+                                                            <span className="text-red-500 text-xs">{getValidationError(index, 'vesting_cliff')}</span>
+                                                        )}
                                                         <span className="text-[11px] text-gray-500">Period before tokens start vesting</span>
                                                     </div>
                                                 </div>
@@ -171,7 +198,11 @@ export const TokenDistribution = () => {
                                                             value={item.vesting.duration || 0}
                                                             onChange={(e) => handleVestingChange(index, 'duration', Number(e.target.value))}
                                                             min={0}
+                                                            className={getValidationError(index, 'vesting_duration') ? 'border-red-500' : ''}
                                                         />
+                                                        {getValidationError(index, 'vesting_duration') && (
+                                                            <span className="text-red-500 text-xs">{getValidationError(index, 'vesting_duration')}</span>
+                                                        )}
                                                         <span className="text-[11px] text-gray-500">Total duration of the vesting period</span>
                                                     </div>
                                                 </div>
@@ -183,7 +214,11 @@ export const TokenDistribution = () => {
                                                             value={item.vesting.interval || 0}
                                                             onChange={(e) => handleVestingChange(index, 'interval', Number(e.target.value))}
                                                             min={0}
+                                                            className={getValidationError(index, 'vesting_interval') ? 'border-red-500' : ''}
                                                         />
+                                                        {getValidationError(index, 'vesting_interval') && (
+                                                            <span className="text-red-500 text-xs">{getValidationError(index, 'vesting_interval')}</span>
+                                                        )}
                                                         <span className="text-[11px] text-gray-500">How often tokens are released</span>
                                                     </div>
                                                 </div>

@@ -55,6 +55,12 @@ export interface ValidationErrors {
 export interface DeployStateWithValidation extends DeployState {
     validationErrors: ValidationErrors;
     validateBasicInfo: () => boolean;
+    validateSocials: () => boolean;
+    validateTokenDistribution: () => boolean;
+    validateDexListing: () => boolean;
+    validateFees: () => boolean;
+    validateSaleSetup: () => boolean;
+    validatePricingMechanism: () => boolean;
     clearValidationErrors: () => void;
     updateAllocation: (data: TokenDistributionItem[]) => void;
     addAllocation: () => void;
@@ -65,6 +71,14 @@ export interface DeployStateWithValidation extends DeployState {
     updateSaleSetup: (data: Partial<TokenSaleSetup>) => void;
     adminSetup: AdminSetup;
     updateAdminSetup: (data: Partial<AdminSetup>) => void;
+}
+
+export interface PricingMechanismData {
+    initialPrice: string;
+    finalPrice: string;
+    targetRaise: string;
+    reserveRatio: string;
+    curveType: string;
 }
 
 export interface DeployState {
@@ -89,6 +103,8 @@ export interface DeployState {
     updateSaleSetup: (data: Partial<TokenSaleSetup>) => void;
     adminSetup: AdminSetup;
     updateAdminSetup: (data: Partial<AdminSetup>) => void;
+    pricingMechanism: PricingMechanismData;
+    updatePricingMechanism: (data: Partial<PricingMechanismData>) => void;
     resetState: () => void;
 }
 
@@ -187,15 +203,16 @@ export interface DexListing {
     liquidityPercentage: number;
     liquidityLockupPeriod: number;
     walletLiquidityAmount?: number;
+    externalSolContribution?: number;
     isAutoBotProtectionEnabled: boolean;
     isAutoListingEnabled: boolean;
     isPriceProtectionEnabled: boolean;
 }
 
 export interface Fees {
-    mintFee: string;
-    transferFee: string;
-    burnFee: string;
+    mintFee: number;
+    transferFee: number;
+    burnFee: number;
     feeRecipientAddress: string;
     adminControls: {
         isEnabled: boolean;
@@ -233,4 +250,17 @@ export interface AdminSetup {
     numberOfSignatures: number;
     mintAuthorityWalletAddress?: string;
     freezeAuthorityWalletAddress?: string;
+}
+
+export interface PricingTemplate {
+    label: string;
+    description: string;
+    type?: string;
+    priceRange?: string;
+    usedBy?: string;
+    icon: string;
+    color: string;
+    style: string;
+    value: string;
+    longDescription?: string;
 }

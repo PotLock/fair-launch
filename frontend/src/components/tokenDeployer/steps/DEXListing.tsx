@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { Rocket, Wallet2, ExternalLink, SquareArrowOutUpRight, LockKeyhole, TrendingUp } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Badge } from '../../ui/badge';
 import { Input } from '../../ui/input';
 import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
-import { DexOption, DexListing } from '../../../types';
+import { DexOption, DexListing, LiquiditySourceData, WalletLiquidity, SaleLiquidity, BondingLiquidity, TeamLiquidity, ExternalLiquidity, HybridLiquidity } from '../../../types';
 
 export const DEXListing = () => {
-    const { dexListing, updateDexListing } = useDeployStore();
+    const { dexListing, updateDexListing, validationErrors } = useDeployStore();
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -35,8 +35,89 @@ export const DEXListing = () => {
     };
 
     const updateLiquidityField = (field: keyof DexListing, value: any) => {
-        updateDexListing({ [field]: value });
+        if (field === 'liquiditySource') {
+            // Reset liquidity data when source changes
+            let newLiquidityData: LiquiditySourceData;
+            switch (value) {
+                case 'wallet':
+                    newLiquidityData = { type: 'wallet', solAmount: 0 };
+                    break;
+                case 'sale':
+                    newLiquidityData = { type: 'sale', percentage: 0 };
+                    break;
+                case 'bonding':
+                    newLiquidityData = { type: 'bonding', percentage: 0 };
+                    break;
+                case 'team':
+                    newLiquidityData = { type: 'team', percentage: 0, solContribution: 0 };
+                    break;
+                case 'external':
+                    newLiquidityData = { type: 'external', solContribution: 0, tokenAllocation: 0 };
+                    break;
+                case 'hybrid':
+                    newLiquidityData = { 
+                        type: 'hybrid', 
+                        sources: {
+                            wallet: false,
+                            sale: false,
+                            bonding: false,
+                            team: false
+                        }
+                    };
+                    break;
+                default:
+                    newLiquidityData = { type: 'wallet', solAmount: 0 };
+            }
+            updateDexListing({ 
+                liquiditySource: value,
+                liquidityData: newLiquidityData
+            });
+        } else {
+            updateDexListing({ [field]: value });
+        }
     };
+
+    const updateLiquidityDataField = (field: string, value: any) => {
+        const currentData = dexListing.liquidityData;
+        let newData: LiquiditySourceData;
+
+        switch (dexListing.liquiditySource) {
+            case 'wallet':
+                newData = { ...currentData as WalletLiquidity, [field]: value };
+                break;
+            case 'sale':
+                newData = { ...currentData as SaleLiquidity, [field]: value };
+                break;
+            case 'bonding':
+                newData = { ...currentData as BondingLiquidity, [field]: value };
+                break;
+            case 'team':
+                newData = { ...currentData as TeamLiquidity, [field]: value };
+                break;
+            case 'external':
+                newData = { ...currentData as ExternalLiquidity, [field]: value };
+                break;
+            case 'hybrid':
+                newData = { 
+                    ...currentData as HybridLiquidity,
+                    sources: {
+                        ...(currentData as HybridLiquidity).sources,
+                        [field]: value
+                    }
+                };
+                break;
+            default:
+                newData = currentData;
+        }
+
+        updateDexListing({ liquidityData: newData });
+    };
+
+    // Validate on mount and when relevant fields change
+    useEffect(() => {
+        const store = useDeployStore.getState();
+        store.validateDexListing();
+    }, [dexListing]);
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
@@ -49,7 +130,9 @@ export const DEXListing = () => {
                         )
                     }
                 </div>
-                {isExpanded ? (
+                {Object.keys(validationErrors).length === 0 ? (
+                    <CircleCheck className="w-5 h-5 text-green-500" />
+                ) : isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />
                 ) : (
                     <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -132,15 +215,18 @@ export const DEXListing = () => {
                                         </div>
                                         {dexListing.liquiditySource === 'wallet' && (
                                             <div className="px-2 pb-3 pt-2">
-                                                <div className="text-sm font-medium mb-1">Liquidity Type</div>
-                                                <input
-                                                    type="text"
-                                                    className="w-full border border-gray-200 rounded-md p-2 mb-1"
+                                                <div className="text-sm font-medium mb-1">Wallet Liquidity Amount (SOL)</div>
+                                                <Input
+                                                    type="number"
+                                                    className={`w-full border ${validationErrors.walletLiquidityAmount ? 'border-red-500' : 'border-gray-200'} rounded-md p-2 mb-1`}
                                                     placeholder="10"
-                                                    value={dexListing.walletLiquidityAmount || ''}
-                                                    onChange={e => updateLiquidityField('walletLiquidityAmount', e.target.value)}
+                                                    value={(dexListing.liquidityData as WalletLiquidity).solAmount || ''}
+                                                    onChange={e => updateLiquidityDataField('solAmount', parseFloat(e.target.value) || 0)}
                                                 />
-                                                <div className="text-xs text-gray-500">Amount od SOL you'll provide for initial liquidity</div>
+                                                {validationErrors.walletLiquidityAmount && (
+                                                    <span className="text-xs text-red-500">{validationErrors.walletLiquidityAmount}</span>
+                                                )}
+                                                <div className="text-xs text-gray-500">Amount of SOL you'll provide for initial liquidity</div>
                                             </div>
                                         )}
                                     </div>
@@ -159,13 +245,13 @@ export const DEXListing = () => {
                                         {dexListing.liquiditySource === 'sale' && (
                                             <div className="px-2 pb-3 pt-2">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h1 className='text-sm font-medium'>Percentage of Sale Proceeds: <span className="font-bold">{dexListing.liquidityPercentage}%</span></h1>
+                                                    <h1 className='text-sm font-medium'>Percentage of Sale Proceeds: <span className="font-bold">{(dexListing.liquidityData as SaleLiquidity).percentage}%</span></h1>
                                                 </div>
                                                 <SliderCustom
                                                     min={0}
                                                     max={100}
-                                                    value={[dexListing.liquidityPercentage || 0]}
-                                                    onValueChange={([val]) => updateLiquidityField('liquidityPercentage', val)}
+                                                    value={[(dexListing.liquidityData as SaleLiquidity).percentage || 0]}
+                                                    onValueChange={([val]) => updateLiquidityDataField('percentage', val)}
                                                     className="w-full"
                                                 />
                                                 <span className="text-xs text-gray-500">Percentage of the token sale proceeds that will be used for liquidity</span>
@@ -194,16 +280,16 @@ export const DEXListing = () => {
                                         {dexListing.liquiditySource === 'bonding' && (
                                             <div className="px-2 pb-3 pt-2">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h1 className='text-sm font-medium'>Percentage of Sale Proceeds: <span className="font-bold">{dexListing.liquidityPercentage}%</span></h1>
+                                                    <h1 className='text-sm font-medium'>Percentage of Bonding Curve: <span className="font-bold">{(dexListing.liquidityData as BondingLiquidity).percentage}%</span></h1>
                                                 </div>
                                                 <SliderCustom
                                                     min={0}
                                                     max={100}
-                                                    value={[dexListing.liquidityPercentage || 0]}
-                                                    onValueChange={([val]) => updateLiquidityField('liquidityPercentage', val)}
+                                                    value={[(dexListing.liquidityData as BondingLiquidity).percentage || 0]}
+                                                    onValueChange={([val]) => updateLiquidityDataField('percentage', val)}
                                                     className="w-full"
                                                 />
-                                                <span className="text-xs text-gray-500">Percentage of the token sale proceeds that will be used for liquidity</span>
+                                                <span className="text-xs text-gray-500">Percentage of the bonding curve reserves that will be used for liquidity</span>
                                             </div>
                                         )}
                                     </div>
@@ -222,17 +308,34 @@ export const DEXListing = () => {
                                         {dexListing.liquiditySource === 'team' && (
                                             <div className="px-2 pb-3 pt-2 space-y-2">
                                                 <div className='space-y-1'>
+                                                    <h1 className='text-sm font-medium'>Team SOL Contribution</h1>
+                                                    <Input
+                                                        type="number"
+                                                        className={`w-full border ${validationErrors.teamSolContribution ? 'border-red-500' : 'border-gray-200'} rounded-md p-2`}
+                                                        placeholder="5"
+                                                        value={(dexListing.liquidityData as TeamLiquidity).solContribution || ''}
+                                                        onChange={e => updateLiquidityDataField('solContribution', parseFloat(e.target.value) || 0)}
+                                                    />
+                                                    {validationErrors.teamSolContribution && (
+                                                        <span className="text-xs text-red-500">{validationErrors.teamSolContribution}</span>
+                                                    )}
+                                                    <span className='text-xs text-gray-500'>Amount of SOL the team will provide for the liquidity pool</span>
+                                                </div>
+                                                <div className='space-y-1'>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <h1 className='text-sm font-medium'>Percentage of Sale Proceeds: <span className="font-bold">{dexListing.liquidityPercentage}%</span></h1>
+                                                        <h1 className='text-sm font-semibold'>Team Token Allocation: <span className="font-bold">{(dexListing.liquidityData as TeamLiquidity).percentage}%</span></h1>
                                                     </div>
                                                     <SliderCustom
                                                         min={0}
                                                         max={100}
-                                                        value={[dexListing.liquidityPercentage || 0]}
-                                                        onValueChange={([val]) => updateLiquidityField('liquidityPercentage', val)}
+                                                        value={[(dexListing.liquidityData as TeamLiquidity).percentage || 0]}
+                                                        onValueChange={([val]) => updateLiquidityDataField('percentage', val)}
                                                         className="w-full"
                                                     />
-                                                    <span className="text-xs text-gray-500">Percentage of the token sale proceeds that will be used for liquidity</span>
+                                                    {validationErrors.teamPercentage && (
+                                                        <span className="text-xs text-red-500">{validationErrors.teamPercentage}</span>
+                                                    )}
+                                                    <span className="text-xs text-gray-500">Percentage of team's token allocation that will be used for liquidity</span>
                                                 </div>
                                             </div>
                                         )}
@@ -255,22 +358,30 @@ export const DEXListing = () => {
                                                     <h1 className='text-sm font-medium'>External SOL Contribution</h1>
                                                     <Input
                                                         type="number"
-                                                        className="w-full border border-gray-200 rounded-md p-2"
+                                                        className={`w-full border ${validationErrors.externalSolContribution ? 'border-red-500' : 'border-gray-200'} rounded-md p-2`}
                                                         placeholder="5"
+                                                        value={(dexListing.liquidityData as ExternalLiquidity).solContribution || ''}
+                                                        onChange={e => updateLiquidityDataField('solContribution', parseFloat(e.target.value) || 0)}
                                                     />
+                                                    {validationErrors.externalSolContribution && (
+                                                        <span className="text-xs text-red-500">{validationErrors.externalSolContribution}</span>
+                                                    )}
                                                     <span className='text-xs text-gray-500'>Amount of SOL the team will provide for the liquidity pool</span>
                                                 </div>
                                                 <div className='space-y-1'>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <h1 className='text-sm font-semibold'>Token Allocation: <span className="font-bold">{dexListing.liquidityPercentage}%</span></h1>
+                                                        <h1 className='text-sm font-semibold'>Token Allocation: <span className="font-bold">{(dexListing.liquidityData as ExternalLiquidity).tokenAllocation}%</span></h1>
                                                     </div>
                                                     <SliderCustom
                                                         min={0}
                                                         max={100}
-                                                        value={[dexListing.liquidityPercentage || 0]}
-                                                        onValueChange={([val]) => updateLiquidityField('liquidityPercentage', val)}
+                                                        value={[(dexListing.liquidityData as ExternalLiquidity).tokenAllocation || 0]}
+                                                        onValueChange={([val]) => updateLiquidityDataField('tokenAllocation', val)}
                                                         className="w-full"
                                                     />
+                                                    {validationErrors.tokenAllocation && (
+                                                        <span className="text-xs text-red-500">{validationErrors.tokenAllocation}</span>
+                                                    )}
                                                     <span className="text-xs text-gray-500">Percentage of total token supply allocated to external liquidity providers</span>
                                                 </div>
                                             </div>
@@ -293,22 +404,53 @@ export const DEXListing = () => {
                                                 <h1 className='text-sm font-medium'>Select Sources to combine: </h1>
                                                 <div className='flex flex-col gap-3'>
                                                     <div className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg">
-                                                        <Checkbox id="wallet" />
+                                                        <Checkbox 
+                                                            id="wallet" 
+                                                            checked={(dexListing.liquidityData as HybridLiquidity).sources.wallet}
+                                                            onCheckedChange={(checked) => updateLiquidityDataField('sources', {
+                                                                ...(dexListing.liquidityData as HybridLiquidity).sources,
+                                                                wallet: checked as boolean
+                                                            })}
+                                                        />
                                                         <Label htmlFor="wallet" className='text-xs font-normal'>Your Wallet</Label>
                                                     </div>
                                                     <div className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg">
-                                                        <Checkbox id="sale" />
+                                                        <Checkbox 
+                                                            id="sale" 
+                                                            checked={(dexListing.liquidityData as HybridLiquidity).sources.sale}
+                                                            onCheckedChange={(checked) => updateLiquidityDataField('sources', {
+                                                                ...(dexListing.liquidityData as HybridLiquidity).sources,
+                                                                sale: checked as boolean
+                                                            })}
+                                                        />
                                                         <Label htmlFor="sale" className='text-xs font-normal'>Token Sale Proceeds</Label>
                                                     </div>
                                                     <div className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg">
-                                                        <Checkbox id="bonding" />
+                                                        <Checkbox 
+                                                            id="bonding" 
+                                                            checked={(dexListing.liquidityData as HybridLiquidity).sources.bonding}
+                                                            onCheckedChange={(checked) => updateLiquidityDataField('sources', {
+                                                                ...(dexListing.liquidityData as HybridLiquidity).sources,
+                                                                bonding: checked as boolean
+                                                            })}
+                                                        />
                                                         <Label htmlFor="bonding" className='text-xs font-normal'>Bonding Curve Reserves</Label>
                                                     </div>
                                                     <div className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg">
-                                                        <Checkbox id="team" />
+                                                        <Checkbox 
+                                                            id="team" 
+                                                            checked={(dexListing.liquidityData as HybridLiquidity).sources.team}
+                                                            onCheckedChange={(checked) => updateLiquidityDataField('sources', {
+                                                                ...(dexListing.liquidityData as HybridLiquidity).sources,
+                                                                team: checked as boolean
+                                                            })}
+                                                        />
                                                         <Label htmlFor="team" className='text-xs font-normal'>Team Reserves</Label>
                                                     </div>
                                                 </div>
+                                                {validationErrors.hybridSources && (
+                                                    <span className="text-xs text-red-500">{validationErrors.hybridSources}</span>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -318,13 +460,16 @@ export const DEXListing = () => {
                                 <div className="text-base font-semibold mb-2">Liquidity Type</div>
                                 <div className="relative">
                                     <select
-                                        className="w-full text-sm border border-gray-200 rounded-lg p-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        className={`w-full text-sm border ${validationErrors.liquidityType ? 'border-red-500' : 'border-gray-200'} rounded-lg p-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200`}
                                         value={dexListing.liquidityType || ''}
                                         onChange={e => updateLiquidityField('liquidityType', e.target.value as 'double' | 'single')}
                                     >
                                         <option value="double">Double-Sided Liquidity</option>
                                         <option value="single">Single-Sided Liquidity</option>
                                     </select>
+                                    {validationErrors.liquidityType && (
+                                        <span className="text-xs text-red-500 mt-1">{validationErrors.liquidityType}</span>
+                                    )}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
                                     Double-Sided: Traditional liquidity pool requiring both your token and SOL
@@ -343,15 +488,64 @@ export const DEXListing = () => {
                                 onValueChange={([val]) => updateLiquidityField('liquidityPercentage', val)}
                                 className="w-full"
                             />
+                            {validationErrors.liquidityPercentage && (
+                                <span className="text-xs text-red-500">{validationErrors.liquidityPercentage}</span>
+                            )}
                             <span className='text-xs text-gray-500'>Percentage of the token sale proceeds that will be used for liquidity</span>
                         </div>
 
                         <div className='space-y-2'>
                             <h1 className='text-base font-semibold'>Liquidity Lookup Period (days)</h1>
-                            <Input className='w-full border border-gray-200 rounded-md p-2' placeholder='10' value={dexListing.liquidityLockupPeriod} onChange={e => updateLiquidityField('liquidityLockupPeriod', e.target.value)}/>
-                            <span className='text-sm text-gray-500'>Period during which the initial liquidity cannot be removed (minimum 30n days)</span>
+                            <Input 
+                                className={`w-full border ${validationErrors.liquidityLockupPeriod ? 'border-red-500' : 'border-gray-200'} rounded-md p-2`} 
+                                placeholder='30' 
+                                type="number"
+                                min="30"
+                                value={dexListing.liquidityLockupPeriod} 
+                                onChange={e => updateLiquidityField('liquidityLockupPeriod', parseInt(e.target.value) || 0)}
+                            />
+                            {validationErrors.liquidityLockupPeriod && (
+                                <span className="text-xs text-red-500">{validationErrors.liquidityLockupPeriod}</span>
+                            )}
+                            <span className='text-sm text-gray-500'>Period during which the initial liquidity cannot be removed (minimum 30 days)</span>
                         </div>
-                        
+
+                        {dexListing.liquiditySource === 'wallet' && (
+                            <div className='space-y-2'>
+                                <h1 className='text-base font-semibold'>Wallet Liquidity Amount (SOL)</h1>
+                                <Input 
+                                    className={`w-full border ${validationErrors.walletLiquidityAmount ? 'border-red-500' : 'border-gray-200'} rounded-md p-2`} 
+                                    type="number"
+                                    placeholder='10' 
+                                    value={(dexListing.liquidityData as WalletLiquidity).solAmount || ''} 
+                                    onChange={e => updateLiquidityDataField('solAmount', parseFloat(e.target.value) || 0)}
+                                />
+                                <div className='flex flex-col gap-1'>
+                                    {validationErrors.walletLiquidityAmount && (
+                                        <span className="text-xs text-red-500">{validationErrors.walletLiquidityAmount}</span>
+                                    )}
+                                    <span className='text-sm text-gray-500'>Amount of SOL you'll provide for initial liquidity</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {dexListing.liquiditySource === 'external' && (
+                            <div className='space-y-2'>
+                                <h1 className='text-base font-semibold'>External SOL Contribution</h1>
+                                <Input 
+                                    className={`w-full border ${validationErrors.externalSolContribution ? 'border-red-500' : 'border-gray-200'} rounded-md p-2`} 
+                                    type="number"
+                                    placeholder='5' 
+                                    value={(dexListing.liquidityData as ExternalLiquidity).solContribution || ''} 
+                                    onChange={e => updateLiquidityDataField('solContribution', parseFloat(e.target.value) || 0)}
+                                />
+                                {validationErrors.externalSolContribution && (
+                                    <span className="text-xs text-red-500">{validationErrors.externalSolContribution}</span>
+                                )}
+                                <span className='text-sm text-gray-500'>Amount of SOL the team will provide for the liquidity pool</span>
+                            </div>
+                        )}
+
                         <div className='border border-gray-200 rounded-lg p-3 bg-gray-100'>
                             <div className='flex flex-row justify-between items-center'>
                                 <div className='flex flex-row gap-2 items-center'>

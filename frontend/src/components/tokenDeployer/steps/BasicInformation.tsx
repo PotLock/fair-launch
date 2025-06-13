@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, CircleCheck } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
@@ -106,7 +106,9 @@ export const BasicInformation = () => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Basic Information</div>
-                    {isExpanded ? (
+                    {Object.keys(validationErrors).length === 0 && basicInfo.avatarUrl && basicInfo.bannerUrl ? (
+                        <CircleCheck className="w-5 h-5 text-green-500" />
+                    ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />
                     ) : (
                         <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -215,13 +217,13 @@ export const BasicInformation = () => {
                                 <Tabs defaultValue="upload" className="w-full">
                                     <TabsList className="w-full">
                                         <TabsTrigger value="upload" className="flex-1 data-[state=active]:bg-white">Upload</TabsTrigger>
-                                        <TabsTrigger value="ai" className="flex-1 data-[state=active]:bg-white">AI Generate</TabsTrigger>
+                                        <TabsTrigger value="ai" className="flex-1 data-[state=active]:bg-white opacity-50 cursor-not-allowed" disabled>AI Generate</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="upload" className="mt-2">
                                         <div className="text-sm text-gray-500">Upload your token logo</div>
                                     </TabsContent>
                                     <TabsContent value="ai" className="mt-2">
-                                        <div className="text-sm text-gray-500">Generate token logo using AI</div>
+                                        <div className="text-sm text-gray-500">Generate token logo using AI (Coming Soon)</div>
                                     </TabsContent>
                                 </Tabs>
                             </div>
