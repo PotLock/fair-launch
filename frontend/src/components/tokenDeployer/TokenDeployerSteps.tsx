@@ -33,7 +33,7 @@ const TokenDeployerSteps = ({ currentStep }: TokenDeployerSteps) => {
               {index + 1}
             </div>
             {index !== steps.length - 1 && (
-              <div className="w-36 h-0.5 bg-gray-200 mx-2" />
+              <div className="md:w-36 w-16 h-0.5 bg-gray-200 mx-2" />
             )}
           </React.Fragment>
         ))}
