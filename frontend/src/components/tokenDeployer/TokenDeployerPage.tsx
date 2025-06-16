@@ -18,20 +18,20 @@ const TokenDeployerPage = () => {
   };
 
   return (
-    <div className="flex flex-col pt-14 bg-white">
+    <div className="flex flex-col pt-14 bg-white pb-10">
       <div className={`w-full px-4 ${currentStep <= 3 ? 'max-w-4xl mx-auto' : 'container mx-auto'}`}>
         {
           currentStep <= 3 &&(
             <>
               <h1 className="text-3xl font-bold text-center mb-2">Token Deployer</h1>
-              <p className="text-center text-gray-500 mb-8">Easily create and mint your own SPL Token without coding.</p>
+              <p className="text-center text-gray-500 mb-8 md:mb-4">Easily create and mint your own SPL Token without coding.</p>
             </>
           )
         }
         <TokenDeployerForm currentStep={currentStep} setCurrentStep={setCurrentStep}/>
         {
           currentStep <= 3 && (
-            <div className="flex justify-between mt-10">
+            <div className="flex justify-between md:mt-10 mt-3">
               <Button 
                 variant="outline" 
                 className="px-8" 

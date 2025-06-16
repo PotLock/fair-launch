@@ -4,7 +4,7 @@ import { tokenTemplates } from "../../../lib/templates";
 export const TokenTemplate = () => {
     const { selectedTemplate, setSelectedTemplate } = useDeployStore();
     return (
-        <div className="mb-10">
+        <div className="md:mb-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {tokenTemplates.map((tpl) => (
               <button
