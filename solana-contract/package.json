@@ -10,7 +10,8 @@
         "fetchPool": "ts-node scripts/fetchPool.ts",
         "swap": "ts-node scripts/swap.ts",
         "createToken2022": "ts-node scripts/create-token2022.ts",
-        "fetchTokens": "ts-node scripts/fetchTokens.ts"
+        "fetchTokensByOwners": "ts-node scripts/fetchTokensByOwners.ts",
+        "fetchToken": "ts-node scripts/fetchToken.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",
