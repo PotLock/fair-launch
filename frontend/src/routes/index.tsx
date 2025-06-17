@@ -1,87 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TokenCard } from "../components/TokenCard";
-import { ExternalLink } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState } from "react";
-import { getTokenBalances, TokenBalance } from "../utils/tokenUtils";
+import { getMintAccounts, getTokenInfo, TokenInfo } from "../utils/tokenUtils";
 
 
 export const Route = createFileRoute("/")({
     component: Token,
 });
 
-const tokens = [
-    {
-        image: "/curate.png",
-        avatar: "/curate.png",
-        name: "CURATEDDOTFUN",
-        symbol: "CURATE",
-        type: "Meme Coin",
-        description:
-        "Lorem ipsum dolor sit amet consectetur. Facilisis sit tellus ultrices vitae. Sit ac tellus posuere dolor pulvinar interdum pharetra fermentum commodo. Aliquam vitae lectus fringilla...",
-        progress: 60,
-        progressLabel: "123/100B",
-        address: "7xH5.....9Gh3",
-        createdOn: "Apr 15, 2025",
-        marketCap: "1,000,000,000",
-        price: "1,000,000,000",
-        externalLabel: "View on Raydium",
-        externalIcon: <ExternalLink className="w-4 h-4" />,
-    },
-    {
-        image: "/curate.png",
-        avatar: "/curate.png",
-        name: "CURATEDDOTFUN",
-        symbol: "CURATE",
-        type: "Meme Coin",
-        description:
-        "Lorem ipsum dolor sit amet consectetur. Facilisis sit tellus ultrices vitae. Sit ac tellus posuere dolor pulvinar interdum pharetra fermentum commodo. Aliquam vitae lectus fringilla...",
-        progress: 60,
-        progressLabel: "123/100B",
-        address: "7xH5.....9Gh3",
-        createdOn: "Apr 15, 2025",
-        marketCap: "1,000,000,000",
-        price: "1,000,000,000",
-        externalLabel: "View on Jupiter",
-        externalIcon: <ExternalLink className="w-4 h-4" />,
-    },
-    {
-        image: "/curate.png",
-        avatar: "/curate.png",
-        name: "CURATEDDOTFUN",
-        symbol: "CURATE",
-        type: "Meme Coin",
-        description:
-        "Lorem ipsum dolor sit amet consectetur. Facilisis sit tellus ultrices vitae. Sit ac tellus posuere dolor pulvinar interdum pharetra fermentum commodo. Aliquam vitae lectus fringilla...",
-        progress: 60,
-        progressLabel: "123/100B",
-        address: "7xH5.....9Gh3",
-        createdOn: "Apr 15, 2025",
-        marketCap: "1,000,000,000",
-        price: "1,000,000,000",
-        externalLabel: "View on Orca",
-        externalIcon: <ExternalLink className="w-4 h-4" />,
-    }
-];
-
 function Token() {
   const { publicKey } = useWallet();
-  const [tokensTest, setTokensTest] = useState<TokenBalance[]>([]);
+  const [listTokens, setListTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchTokens() {
       if (!publicKey) {
-        setTokensTest([]);
+        setListTokens([]);
         return;
       }
 
       setLoading(true);
       setError(null);
       try {
-        const balances = await getTokenBalances(publicKey.toBase58());
-        setTokensTest(balances);
+        const listMintAccounts = await getMintAccounts(publicKey.toBase58());
+        for (const mintAccount of listMintAccounts) {
+          const tokenInfo = await getTokenInfo(mintAccount.mint);
+          setListTokens(prev => [...prev, tokenInfo]);
+        }
       } catch (err) {
         setError('Failed to fetch token balances');
         console.error(err);
@@ -128,8 +76,6 @@ function Token() {
     );
   }
 
-  console.log(tokensTest);
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -138,10 +84,20 @@ function Token() {
           View and manage all the tokens you've created on the token launch platforms
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {tokens.map((token, idx) => (
+          {listTokens.map((token) => (
             <TokenCard
-              key={idx}
-              {...token}
+              avatar={token.avatar}
+              banner={token.banner}
+              key={token.id}
+              type={'Meme Coin'}
+              progress={10}
+              name={token.name}
+              symbol={token.symbol}
+              description={token.description}
+              supply={token.supply.toString()}
+              address={token.id}
+              createdOn={token.createdOn}
+              externalLabel={'Raydium'}
             />
           ))}
         </div>

@@ -31,6 +31,7 @@ const uploadMetadataToPinata = async (metadata: {
     symbol: string;
     description?: string;
     image?: string;
+    banner?: string;
 }) => {
     try {
         const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
@@ -216,7 +217,8 @@ export const useDeployToken = () => {
         name: basicInfo.name,
         symbol: basicInfo.symbol,
         description: basicInfo.description || "",
-        image: basicInfo.avatarUrl || ""
+        image: basicInfo.avatarUrl || "",
+        banner: basicInfo.bannerUrl || ""
       });
 
       const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
