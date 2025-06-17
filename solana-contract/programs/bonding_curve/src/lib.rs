@@ -8,6 +8,8 @@ pub mod utils;
 
 use crate::instructions::*;
 use crate::state::Recipient;
+use crate::instructions::allocation::{CreateAllocation, ClaimTokens, create_allocation, claim_tokens};
+use crate::state::allocation::Vesting;
 declare_id!("6qR9UPXArNpBR2m9uBfh97LXcQQQwJpKmV1ULHmxzNeW");
 
 #[program]
@@ -129,5 +131,23 @@ pub mod bonding_curve {
         instructions::unpause_launchpad(ctx)
     }
 
+    // ============================================================================
+    // Token Distribution & Vesting
+    // ============================================================================
+    pub fn create_allocation(
+        ctx: Context<CreateAllocation>,
+        category: String,
+        percentage: u8,
+        total_tokens: u64,
+        vesting: Option<Vesting>,
+    ) -> Result<()> {
+        instructions::create_allocation(ctx, category, percentage, total_tokens, vesting)
+    }
 
+    pub fn claim_tokens(
+        ctx: Context<ClaimTokens>,
+        now: i64,
+    ) -> Result<u64> {
+        instructions::claim_tokens(ctx, now)
+    }
 }

@@ -7,11 +7,11 @@ import { BN } from "bn.js";
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as os from "os";
-import { getPDAs, getKeypairFromFile, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram, getPumpSwapPDA, PUMP_SWAP_PROGRAM_ID, accountExists, CURVE_CONFIGURATION_SEED, getPoolTokenAccount2022, getUserTokenAccount2022, getLaunchPadPDAs } from "./utils";
+import { getPDAs, getKeypairFromFile, getKeypairFromSecretKey, METEORA_PROGRAM_ID, METEORA_VAULT_PROGRAM_ID, SOL_MINT, getMeteoraPDA, getVaultPDA, getProtocolTokenFeePDA, METAPLEX_PROGRAM, deriveMintMetadata, TEST_CONFIG, getAssociatedTokenAccount, createProgram, getPumpSwapPDA, PUMP_SWAP_PROGRAM_ID, accountExists, CURVE_CONFIGURATION_SEED, getPoolTokenAccount2022, getUserTokenAccount2022, getLaunchPadPDAs, getAllocationPDAs } from "./utils";
 import { getOrCreateATAInstruction } from "@mercurial-finance/vault-sdk/dist/cjs/src/vault/utils";
 import { derivePoolAddressWithConfig } from "@mercurial-finance/dynamic-amm-sdk/dist/cjs/src/amm/utils";
 import VaultImpl from "@mercurial-finance/vault-sdk";
-import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, NATIVE_MINT, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, getAccount, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 const connection = new Connection(clusterApiUrl("devnet"), 'confirmed')
 
 
@@ -38,60 +38,60 @@ describe("bonding_curve", () => {
   const governance = Keypair.generate();
   const { vaultProgram } = createProgram(connection);
 
-  it("Initialize the contract", async () => {
+  // it("Initialize the contract", async () => {
 
-    try {
-      const [curveConfig] = PublicKey.findProgramAddressSync(
-        [Buffer.from(CURVE_CONFIGURATION_SEED)],
-        program.programId,
+  //   try {
+  //     const [curveConfig] = PublicKey.findProgramAddressSync(
+  //       [Buffer.from(CURVE_CONFIGURATION_SEED)],
+  //       program.programId,
 
-      );
-      console.log("Curve Config : ", curveConfig.toBase58())
-      // Fee Percentage : 100 = 1%
-      const feePercentage = new BN(100);
-      const initialQuorum = new BN(500);
-      const targetLiquidity = new BN(1000000000);
-      const daoQuorum = new BN(500);
-      // 0 is linear, 1 is quadratic
-      const bondingCurveType = 0;
-      const maxTokenSupply = new BN(10000000000);
-      const liquidityLockPeriod = new BN(60); // 30 days
-      const liquidityPoolPercentage = new BN(50); // 50%
-      const initialReserve = new BN(100000000); // 0.1 SOL
-      const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
-      const reserveRatio = new BN(5000); // 50%
-      let recipients = [
-        {
-          address: feeRecipient.publicKey,
-          share: 10000,
-          amount: new BN(0),
-          lockingPeriod: new BN(60000),
-        },
-      ]
+  //     );
+  //     console.log("Curve Config : ", curveConfig.toBase58())
+  //     // Fee Percentage : 100 = 1%
+  //     const feePercentage = new BN(100);
+  //     const initialQuorum = new BN(500);
+  //     const targetLiquidity = new BN(1000000000);
+  //     const daoQuorum = new BN(500);
+  //     // 0 is linear, 1 is quadratic
+  //     const bondingCurveType = 0;
+  //     const maxTokenSupply = new BN(10000000000);
+  //     const liquidityLockPeriod = new BN(60); // 30 days
+  //     const liquidityPoolPercentage = new BN(50); // 50%
+  //     const initialReserve = new BN(100000000); // 0.1 SOL
+  //     const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
+  //     const reserveRatio = new BN(5000); // 50%
+  //     let recipients = [
+  //       {
+  //         address: feeRecipient.publicKey,
+  //         share: 10000,
+  //         amount: new BN(0),
+  //         lockingPeriod: new BN(60000),
+  //       },
+  //     ]
 
 
-      const tx = new Transaction()
-        .add(
-          await program.methods
+  //     const tx = new Transaction()
+  //       .add(
+  //         await program.methods
 
-            .initialize(signer.payer.publicKey, initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
-            .accountsStrict({
+  //           .initialize(signer.payer.publicKey, initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
+  //           .accountsStrict({
 
-              bondingCurveConfiguration: curveConfig,
-              admin: signer.payer.publicKey,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId
-            })
-            .instruction()
-        )
-      tx.feePayer = signer.payer.publicKey
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
-      console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-    } catch (error) {
-      console.log("Error in initialization :", error)
-    }
-  });
+  //             bondingCurveConfiguration: curveConfig,
+  //             admin: signer.payer.publicKey,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId
+  //           })
+  //           .instruction()
+  //       )
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
+  //     console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+  //   } catch (error) {
+  //     console.log("Error in initialization :", error)
+  //   }
+  // });
 
   // it(" create bonding curve pool with SPL token ", async () => {
 
@@ -605,7 +605,7 @@ describe("bonding_curve", () => {
   //     const multisigBalanceBefore = (await connection.getBalance(multisig));
   //     console.log("Multisig Balance Before Buy: ", multisigBalanceBefore);
 
-      
+
   //     const amount = new BN(100000000)
   //     const tx = new Transaction()
   //       .add(
@@ -1056,6 +1056,120 @@ describe("bonding_curve", () => {
   //     console.log("Error in unpause launchpad :", error)
   //   }
   // })
+
+
+  // it(" create allocation ", async () => {
+
+  //   try {
+  //     let user1Keypair = getKeypairFromFile(`${os.homedir()}/.config/solana/id2.json`);
+  //     let user2Keypair = getKeypairFromFile(`${os.homedir()}/.config/solana/id3.json`);
+  //     const { allocations, allocationTokenAccounts } = getAllocationPDAs(mint, [user1Keypair.publicKey, user2Keypair.publicKey])
+  //     let category = "Team"
+  //     let percentage = new BN(10)
+  //     let totalTokens = new BN(1000000000000)
+  //     let currentTime = Math.floor(Date.now() / 1000);
+  //     let startTime = new BN(currentTime).add(new BN(1000));
+  //     let cliffPeriod = new BN(1000);
+  //     let duration = new BN(1000);
+  //     let interval = new BN(1000);
+  //     let released = new BN(0);
+
+  //     let vesting = {
+  //       cliffPeriod: cliffPeriod,
+  //       startTime: startTime,
+  //       duration: duration,
+  //       interval: interval,
+  //       released: released,
+  //     }
+
+  //     const instructions = [
+  //       await program.methods
+  //           .createAllocation(category, percentage, totalTokens, vesting)
+  //           .accountsStrict({
+  //             allocation: allocations[0],
+  //             wallet: user1Keypair.publicKey,
+  //             tokenMint: mint,
+  //             allocationVault: allocationTokenAccounts[0],
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId,
+  //             authority: signer.payer.publicKey,
+  //           })
+  //           .instruction(),
+  //       await program.methods
+  //           .createAllocation(category, percentage, totalTokens, vesting)
+  //           .accountsStrict({
+  //             allocation: allocations[1],
+  //             wallet: user2Keypair.publicKey,
+  //             tokenMint: mint,
+  //             allocationVault: allocationTokenAccounts[1],
+  //             tokenProgram: TOKEN_PROGRAM_ID,
+  //             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+  //             rent: SYSVAR_RENT_PUBKEY,
+  //             systemProgram: SystemProgram.programId,
+  //             authority: signer.payer.publicKey,
+  //           })
+  //           .instruction()
+  //     ]
+  //     let tx = new Transaction()
+  //     for(let i = 0; i < instructions.length; i++){
+  //       tx.add(instructions[i])
+  //     }
+  //     tx.feePayer = signer.payer.publicKey
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
+  //     console.log("Successfully create allocation : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+  //   } catch (error) {
+  //     console.log("Error in create allocation :", error)
+  //   }
+  // })
+
+
+  it(" claim tokens ", async () => {
+
+    try {
+
+      let user1Keypair = getKeypairFromFile(`${os.homedir()}/.config/solana/id2.json`);
+      const { allocations, allocationTokenAccounts, userTokenAccounts } = getAllocationPDAs(mint, [user1Keypair.publicKey])
+      let now = Math.floor(Date.now() / 1000);
+      console.log("User token account : ", userTokenAccounts[0])
+      
+
+      const accountInfo = await connection.getAccountInfo(userTokenAccounts[0]);
+      if (!accountInfo) {
+        await getOrCreateAssociatedTokenAccount(connection, user1Keypair, mint, user1Keypair.publicKey)
+      }
+
+      
+      const tx = new Transaction()
+        tx.add(
+          await program.methods
+            .claimTokens(new BN(now))
+            .accountsStrict({
+              allocation: allocations[0],
+              wallet: user1Keypair.publicKey,
+              systemProgram: SystemProgram.programId,
+              tokenMint: mint,
+              allocationVault: allocationTokenAccounts[0],
+              userTokenAccount: userTokenAccounts[0],
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+            })
+            .instruction()
+        )
+      tx.feePayer = user1Keypair.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [user1Keypair], { skipPreflight: true, commitment: "confirmed" })
+      console.log("Successfully claim token : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+
+    } catch (error) {
+      console.log("Error in claim token :", error)
+    }
+  })
+
+
 });
 
 

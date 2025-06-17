@@ -20,3 +20,6 @@ pub use admin::*;
 
 pub mod launchpad;
 pub use launchpad::*;
+
+pub mod allocation;
+pub use allocation::*;

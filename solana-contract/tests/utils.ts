@@ -35,6 +35,9 @@ export const TEST_CONFIG = new PublicKey("BdfD7rrTZEWmf8UbEBPVpvM3wUqyrR8swjAy5S
 const LAUNCHPAD_SEED_PREFIX = "launchpad"
 const BUYER_SEED_PREFIX = "buyer"
 
+// Allocation
+const ALLOCATION_SEED_PREFIX = "allocation"
+
 // PumpSwap
 const POOL_PUMP_SWAP_PREFIX = "pool"
 export const PUMP_SWAP_PROGRAM_ID = new PublicKey("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
@@ -103,8 +106,34 @@ export function getLaunchPadPDAs(authority: PublicKey, mint: PublicKey, buyer: P
 }
 
 
+export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]){
+  let allocations = []
+  let allocationTokenAccounts = []
+  let userTokenAccounts = []
+  for(let i = 0; i < wallet.length; i++){
+    const [allocation] = PublicKey.findProgramAddressSync(
+      [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer()],
+      program.programId
+    );
+    allocations.push(allocation)
 
+    const allocationTokenAccount = getAssociatedTokenAddressSync(
+      mint, allocation, true
+    )
+    allocationTokenAccounts.push(allocationTokenAccount)
 
+    const userTokenAccount = getAssociatedTokenAddressSync(
+      mint, wallet[i], true
+    )
+    userTokenAccounts.push(userTokenAccount)
+  }
+
+  return {
+    allocations,
+    allocationTokenAccounts,
+    userTokenAccounts,
+  };
+}
 
 
 export async function getPoolTokenAccount2022(payer: Signer, mint: PublicKey, bondingCurve: PublicKey){
@@ -186,7 +215,13 @@ export function getKeypairFromFile(filePath: string): Keypair {
     )
   );
 }
-
+export function getKeypairFromSecretKey(secretKey: string): Keypair {
+  return Keypair.fromSecretKey(
+    Uint8Array.from(
+      JSON.parse(secretKey)
+    )
+  );
+}
 
 function getFirstKey(key1: PublicKey, key2: PublicKey): PublicKey {
   // Convert public keys to base58 strings for comparison

@@ -70,4 +70,7 @@ pub enum CustomError {
 
     #[msg("Whitelist duration over")]
     WhitelistDurationOver,
+
+    #[msg("Cliff period not reached")]
+    CliffNotReached,
 }
