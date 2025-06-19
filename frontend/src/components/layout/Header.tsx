@@ -32,14 +32,16 @@ export default function Header() {
                         <span className="text-2xl font-semibold md:block hidden ml-2">POTLAUNCH</span>
                     </Link>
                 </div>
-                <div className="flex items-center space-x-20">
-                    {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center space-x-8">
+                <div className="flex items-center">
+                    <nav className="hidden md:flex items-center space-x-8 mr-10">
                         <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Token Creator</span>
                         </Link>
                         <Link to="/" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
+                        </Link>
+                        <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900">
+                            <span className='text-sm'>My tokens</span>
                         </Link>
                     </nav>
 

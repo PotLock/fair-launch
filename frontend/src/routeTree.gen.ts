@@ -12,10 +12,12 @@
 
 import { Route as rootRoute } from "./routes/__root";
 import { Route as CreateTokenImport } from "./routes/create-token";
-import { Route as TokenImport } from "./routes";
+import { Route as IndexImport } from "./routes";
+import { Route as MyTokensImport } from "./routes/my-tokens";
+import { Route as TokenDetailImport } from "./routes/token/$tokenId";
 
 // Create/Update Routes
-const IndexRoute = TokenImport.update({
+const IndexRoute = IndexImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => rootRoute,
@@ -27,6 +29,17 @@ const CreateTokenRoute = CreateTokenImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
+const MyTokensRoute = MyTokensImport.update({
+  id: "/my-tokens",
+  path: "/my-tokens",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const TokenDetailRoute = TokenDetailImport.update({
+  id: "/token/$tokenId",
+  path: "/token/$tokenId",
+  getParentRoute: () => rootRoute,
+} as any);
 
 // Populate the FileRoutesByPath interface
 
@@ -46,6 +59,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateTokenRoute;
       parentRoute: typeof rootRoute;
     };
+    "/my-tokens": {
+      id: "/my-tokens";
+      path: "/my-tokens";
+      fullPath: "/my-tokens";
+      preLoaderRoute: typeof MyTokensRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/token/$tokenId": {
+      id: "/token/$tokenId";
+      path: "/token/$tokenId";
+      fullPath: "/token/$tokenId";
+      preLoaderRoute: typeof TokenDetailRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -54,17 +81,23 @@ declare module "@tanstack/react-router" {
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/create": typeof CreateTokenRoute;
+  "/my-tokens": typeof MyTokensRoute;
+  "/token/$tokenId": typeof TokenDetailRoute;
 }
 
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/create": typeof CreateTokenRoute;
+  "/my-tokens": typeof MyTokensRoute;
+  "/token/$tokenId": typeof TokenDetailRoute;
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute;
   "/": typeof IndexRoute;
   "/create": typeof CreateTokenRoute;
+  "/my-tokens": typeof MyTokensRoute;
+  "/token/$tokenId": typeof TokenDetailRoute;
 }
 
 export interface FileRouteTypes {
@@ -72,23 +105,31 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/create"
+    | "/my-tokens"
+    | "/token/$tokenId"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/create";
+  to: "/" | "/create" | "/my-tokens" | "/token/$tokenId";
   id:
     | "__root__"
     | "/"
     | "/create"
+    | "/my-tokens"
+    | "/token/$tokenId"
   fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   CreateTokenRoute: typeof CreateTokenRoute;
+  MyTokensRoute: typeof MyTokensRoute;
+  TokenDetailRoute: typeof TokenDetailRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateTokenRoute: CreateTokenRoute,
+  MyTokensRoute: MyTokensRoute,
+  TokenDetailRoute: TokenDetailRoute,
 };
 
 export const routeTree = rootRoute
