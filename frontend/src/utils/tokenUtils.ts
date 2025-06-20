@@ -113,7 +113,7 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
       id: data.result.id,
       name: data.result.content.metadata.name,
       symbol: data.result.content.metadata.symbol,
-      description: data.result.content.metadata.description,
+      description: metadataJson.description,
       avatar: metadataJson.image,
       banner: metadataJson.banner,
       decimals: data.result.token_info.decimals,

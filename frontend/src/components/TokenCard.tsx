@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { ExternalLink } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 interface TokenCardProps {
     banner?: string;
@@ -18,6 +19,7 @@ interface TokenCardProps {
     marketCap?: string;
     price?: string;
     externalLabel: string;
+    value: string;
 }
 
 export function TokenCard({
@@ -33,8 +35,10 @@ export function TokenCard({
     createdOn,
     marketCap,
     price,
-    externalLabel
+    externalLabel,
+    value,
 }: TokenCardProps) {
+    const navigate = useNavigate();
     return (
         <Card className="rounded-3xl border-2 border-gray-200 bg-white p-0 overflow-hidden transition hover:shadow-lg">
             <div className="relative p-3">
@@ -54,43 +58,43 @@ export function TokenCard({
                     </div>
                 </div>
             </div>
-        <CardContent className="pt-14 p-3">
-            <p className="text-sm text-gray-500 mb-3 line-clamp-2 min-h-[40px]">{description}</p>
-            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                <span>Token Type</span>
-                <span>{supply}/1,000,000</span>
-            </div>
-            <Progress value={progress} className="h-4 bg-gray-200 mb-4" />
-            <div className="grid grid-cols-2 gap-2 text-xs mb-1">
-                <div>
-                    <div className="text-gray-400">Token Address</div>
-                    <a href={`https://solscan.io/token/${address}?cluster=${process.env.PUBLIC_SOL_NETWORK}`} target="_blank" className="font-medium text-gray-800 truncate hover:underline">
-                        {address.slice(0, 19)}...
-                    </a>
+            <CardContent className="pt-14 p-3">
+                <p className="text-sm text-gray-500 mb-3 line-clamp-2 min-h-[40px]">{description}</p>
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                    <span>Progress</span>
+                    <span>{supply}/1,000,000</span>
                 </div>
-                <div className="text-right">
-                    <div className="text-gray-400">Created On</div>
-                    <div className="font-medium text-gray-800">{createdOn}</div>
+                <Progress value={progress} className="h-4 bg-gray-200 mb-4" />
+                <div className="grid grid-cols-2 gap-2 text-xs mb-1">
+                    <div>
+                        <div className="text-gray-400">Token Address</div>
+                        <a href={`https://solscan.io/token/${address}?cluster=${process.env.PUBLIC_SOL_NETWORK}`} target="_blank" className="font-medium text-gray-800 truncate hover:underline">
+                            {address.slice(0, 19)}...
+                        </a>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-gray-400">Created On</div>
+                        <div className="font-medium text-gray-800">{createdOn}</div>
+                    </div>
                 </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs mb-4">
-                <div>
-                    <div className="text-gray-400">Market Cap</div>
-                    <div className="font-bold text-gray-900">{marketCap || '-'}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+                    <div>
+                        <div className="text-gray-400">Market Cap</div>
+                        <div className="font-bold text-gray-900">{marketCap || '-'}</div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-gray-400">Price</div>
+                        <div className="font-bold text-gray-900">{price || '-'}</div>
+                    </div>
                 </div>
-                <div className="text-right">
-                    <div className="text-gray-400">Price</div>
-                    <div className="font-bold text-gray-900">{price || '-'}</div>
+                <div className="flex gap-2 mt-2">
+                    <Button onClick={() => navigate({ to: `/token/${value}` })} variant="outline" className="flex-1 rounded-md text-sm border-gray-300 py-2">View Details</Button>
+                    <Button variant="secondary" className="flex-1 flex items-center text-sm gap-2 rounded-md bg-gray-900 hover:bg-gray-800 text-white py-2">
+                        <ExternalLink className="w-4 h-4" />
+                        View on {externalLabel}
+                    </Button>
                 </div>
-            </div>
-            <div className="flex gap-2 mt-2">
-                <Button variant="outline" className="flex-1 rounded-md text-sm border-gray-300 py-2">View Details</Button>
-                <Button variant="secondary" className="flex-1 flex items-center text-sm gap-2 rounded-md bg-gray-900 hover:bg-gray-800 text-white py-2">
-                    <ExternalLink className="w-4 h-4" />
-                    View on {externalLabel}
-                </Button>
-            </div>
-        </CardContent>
+            </CardContent>
         </Card>
     );
 } 

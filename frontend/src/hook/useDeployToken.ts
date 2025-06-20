@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
 import { getPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
+import { useRouter } from "@tanstack/react-router";
 
 const uploadMetadataToPinata = async (metadata: {
     name: string;
@@ -57,6 +58,7 @@ const uploadMetadataToPinata = async (metadata: {
 
 export const useDeployToken = () => {
   const { basicInfo, allocation, dexListing, saleSetup, adminSetup } = useDeployStore();
+  const router = useRouter();
   const walletSol = useWallet();
   const { publicKey, sendTransaction, signTransaction } = walletSol;
   const { anchorWallet, program, governanceKeypair, connection, mintKeypair } = useAnchorProvider();
@@ -320,6 +322,7 @@ export const useDeployToken = () => {
       await connection.confirmTransaction(txid);
 
       toast.success(`🚀 Created token ${basicInfo.name} Successfully!`);
+      router.navigate({ to: "/" });
       return txid;
     } catch (error) {
       toast.error('Create token failed!');
