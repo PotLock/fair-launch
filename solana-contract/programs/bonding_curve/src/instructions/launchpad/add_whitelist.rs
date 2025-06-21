@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
-use crate::{errors::CustomError, state::{BuyerAccount, LaunchPadAccount}};
+use crate::{errors::CustomError, state::{BuyerAccount, LaunchPadAccount}, consts::{LAUNCHPAD_SEED_PREFIX, BUYER_SEED_PREFIX}};
 
 #[derive(Accounts)]
 pub struct AddWhitelist<'info> {
     #[account(
         mut,
-        seeds = [b"launchpad".as_ref(), authority.key().as_ref()],
+        seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), authority.key().as_ref()],
         bump = launch_pad_account.bump
     )]
     pub launch_pad_account: Account<'info, LaunchPadAccount>,
@@ -13,7 +13,7 @@ pub struct AddWhitelist<'info> {
     pub authority: Signer<'info>,
     #[account(
         init_if_needed,
-        seeds = [b"buyer", launch_pad_account.key().as_ref(), user.key().as_ref()],
+        seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), user.key().as_ref()],
         bump,
         payer = authority,
         space = 8 + std::mem::size_of::<BuyerAccount>(),

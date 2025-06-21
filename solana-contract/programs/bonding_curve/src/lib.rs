@@ -87,7 +87,7 @@ pub mod bonding_curve {
     }
 
     // ============================================================================
-    // Admin Functions
+    // Admin Functions : Bonding Curve
     // ============================================================================
     pub fn add_fee_recipients(
         ctx: Context<AddFeeRecipient>,
@@ -114,11 +114,11 @@ pub mod bonding_curve {
 
 
     // ============================================================================
-    // Launchpad Functions
+    // Whitelist Launchpad Functions
     // ============================================================================
 
-    pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
-        instructions::create_launchpad(ctx, token_price, purchase_limit_per_wallet, whitelist_duration, start_time, end_time)
+    pub fn create_whitelist_launch(ctx: Context<CreateWhitelistLaunch>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
+        instructions::create_whitelist_launch(ctx, token_price, purchase_limit_per_wallet, whitelist_duration, start_time, end_time)
     }
     pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
         instructions::add_whitelist(ctx, user)
@@ -127,6 +127,55 @@ pub mod bonding_curve {
     pub fn remove_whitelist(ctx: Context<RemoveWhitelist>, user: Pubkey) -> Result<()> {
         instructions::remove_whitelist(ctx, user)
     }
+
+    // ============================================================================
+    // Fair Launch Functions
+    // ============================================================================
+
+    pub fn create_fair_launch(
+        ctx: Context<CreateFairLaunch>, 
+        token_price: u64,
+        soft_cap: u64,
+        hard_cap: u64,
+        start_time: i64,
+        end_time: i64,
+        min_contribution: u64,
+        max_contribution: u64,
+        max_tokens_per_wallet: u64,
+        distribution_delay: i64,
+    ) -> Result<()> {
+        instructions::create_fair_launch(
+            ctx, 
+            token_price,
+            soft_cap,
+            hard_cap,
+            start_time,
+            end_time,
+            min_contribution,
+            max_contribution,
+            max_tokens_per_wallet,
+            distribution_delay,
+        )
+    }
+
+    pub fn contribute_fair_launch(
+        ctx: Context<ContributeFairLaunch>,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::contribute_fair_launch(ctx, amount)
+    }
+
+    pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
+        instructions::distribute_tokens(ctx)
+    }
+
+    pub fn refund_contribution(ctx: Context<RefundContribution>) -> Result<()> {
+        instructions::refund_contribution(ctx)
+    }
+
+    // ============================================================================
+    // Admin Pause & Unpause Functions : Launchpad
+    // ============================================================================
 
     pub fn pause_launchpad(ctx: Context<PauseLaunchPad>) -> Result<()> {
         instructions::pause_launchpad(ctx)

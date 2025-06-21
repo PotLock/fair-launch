@@ -1,0 +1,133 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface, transfer_checked, TransferChecked};
+use crate::{
+    consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX}, 
+    state::{LaunchPadAccount, FairLaunchData, BuyerAccount, LaunchType}, 
+    errors::CustomError
+};
+
+#[derive(Accounts)]
+pub struct DistributeTokens<'info> {
+    #[account(
+        mut,
+        seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
+        bump = launch_pad_account.bump,
+        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ CustomError::InvalidLaunchType,
+    )]
+    pub launch_pad_account: Box<Account<'info, LaunchPadAccount>>,
+    
+    #[account(
+        mut,
+        seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
+        bump = fair_launch_data.bump,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CustomError::InvalidAuthority,
+    )]
+    pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
+    
+    #[account(
+        mut,
+        seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), recipient.key().as_ref()],
+        bump,
+        constraint = buyer_account.buyer == recipient.key() @ CustomError::InvalidAuthority,
+    )]
+    pub buyer_account: Box<Account<'info, BuyerAccount>>,
+    
+    #[account(
+        mint::token_program = token_program,
+        constraint = token_mint.key() == launch_pad_account.token_mint @ CustomError::BondingCurveTokenMismatch,
+    )]
+    pub token_mint: Box<InterfaceAccount<'info, Mint>>,
+    
+    #[account(
+        mut,
+        token::token_program = token_program,
+        token::mint = token_mint,
+        token::authority = launch_pad_account,
+        constraint = launchpad_vault.key() == launch_pad_account.vault @ CustomError::InvalidAuthority,
+    )]
+    pub launchpad_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    
+    #[account(
+        mut,
+        token::token_program = token_program,
+        token::mint = token_mint,
+        token::authority = recipient,
+    )]
+    pub recipient_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    
+    #[account(mut)]
+    pub recipient: Signer<'info>,
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
+    let launch_pad_account = &mut ctx.accounts.launch_pad_account;
+    let fair_launch_data = &ctx.accounts.fair_launch_data;
+    let buyer_account = &mut ctx.accounts.buyer_account;
+    let current_time = Clock::get()?.unix_timestamp;
+
+    // Check if sale has ended
+    if current_time <= launch_pad_account.end_time {
+        return Err(CustomError::SaleNotStarted.into()); // Reusing error, could create SaleNotEnded
+    }
+
+    // Check if soft cap was reached
+    if fair_launch_data.total_raised < fair_launch_data.soft_cap {
+        return Err(CustomError::SoftCapNotReached.into());
+    }
+
+    // Check distribution delay
+    let distribution_time = launch_pad_account.end_time + (fair_launch_data.distribution_delay * 3600); // Convert hours to seconds
+    if current_time < distribution_time {
+        return Err(CustomError::DistributionDelayNotReached.into());
+    }
+
+    // Check if tokens already distributed to this buyer
+    if buyer_account.amount == 0 {
+        return Err(CustomError::InvalidAmount.into());
+    }
+
+    // Calculate tokens to distribute based on contribution and token price
+    let tokens_to_distribute = buyer_account.amount
+        .checked_div(launch_pad_account.token_price)
+        .unwrap()
+        .checked_mul(10u64.pow(ctx.accounts.token_mint.decimals as u32))
+        .unwrap();
+
+    // Transfer tokens from launchpad vault to recipient
+    let authority_seeds = &[
+        LAUNCHPAD_SEED_PREFIX.as_bytes(),
+        launch_pad_account.authority.as_ref(),
+        &[launch_pad_account.bump],
+    ];
+    let signer_seeds = &[&authority_seeds[..]];
+
+    transfer_checked(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.launchpad_vault.to_account_info(),
+                mint: ctx.accounts.token_mint.to_account_info(),
+                to: ctx.accounts.recipient_token_account.to_account_info(),
+                authority: launch_pad_account.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        tokens_to_distribute,
+        ctx.accounts.token_mint.decimals,
+    )?;
+
+    // Update sold tokens
+    launch_pad_account.sold_tokens = launch_pad_account.sold_tokens
+        .checked_add(tokens_to_distribute)
+        .unwrap();
+
+    // Mark buyer as processed by setting amount to 0
+    buyer_account.amount = 0;
+
+    msg!("Tokens distributed successfully!");
+    msg!("Recipient: {}", ctx.accounts.recipient.key());
+    msg!("Tokens distributed: {}", tokens_to_distribute);
+
+    Ok(())
+} 

@@ -1,14 +1,14 @@
 use anchor_lang::prelude::*;
-use crate::{consts::CURVE_CONFIGURATION_SEED, state::{CurveConfiguration, LaunchPadAccount}};
+use crate::{consts::{CURVE_CONFIGURATION_SEED, LAUNCHPAD_SEED_PREFIX}, state::{CurveConfiguration, LaunchPadAccount}};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::errors::CustomError;
 
 #[derive(Accounts)]
-pub struct CreateLaunchPad<'info> {
+pub struct CreateWhitelistLaunch<'info> {
     #[account(
         init, 
-        seeds = [b"launchpad".as_ref(), authority.key().as_ref()],
+        seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), authority.key().as_ref()],
         bump,
         payer = authority, 
         space = 8 + std::mem::size_of::<LaunchPadAccount>() + LaunchPadAccount::ACCOUNT_SIZE,
@@ -36,10 +36,10 @@ pub struct CreateLaunchPad<'info> {
 }
 
 
-pub fn create_launchpad(ctx: Context<CreateLaunchPad>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
+pub fn create_whitelist_launch(ctx: Context<CreateWhitelistLaunch>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
     let launch_pad_account = &mut ctx.accounts.launch_pad_account;
 
-    let (_, bump) = Pubkey::find_program_address(&[b"launchpad".as_ref(), ctx.accounts.authority.key().as_ref()], ctx.program_id);
+    let (_, bump) = Pubkey::find_program_address(&[LAUNCHPAD_SEED_PREFIX.as_bytes(), ctx.accounts.authority.key().as_ref()], ctx.program_id);
     let current_time = Clock::get()?.unix_timestamp;
     msg!("current time: {}", current_time);
     // make sure current time is between start and end time

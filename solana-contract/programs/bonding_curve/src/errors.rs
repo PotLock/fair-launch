@@ -73,4 +73,35 @@ pub enum CustomError {
 
     #[msg("Cliff period not reached")]
     CliffNotReached,
+
+    // Fair Launch specific errors
+    #[msg("Sale has not started yet")]
+    SaleNotStarted,
+
+    #[msg("Sale has ended")]
+    SaleEnded,
+
+    #[msg("Contribution below minimum")]
+    ContributionBelowMinimum,
+
+    #[msg("Contribution exceeds maximum")]
+    ContributionExceedsMaximum,
+
+    #[msg("Hard cap reached")]
+    HardCapReached,
+
+    #[msg("Soft cap not reached")]
+    SoftCapNotReached,
+
+    #[msg("Distribution delay not reached")]
+    DistributionDelayNotReached,
+
+    #[msg("Max tokens per wallet exceeded")]
+    MaxTokensPerWalletExceeded,
+
+    #[msg("Invalid launch type")]
+    InvalidLaunchType,
+
+    #[msg("Sale is paused")]
+    SaleIsPaused,
 }

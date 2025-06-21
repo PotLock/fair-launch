@@ -6,6 +6,12 @@ pub const FEE_POOL_VAULT_PREFIX: &'static str = "fee_pool_vault";
 
 pub const TOKEN_VAULT_PREFIX: &'static str = "token_vault";
 
+// Launchpad constants
+pub const LAUNCHPAD_SEED_PREFIX: &'static str = "launchpad";
+pub const FAIR_LAUNCH_DATA_SEED_PREFIX: &'static str = "fair_launch_data";
+pub const FAIR_LAUNCH_VAULT_SEED_PREFIX: &'static str = "fair_launch_vault";
+pub const BUYER_SEED_PREFIX: &'static str = "buyer";
+
 pub const METEORA_PROGRAM_KEY: &str = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB";
 pub const METEORA_VAULT_PROGRAM_KEY: &str = "24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi";
 
