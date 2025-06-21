@@ -3,7 +3,7 @@ use anchor_lang::system_program;
 use crate::{
     consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX, FAIR_LAUNCH_VAULT_SEED_PREFIX}, 
     state::{LaunchPadAccount, FairLaunchData, BuyerAccount, LaunchType}, 
-    errors::CustomError
+    errors::{CommonCustomError, LaunchPadCustomErrror}
 };
 
 #[derive(Accounts)]
@@ -12,7 +12,7 @@ pub struct RefundContribution<'info> {
         mut,
         seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
         bump = launch_pad_account.bump,
-        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ CustomError::InvalidLaunchType,
+        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ LaunchPadCustomErrror::InvalidLaunchType,
     )]
     pub launch_pad_account: Box<Account<'info, LaunchPadAccount>>,
     
@@ -20,7 +20,7 @@ pub struct RefundContribution<'info> {
         mut,
         seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump = fair_launch_data.bump,
-        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CustomError::InvalidAuthority,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
     
@@ -28,7 +28,7 @@ pub struct RefundContribution<'info> {
         mut,
         seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), contributor.key().as_ref()],
         bump,
-        constraint = buyer_account.buyer == contributor.key() @ CustomError::InvalidAuthority,
+        constraint = buyer_account.buyer == contributor.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub buyer_account: Box<Account<'info, BuyerAccount>>,
     
@@ -53,17 +53,17 @@ pub fn refund_contribution(ctx: Context<RefundContribution>) -> Result<()> {
 
     // Check if sale has ended
     if current_time <= launch_pad_account.end_time {
-        return Err(CustomError::SaleNotStarted.into()); // Reusing error, could create SaleNotEnded
+        return Err(LaunchPadCustomErrror::SaleNotStarted.into()); // Reusing error, could create SaleNotEnded
     }
 
     // Check if soft cap was NOT reached (this is when refunds are allowed)
     if fair_launch_data.total_raised >= fair_launch_data.soft_cap {
-        return Err(CustomError::InvalidAmount.into()); // Soft cap was reached, no refunds
+        return Err(CommonCustomError::InvalidAmount.into()); // Soft cap was reached, no refunds
     }
 
     // Check if contributor has any amount to refund
     if buyer_account.amount == 0 {
-        return Err(CustomError::InvalidAmount.into());
+        return Err(CommonCustomError::InvalidAmount.into());
     }
 
     let refund_amount = buyer_account.amount;

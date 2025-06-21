@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::curve_configuration::{
     BondingCurveType, CurveConfiguration, CurveConfigurationAccount,
 };
@@ -176,14 +176,14 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         reserve_ratio: u16,
     ) -> Result<u64> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
-            .map_err(|_| CustomError::InvalidBondingCurveType)?;
+            .map_err(|_| CommonCustomError::InvalidBondingCurveType)?;
 
         if bonding_curve_type == BondingCurveType::Linear {
             return linear_buy_cost(amount, reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
             return quadratic_buy_cost(amount, reserve_ratio, self.total_supply);
         } else {
-            return Err(CustomError::InvalidBondingCurveType.into());
+            return Err(CommonCustomError::InvalidBondingCurveType.into());
         }
     }
 
@@ -194,14 +194,14 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         reserve_ratio: u16,
     ) -> Result<u64> {
         let bonding_curve_type = BondingCurveType::try_from(bonding_curve_type)
-            .map_err(|_| CustomError::InvalidBondingCurveType)?;
+            .map_err(|_| CommonCustomError::InvalidBondingCurveType)?;
 
         if bonding_curve_type == BondingCurveType::Linear {
             return linear_sell_cost(amount, reserve_ratio, self.total_supply);
         } else if bonding_curve_type == BondingCurveType::Quadratic {
             return quadratic_sell_cost(amount, reserve_ratio, self.total_supply);
         } else {
-            return Err(CustomError::InvalidBondingCurveType.into());
+            return Err(CommonCustomError::InvalidBondingCurveType.into());
         }
     }
 
@@ -231,7 +231,7 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
         if self.reserve_balance + sol_amount > target_liquidity {
-            return err!(CustomError::TargetLiquidityReached);
+            return err!(CommonCustomError::TargetLiquidityReached);
         }
         self.total_supply += amount_out;
         self.reserve_balance += amount_out;
@@ -282,11 +282,11 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
 
         // make sure the bonding curve SOL liquility is not hit target liquidity
         if self.reserve_balance + amount_out > target_liquidity {
-            return err!(CustomError::TargetLiquidityReached);
+            return err!(CommonCustomError::TargetLiquidityReached);
         }
 
         if self.reserve_balance < amount_out {
-            return err!(CustomError::NotEnoughSolInVault);
+            return err!(CommonCustomError::NotEnoughSolInVault);
         }
 
         self.total_supply -= token_amount;
@@ -338,11 +338,11 @@ impl<'info> BondingCurveAccount<'info> for Account<'info, BondingCurve> {
         // Checking if the amount is greater than 0 and less than token balance
         let balance = token_accounts.2.amount;
         if token_amount == 0 || token_amount > balance {
-            return err!(CustomError::InvalidAmount);
+            return err!(CommonCustomError::InvalidAmount);
         }
         // unable to  add liquidity if the bonding curve locked
         if locked_liquidity {
-            return err!(CustomError::LiquidityLocked);
+            return err!(CommonCustomError::LiquidityLocked);
         }
         // make sure the reserve balance is not exceed the target liquidity
         // TODO!

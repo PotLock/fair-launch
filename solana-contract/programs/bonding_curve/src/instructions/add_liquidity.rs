@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -13,7 +13,7 @@ pub fn add_liquidity(ctx: Context<AddLiquidity>, sol_amount: u64, token_amount: 
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
     if bonding_curve.creator != user.key() {
-        return Err(CustomError::InvalidAuthority.into());
+        return Err(CommonCustomError::InvalidAuthority.into());
     }
 
     let system_program = &ctx.accounts.system_program;

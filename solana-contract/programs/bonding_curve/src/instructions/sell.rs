@@ -5,7 +5,7 @@ use anchor_spl::{
 };
 
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
-use crate::{consts::*, errors::CustomError};
+use crate::{consts::*, errors::CommonCustomError};
 use anchor_lang::system_program;
 
 pub fn sell<'info>(
@@ -52,7 +52,7 @@ pub fn sell<'info>(
             .iter()
             .any(|r| r.address == recipient.clone().key())
         {
-            return Err(CustomError::FeeRecipientNotFound.into());
+            return Err(CommonCustomError::FeeRecipientNotFound.into());
         }
 
         let amount_each_gets = bonding_curve_configuration
@@ -71,7 +71,7 @@ pub fn sell<'info>(
 
         let res = system_program::transfer(cpi_context, amount_each_gets);
         if !res.is_ok() {
-            return Err(CustomError::TransferFailed.into());
+            return Err(CommonCustomError::TransferFailed.into());
         }
 
     }

@@ -2,7 +2,7 @@ use crate::consts::{
     CURVE_CONFIGURATION_SEED, METEORA_PROGRAM_KEY, POOL_SEED_PREFIX, PUMP_SWAP_PROGRAM_KEY,
     QUOTE_TOKEN_MINT, SOL_VAULT_PREFIX,
 };
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::{get_meteora_pool_create_ix_data, get_pump_pool_create_ix_data};
 use crate::state::{BondingCurve, CurveConfiguration};
 use anchor_lang::prelude::*;
@@ -149,7 +149,7 @@ pub fn initialize_pool_meteora_with_config(ctx: Context<InitializeMeteoraPool>) 
     // todo
     // 1. check bonding curve liquidity hit the target liquidity if yes then create the pool ( locked_liquidity = true)
     // if bonding_curve_configuration.locked_liquidity == true && bonding_curve.reserve_balance == bonding_curve_configuration.target_liquidity {
-    //     return err!(CustomError::TargetLiquidityReached);
+    //     return err!(CommonCustomError::TargetLiquidityReached);
     // }
     // 2. update the bonding curve state to indicate that the pool has been created
     // 2.1
@@ -158,12 +158,12 @@ pub fn initialize_pool_meteora_with_config(ctx: Context<InitializeMeteoraPool>) 
 
     require!(
         ctx.accounts.bonding_curve_account.token == ctx.accounts.token_b_mint.key(),
-        CustomError::BondingCurveTokenMismatch
+        CommonCustomError::BondingCurveTokenMismatch
     );
 
     require!(
         quote_mint.key() == ctx.accounts.token_a_mint.key(),
-        CustomError::SOLMismatch
+        CommonCustomError::SOLMismatch
     );
 
     // TODO!: make sure payer is authority
@@ -417,12 +417,12 @@ pub fn initialize_pool_pumpswap(ctx: Context<InitializePumpswapPool>, index: u16
 
     require!(
         ctx.accounts.bonding_curve_account.token == ctx.accounts.base_mint.key(),
-        CustomError::BondingCurveTokenMismatch
+        CommonCustomError::BondingCurveTokenMismatch
     );
 
     require!(
         quote_mint.key() == ctx.accounts.quote_mint.key(),
-        CustomError::SOLMismatch
+        CommonCustomError::SOLMismatch
     );
 
     // TODO!: make sure payer is authority

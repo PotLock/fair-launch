@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::{consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX}, state::{LaunchPadAccount, FairLaunchData}, errors::CustomError};
+use crate::{consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX}, state::{LaunchPadAccount, FairLaunchData}, errors::{LaunchPadCustomErrror, CommonCustomError}};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -65,26 +65,26 @@ pub fn create_fair_launch(
     
     // Validate time ranges
     if start_time <= current_time {
-        return Err(CustomError::InvalidTimeRange.into());
+        return Err(LaunchPadCustomErrror::InvalidTimeRange.into());
     }
     
     if end_time <= start_time {
-        return Err(CustomError::InvalidTimeRange.into());
+        return Err(LaunchPadCustomErrror::InvalidTimeRange.into());
     }
     
     // Validate caps
     if hard_cap <= soft_cap {
-        return Err(CustomError::InvalidAmount.into());
+        return Err(CommonCustomError::InvalidAmount.into());
     }
     
     // Validate contribution limits
     if max_contribution <= min_contribution {
-        return Err(CustomError::InvalidAmount.into());
+        return Err(CommonCustomError::InvalidAmount.into());
     }
     
     // Validate token price
     if token_price == 0 {
-        return Err(CustomError::InvalidAmount.into());
+        return Err(CommonCustomError::InvalidAmount.into());
     }
 
     // Initialize LaunchPadAccount for fair launch

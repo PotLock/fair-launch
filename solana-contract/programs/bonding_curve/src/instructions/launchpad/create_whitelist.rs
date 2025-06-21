@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::{consts::{CURVE_CONFIGURATION_SEED, LAUNCHPAD_SEED_PREFIX}, state::{CurveConfiguration, LaunchPadAccount}};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use crate::errors::CustomError;
+use crate::errors::{LaunchPadCustomErrror, CommonCustomError};
 
 #[derive(Accounts)]
 pub struct CreateWhitelistLaunch<'info> {
@@ -44,10 +44,10 @@ pub fn create_whitelist_launch(ctx: Context<CreateWhitelistLaunch>, token_price:
     msg!("current time: {}", current_time);
     // make sure current time is between start and end time
     if current_time > start_time || current_time > end_time {
-        return Err(CustomError::InvalidTimeRange.into());
+        return Err(LaunchPadCustomErrror::InvalidTimeRange.into());
     }
 
-    let whitelist_duration = current_time.checked_add(whitelist_duration).ok_or(CustomError::OverFlowUnderFlowOccured)?;
+    let whitelist_duration = current_time.checked_add(whitelist_duration).ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
 
     launch_pad_account.set_inner(LaunchPadAccount::new(
         ctx.accounts.authority.key(),

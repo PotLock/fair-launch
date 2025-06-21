@@ -4,7 +4,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::consts::*;
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
@@ -15,11 +15,11 @@ pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
     let user = &ctx.accounts.user;
     // check if the user is the creator of the pool
     if bonding_curve.creator != user.key() {
-        return Err(CustomError::InvalidAuthority.into());
+        return Err(CommonCustomError::InvalidAuthority.into());
     }
     // only removing liquidity after the liquidity lock period
     if bonding_curve_configuration.liquidity_lock_period > Clock::get()?.unix_timestamp {
-        return Err(CustomError::NotReadyToRemoveLiquidity.into());
+        return Err(CommonCustomError::NotReadyToRemoveLiquidity.into());
     }
 
     let system_program = &ctx.accounts.system_program;

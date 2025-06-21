@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum CustomError {
+pub enum CommonCustomError {
     #[msg("Only admin can call this function")]
     OnlyAdmin,
 
@@ -65,6 +65,13 @@ pub enum CustomError {
     #[msg("Transfer failed")]
     TransferFailed,
 
+
+}
+
+
+#[error_code]
+pub enum LaunchPadCustomErrror {
+    // Whitelist Launch Errors
     #[msg("Invalid time range")]
     InvalidTimeRange,
 
@@ -74,7 +81,7 @@ pub enum CustomError {
     #[msg("Cliff period not reached")]
     CliffNotReached,
 
-    // Fair Launch specific errors
+    // Fair Launch Errors
     #[msg("Sale has not started yet")]
     SaleNotStarted,
 
@@ -104,4 +111,7 @@ pub enum CustomError {
 
     #[msg("Sale is paused")]
     SaleIsPaused,
+
 }
+
+

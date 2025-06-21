@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::{errors::CustomError, state::{BuyerAccount, LaunchPadAccount}, consts::{LAUNCHPAD_SEED_PREFIX, BUYER_SEED_PREFIX}};
+use crate::{errors::LaunchPadCustomErrror, state::{BuyerAccount, LaunchPadAccount}, consts::{LAUNCHPAD_SEED_PREFIX, BUYER_SEED_PREFIX}};
 
 #[derive(Accounts)]
 pub struct RemoveWhitelist<'info> {
@@ -33,7 +33,7 @@ pub fn remove_whitelist(ctx: Context<RemoveWhitelist>, user: Pubkey) -> Result<(
     let current_time = Clock::get()?.unix_timestamp;
     msg!("whitelist duration: {}", launch_pad_account.whitelist_duration);
     if current_time > launch_pad_account.whitelist_duration {
-        return Err(CustomError::WhitelistDurationOver.into());
+        return Err(LaunchPadCustomErrror::WhitelistDurationOver.into());
     }
 
     buyer_account.whitelisted = false;

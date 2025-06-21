@@ -5,7 +5,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::consts::*;
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::{BondingCurve, BondingCurveAccount, CurveConfiguration};
 
 pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> Result<()> {
@@ -48,7 +48,7 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
             .iter()
             .any(|r| r.address == recipient.clone().key())
         {
-            return Err(CustomError::FeeRecipientNotFound.into());
+            return Err(CommonCustomError::FeeRecipientNotFound.into());
         }
 
         let amount_each_gets = bonding_curve_configuration
@@ -67,7 +67,7 @@ pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> R
 
         let res = system_program::transfer(cpi_context, amount_each_gets);
         if !res.is_ok() {
-            return Err(CustomError::TransferFailed.into());
+            return Err(CommonCustomError::TransferFailed.into());
         }
 
     }

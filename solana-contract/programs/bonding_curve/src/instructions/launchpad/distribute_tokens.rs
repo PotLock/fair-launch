@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface, transfer_c
 use crate::{
     consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX}, 
     state::{LaunchPadAccount, FairLaunchData, BuyerAccount, LaunchType}, 
-    errors::CustomError
+    errors::{CommonCustomError, LaunchPadCustomErrror}
 };
 
 #[derive(Accounts)]
@@ -12,7 +12,7 @@ pub struct DistributeTokens<'info> {
         mut,
         seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
         bump = launch_pad_account.bump,
-        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ CustomError::InvalidLaunchType,
+        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ LaunchPadCustomErrror::InvalidLaunchType,
     )]
     pub launch_pad_account: Box<Account<'info, LaunchPadAccount>>,
     
@@ -20,7 +20,7 @@ pub struct DistributeTokens<'info> {
         mut,
         seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump = fair_launch_data.bump,
-        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CustomError::InvalidAuthority,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
     
@@ -28,13 +28,13 @@ pub struct DistributeTokens<'info> {
         mut,
         seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), recipient.key().as_ref()],
         bump,
-        constraint = buyer_account.buyer == recipient.key() @ CustomError::InvalidAuthority,
+        constraint = buyer_account.buyer == recipient.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub buyer_account: Box<Account<'info, BuyerAccount>>,
     
     #[account(
         mint::token_program = token_program,
-        constraint = token_mint.key() == launch_pad_account.token_mint @ CustomError::BondingCurveTokenMismatch,
+        constraint = token_mint.key() == launch_pad_account.token_mint @ CommonCustomError::BondingCurveTokenMismatch,
     )]
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
     
@@ -43,7 +43,7 @@ pub struct DistributeTokens<'info> {
         token::token_program = token_program,
         token::mint = token_mint,
         token::authority = launch_pad_account,
-        constraint = launchpad_vault.key() == launch_pad_account.vault @ CustomError::InvalidAuthority,
+        constraint = launchpad_vault.key() == launch_pad_account.vault @ CommonCustomError::InvalidAuthority,
     )]
     pub launchpad_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     
@@ -68,23 +68,23 @@ pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
 
     // Check if sale has ended
     if current_time <= launch_pad_account.end_time {
-        return Err(CustomError::SaleNotStarted.into()); // Reusing error, could create SaleNotEnded
+        return Err(LaunchPadCustomErrror::SaleNotStarted.into()); // Reusing error, could create SaleNotEnded
     }
 
     // Check if soft cap was reached
     if fair_launch_data.total_raised < fair_launch_data.soft_cap {
-        return Err(CustomError::SoftCapNotReached.into());
+        return Err(LaunchPadCustomErrror::SoftCapNotReached.into());
     }
 
     // Check distribution delay
     let distribution_time = launch_pad_account.end_time + (fair_launch_data.distribution_delay * 3600); // Convert hours to seconds
     if current_time < distribution_time {
-        return Err(CustomError::DistributionDelayNotReached.into());
+        return Err(LaunchPadCustomErrror::DistributionDelayNotReached.into());
     }
 
     // Check if tokens already distributed to this buyer
     if buyer_account.amount == 0 {
-        return Err(CustomError::InvalidAmount.into());
+        return Err(CommonCustomError::InvalidAmount.into());
     }
 
     // Calculate tokens to distribute based on contribution and token price

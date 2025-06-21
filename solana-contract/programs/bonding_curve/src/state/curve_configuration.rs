@@ -1,4 +1,4 @@
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use anchor_lang::prelude::*;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -15,7 +15,7 @@ impl TryFrom<u8> for BondingCurveType {
         match value {
             0 => Ok(BondingCurveType::Linear),
             1 => Ok(BondingCurveType::Quadratic),
-            _ => Err(CustomError::InvalidBondingCurveType.into()),
+            _ => Err(CommonCustomError::InvalidBondingCurveType.into()),
         }
     }
 }
@@ -88,7 +88,7 @@ impl CurveConfiguration {
 
         let total_share: u16 = fee_recipients.iter().map(|r| r.share).sum();
         if total_share != 10000 {
-            return Err(CustomError::InvalidSharePercentage.into());
+            return Err(CommonCustomError::InvalidSharePercentage.into());
         }
         let current_time = Clock::get()?.unix_timestamp;
 
@@ -138,7 +138,7 @@ pub trait CurveConfigurationAccount<'info> {
 impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfiguration> {
     fn toggle_dao(&mut self) -> Result<()> {
         if self.use_dao {
-            return Err(CustomError::DAOAlreadyActivated.into());
+            return Err(CommonCustomError::DAOAlreadyActivated.into());
         }
         self.use_dao = true;
         Ok(())
@@ -147,7 +147,7 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
     fn update_fee_percentage(&mut self, new_fee_percentage: u16) -> Result<()> {
         // Maximum fee is 10%
         if new_fee_percentage <= 1000_u16 {
-            return Err(CustomError::InvalidFee.into());
+            return Err(CommonCustomError::InvalidFee.into());
         }
         self.fee_percentage = new_fee_percentage;
         Ok(())
@@ -157,7 +157,7 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
         self.total_fees_collected = self
             .total_fees_collected
             .checked_add(amount)
-            .ok_or(CustomError::OverFlowUnderFlowOccured)?;
+            .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
 
         for recipient in self.fee_recipients.iter_mut() {
             recipient.amount = amount * (recipient.share as u64) / 10000;
@@ -183,7 +183,7 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
 
         let total_share: u16 = updated_recipients.iter().map(|r| r.share).sum();
         if total_share != 10000 {
-            return Err(CustomError::InvalidSharePercentage.into());
+            return Err(CommonCustomError::InvalidSharePercentage.into());
         }
         msg!("updated recipients {:?}", updated_recipients);
         // Update recipients list

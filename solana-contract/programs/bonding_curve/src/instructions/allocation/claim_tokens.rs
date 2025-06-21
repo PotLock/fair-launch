@@ -1,5 +1,5 @@
 use crate::{
-    errors::CustomError,
+    errors::LaunchPadCustomErrror,
     state::allocation::{Allocation, Vesting},
 };
 use anchor_lang::prelude::*;
@@ -32,7 +32,7 @@ pub fn claim_tokens(ctx: Context<ClaimTokens>, now: i64) -> Result<u64> {
     if let Some(ref mut vesting) = allocation.vesting {
         // Cliff check
         if now < vesting.start_time + vesting.cliff_period {
-            return Err(CustomError::CliffNotReached.into()); // Cliff not reached
+            return Err(LaunchPadCustomErrror::CliffNotReached.into()); // Cliff not reached
         }
         // Linear vesting
         let elapsed = now.saturating_sub(vesting.start_time + vesting.cliff_period);

@@ -1,4 +1,4 @@
-use crate::errors::CustomError;
+use crate::errors::CommonCustomError;
 use crate::state::{CurveConfiguration, CurveConfigurationAccount, Recipient};
 use anchor_lang::prelude::*;
 
@@ -13,7 +13,7 @@ pub fn change_fee_admin(ctx: Context<ChangeFeeAdmin>, new_fee_admin: Pubkey) -> 
 
 #[derive(Accounts)]
 pub struct ChangeFeeAdmin<'info> {
-    #[account(mut, has_one = fee_admin @ CustomError::InvalidAuthority)]
+    #[account(mut, has_one = fee_admin @ CommonCustomError::InvalidAuthority)]
     pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,
 
     #[account(mut)]

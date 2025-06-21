@@ -3,7 +3,7 @@ use anchor_lang::system_program;
 use crate::{
     consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX, FAIR_LAUNCH_VAULT_SEED_PREFIX}, 
     state::{LaunchPadAccount, FairLaunchData, BuyerAccount, LaunchType}, 
-    errors::CustomError
+    errors::{LaunchPadCustomErrror, CommonCustomError}
 };
 
 #[derive(Accounts)]
@@ -12,7 +12,7 @@ pub struct ContributeFairLaunch<'info> {
         mut,
         seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
         bump = launch_pad_account.bump,
-        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ CustomError::InvalidLaunchType,
+        constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ LaunchPadCustomErrror::InvalidLaunchType,
     )]
     pub launch_pad_account: Box<Account<'info, LaunchPadAccount>>,
     
@@ -20,7 +20,7 @@ pub struct ContributeFairLaunch<'info> {
         mut,
         seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump = fair_launch_data.bump,
-        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CustomError::InvalidAuthority,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
     
@@ -57,33 +57,33 @@ pub fn contribute_fair_launch(
 
     // Check if launchpad is paused
     if launch_pad_account.paused {
-        return Err(CustomError::SaleIsPaused.into());
+        return Err(LaunchPadCustomErrror::SaleIsPaused.into());
     }
 
     // Check if sale has started
     if current_time < launch_pad_account.start_time {
-        return Err(CustomError::SaleNotStarted.into());
+        return Err(LaunchPadCustomErrror::SaleNotStarted.into());
     }
 
     // Check if sale has ended
     if current_time > launch_pad_account.end_time {
-        return Err(CustomError::SaleEnded.into());
+        return Err(LaunchPadCustomErrror::SaleEnded.into());
     }
 
     // Check if hard cap would be exceeded
     if fair_launch_data.total_raised.checked_add(amount).unwrap() > fair_launch_data.hard_cap {
-        return Err(CustomError::HardCapReached.into());
+        return Err(LaunchPadCustomErrror::HardCapReached.into());
     }
 
     // Check minimum contribution
     if amount < fair_launch_data.min_contribution {
-        return Err(CustomError::ContributionBelowMinimum.into());
+        return Err(LaunchPadCustomErrror::ContributionBelowMinimum.into());
     }
 
     // Check maximum contribution per wallet
     let total_contribution = buyer_account.amount.checked_add(amount).unwrap();
     if total_contribution > fair_launch_data.max_contribution {
-        return Err(CustomError::ContributionExceedsMaximum.into());
+        return Err(LaunchPadCustomErrror::ContributionExceedsMaximum.into());
     }
 
     // Check max tokens per wallet (calculate tokens based on contribution and price)
@@ -94,7 +94,7 @@ pub fn contribute_fair_launch(
         .unwrap();
     
     if tokens_to_receive > fair_launch_data.max_tokens_per_wallet {
-        return Err(CustomError::MaxTokensPerWalletExceeded.into());
+        return Err(LaunchPadCustomErrror::MaxTokensPerWalletExceeded.into());
     }
 
     // Transfer SOL from contributor to contribution vault
