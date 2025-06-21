@@ -40,7 +40,8 @@ pub struct Recipient {
 /// CURVE CONFIGURATION ACCOUNT
 #[account]
 pub struct CurveConfiguration {
-    pub admin: Pubkey,
+    pub global_admin: Pubkey,
+    pub fee_admin: Pubkey,
     pub initial_quorum: u64,
     pub use_dao: bool,
     pub governance: Pubkey,     // Shared governance contract address
@@ -61,10 +62,10 @@ pub struct CurveConfiguration {
 }
 
 impl CurveConfiguration {
-    // Discriminator (8) + Pubkey(32) + u64(8) + bool(1) + u16(2) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
+    // Discriminator (8) + Pubkey(32) + Pubkey(32) + u64(8) + bool(1) + u16(2) + Pubkey(32) + u16(2) + bool(1) + u64(8) + u16(2) + bool(1) + u8(1) + u64(8) + i64(8) + u16(2) + u64(8) + u64(8)
     // todo : limit number of fee recipients for init account
     pub const ACCOUNT_SIZE: usize =
-        8 + 32 + 8 + 1 + 2 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
+        8 + 32 + 32 + 8 + 1 + 2 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
 
     pub fn new(
         admin: Pubkey,
@@ -103,7 +104,8 @@ impl CurveConfiguration {
             .collect();
 
         Ok(Self {
-            admin,
+            global_admin: admin,
+            fee_admin: admin,
             initial_quorum,
             use_dao: false,
             governance,
@@ -130,6 +132,7 @@ pub trait CurveConfigurationAccount<'info> {
     fn update_fee_percentage(&mut self, new_fee_percentage: u16) -> Result<()>;
     fn calculate_fee(&mut self, amount: u64) -> Result<()>;
     fn add_fee_recipients(&mut self, new_recipients: Vec<Recipient>) -> Result<()>;
+    fn change_fee_admin(&mut self, new_fee_admin: Pubkey) -> Result<()>;
 }
 
 impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfiguration> {
@@ -186,6 +189,11 @@ impl<'info> CurveConfigurationAccount<'info> for Account<'info, CurveConfigurati
         // Update recipients list
         self.fee_recipients = updated_recipients;
 
+        Ok(())
+    }
+
+    fn change_fee_admin(&mut self, new_fee_admin: Pubkey) -> Result<()> {
+        self.fee_admin = new_fee_admin;
         Ok(())
     }
 }
