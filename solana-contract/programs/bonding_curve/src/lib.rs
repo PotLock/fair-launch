@@ -10,7 +10,7 @@ use crate::instructions::*;
 use crate::state::Recipient;
 use crate::instructions::allocation::{CreateAllocation, ClaimTokens, create_allocation, claim_tokens};
 use crate::state::allocation::Vesting;
-declare_id!("6qR9UPXArNpBR2m9uBfh97LXcQQQwJpKmV1ULHmxzNeW");
+declare_id!("9imKuCbzvaydkgsEXY2UNk9ANYg3j4W8EvzLn1i6WKv1");
 
 #[program]
 pub mod bonding_curve {

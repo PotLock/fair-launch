@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::{consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, FAIR_LAUNCH_VAULT_SEED_PREFIX}, state::{LaunchPadAccount, FairLaunchData}, errors::{LaunchPadCustomErrror, CommonCustomError}};
+use crate::{consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, CONTRIBUTION_VAULT_SEED_PREFIX}, state::{LaunchPadAccount, FairLaunchData}, errors::{LaunchPadCustomErrror, CommonCustomError}};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -40,7 +40,7 @@ pub struct CreateFairLaunch<'info> {
     
     #[account(
         init,
-        seeds = [FAIR_LAUNCH_VAULT_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
+        seeds = [CONTRIBUTION_VAULT_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump,
         payer = authority,
         space = 8 + 32, // Space for a vault account

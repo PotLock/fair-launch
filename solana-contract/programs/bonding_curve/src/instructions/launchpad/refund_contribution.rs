@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::{
-    consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX, FAIR_LAUNCH_VAULT_SEED_PREFIX}, 
+    consts::{LAUNCHPAD_SEED_PREFIX, FAIR_LAUNCH_DATA_SEED_PREFIX, BUYER_SEED_PREFIX, CONTRIBUTION_VAULT_SEED_PREFIX}, 
     state::{LaunchPadAccount, FairLaunchData, BuyerAccount, LaunchType}, 
     errors::{CommonCustomError, LaunchPadCustomErrror}
 };
@@ -35,7 +35,7 @@ pub struct RefundContribution<'info> {
     /// CHECK: This is the vault that holds SOL contributions
     #[account(
         mut,
-        seeds = [FAIR_LAUNCH_VAULT_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
+        seeds = [CONTRIBUTION_VAULT_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump,
     )]
     pub contribution_vault: AccountInfo<'info>,
@@ -72,7 +72,7 @@ pub fn refund_contribution(ctx: Context<RefundContribution>) -> Result<()> {
 
     // Transfer SOL from contribution vault back to contributor
     let vault_seeds = &[
-        FAIR_LAUNCH_VAULT_SEED_PREFIX.as_bytes(),
+        CONTRIBUTION_VAULT_SEED_PREFIX.as_bytes(),
         launchpad_key.as_ref(),
         &[ctx.bumps.contribution_vault],
     ];

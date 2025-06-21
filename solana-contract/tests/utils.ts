@@ -32,8 +32,12 @@ export const METAPLEX_PROGRAM = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6
 export const TEST_CONFIG = new PublicKey("BdfD7rrTZEWmf8UbEBPVpvM3wUqyrR8swjAy5SNT8gJ2")
 
 // Launchpad
-const LAUNCHPAD_SEED_PREFIX = "launchpad"
-const BUYER_SEED_PREFIX = "buyer"
+export const LAUNCHPAD_SEED_PREFIX = "launchpad";
+export const WHITELIST_DATA_SEED_PREFIX = "whitelist_data";
+export const FAIR_LAUNCH_DATA_SEED_PREFIX = "fair_launch_data";
+export const CONTRIBUTION_VAULT_SEED_PREFIX = "fair_launch_vault";
+export const BUYER_SEED_PREFIX = "buyer";
+
 
 // Allocation
 const ALLOCATION_SEED_PREFIX = "allocation"
@@ -44,14 +48,14 @@ export const PUMP_SWAP_PROGRAM_ID = new PublicKey("pAMMBay6oceH9fJKBRHGP5D4bD4sW
 const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 
 
-const connection = new Connection(clusterApiUrl("devnet"),'confirmed')
+const connection = new Connection(clusterApiUrl("devnet"), 'confirmed')
 
 
-export function getPDAs(user: PublicKey, mint: PublicKey){
+export function getPDAs(user: PublicKey, mint: PublicKey) {
   const [curveConfig] = PublicKey.findProgramAddressSync(
     [Buffer.from(CURVE_CONFIGURATION_SEED)],
     program.programId,
-    
+
   );
 
   const [bondingCurve] = PublicKey.findProgramAddressSync(
@@ -83,9 +87,14 @@ export function getPDAs(user: PublicKey, mint: PublicKey){
 }
 
 
-export function getLaunchPadPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey){
+export function getWhitelistLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey) {
   const [launchpad] = PublicKey.findProgramAddressSync(
     [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+    program.programId
+  );
+
+  const [whitelistData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(WHITELIST_DATA_SEED_PREFIX), launchpad.toBuffer()],
     program.programId
   );
 
@@ -96,21 +105,120 @@ export function getLaunchPadPDAs(authority: PublicKey, mint: PublicKey, buyer: P
 
   const launchpadTokenAccount = getAssociatedTokenAddressSync(
     mint, launchpad, true
-  )
+  );
 
   return {
     launchpad,
+    whitelistData,
     launchpadTokenAccount,
     buyerAccount,
   };
 }
 
 
-export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]){
+export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey) {
+  const [launchpad] = PublicKey.findProgramAddressSync(
+    [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+    program.programId
+  );
+
+  const [fairLaunchData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [fairLaunchVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [buyerAccount] = PublicKey.findProgramAddressSync(
+    [Buffer.from(BUYER_SEED_PREFIX), launchpad.toBuffer(), buyer.toBuffer()],
+    program.programId
+  );
+
+  const launchpadTokenAccount = getAssociatedTokenAddressSync(
+    mint, launchpad, true
+  );
+
+  return {
+    launchpad,
+    fairLaunchData,
+    fairLaunchVault,
+    launchpadTokenAccount,
+    buyerAccount,
+  };
+}
+
+export function getHybridLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey) {
+  const [launchpad] = PublicKey.findProgramAddressSync(
+    [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+    program.programId
+  );
+
+  const [whitelistData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(WHITELIST_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [fairLaunchData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [fairLaunchVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [buyerAccount] = PublicKey.findProgramAddressSync(
+    [Buffer.from(BUYER_SEED_PREFIX), launchpad.toBuffer(), buyer.toBuffer()],
+    program.programId
+  );
+
+  const launchpadTokenAccount = getAssociatedTokenAddressSync(
+    mint, launchpad, true
+  );
+
+  return {
+    launchpad,
+    whitelistData,
+    fairLaunchData,
+    fairLaunchVault,
+    launchpadTokenAccount,
+    buyerAccount,
+  };
+}
+
+export function getPauseLaunchPDAs(authority: PublicKey) {
+  const [launchpad] = PublicKey.findProgramAddressSync(
+    [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+    program.programId
+  );
+
+  const [whitelistData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(WHITELIST_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  const [fairLaunchData] = PublicKey.findProgramAddressSync(
+    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
+  return {
+    launchpad,
+    whitelistData,
+    fairLaunchData,
+  };
+}
+
+
+export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]) {
   let allocations = []
   let allocationTokenAccounts = []
   let userTokenAccounts = []
-  for(let i = 0; i < wallet.length; i++){
+  for (let i = 0; i < wallet.length; i++) {
     const [allocation] = PublicKey.findProgramAddressSync(
       [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer()],
       program.programId
@@ -136,16 +244,16 @@ export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]){
 }
 
 
-export async function getPoolTokenAccount2022(payer: Signer, mint: PublicKey, bondingCurve: PublicKey){
+export async function getPoolTokenAccount2022(payer: Signer, mint: PublicKey, bondingCurve: PublicKey) {
   const poolTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection, payer, mint, bondingCurve, true,'confirmed', null , TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+    connection, payer, mint, bondingCurve, true, 'confirmed', null, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
   )
   return poolTokenAccount
 }
 
-export async function getUserTokenAccount2022(payer: Signer, mint: PublicKey, user: PublicKey){
+export async function getUserTokenAccount2022(payer: Signer, mint: PublicKey, user: PublicKey) {
   const userTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection, payer, mint, user, true,'confirmed', null , TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+    connection, payer, mint, user, true, 'confirmed', null, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
   )
   return userTokenAccount
 }
@@ -161,7 +269,7 @@ export async function getMeteoraPDA(tokenAMint: PublicKey, tokenBMint: PublicKey
     [new anchor.BN(0).toBuffer(), firstKey.toBuffer(), secondKey.toBuffer()],
     METEORA_PROGRAM_ID
   )
-  const [lpMint] = PublicKey.findProgramAddressSync(  
+  const [lpMint] = PublicKey.findProgramAddressSync(
     [Buffer.from(LP_MINT_PREFIX), pool.toBuffer()],
     METEORA_PROGRAM_ID
   )
@@ -174,17 +282,17 @@ export async function getMeteoraPDA(tokenAMint: PublicKey, tokenBMint: PublicKey
   }
 }
 
-export function getVaultPDA(tokenAMint: PublicKey, tokenBMint: PublicKey) { 
+export function getVaultPDA(tokenAMint: PublicKey, tokenBMint: PublicKey) {
   const [
     { vaultPda: aVault, tokenVaultPda: aTokenVault, lpMintPda: aLpMintPda },
     { vaultPda: bVault, tokenVaultPda: bTokenVault, lpMintPda: bLpMintPda },
   ] = [getVaultPdas(tokenAMint, METEORA_VAULT_PROGRAM_ID), getVaultPdas(tokenBMint, METEORA_VAULT_PROGRAM_ID)];
 
-  return {aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda}
+  return { aVault, aTokenVault, aLpMintPda, bVault, bTokenVault, bLpMintPda }
 }
 
 
-export function getProtocolTokenFeePDA(tokenAMint: PublicKey, tokenBMint: PublicKey, poolKey: PublicKey) { 
+export function getProtocolTokenFeePDA(tokenAMint: PublicKey, tokenBMint: PublicKey, poolKey: PublicKey) {
   const [[protocolTokenAFee], [protocolTokenBFee]] = [
     PublicKey.findProgramAddressSync(
       [Buffer.from(PROTOCOL_FEE_PREFIX), tokenAMint.toBuffer(), poolKey.toBuffer()],
@@ -196,7 +304,7 @@ export function getProtocolTokenFeePDA(tokenAMint: PublicKey, tokenBMint: Public
     ),
   ];
 
-  return {protocolTokenAFee, protocolTokenBFee}
+  return { protocolTokenAFee, protocolTokenBFee }
 }
 
 export function deriveMintMetadata(lpMint: PublicKey) {
@@ -227,9 +335,9 @@ function getFirstKey(key1: PublicKey, key2: PublicKey): PublicKey {
   // Convert public keys to base58 strings for comparison
   const key1Str = key1.toBase58();
   const key2Str = key2.toBase58();
-  
+
   if (key1Str > key2Str) {
-      return key1;
+    return key1;
   }
   return key2;
 }
@@ -238,9 +346,9 @@ export function getSecondKey(key1: PublicKey, key2: PublicKey): PublicKey {
   // Convert public keys to base58 strings for comparison
   const key1Str = key1.toBase58();
   const key2Str = key2.toBase58();
-  
+
   if (key1Str > key2Str) {
-      return key2;
+    return key2;
   }
   return key1;
 }
@@ -257,7 +365,7 @@ export const getAssociatedTokenAccount = (tokenMint: PublicKey, owner: PublicKey
 
 export const createProgram = (connection: Connection) => {
   const provider = new AnchorProvider(connection, {} as any, AnchorProvider.defaultOptions());
-  
+
   const vaultProgram = new Program<VaultMeteora>(IDL as VaultMeteora, provider);
 
   return { vaultProgram };
@@ -267,7 +375,7 @@ export const createProgram = (connection: Connection) => {
 export const getPumpSwapPDA = (
   index: number,
   creator: PublicKey,
-  baseMint: PublicKey, 
+  baseMint: PublicKey,
   quoteMint: PublicKey,
 ) => {
   const [pool] = PublicKey.findProgramAddressSync(
@@ -287,7 +395,7 @@ export const getPumpSwapPDA = (
     true, // allowOwnerOffCurve - set to true for PDAs
     TOKEN_PROGRAM_ID
   );
-  
+
   const poolQuoteTokenAccount = getAssociatedTokenAddressSync(
     quoteMint,
     pool,
@@ -332,7 +440,7 @@ export const getPumpSwapPDA = (
     [Buffer.from("__event_authority")],
     PUMP_SWAP_PROGRAM_ID,
   );
-  return {pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority};
+  return { pool, poolBaseTokenAccount, poolQuoteTokenAccount, lpMint, userBaseTokenAccount, userQuoteTokenAccount, userPoolTokenAccount, globalConfig, eventAuthority };
 }
 
 
