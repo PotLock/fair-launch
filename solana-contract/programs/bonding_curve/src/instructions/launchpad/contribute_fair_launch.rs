@@ -54,6 +54,11 @@ pub fn contribute_fair_launch(
     let buyer_account = &mut ctx.accounts.buyer_account;
     let current_time = Clock::get()?.unix_timestamp;
 
+    // Check if fair launch is paused
+    if fair_launch_data.paused {
+        return Err(LaunchPadCustomErrror::LaunchpadPaused.into());
+    }
+
     // Check if sale has started
     if current_time < launch_pad_account.start_time {
         return Err(LaunchPadCustomErrror::SaleNotStarted.into());

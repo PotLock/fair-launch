@@ -44,6 +44,7 @@ pub struct FairLaunchData {
     pub max_tokens_per_wallet: u64,     // Maximum tokens per wallet (anti-whale)
     pub distribution_delay: i64,        // Hours to wait before distribution (0 for immediate)
     pub total_raised: u64,              // Total amount raised so far
+    pub paused: bool,                   // Emergency pause state
     pub bump: u8,                       // PDA bump seed
 }
 
@@ -123,7 +124,7 @@ impl WhitelistLaunchData {
 
 impl FairLaunchData {
     // Fixed size account
-    pub const ACCOUNT_SIZE: usize = 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1; // ~130 bytes
+    pub const ACCOUNT_SIZE: usize = 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1; // ~131 bytes
 
     pub fn new(
         launchpad: Pubkey,
@@ -146,6 +147,7 @@ impl FairLaunchData {
             max_tokens_per_wallet,
             distribution_delay,
             total_raised: 0,
+            paused: false,
             bump,
         }
     }
