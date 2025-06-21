@@ -1,5 +1,5 @@
 import { Keypair, PublicKey, Connection } from "@solana/web3.js";
-import { getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
+import { getAssociatedTokenAddress, getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import fs from 'fs';
 
 const CURVE_CONFIGURATION_SEED = "curve_configuration"
@@ -7,6 +7,7 @@ const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
 const FEE_POOL_SEED_PREFIX = "fee_pool"
 const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
+const ALLOCATION_SEED_PREFIX = "allocation"
 
 export function deserializeBondingCurve(data) {
 
@@ -164,6 +165,37 @@ export async function getPDAs(user: PublicKey, mint: PublicKey, programId: Publi
     };
 }
 
+export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[], programId: PublicKey) {
+    let allocations = []
+    let allocationTokenAccounts = []
+    let userTokenAccounts = []
+    for (let i = 0; i < wallet.length; i++) {
+        const [allocation] = PublicKey.findProgramAddressSync(
+            [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer()],
+            programId
+        );
+        allocations.push(allocation)
+
+        const allocationTokenAccount = getAssociatedTokenAddressSync(
+            mint, allocation, true
+        )
+        allocationTokenAccounts.push(allocationTokenAccount)
+
+        const userTokenAccount = getAssociatedTokenAddressSync(
+            mint, wallet[i], true
+        )
+        userTokenAccounts.push(userTokenAccount)
+    }
+
+    return {
+        allocations,
+        allocationTokenAccounts,
+        userTokenAccounts,
+    };
+}
+
+
+
 
 export function getKeypairFromFile(filePath: string): Keypair {
     return Keypair.fromSecretKey(
@@ -183,7 +215,7 @@ export async function fetchBalancePool(connection: Connection, poolSolVault: Pub
     // get token balance of poolTokenAccount
     const tokenBalance = await getAccount(connection, poolTokenAccount)
 
-    return {solBalance, tokenBalance: tokenBalance.amount};
+    return { solBalance, tokenBalance: tokenBalance.amount };
 }
 
 

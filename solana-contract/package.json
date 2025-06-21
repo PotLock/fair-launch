@@ -11,13 +11,14 @@
         "swap": "ts-node scripts/swap.ts",
         "createToken2022": "ts-node scripts/create-token2022.ts",
         "fetchTokensByOwners": "ts-node scripts/fetchTokensByOwners.ts",
-        "fetchToken": "ts-node scripts/fetchToken.ts"
+        "fetchToken": "ts-node scripts/fetchToken.ts",
+        "initilize": "ts-node scripts/initilize.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",
         "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
         "@mercurial-finance/vault-sdk": "^2.2.1",
-        "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+        "@metaplex-foundation/mpl-token-metadata": "~2.13.0",
         "@metaplex-foundation/umi": "^1.2.0",
         "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
         "@metaplex-foundation/umi-web3js-adapters": "^1.2.0",

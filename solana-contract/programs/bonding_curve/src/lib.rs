@@ -86,13 +86,15 @@ pub mod bonding_curve {
         instructions::remove_liquidity(ctx, bump)
     }
 
-    // // Only DAO can grant this permission
+    // Only admin/DAO can grant this permission
     pub fn add_fee_recipients(
         ctx: Context<AddFeeRecipient>,
         recipients: Vec<Recipient>,
     ) -> Result<()> {
         instructions::add_fee_recipients(ctx, recipients)
     }
+    
+    // TODO: Change admin that can config fee 
 
     // ============================================================================
     // Migrate Liquidity Pool Bonding Curve to DEX
