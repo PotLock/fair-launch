@@ -9,7 +9,6 @@ use crate::{
 #[derive(Accounts)]
 pub struct ContributeFairLaunch<'info> {
     #[account(
-        mut,
         seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
         bump = launch_pad_account.bump,
         constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ LaunchPadCustomErrror::InvalidLaunchType,
@@ -20,7 +19,7 @@ pub struct ContributeFairLaunch<'info> {
         mut,
         seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump = fair_launch_data.bump,
-        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CommonCustomError::InvalidAuthority,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ LaunchPadCustomErrror::InvalidAccountRelationship,
     )]
     pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
     
@@ -29,7 +28,7 @@ pub struct ContributeFairLaunch<'info> {
         seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), contributor.key().as_ref()],
         bump,
         payer = contributor,
-        space = 8 + std::mem::size_of::<BuyerAccount>(),
+        space = 8 + BuyerAccount::ACCOUNT_SIZE,
     )]
     pub buyer_account: Box<Account<'info, BuyerAccount>>,
     
@@ -50,15 +49,10 @@ pub fn contribute_fair_launch(
     ctx: Context<ContributeFairLaunch>,
     amount: u64,
 ) -> Result<()> {
-    let launch_pad_account = &mut ctx.accounts.launch_pad_account;
+    let launch_pad_account = &ctx.accounts.launch_pad_account;
     let fair_launch_data = &mut ctx.accounts.fair_launch_data;
     let buyer_account = &mut ctx.accounts.buyer_account;
     let current_time = Clock::get()?.unix_timestamp;
-
-    // Check if launchpad is paused
-    if launch_pad_account.paused {
-        return Err(LaunchPadCustomErrror::SaleIsPaused.into());
-    }
 
     // Check if sale has started
     if current_time < launch_pad_account.start_time {
@@ -71,7 +65,8 @@ pub fn contribute_fair_launch(
     }
 
     // Check if hard cap would be exceeded
-    if fair_launch_data.total_raised.checked_add(amount).unwrap() > fair_launch_data.hard_cap {
+    if fair_launch_data.total_raised.checked_add(amount)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)? > fair_launch_data.hard_cap {
         return Err(LaunchPadCustomErrror::HardCapReached.into());
     }
 
@@ -81,19 +76,21 @@ pub fn contribute_fair_launch(
     }
 
     // Check maximum contribution per wallet
-    let total_contribution = buyer_account.amount.checked_add(amount).unwrap();
+    let total_contribution = buyer_account.amount.checked_add(amount)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
     if total_contribution > fair_launch_data.max_contribution {
         return Err(LaunchPadCustomErrror::ContributionExceedsMaximum.into());
     }
 
-    // Check max tokens per wallet (calculate tokens based on contribution and price)
-    let tokens_to_receive = total_contribution
-        .checked_div(launch_pad_account.token_price)
-        .unwrap()
-        .checked_mul(10u64.pow(9)) // Assuming 9 decimals
-        .unwrap();
+    // For fair launch, we calculate tokens based on proportion of total raise
+    // This is a simplified calculation - in practice you might want more complex logic
+    let estimated_tokens = total_contribution
+        .checked_mul(fair_launch_data.max_tokens_per_wallet)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?
+        .checked_div(fair_launch_data.max_contribution)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
     
-    if tokens_to_receive > fair_launch_data.max_tokens_per_wallet {
+    if estimated_tokens > fair_launch_data.max_tokens_per_wallet {
         return Err(LaunchPadCustomErrror::MaxTokensPerWalletExceeded.into());
     }
 
@@ -113,18 +110,23 @@ pub fn contribute_fair_launch(
     if buyer_account.buyer == Pubkey::default() {
         buyer_account.buyer = ctx.accounts.contributor.key();
         buyer_account.whitelisted = false; // Fair launch doesn't use whitelist
-        launch_pad_account.buyers.push(ctx.accounts.contributor.key());
+        buyer_account.launchpad = ctx.accounts.launch_pad_account.key();
+        buyer_account.bump = ctx.bumps.buyer_account;
     }
-    buyer_account.amount = buyer_account.amount.checked_add(amount).unwrap();
+    buyer_account.amount = buyer_account.amount.checked_add(amount)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
 
     // Update fair launch data
-    fair_launch_data.total_raised = fair_launch_data.total_raised.checked_add(amount).unwrap();
+    fair_launch_data.total_raised = fair_launch_data.total_raised.checked_add(amount)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
 
     msg!("Contribution successful!");
     msg!("Contributor: {}", ctx.accounts.contributor.key());
     msg!("Amount contributed: {}", amount);
     msg!("Total contribution by user: {}", buyer_account.amount);
     msg!("Total raised: {}", fair_launch_data.total_raised);
+    msg!("Soft cap: {}", fair_launch_data.soft_cap);
+    msg!("Hard cap: {}", fair_launch_data.hard_cap);
 
     Ok(())
 } 

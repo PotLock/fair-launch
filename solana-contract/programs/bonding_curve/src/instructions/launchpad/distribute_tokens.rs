@@ -9,7 +9,6 @@ use crate::{
 #[derive(Accounts)]
 pub struct DistributeTokens<'info> {
     #[account(
-        mut,
         seeds = [LAUNCHPAD_SEED_PREFIX.as_bytes(), launch_pad_account.authority.key().as_ref()],
         bump = launch_pad_account.bump,
         constraint = launch_pad_account.launch_type == LaunchType::FairLaunch @ LaunchPadCustomErrror::InvalidLaunchType,
@@ -17,17 +16,16 @@ pub struct DistributeTokens<'info> {
     pub launch_pad_account: Box<Account<'info, LaunchPadAccount>>,
     
     #[account(
-        mut,
         seeds = [FAIR_LAUNCH_DATA_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
         bump = fair_launch_data.bump,
-        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ CommonCustomError::InvalidAuthority,
+        constraint = fair_launch_data.launchpad == launch_pad_account.key() @ LaunchPadCustomErrror::InvalidAccountRelationship,
     )]
     pub fair_launch_data: Box<Account<'info, FairLaunchData>>,
     
     #[account(
         mut,
         seeds = [BUYER_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref(), recipient.key().as_ref()],
-        bump,
+        bump = buyer_account.bump,
         constraint = buyer_account.buyer == recipient.key() @ CommonCustomError::InvalidAuthority,
     )]
     pub buyer_account: Box<Account<'info, BuyerAccount>>,
@@ -61,7 +59,7 @@ pub struct DistributeTokens<'info> {
 }
 
 pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
-    let launch_pad_account = &mut ctx.accounts.launch_pad_account;
+    let launch_pad_account = &ctx.accounts.launch_pad_account;
     let fair_launch_data = &ctx.accounts.fair_launch_data;
     let buyer_account = &mut ctx.accounts.buyer_account;
     let current_time = Clock::get()?.unix_timestamp;
@@ -87,12 +85,20 @@ pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
         return Err(CommonCustomError::InvalidAmount.into());
     }
 
-    // Calculate tokens to distribute based on contribution and token price
+    // Calculate tokens to distribute based on proportional contribution
+    // In fair launch, tokens are distributed proportionally based on contribution percentage
+    let total_tokens_available = ctx.accounts.launchpad_vault.amount;
+    
     let tokens_to_distribute = buyer_account.amount
-        .checked_div(launch_pad_account.token_price)
-        .unwrap()
-        .checked_mul(10u64.pow(ctx.accounts.token_mint.decimals as u32))
-        .unwrap();
+        .checked_mul(total_tokens_available)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?
+        .checked_div(fair_launch_data.total_raised)
+        .ok_or(CommonCustomError::OverFlowUnderFlowOccured)?;
+
+    // Ensure we don't exceed max tokens per wallet
+    if tokens_to_distribute > fair_launch_data.max_tokens_per_wallet {
+        return Err(LaunchPadCustomErrror::MaxTokensPerWalletExceeded.into());
+    }
 
     // Transfer tokens from launchpad vault to recipient
     let authority_seeds = &[
@@ -117,17 +123,13 @@ pub fn distribute_tokens(ctx: Context<DistributeTokens>) -> Result<()> {
         ctx.accounts.token_mint.decimals,
     )?;
 
-    // Update sold tokens
-    launch_pad_account.sold_tokens = launch_pad_account.sold_tokens
-        .checked_add(tokens_to_distribute)
-        .unwrap();
-
     // Mark buyer as processed by setting amount to 0
     buyer_account.amount = 0;
 
     msg!("Tokens distributed successfully!");
     msg!("Recipient: {}", ctx.accounts.recipient.key());
     msg!("Tokens distributed: {}", tokens_to_distribute);
+    msg!("Contribution percentage: {}%", (buyer_account.amount * 100) / fair_launch_data.total_raised);
 
     Ok(())
 } 

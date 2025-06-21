@@ -112,6 +112,12 @@ pub enum LaunchPadCustomErrror {
     #[msg("Sale is paused")]
     SaleIsPaused,
 
+    #[msg("Invalid account relationship")]
+    InvalidAccountRelationship,
+
+    #[msg("Launchpad is paused")]
+    LaunchpadPaused,
+
 }
 
 

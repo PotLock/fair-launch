@@ -8,6 +8,7 @@ pub const TOKEN_VAULT_PREFIX: &'static str = "token_vault";
 
 // Launchpad constants
 pub const LAUNCHPAD_SEED_PREFIX: &'static str = "launchpad";
+pub const WHITELIST_DATA_SEED_PREFIX: &'static str = "whitelist_data";
 pub const FAIR_LAUNCH_DATA_SEED_PREFIX: &'static str = "fair_launch_data";
 pub const FAIR_LAUNCH_VAULT_SEED_PREFIX: &'static str = "fair_launch_vault";
 pub const BUYER_SEED_PREFIX: &'static str = "buyer";

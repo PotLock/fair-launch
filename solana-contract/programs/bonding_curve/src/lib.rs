@@ -117,8 +117,16 @@ pub mod bonding_curve {
     // Whitelist Launchpad Functions
     // ============================================================================
 
-    pub fn create_whitelist_launch(ctx: Context<CreateWhitelistLaunch>, token_price: u64, purchase_limit_per_wallet: u64, whitelist_duration: i64, start_time: i64, end_time: i64) -> Result<()> {
-        instructions::create_whitelist_launch(ctx, token_price, purchase_limit_per_wallet, whitelist_duration, start_time, end_time)
+    pub fn create_whitelist_launch(
+        ctx: Context<CreateWhitelistLaunch>, 
+        token_price: u64, 
+        purchase_limit_per_wallet: u64, 
+        total_supply: u64,
+        whitelist_duration: i64, 
+        start_time: i64, 
+        end_time: i64
+    ) -> Result<()> {
+        instructions::create_whitelist_launch(ctx, token_price, purchase_limit_per_wallet, total_supply, whitelist_duration, start_time, end_time)
     }
     pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
         instructions::add_whitelist(ctx, user)
@@ -134,7 +142,6 @@ pub mod bonding_curve {
 
     pub fn create_fair_launch(
         ctx: Context<CreateFairLaunch>, 
-        token_price: u64,
         soft_cap: u64,
         hard_cap: u64,
         start_time: i64,
@@ -146,7 +153,6 @@ pub mod bonding_curve {
     ) -> Result<()> {
         instructions::create_fair_launch(
             ctx, 
-            token_price,
             soft_cap,
             hard_cap,
             start_time,
