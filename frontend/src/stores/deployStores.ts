@@ -58,10 +58,10 @@ const initialDeploy = {
         }
     ] as TokenDistributionItem[],
     pricingMechanism: {
-        initialPrice: '0.005',
-        finalPrice: '0.02',
-        targetRaise: '1000',
-        reserveRatio: '70',
+        initialPrice: '0',
+        finalPrice: '0',
+        targetRaise: '0',
+        reserveRatio: '0',
         curveType: 'linear'
     } as PricingMechanismData,
     dexListing: {
@@ -549,6 +549,73 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
         if (!pricingMechanism.reserveRatio || isNaN(Number(pricingMechanism.reserveRatio)) || 
             Number(pricingMechanism.reserveRatio) < 0 || Number(pricingMechanism.reserveRatio) > 100) {
             errors.reserveRatio = 'Reserve ratio must be between 0 and 100';
+        }
+
+        set((state) => ({ ...state, validationErrors: errors }));
+        return Object.keys(errors).length === 0;
+    },
+    validateAdminSetup: () => {
+        const { adminSetup } = get();
+        const errors: ValidationErrors = {};
+
+        // Validate admin wallet address
+        if (!adminSetup.adminWalletAddress || !adminSetup.adminWalletAddress.trim()) {
+            errors.adminWalletAddress = 'Admin wallet address is required';
+        } else {
+            try {
+                new PublicKey(adminSetup.adminWalletAddress);
+            } catch (error) {
+                errors.adminWalletAddress = 'Invalid Solana wallet address';
+            }
+        }
+
+        // Validate admin structure
+        if (!adminSetup.adminStructure) {
+            errors.adminStructure = 'Admin structure is required';
+        }
+
+        // Validate mint authority wallet if revoke mint authority is enabled
+        if (adminSetup.revokeMintAuthority.isEnabled) {
+            if (adminSetup.revokeMintAuthority.walletAddress && adminSetup.revokeMintAuthority.walletAddress.trim()) {
+                try {
+                    new PublicKey(adminSetup.revokeMintAuthority.walletAddress);
+                } catch (error) {
+                    errors.mintAuthorityWalletAddress = 'Invalid Solana wallet address for mint authority';
+                }
+            }
+        }
+
+        // Validate freeze authority wallet if revoke freeze authority is enabled
+        if (adminSetup.revokeFreezeAuthority.isEnabled) {
+            if (adminSetup.revokeFreezeAuthority.walletAddress && adminSetup.revokeFreezeAuthority.walletAddress.trim()) {
+                try {
+                    new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress);
+                } catch (error) {
+                    errors.freezeAuthorityWalletAddress = 'Invalid Solana wallet address for freeze authority';
+                }
+            }
+        }
+
+        // Validate token owner wallet for multisig and dao structures
+        if (adminSetup.adminStructure === 'multisig' || adminSetup.adminStructure === 'dao') {
+            if (!adminSetup.tokenOwnerWalletAddress || !adminSetup.tokenOwnerWalletAddress.trim()) {
+                errors.tokenOwnerWalletAddress = 'Token owner wallet address is required for multi-signature and DAO structures';
+            } else {
+                try {
+                    new PublicKey(adminSetup.tokenOwnerWalletAddress);
+                } catch (error) {
+                    errors.tokenOwnerWalletAddress = 'Invalid Solana wallet address for token owner';
+                }
+            }
+
+            // Validate number of signatures for multisig
+            if (adminSetup.adminStructure === 'multisig') {
+                if (!adminSetup.numberOfSignatures || adminSetup.numberOfSignatures < 1) {
+                    errors.numberOfSignatures = 'Number of signatures must be at least 1';
+                } else if (adminSetup.numberOfSignatures > 10) {
+                    errors.numberOfSignatures = 'Number of signatures cannot exceed 10';
+                }
+            }
         }
 
         set((state) => ({ ...state, validationErrors: errors }));

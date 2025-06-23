@@ -61,6 +61,7 @@ export interface DeployStateWithValidation extends DeployState {
     validateFees: () => boolean;
     validateSaleSetup: () => boolean;
     validatePricingMechanism: () => boolean;
+    validateAdminSetup: () => boolean;
     clearValidationErrors: () => void;
     updateAllocation: (data: TokenDistributionItem[]) => void;
     addAllocation: () => void;

@@ -13,6 +13,34 @@ export const TokenDistribution = () => {
         validateTokenDistribution();
     }, [allocation]);
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('allocation_') || 
+            key.includes('total_percentage')
+        );
+        
+        // Must have at least one allocation
+        const hasAllocations = allocation.length > 0;
+        
+        // All allocations must have valid data
+        const hasValidAllocations = allocation.every(item => 
+            item.percentage > 0 && 
+            item.walletAddress && 
+            item.walletAddress.trim() !== ''
+        );
+        
+        // Check vesting data if enabled
+        const hasValidVesting = allocation.every(item => {
+            if (!item.vesting.enabled) return true;
+            return item.vesting.percentage > 0 && 
+                   item.vesting.duration > 0 && 
+                   item.vesting.interval > 0;
+        });
+        
+        return !hasErrors && hasAllocations && hasValidAllocations && hasValidVesting;
+    };
+
     const handleAddAllocation = (e: React.MouseEvent) => {
         e.stopPropagation();
         addAllocation();
@@ -57,7 +85,7 @@ export const TokenDistribution = () => {
                             </button>
                         )
                     }
-                    {Object.keys(validationErrors).length === 0 && allocation.length > 0 ? (
+                    {isFormValid() ? (
                         <CircleCheck className="w-5 h-5 text-green-500" />
                     ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />

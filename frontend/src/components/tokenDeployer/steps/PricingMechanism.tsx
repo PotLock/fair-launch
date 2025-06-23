@@ -35,6 +35,30 @@ export const PricingMechanism = () => {
         validatePricingMechanism();
     };
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('curveType') || 
+            key.includes('initialPrice') || 
+            key.includes('finalPrice') || 
+            key.includes('targetRaise') ||
+            key.includes('reserveRatio')
+        );
+        
+        const hasRequiredFields = pricingMechanism.curveType && 
+                                 pricingMechanism.initialPrice && 
+                                 pricingMechanism.finalPrice && 
+                                 pricingMechanism.targetRaise && 
+                                 pricingMechanism.reserveRatio;
+        
+        const hasValidValues = parseFloat(pricingMechanism.initialPrice) > 0 && 
+                              parseFloat(pricingMechanism.finalPrice) > 0 && 
+                              parseFloat(pricingMechanism.targetRaise) > 0 && 
+                              parseFloat(pricingMechanism.reserveRatio) > 0;
+        
+        return !hasErrors && hasRequiredFields && hasValidValues;
+    };
+
     const selectedTemplate = templatesPricingMechanism.find(t => t.value === pricingMechanism.curveType);
 
     return (
@@ -44,7 +68,7 @@ export const PricingMechanism = () => {
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Price Mechanism</div>
-                {Object.keys(validationErrors).length === 0 && pricingMechanism.curveType ? (
+                {isFormValid() ? (
                     <CircleCheck className="w-5 h-5 text-green-500" />
                 ) : isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />

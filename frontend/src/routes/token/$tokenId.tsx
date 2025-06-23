@@ -12,8 +12,7 @@ import {
     Pie,
     Cell
 } from 'recharts';
-import { Globe, Copy, ChevronDown, ChevronUp } from "lucide-react";
-import { Input } from "../../components/ui/input";
+import { Globe, Copy, ChevronDown } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,

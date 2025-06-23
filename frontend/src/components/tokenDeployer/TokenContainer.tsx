@@ -3,21 +3,61 @@ import { Fuel } from "lucide-react";
 import { useDeployToken } from "../../hook/useDeployToken";
 import { useWallet } from "@solana/wallet-adapter-react";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import { LoadingModal } from "./LoadingModal";
+import { SuccessModal } from "./SuccessModal";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useDeployStore } from "../../stores/deployStores";
 
 export const TokenContainer = () => {
     const { deployToken } = useDeployToken();
     const { publicKey } = useWallet();
+    const router = useRouter();
+    const { basicInfo } = useDeployStore();
+    const navigate = useNavigate();
+
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [txid, setTxid] = useState("");
 
     const handleDeployToken = async () => {
         if (!publicKey) {
             toast.error("Please connect your wallet first!");
             return;
         }
+        
+        setIsLoading(true);
         try {
-            await deployToken();
+            const txid = await deployToken();
+            if (txid) {
+                setTxid(txid);
+                setIsSuccess(true);
+            }
         } catch (error) {
             console.error("Deploy token error:", error);
+            // toast.error("Failed to deploy token. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
+    };
+
+    const handleCancelDeployment = () => {
+        setIsLoading(false);
+        toast.error("Token deployment cancelled");
+    };
+
+    const handleViewToken = () => {
+        setIsSuccess(false);
+        navigate({ to: "/my-tokens" });
+        // Navigate to token page or open in explorer
+        if (txid) {
+            window.open(`https://solscan.io/tx/${txid}?cluster=devnet`, '_blank');
+        }
+    };
+
+    const handleReturnHome = () => {
+        setIsSuccess(false);
+        router.navigate({ to: "/" });
     };
 
     return (
@@ -47,11 +87,26 @@ export const TokenContainer = () => {
                 </div>
                 <button 
                     onClick={handleDeployToken}
-                    className="border p-2 px-3 bg-gray-100 rounded-md text-sm border-gray-300 shadow-none hover:bg-gray-200 transition-colors"
+                    disabled={isLoading}
+                    className="border p-2 px-3 bg-gray-100 rounded-md text-sm border-gray-300 shadow-none hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Deploy Token
+                    {isLoading ? "Deploying..." : "Deploy Token"}
                 </button>
             </div>
+
+            {/* Loading Modal */}
+            <LoadingModal 
+                isOpen={isLoading} 
+                onCancel={handleCancelDeployment} 
+            />
+
+            {/* Success Modal */}
+            <SuccessModal 
+                isOpen={isSuccess}
+                tokenName={basicInfo.name || "Token"}
+                onViewToken={handleViewToken}
+                onReturnHome={handleReturnHome}
+            />
         </div>
     );
 }
