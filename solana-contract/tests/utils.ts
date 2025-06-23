@@ -141,12 +141,18 @@ export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: 
     mint, launchpad, true
   );
 
+  const [contributionVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+    program.programId
+  );
+
   return {
     launchpad,
     fairLaunchData,
     fairLaunchVault,
     launchpadTokenAccount,
     buyerAccount,
+    contributionVault,
   };
 }
 

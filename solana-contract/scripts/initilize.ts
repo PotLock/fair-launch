@@ -34,12 +34,11 @@ import dotenv from "dotenv"
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program } from "@coral-xyz/anchor";
 import { BondingCurve } from "../target/types/bonding_curve";
-import { getAllocationPDAs, getPDAs } from "./utils";
+import { getAllocationPDAs, getFairLaunchPDAs, getPDAs } from "./utils";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 dotenv.config()
 
 const mintExample = new PublicKey("24Uhd6Q9pJ9TEc561BTQpDfEucW9egYuYg9Ud4ijDKFz");
-const BONDING_CURVE_PROGRAM_ID = "6qR9UPXArNpBR2m9uBfh97LXcQQQwJpKmV1ULHmxzNeW";
 const BONDING_CURVE_IDL = require("../target/idl/bonding_curve.json");
 
 async function main() {
@@ -77,114 +76,97 @@ async function main() {
     };
 
     try {
-        // const decimals = 9;
+        const decimals = 9;
 
-        // const createMintAccountInstruction = SystemProgram.createAccount({
-        //     fromPubkey: signer.publicKey,
-        //     newAccountPubkey: mint.publicKey,
-        //     space: MINT_SIZE,
-        //     lamports: await connection.getMinimumBalanceForRentExemption(MINT_SIZE),
-        //     programId: TOKEN_PROGRAM_ID,
-        // });
+        const createMintAccountInstruction = SystemProgram.createAccount({
+            fromPubkey: signer.publicKey,
+            newAccountPubkey: mint.publicKey,
+            space: MINT_SIZE,
+            lamports: await connection.getMinimumBalanceForRentExemption(MINT_SIZE),
+            programId: TOKEN_PROGRAM_ID,
+        });
 
-        // const initializeMintInstruction = createInitializeMintInstruction(
-        //     mint.publicKey,
-        //     decimals,
-        //     signer.publicKey,
-        //     signer.publicKey,
-        // );
+        const initializeMintInstruction = createInitializeMintInstruction(
+            mint.publicKey,
+            decimals,
+            signer.publicKey,
+            signer.publicKey,
+        );
 
-        // const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
-        //     {
-        //         metadata: PublicKey.findProgramAddressSync(
-        //             [
-        //                 Buffer.from("metadata"),
-        //                 PROGRAM_ID.toBuffer(),
-        //                 mint.publicKey.toBuffer(),
-        //             ],
-        //             PROGRAM_ID,
-        //         )[0],
-        //         mint: mint.publicKey,
-        //         mintAuthority: signer.publicKey,
-        //         payer: signer.publicKey,
-        //         updateAuthority: signer.publicKey,
-        //     },
-        //     {
-        //         createMetadataAccountArgsV3: {
-        //             data: {
-        //                 name: tokenMetadata.name,
-        //                 symbol: tokenMetadata.symbol,
-        //                 uri: tokenMetadata.uri,
-        //                 sellerFeeBasisPoints: tokenMetadata.sellerFeeBasisPoints,
-        //                 creators: tokenMetadata.creators,
-        //                 collection: tokenMetadata.collection,
-        //                 uses: tokenMetadata.uses,
-        //             },
-        //             isMutable: true,
-        //             collectionDetails: null,
-        //         },
-        //     }
-        // );
+        const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
+            {
+                metadata: PublicKey.findProgramAddressSync(
+                    [
+                        Buffer.from("metadata"),
+                        PROGRAM_ID.toBuffer(),
+                        mint.publicKey.toBuffer(),
+                    ],
+                    PROGRAM_ID,
+                )[0],
+                mint: mint.publicKey,
+                mintAuthority: signer.publicKey,
+                payer: signer.publicKey,
+                updateAuthority: signer.publicKey,
+            },
+            {
+                createMetadataAccountArgsV3: {
+                    data: {
+                        name: tokenMetadata.name,
+                        symbol: tokenMetadata.symbol,
+                        uri: tokenMetadata.uri,
+                        sellerFeeBasisPoints: tokenMetadata.sellerFeeBasisPoints,
+                        creators: tokenMetadata.creators,
+                        collection: tokenMetadata.collection,
+                        uses: tokenMetadata.uses,
+                    },
+                    isMutable: true,
+                    collectionDetails: null,
+                },
+            }
+        );
 
         const associatedtoken = await getAssociatedTokenAddress(
-            mintExample,
+            mint.publicKey,
             signer.publicKey,
             false,
             TOKEN_PROGRAM_ID,
             ASSOCIATED_TOKEN_PROGRAM_ID
         );
 
-        // let associatedTokenAccountInstruction = null;
-        // let transactionInstructions = [
-        //     createMintAccountInstruction,
-        //     initializeMintInstruction,
-        //     createMetadataInstruction
-        // ];
+        let associatedTokenAccountInstruction = null;
+        let tokenInstructions = [
+            createMintAccountInstruction,
+            initializeMintInstruction,
+            createMetadataInstruction
+        ];
 
-        // try {
-        //     await connection.getTokenAccountBalance(associatedtoken);
-        //     console.log("Associated token account already exists");
-        // } catch (error) {
-        //     console.log("Creating associated token account");
-        //     associatedTokenAccountInstruction = createAssociatedTokenAccountInstruction(
-        //         signer.publicKey,
-        //         associatedtoken,
-        //         signer.publicKey,
-        //         mint.publicKey,
-        //         TOKEN_PROGRAM_ID,
-        //         ASSOCIATED_TOKEN_PROGRAM_ID
-        //     );
-        //     transactionInstructions.push(associatedTokenAccountInstruction);
-        // }
+        try {
+            await connection.getTokenAccountBalance(associatedtoken);
+            console.log("Associated token account already exists");
+        } catch (error) {
+            console.log("Creating associated token account");
+            associatedTokenAccountInstruction = createAssociatedTokenAccountInstruction(
+                signer.publicKey,
+                associatedtoken,
+                signer.publicKey,
+                mint.publicKey,
+                TOKEN_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
+            );
+            tokenInstructions.push(associatedTokenAccountInstruction);
+        }
 
-        // const totalSupply = 1_000_000;
+        const totalSupply = 1_000_000;
 
-        // const mintInstruction = createMintToInstruction(
-        //     mint.publicKey,
-        //     associatedtoken,
-        //     signer.publicKey,
-        //     totalSupply * Math.pow(10, decimals)
-        // );
+        const mintInstruction = createMintToInstruction(
+            mint.publicKey,
+            associatedtoken,
+            signer.publicKey,
+            totalSupply * Math.pow(10, decimals)
+        );
 
-        // transactionInstructions.push(mintInstruction);
+        tokenInstructions.push(mintInstruction);
 
-        // console.log("Building transaction...");
-        // const transaction = new Transaction().add(...transactionInstructions);
-
-
-        // console.log("Sending and confirming transaction...");
-        // const signature = await sendAndConfirmTransaction(
-        //     connection,
-        //     transaction,
-        //     [signer, mint]
-        // );
-
-        // console.log(
-        //     `View on Solana Explorer: https://solscan.io/tx/${signature}?cluster=devnet`
-        // );
-        // console.log(
-        //     `Mint Address: https://solscan.io/tx/address/${mint.publicKey.toBase58()}?cluster=devnet`
-        // );
 
 
         // @ts-ignore
@@ -193,9 +175,11 @@ async function main() {
         const createAllocationsInstructions = await createAllocations(program, mint.publicKey, [team.publicKey, advisor.publicKey], signer);
 
 
-        const transaction = new Transaction().add(initializeInstruction, ...createAllocationsInstructions);
+        const createFairLaunchInstructions = await createFairLaunch(program, mint.publicKey, signer);
 
-        const signature = await provider.sendAndConfirm(transaction, [signer]);
+        const transaction = new Transaction().add(...tokenInstructions, initializeInstruction , ...createAllocationsInstructions, createFairLaunchInstructions);
+
+        const signature = await provider.sendAndConfirm(transaction, [signer, mint]);
         console.log("Transaction signature:", signature);
 
     } catch (error) {
@@ -288,8 +272,48 @@ async function createAllocations(program: Program<BondingCurve>, mint: PublicKey
 
     return instructions;
 
+}
 
+async function createFairLaunch(program: Program<BondingCurve>, mint: PublicKey, signer: Keypair): Promise<TransactionInstruction> {
 
+    const { launchpad, fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(signer.publicKey, mint, signer.publicKey, program.programId);
+
+    let softCap = new BN(1_000_000_000); // 1 SOL
+    let hardCap = new BN(10_000_000_000); // 10 SOL
+    let minContribution = new BN(100_000_000); // 0.1 SOL
+    let maxContribution = new BN(2_000_000_000); // 2 SOL
+    let maxTokensPerWallet = new BN(1000);
+    let distributionDelay = new BN(3600); // 1 hour
+    let currentTime = Math.floor(Date.now() / 1000);
+    let startTime = new BN(currentTime + 60); // 1 min from now
+    let endTime = new BN(currentTime + 3600); // 1 hour from now
+
+    const createFairLaunchInstruction = await program.methods
+        .createFairLaunch(
+            softCap,
+            hardCap,
+            startTime,
+            endTime,
+            minContribution,
+            maxContribution,
+            maxTokensPerWallet,
+            distributionDelay
+        )
+        .accountsStrict({
+            launchPadAccount: launchpad,
+            fairLaunchData: fairLaunchData,
+            tokenMint: mint,
+            launchpadVault: launchpadTokenAccount,
+            contributionVault: contributionVault,
+            authority: signer.publicKey,
+            systemProgram: SystemProgram.programId,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+            rent: SYSVAR_RENT_PUBKEY,
+        })
+        .instruction();
+
+    return createFairLaunchInstruction;
 
 }
 

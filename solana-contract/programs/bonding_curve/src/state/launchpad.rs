@@ -97,7 +97,7 @@ impl LaunchPadAccount {
 }
 
 impl WhitelistLaunchData {
-    pub const ACCOUNT_SIZE: usize = 5000; // Includes space for vectors
+    pub const ACCOUNT_SIZE: usize = 5000; 
 
     pub fn new(
         launchpad: Pubkey,
@@ -124,7 +124,7 @@ impl WhitelistLaunchData {
 
 impl FairLaunchData {
     // Fixed size account
-    pub const ACCOUNT_SIZE: usize = 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1; // ~131 bytes
+    pub const ACCOUNT_SIZE: usize = 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1000; // ~131 bytes
 
     pub fn new(
         launchpad: Pubkey,

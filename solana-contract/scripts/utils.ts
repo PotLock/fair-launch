@@ -7,7 +7,18 @@ const POOL_SEED_PREFIX = "bonding_curve"
 const SOL_VAULT_PREFIX = "liquidity_sol_vault"
 const FEE_POOL_SEED_PREFIX = "fee_pool"
 const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
+
+/// Allocation
 const ALLOCATION_SEED_PREFIX = "allocation"
+
+
+/// Fair Launch
+const LAUNCHPAD_SEED_PREFIX = "launchpad"
+const FAIR_LAUNCH_DATA_SEED_PREFIX = "fair_launch_data"
+const CONTRIBUTION_VAULT_SEED_PREFIX = "contribution_vault"
+const BUYER_SEED_PREFIX = "buyer"
+
+
 
 export function deserializeBondingCurve(data) {
 
@@ -193,6 +204,49 @@ export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[], programI
         userTokenAccounts,
     };
 }
+
+export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey, programId: PublicKey) {
+    const [launchpad] = PublicKey.findProgramAddressSync(
+      [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
+      programId
+    );
+  
+    const [fairLaunchData] = PublicKey.findProgramAddressSync(
+      [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), launchpad.toBuffer()],
+      programId
+    );
+  
+    const [fairLaunchVault] = PublicKey.findProgramAddressSync(
+      [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+      programId
+    );
+  
+    const [buyerAccount] = PublicKey.findProgramAddressSync(
+      [Buffer.from(BUYER_SEED_PREFIX), launchpad.toBuffer(), buyer.toBuffer()],
+      programId
+    );
+  
+    const launchpadTokenAccount = getAssociatedTokenAddressSync(
+      mint, launchpad, true
+    );
+  
+    const [contributionVault] = PublicKey.findProgramAddressSync(
+      [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+      programId
+    );
+  
+    return {
+      launchpad,
+      fairLaunchData,
+      fairLaunchVault,
+      launchpadTokenAccount,
+      buyerAccount,
+      contributionVault,
+    };
+  }
+
+
+
 
 
 

@@ -39,11 +39,9 @@ pub struct CreateFairLaunch<'info> {
     pub launchpad_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     
     #[account(
-        init,
+        mut,
         seeds = [CONTRIBUTION_VAULT_SEED_PREFIX.as_bytes(), launch_pad_account.key().as_ref()],
-        bump,
-        payer = authority,
-        space = 8 + 32, // Space for a vault account
+        bump
     )]
     /// CHECK: This is a PDA used as a vault for SOL contributions
     pub contribution_vault: AccountInfo<'info>,
@@ -102,10 +100,9 @@ pub fn create_fair_launch(
     if max_tokens_per_wallet == 0 {
         return Err(CommonCustomError::InvalidAmount.into());
     }
-
-    // Get the keys before borrowing mutably
     let fair_launch_data_key = ctx.accounts.fair_launch_data.key();
     let launch_pad_account_key = ctx.accounts.launch_pad_account.key();
+
     let contribution_vault_key = ctx.accounts.contribution_vault.key();
 
     let launch_pad_account = &mut ctx.accounts.launch_pad_account;
