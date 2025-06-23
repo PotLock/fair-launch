@@ -40,7 +40,9 @@ export function TokenCard({
 }: TokenCardProps) {
     const navigate = useNavigate();
     return (
-        <Card className="rounded-3xl border-2 border-gray-200 bg-white p-0 overflow-hidden transition hover:shadow-lg">
+        <Card
+            onClick={() => navigate({ to: `/token/${value}` })}
+            className="rounded-3xl border-2 border-gray-200 bg-white p-0 overflow-hidden transition hover:shadow-lg cursor-pointer ">
             <div className="relative p-3">
                 <div className="relative">
                     <img src={banner} alt={name} className="w-full h-48 object-cover rounded-2xl" />
@@ -88,8 +90,14 @@ export function TokenCard({
                     </div>
                 </div>
                 <div className="flex gap-2 mt-2">
-                    <Button onClick={() => navigate({ to: `/token/${value}` })} variant="outline" className="flex-1 rounded-md text-sm border-gray-300 py-2">View Details</Button>
-                    <Button variant="secondary" className="flex-1 flex items-center text-sm gap-2 rounded-md bg-gray-900 hover:bg-gray-800 text-white py-2">
+                    <Button onClick={(e) => {
+                        e.stopPropagation();
+                        navigate({ to: `/token/${value}` })
+                    }} variant="outline" className="flex-1 rounded-md text-sm border-gray-300 py-2">View Details</Button>
+                    <Button onClick={(e) => {
+                        e.stopPropagation();
+                        
+                    }} variant="secondary" className="flex-1 flex items-center text-sm gap-2 rounded-md bg-gray-900 hover:bg-gray-800 text-white py-2">
                         <ExternalLink className="w-4 h-4" />
                         View on {externalLabel}
                     </Button>

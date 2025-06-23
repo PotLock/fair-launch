@@ -95,6 +95,27 @@ export const BasicInformation = () => {
         e.preventDefault();
     };
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('name') || 
+            key.includes('symbol') || 
+            key.includes('supply') || 
+            key.includes('decimals') ||
+            key.includes('avatarUrl') ||
+            key.includes('bannerUrl')
+        );
+        
+        const hasRequiredFields = basicInfo.name.trim() !== '' && 
+                                 basicInfo.symbol.trim() !== '' && 
+                                 basicInfo.supply.trim() !== '' && 
+                                 basicInfo.decimals.trim() !== '';
+        
+        const hasImages = basicInfo.avatarUrl && basicInfo.bannerUrl;
+        
+        return !hasErrors && hasRequiredFields && hasImages;
+    };
+
     const avatarDisplay = avatarUrl || avatarPreview;
     const bannerDisplay = bannerUrl || bannerPreview;
 
@@ -106,7 +127,7 @@ export const BasicInformation = () => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Basic Information</div>
-                    {Object.keys(validationErrors).length === 0 && basicInfo.avatarUrl && basicInfo.bannerUrl ? (
+                    {isFormValid() ? (
                         <CircleCheck className="w-5 h-5 text-green-500" />
                     ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />

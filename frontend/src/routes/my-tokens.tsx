@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TokenCard } from "../components/TokenCard";
+import { MyTokenCard } from "../components/MyTokenCard";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { getMintAccounts, getTokenInfo, TokenInfo } from "../utils/tokenUtils";
@@ -98,19 +98,13 @@ function MyTokens() {
                     </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {listTokens.map((token) => (
-                        <TokenCard
-                        avatar={token.avatar}
-                        banner={token.banner}
-                        key={token.id}
-                        type={'Meme Coin'}
-                        progress={10}
-                        name={token.name}
-                        symbol={token.symbol}
-                        description={token.description}
-                        supply={token.supply.toString()}
-                        address={token.id}
-                        createdOn={token.createdOn}
-                        externalLabel={'Raydium'}
+                        <MyTokenCard
+                            avatar={token.avatar}
+                            key={token.id}
+                            progress={10}
+                            name={token.name}
+                            symbol={token.symbol}
+                            supply={token.supply.toString()}
                         />
                     ))}
                 </div>

@@ -119,6 +119,45 @@ export const DEXListing = () => {
         store.validateDexListing();
     }, [dexListing]);
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('launchLiquidityOn') || 
+            key.includes('liquiditySource') || 
+            key.includes('liquidityType') || 
+            key.includes('liquidityPercentage') ||
+            key.includes('liquidityLockupPeriod') ||
+            key.includes('walletLiquidityAmount') ||
+            key.includes('teamSolContribution') ||
+            key.includes('externalSolContribution') ||
+            key.includes('tokenAllocation') ||
+            key.includes('hybridSources')
+        );
+        
+        const hasRequiredFields = dexListing.launchLiquidityOn && 
+                                 dexListing.liquiditySource && 
+                                 dexListing.liquidityType && 
+                                 dexListing.liquidityPercentage > 0 && 
+                                 dexListing.liquidityLockupPeriod >= 30;
+        
+        // Check specific liquidity source requirements
+        let hasValidLiquidityData = true;
+        if (dexListing.liquiditySource === 'wallet') {
+            hasValidLiquidityData = (dexListing.liquidityData as any).solAmount > 0;
+        } else if (dexListing.liquiditySource === 'team') {
+            hasValidLiquidityData = (dexListing.liquidityData as any).solContribution > 0 && 
+                                   (dexListing.liquidityData as any).percentage > 0;
+        } else if (dexListing.liquiditySource === 'external') {
+            hasValidLiquidityData = (dexListing.liquidityData as any).solContribution > 0 && 
+                                   (dexListing.liquidityData as any).tokenAllocation > 0;
+        } else if (dexListing.liquiditySource === 'hybrid') {
+            const sources = (dexListing.liquidityData as any).sources;
+            hasValidLiquidityData = Object.values(sources).some(source => source === true);
+        }
+        
+        return !hasErrors && hasRequiredFields && hasValidLiquidityData;
+    };
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
             <div className="flex items-start justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
@@ -130,7 +169,7 @@ export const DEXListing = () => {
                         )
                     }
                 </div>
-                {Object.keys(validationErrors).length === 0 ? (
+                {isFormValid() ? (
                     <CircleCheck className="w-5 h-5 text-green-500" />
                 ) : isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />

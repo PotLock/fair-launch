@@ -13,6 +13,23 @@ export const Social = () => {
         validateSocials();
     };
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('twitter') || 
+            key.includes('telegram') || 
+            key.includes('discord') || 
+            key.includes('farcaster') ||
+            key.includes('website') ||
+            key.includes('socials')
+        );
+        
+        // At least one social media link should be provided
+        const hasAtLeastOneSocial = socials.twitter || socials.telegram || socials.discord || socials.farcaster || socials.website;
+        
+        return !hasErrors && hasAtLeastOneSocial;
+    };
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
             <>
@@ -21,7 +38,7 @@ export const Social = () => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Socials</div>
-                    {Object.keys(validationErrors).length === 0 && (socials.twitter || socials.telegram || socials.discord || socials.farcaster || socials.website) ? (
+                    {isFormValid() ? (
                         <CircleCheck className="w-5 h-5 text-green-500" />
                     ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />

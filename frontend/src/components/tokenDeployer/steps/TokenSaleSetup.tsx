@@ -30,6 +30,43 @@ export const TokenSaleSetup = () => {
         ) : null;
     };
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('softCap') || 
+            key.includes('hardCap') || 
+            key.includes('minimumContribution') || 
+            key.includes('maximumContribution') ||
+            key.includes('tokenPrice') ||
+            key.includes('maxTokenPerWallet') ||
+            key.includes('distributionDelay') ||
+            key.includes('launchDate') ||
+            key.includes('endDate')
+        );
+        
+        const hasRequiredFields = saleSetup.softCap && 
+                                 saleSetup.hardCap && 
+                                 saleSetup.minimumContribution && 
+                                 saleSetup.maximumContribution && 
+                                 saleSetup.tokenPrice && 
+                                 saleSetup.maxTokenPerWallet;
+        
+        const hasValidValues = parseFloat(saleSetup.softCap) > 0 && 
+                              parseFloat(saleSetup.hardCap) > 0 && 
+                              parseFloat(saleSetup.minimumContribution) > 0 && 
+                              parseFloat(saleSetup.maximumContribution) > 0 && 
+                              parseFloat(saleSetup.tokenPrice) > 0 && 
+                              parseFloat(saleSetup.maxTokenPerWallet) > 0;
+        
+        // If scheduled launch is enabled, dates are required
+        const hasValidSchedule = !saleSetup.scheduleLaunch.isEnabled || 
+                                (saleSetup.scheduleLaunch.isEnabled && 
+                                 saleSetup.scheduleLaunch.launchDate && 
+                                 saleSetup.scheduleLaunch.endDate);
+        
+        return !hasErrors && hasRequiredFields && hasValidValues && hasValidSchedule;
+    };
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div
@@ -37,7 +74,7 @@ export const TokenSaleSetup = () => {
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Token Sale Setup</div>
-                {Object.keys(validationErrors).length === 0 ? (
+                {isFormValid() ? (
                     <CircleCheck className="w-5 h-5 text-green-500" />
                 ) : isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />

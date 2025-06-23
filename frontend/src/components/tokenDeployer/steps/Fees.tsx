@@ -18,6 +18,29 @@ export const FeesStep = () => {
         validateFees();
     };
 
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('mintFee') || 
+            key.includes('transferFee') || 
+            key.includes('burnFee') || 
+            key.includes('feeRecipientAddress') ||
+            key.includes('adminWalletAddress')
+        );
+        
+        const hasRequiredFields = fees.mintFee && 
+                                 fees.transferFee && 
+                                 fees.burnFee && 
+                                 fees.feeRecipientAddress && 
+                                 fees.feeRecipientAddress.trim() !== '';
+        
+        // If admin controls are enabled, admin wallet address is required
+        const hasValidAdminControls = !fees.adminControls.isEnabled || 
+                                     (fees.adminControls.isEnabled && fees.adminControls.walletAddress && fees.adminControls.walletAddress.trim() !== '');
+        
+        return !hasErrors && hasRequiredFields && hasValidAdminControls;
+    };
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
             <div>
@@ -26,7 +49,7 @@ export const FeesStep = () => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Fee Configuration</div>
-                    {Object.keys(validationErrors).length === 0 && fees.mintFee && fees.transferFee && fees.burnFee && fees.feeRecipientAddress && (!fees.adminControls.isEnabled || (fees.adminControls.isEnabled && fees.adminControls.walletAddress)) ? (
+                    {isFormValid() ? (
                         <CircleCheck className="w-5 h-5 text-green-500" />
                     ) : isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-500" />

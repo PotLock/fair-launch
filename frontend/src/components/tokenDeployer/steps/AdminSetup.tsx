@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { useDeployStore } from '../../../stores/deployStores';
@@ -17,7 +17,9 @@ type AdminStructureType = typeof adminStructures[number]['value'];
 export const AdminSetup = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-    const { adminSetup, updateAdminSetup } = useDeployStore();
+    const { adminSetup, updateAdminSetup, validationErrors, validateAdminSetup } = useDeployStore();
+    const [mintAuthorityType, setMintAuthorityType] = useState<'primary' | 'custom'>('primary');
+    const [freezeAuthorityType, setFreezeAuthorityType] = useState<'primary' | 'custom'>('primary');
 
     const handleRevokeMintChange = (value: boolean) => {
         updateAdminSetup({ 
@@ -26,6 +28,7 @@ export const AdminSetup = () => {
                 isEnabled: value
             }
         });
+        validateAdminSetup();
     };
 
     const handleRevokeFreezeChange = (value: boolean) => {
@@ -35,6 +38,7 @@ export const AdminSetup = () => {
                 isEnabled: value
             }
         });
+        validateAdminSetup();
     };
 
     const handleMintAuthorityWalletChange = (value: string) => {
@@ -44,6 +48,7 @@ export const AdminSetup = () => {
                 walletAddress: value
             }
         });
+        validateAdminSetup();
     };
 
     const handleFreezeAuthorityWalletChange = (value: string) => {
@@ -53,23 +58,67 @@ export const AdminSetup = () => {
                 walletAddress: value
             }
         });
+        validateAdminSetup();
     };
 
     const handleAdminWalletChange = (value: string) => {
         updateAdminSetup({ adminWalletAddress: value });
+        validateAdminSetup();
     };
 
     const handleAdminStructureChange = (value: AdminStructureType) => {
         updateAdminSetup({ adminStructure: value });
         setDropdownOpen(false);
+        validateAdminSetup();
     };
 
     const handleNumberOfSignaturesChange = (value: number) => {
         updateAdminSetup({ numberOfSignatures: value });
+        validateAdminSetup();
     };
 
     const handleTokenOwnerWalletChange = (value: string) => {
         updateAdminSetup({ tokenOwnerWalletAddress: value });
+        validateAdminSetup();
+    };
+
+    useEffect(() => {
+        if (mintAuthorityType === 'primary' && adminSetup.revokeMintAuthority.isEnabled) {
+            updateAdminSetup({
+                revokeMintAuthority: {
+                    ...adminSetup.revokeMintAuthority,
+                    walletAddress: adminSetup.adminWalletAddress
+                }
+            });
+        }
+        if (freezeAuthorityType === 'primary' && adminSetup.revokeFreezeAuthority.isEnabled) {
+            updateAdminSetup({
+                revokeFreezeAuthority: {
+                    ...adminSetup.revokeFreezeAuthority,
+                    walletAddress: adminSetup.adminWalletAddress
+                }
+            });
+        }
+        // eslint-disable-next-line
+    }, [adminSetup.adminWalletAddress, mintAuthorityType, freezeAuthorityType, adminSetup.revokeMintAuthority.isEnabled, adminSetup.revokeFreezeAuthority.isEnabled]);
+
+    // Check if all required fields are valid
+    const isFormValid = () => {
+        const hasErrors = Object.keys(validationErrors).some(key => 
+            key.includes('adminWalletAddress') || 
+            key.includes('adminStructure') || 
+            key.includes('tokenOwnerWalletAddress') || 
+            key.includes('numberOfSignatures') ||
+            key.includes('mintAuthorityWalletAddress') ||
+            key.includes('freezeAuthorityWalletAddress')
+        );
+        
+        const hasRequiredFields = adminSetup.adminWalletAddress.trim() !== '';
+        
+        const hasMultisigFields = (adminSetup.adminStructure === 'multisig' || adminSetup.adminStructure === 'dao') ? 
+                                 adminSetup.tokenOwnerWalletAddress.trim() !== '' : true;
+        
+        return !hasErrors && hasRequiredFields && hasMultisigFields;
     };
 
     return (
@@ -83,7 +132,9 @@ export const AdminSetup = () => {
                         )
                     }
                 </div>
-                {isExpanded ? (
+                {isFormValid() ? (
+                    <CircleCheck className="w-5 h-5 text-green-500" />
+                ) : isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />
                 ) : (
                     <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -111,22 +162,43 @@ export const AdminSetup = () => {
                             {
                                 adminSetup.revokeMintAuthority.isEnabled && (
                                     <div className='flex flex-col gap-2 p-3 w-full'>
-                                        <RadioGroup defaultValue="comfortable" className='w-full'>
+                                        <RadioGroup value={mintAuthorityType} onValueChange={(val) => {
+                                            setMintAuthorityType(val as 'primary' | 'custom');
+                                            if (val === 'primary') {
+                                                updateAdminSetup({
+                                                    revokeMintAuthority: {
+                                                        ...adminSetup.revokeMintAuthority,
+                                                        walletAddress: adminSetup.adminWalletAddress
+                                                    }
+                                                });
+                                            } else {
+                                                updateAdminSetup({
+                                                    revokeMintAuthority: {
+                                                        ...adminSetup.revokeMintAuthority,
+                                                        walletAddress: ''
+                                                    }
+                                                });
+                                            }
+                                        }} className='w-full'>
                                             <div className="flex items-center gap-3">
-                                                <RadioGroupItem value="default" id="r1" />
-                                                <Label className='text-xs' htmlFor="r1">Same as Primary Admin</Label>
+                                                <RadioGroupItem value="primary" id="mint-primary" />
+                                                <Label className='text-xs' htmlFor="mint-primary">Same as Primary Admin</Label>
                                             </div> 
                                             <div className='flex flex-col gap-1 w-full'>
                                                 <div className="flex items-center gap-3">
-                                                    <RadioGroupItem value="comfortable" id="r2" />
-                                                    <Label className='text-xs' htmlFor="r2">Different Wallet</Label>
+                                                    <RadioGroupItem value="custom" id="mint-custom" />
+                                                    <Label className='text-xs' htmlFor="mint-custom">Different Wallet</Label>
                                                 </div>
                                                 <Input 
                                                     placeholder='Mint Authority Wallet Address' 
                                                     className='ml-5 mt-1 text-xs placeholder:text-xs w-[90%]'
-                                                    value={adminSetup.revokeMintAuthority.walletAddress}
+                                                    value={mintAuthorityType === 'primary' ? adminSetup.adminWalletAddress : adminSetup.revokeMintAuthority.walletAddress}
                                                     onChange={(e) => handleMintAuthorityWalletChange(e.target.value)}
+                                                    disabled={mintAuthorityType === 'primary'}
                                                 />
+                                                {validationErrors.mintAuthorityWalletAddress && (
+                                                    <p className="text-red-500 text-xs ml-5 mt-1">{validationErrors.mintAuthorityWalletAddress}</p>
+                                                )}
                                             </div>
                                         </RadioGroup>
                                     </div>
@@ -152,22 +224,43 @@ export const AdminSetup = () => {
                             {
                                 adminSetup.revokeFreezeAuthority.isEnabled && (
                                     <div className='flex flex-col gap-2 p-3 w-full'>
-                                        <RadioGroup defaultValue="comfortable" className='w-full'>
+                                        <RadioGroup value={freezeAuthorityType} onValueChange={(val) => {
+                                            setFreezeAuthorityType(val as 'primary' | 'custom');
+                                            if (val === 'primary') {
+                                                updateAdminSetup({
+                                                    revokeFreezeAuthority: {
+                                                        ...adminSetup.revokeFreezeAuthority,
+                                                        walletAddress: adminSetup.adminWalletAddress
+                                                    }
+                                                });
+                                            } else {
+                                                updateAdminSetup({
+                                                    revokeFreezeAuthority: {
+                                                        ...adminSetup.revokeFreezeAuthority,
+                                                        walletAddress: ''
+                                                    }
+                                                });
+                                            }
+                                        }} className='w-full'>
                                             <div className="flex items-center gap-3">
-                                                <RadioGroupItem value="default" id="r1" />
-                                                <Label className='text-xs' htmlFor="r1">Same as Primary Admin</Label>
+                                                <RadioGroupItem value="primary" id="freeze-primary" />
+                                                <Label className='text-xs' htmlFor="freeze-primary">Same as Primary Admin</Label>
                                             </div> 
                                             <div className='flex flex-col gap-1 w-full'>
                                                 <div className="flex items-center gap-3">
-                                                    <RadioGroupItem value="comfortable" id="r2" />
-                                                    <Label className='text-xs' htmlFor="r2">Different Wallet</Label>
+                                                    <RadioGroupItem value="custom" id="freeze-custom" />
+                                                    <Label className='text-xs' htmlFor="freeze-custom">Different Wallet</Label>
                                                 </div>
                                                 <Input 
                                                     placeholder='Freeze Authority Wallet Address' 
                                                     className='ml-5 mt-1 text-xs placeholder:text-xs w-[90%]'
-                                                    value={adminSetup.revokeFreezeAuthority.walletAddress}
+                                                    value={freezeAuthorityType === 'primary' ? adminSetup.adminWalletAddress : adminSetup.revokeFreezeAuthority.walletAddress}
                                                     onChange={(e) => handleFreezeAuthorityWalletChange(e.target.value)}
+                                                    disabled={freezeAuthorityType === 'primary'}
                                                 />
+                                                {validationErrors.freezeAuthorityWalletAddress && (
+                                                    <p className="text-red-500 text-xs ml-5 mt-1">{validationErrors.freezeAuthorityWalletAddress}</p>
+                                                )}
                                             </div>
                                         </RadioGroup>
                                     </div>
@@ -183,6 +276,9 @@ export const AdminSetup = () => {
                             onChange={e => handleAdminWalletChange(e.target.value)}
                             className="mt-1"
                         />
+                        {validationErrors.adminWalletAddress && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors.adminWalletAddress}</p>
+                        )}
                         <div className="text-sm text-gray-500 mt-1">This wallet will have authority to manage the token after deployment</div>
                     </div>
                     <div>
@@ -209,6 +305,9 @@ export const AdminSetup = () => {
                             </div>
                         )}
                         </div>
+                        {validationErrors.adminStructure && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors.adminStructure}</p>
+                        )}
                         <div className="text-sm text-gray-500 mt-1">How token management decisions will be made</div>
                     </div>
                     
@@ -224,6 +323,9 @@ export const AdminSetup = () => {
                                     onChange={e => handleTokenOwnerWalletChange(e.target.value)}
                                     className="mt-1"
                                 />
+                                {validationErrors.tokenOwnerWalletAddress && (
+                                    <p className="text-red-500 text-xs mt-1">{validationErrors.tokenOwnerWalletAddress}</p>
+                                )}
                                 <div className="text-xs text-gray-500 mt-1">This wallet will have authority to manage the token after deployment</div>
                             </div>
                             <div className="mb-5">
@@ -250,6 +352,9 @@ export const AdminSetup = () => {
                                         onValueChange={([val]: number[]) => handleNumberOfSignaturesChange(val)}
                                         className="mt-2"
                                     />
+                                    {validationErrors.numberOfSignatures && (
+                                        <p className="text-red-500 text-xs mt-1">{validationErrors.numberOfSignatures}</p>
+                                    )}
                                     <div className="text-xs text-gray-500 mt-1">Number of Signatures required for administration action</div>
                                 </div>
                             )}

@@ -58,7 +58,6 @@ const uploadMetadataToPinata = async (metadata: {
 
 export const useDeployToken = () => {
   const { basicInfo, allocation, dexListing, saleSetup, adminSetup } = useDeployStore();
-  const router = useRouter();
   const walletSol = useWallet();
   const { publicKey, sendTransaction, signTransaction } = walletSol;
   const { anchorWallet, program, governanceKeypair, connection, mintKeypair } = useAnchorProvider();
@@ -67,119 +66,166 @@ export const useDeployToken = () => {
     feePool: PublicKey,
     curveConfig: PublicKey
   ) => {
-    if (!anchorWallet?.publicKey || !publicKey) {
-      toast.error("Please connect wallet!");
-      return;
-    }
-
-    // Debug logging
-    // console.log("Allocation data:", allocation);
-    // console.log("Total percentage:", allocation.reduce((sum, item) => sum + item.percentage, 0));
-
-    // Validate allocation data
-    if (!allocation || allocation.length === 0) {
-      toast.error("At least one allocation is required!");
-      return;
-    }
-
-    // Validate total percentage equals 100
-    const totalPercentage = allocation.reduce((sum, item) => sum + item.percentage, 0);
-    if (totalPercentage !== 100) {
-      toast.error(`Total allocation percentage must equal 100%. Current total: ${totalPercentage}%`);
-      return;
-    }
-
-    // Validate all wallet addresses
-    const invalidWallets = allocation.filter(item => !item.walletAddress || !item.walletAddress.trim());
-    if (invalidWallets.length > 0) {
-      toast.error("All allocations must have valid wallet addresses!");
-      return;
-    }
-
-    const feePercentage = new BN(100);
-    const initialQuorum = new BN(500);
-    const daoQuorum = new BN(500);
-    const bondingCurveType = 1;
-    const maxTokenSupply = new BN(10000000000);
-
-    const recipients = allocation.map((item) => {
-      if (!item.walletAddress) {
-        throw new Error(`Invalid wallet address: address is empty`);
+    try {
+      if (!anchorWallet?.publicKey || !publicKey) {
+        toast.error("Please connect wallet!");
+        return;
       }
-      try {
-        const share = Math.round(item.percentage * 100);
-        // console.log(`Converting ${item.percentage}% to ${share} basis points`);
-        return {
-          share,
-          address: new PublicKey(item.walletAddress),
-          lockingPeriod: new BN(item.lockupPeriod),
-          amount: new BN(0),
-        };
-      } catch (error) {
-        throw new Error(`Invalid wallet address: ${item.walletAddress}`);
+
+      // Validate basic info
+      if (!basicInfo.name || !basicInfo.symbol || !basicInfo.supply || !basicInfo.decimals) {
+        toast.error("Basic token information is incomplete!");
+        return;
       }
-    });
 
-    // Validate total share percentage equals 10000 (100%)
-    const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
-    // console.log(`Total share in basis points: ${totalShare}`);
-    if (totalShare !== 10000) {
-      toast.error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
-      return;
+      // Validate supply and decimals are valid numbers
+      if (isNaN(Number(basicInfo.supply)) || Number(basicInfo.supply) <= 0) {
+        toast.error("Token supply must be a valid positive number!");
+        return;
+      }
+
+      if (isNaN(Number(basicInfo.decimals)) || Number(basicInfo.decimals) < 0) {
+        toast.error("Token decimals must be a valid non-negative number!");
+        return;
+      }
+
+      // Validate allocation data
+      if (!allocation || allocation.length === 0) {
+        toast.error("At least one allocation is required!");
+        return;
+      }
+
+      // Validate that allocation items have valid data (not just empty defaults)
+      const invalidAllocations = allocation.filter(item => 
+        item.percentage <= 0 || 
+        !item.walletAddress || 
+        !item.walletAddress.trim()
+      );
+      
+      if (invalidAllocations.length > 0) {
+        toast.error("All allocations must have valid percentages and wallet addresses!");
+        return;
+      }
+
+      // Validate total percentage equals 100
+      const totalPercentage = allocation.reduce((sum, item) => sum + item.percentage, 0);
+      if (totalPercentage !== 100) {
+        toast.error(`Total allocation percentage must equal 100%. Current total: ${totalPercentage}%`);
+        return;
+      }
+
+      // Validate all wallet addresses
+      const invalidWallets = allocation.filter(item => !item.walletAddress || !item.walletAddress.trim());
+      if (invalidWallets.length > 0) {
+        toast.error("All allocations must have valid wallet addresses!");
+        return;
+      }
+
+      // Validate wallet addresses are valid Solana addresses
+      const invalidSolanaWallets = allocation.filter(item => {
+        try {
+          new PublicKey(item.walletAddress);
+          return false;
+        } catch (error) {
+          return true;
+        }
+      });
+      
+      if (invalidSolanaWallets.length > 0) {
+        toast.error("One or more wallet addresses are invalid Solana addresses!");
+        return;
+      }
+
+      const feePercentage = new BN(100);
+      const initialQuorum = new BN(500);
+      const daoQuorum = new BN(500);
+      const bondingCurveType = 1;
+      const maxTokenSupply = new BN(10000000000);
+
+      const recipients = allocation.map((item) => {
+        if (!item.walletAddress) {
+          throw new Error(`Invalid wallet address: address is empty`);
+        }
+        try {
+          const share = Math.round(item.percentage * 100);
+          // console.log(`Converting ${item.percentage}% to ${share} basis points`);
+          return {
+            share,
+            address: new PublicKey(item.walletAddress),
+            lockingPeriod: new BN(item.lockupPeriod),
+            amount: new BN(0),
+          };
+        } catch (error) {
+          throw new Error(`Invalid wallet address: ${item.walletAddress}`);
+        }
+      });
+
+      // Validate total share percentage equals 10000 (100%)
+      const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
+      // console.log(`Total share in basis points: ${totalShare}`);
+      if (totalShare !== 10000) {
+        toast.error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
+        return;
+      }
+
+      // Debug logging
+      // console.log("Final recipients:", recipients);
+      // console.log("Total share:", recipients.reduce((sum, item) => sum + item.share, 0));
+
+      // Get target liquidity based on liquidity source type
+      let targetLiquidity = new BN(1);
+      switch (dexListing.liquiditySource) {
+        case 'wallet':
+          const walletAmount = dexListing.walletLiquidityAmount || (dexListing.liquidityData as any)?.solAmount || 0;
+          targetLiquidity = new BN(walletAmount);
+          break;
+        case 'sale':
+          targetLiquidity = new BN(saleSetup.softCap || 0);
+          break;
+        case 'bonding':
+          targetLiquidity = new BN(dexListing.liquidityPercentage);
+          break;
+        case 'team':
+          targetLiquidity = new BN(dexListing.liquidityPercentage);
+          break;
+        case 'external':
+          targetLiquidity = new BN(dexListing.liquidityPercentage);
+          break;
+        case 'hybrid':
+          targetLiquidity = new BN(dexListing.liquidityPercentage);
+          break;
+        default:
+          targetLiquidity = new BN(0);
+      }
+
+      return program.methods
+        .initialize(
+          initialQuorum,
+          feePercentage,
+          targetLiquidity,
+          governanceKeypair.publicKey,
+          daoQuorum,
+          bondingCurveType,
+          maxTokenSupply,
+          new BN(dexListing.liquidityLockupPeriod),
+          new BN(dexListing.liquidityPercentage),
+          recipients
+        )
+        .accounts({
+          configurationAccount: curveConfig,
+          admin: publicKey,
+          tokenMint: mintKeypair.publicKey,
+          feePoolAccount: feePool,
+          rent: SYSVAR_RENT_PUBKEY,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([walletSol as any])
+        .instruction();
+    } catch (error) {
+      console.error('Error in onLaunchToken:', error);
+      toast.error(`Error preparing token launch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
     }
-
-    // Debug logging
-    // console.log("Final recipients:", recipients);
-    // console.log("Total share:", recipients.reduce((sum, item) => sum + item.share, 0));
-
-    // Get target liquidity based on liquidity source type
-    let targetLiquidity = new BN(1);
-    switch (dexListing.liquiditySource) {
-      case 'wallet':
-        targetLiquidity = new BN(dexListing.walletLiquidityAmount || 0);
-        break;
-      case 'sale':
-        targetLiquidity = new BN(saleSetup.softCap || 0);
-        break;
-      case 'bonding':
-        targetLiquidity = new BN(dexListing.liquidityPercentage);
-        break;
-      case 'team':
-        targetLiquidity = new BN(dexListing.liquidityPercentage);
-        break;
-      case 'external':
-        targetLiquidity = new BN(dexListing.liquidityPercentage);
-        break;
-      case 'hybrid':
-        targetLiquidity = new BN(dexListing.liquidityPercentage);
-        break;
-      default:
-        targetLiquidity = new BN(0);
-    }
-
-    return program.methods
-      .initialize(
-        initialQuorum,
-        feePercentage,
-        targetLiquidity,
-        governanceKeypair.publicKey,
-        daoQuorum,
-        bondingCurveType,
-        maxTokenSupply,
-        new BN(dexListing.liquidityLockupPeriod),
-        new BN(dexListing.liquidityPercentage),
-        recipients
-      )
-      .accounts({
-        configurationAccount: curveConfig,
-        admin: publicKey,
-        tokenMint: mintKeypair.publicKey,
-        feePoolAccount: feePool,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([walletSol as any])
-      .instruction();
   };
 
   const deployToken = useCallback(async () => {
@@ -252,6 +298,11 @@ export const useDeployToken = () => {
 
       const curveConfigIns = await onLaunchToken(feePool, curveConfig);
 
+      if (!curveConfigIns) {
+        toast.error("Failed to prepare token launch configuration!");
+        return;
+      }
+
       const createNewTokenTransaction = new Transaction().add(
         SystemProgram.createAccount({
           fromPubkey: publicKey,
@@ -283,6 +334,18 @@ export const useDeployToken = () => {
       );
 
       if (adminSetup.revokeMintAuthority.isEnabled) {
+        // Validate mint authority wallet address
+        if (!adminSetup.revokeMintAuthority.walletAddress || !adminSetup.revokeMintAuthority.walletAddress.trim()) {
+          toast.error("Mint authority wallet address is required when revoke mint authority is enabled!");
+          return;
+        }
+        try {
+          new PublicKey(adminSetup.revokeMintAuthority.walletAddress);
+        } catch (error) {
+          toast.error("Invalid mint authority wallet address!");
+          return;
+        }
+        
         createNewTokenTransaction.add(
           createSetAuthorityInstruction(
             mintKeypair.publicKey,
@@ -294,6 +357,18 @@ export const useDeployToken = () => {
       }
 
       if (adminSetup.revokeFreezeAuthority.isEnabled) {
+        // Validate freeze authority wallet address
+        if (!adminSetup.revokeFreezeAuthority.walletAddress || !adminSetup.revokeFreezeAuthority.walletAddress.trim()) {
+          toast.error("Freeze authority wallet address is required when revoke freeze authority is enabled!");
+          return;
+        }
+        try {
+          new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress);
+        } catch (error) {
+          toast.error("Invalid freeze authority wallet address!");
+          return;
+        }
+        
         createNewTokenTransaction.add(
           createSetAuthorityInstruction(
             mintKeypair.publicKey,
@@ -320,13 +395,10 @@ export const useDeployToken = () => {
       // Send raw transaction
       const txid = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(txid);
-
-      toast.success(`🚀 Created token ${basicInfo.name} Successfully!`);
-      router.navigate({ to: "/" });
       return txid;
     } catch (error) {
-      toast.error('Create token failed!');
       console.error('Deploy token error:', error);
+      throw error; // Re-throw the error so the calling component can handle it
     }
   }, [publicKey, connection, signTransaction, sendTransaction, basicInfo, allocation, dexListing, adminSetup, saleSetup]);
 
