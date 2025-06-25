@@ -71,7 +71,7 @@ export function TokenCard({
                     <div>
                         <div className="text-gray-400">Token Address</div>
                         <a href={`https://solscan.io/token/${address}?cluster=${process.env.PUBLIC_SOL_NETWORK}`} target="_blank" className="font-medium text-gray-800 truncate hover:underline">
-                            {address.slice(0, 19)}...
+                            {address.slice(0, 6)}...{address.slice(-6)}
                         </a>
                     </div>
                     <div className="text-right">

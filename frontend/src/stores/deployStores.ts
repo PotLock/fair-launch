@@ -402,16 +402,21 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
         const { fees } = get();
         const errors: ValidationErrors = {};
 
-        if (!fees.mintFee || isNaN(Number(fees.mintFee)) || Number(fees.mintFee) < 0 || Number(fees.mintFee) > 100) {
+        if (fees.mintFee === undefined || fees.mintFee === null || isNaN(Number(fees.mintFee)) || Number(fees.mintFee) < 0 || Number(fees.mintFee) > 100) {
             errors.mintFee = 'Mint fee must be a number between 0 and 100';
         }
 
-        if (!fees.transferFee || isNaN(Number(fees.transferFee)) || Number(fees.transferFee) < 0 || Number(fees.transferFee) > 100) {
+        if (fees.transferFee === undefined || fees.transferFee === null || isNaN(Number(fees.transferFee)) || Number(fees.transferFee) < 0 || Number(fees.transferFee) > 100) {
             errors.transferFee = 'Transfer fee must be a number between 0 and 100';
         }
 
-        if (!fees.burnFee || isNaN(Number(fees.burnFee)) || Number(fees.burnFee) < 0 || Number(fees.burnFee) > 100) {
+        if (fees.burnFee === undefined || fees.burnFee === null || isNaN(Number(fees.burnFee)) || Number(fees.burnFee) < 0 || Number(fees.burnFee) > 100) {
             errors.burnFee = 'Burn fee must be a number between 0 and 100';
+        }
+
+        const totalFee = Number(fees.mintFee) + Number(fees.transferFee) + Number(fees.burnFee);
+        if (!isNaN(totalFee) && totalFee > 100) {
+            errors.totalFee = 'The sum of all fees cannot exceed 100%';
         }
 
         if (!fees.feeRecipientAddress || !fees.feeRecipientAddress.trim()) {
@@ -558,7 +563,6 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
         const { adminSetup } = get();
         const errors: ValidationErrors = {};
 
-        // Validate admin wallet address
         if (!adminSetup.adminWalletAddress || !adminSetup.adminWalletAddress.trim()) {
             errors.adminWalletAddress = 'Admin wallet address is required';
         } else {
@@ -569,12 +573,10 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             }
         }
 
-        // Validate admin structure
         if (!adminSetup.adminStructure) {
             errors.adminStructure = 'Admin structure is required';
         }
 
-        // Validate mint authority wallet if revoke mint authority is enabled
         if (adminSetup.revokeMintAuthority.isEnabled) {
             if (adminSetup.revokeMintAuthority.walletAddress && adminSetup.revokeMintAuthority.walletAddress.trim()) {
                 try {
@@ -585,7 +587,6 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             }
         }
 
-        // Validate freeze authority wallet if revoke freeze authority is enabled
         if (adminSetup.revokeFreezeAuthority.isEnabled) {
             if (adminSetup.revokeFreezeAuthority.walletAddress && adminSetup.revokeFreezeAuthority.walletAddress.trim()) {
                 try {
@@ -596,7 +597,6 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             }
         }
 
-        // Validate token owner wallet for multisig and dao structures
         if (adminSetup.adminStructure === 'multisig' || adminSetup.adminStructure === 'dao') {
             if (!adminSetup.tokenOwnerWalletAddress || !adminSetup.tokenOwnerWalletAddress.trim()) {
                 errors.tokenOwnerWalletAddress = 'Token owner wallet address is required for multi-signature and DAO structures';
@@ -608,7 +608,6 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
                 }
             }
 
-            // Validate number of signatures for multisig
             if (adminSetup.adminStructure === 'multisig') {
                 if (!adminSetup.numberOfSignatures || adminSetup.numberOfSignatures < 1) {
                     errors.numberOfSignatures = 'Number of signatures must be at least 1';
