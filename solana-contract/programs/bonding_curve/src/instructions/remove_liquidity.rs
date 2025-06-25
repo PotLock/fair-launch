@@ -47,7 +47,7 @@ pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, bump: u8) -> Result<()> {
 pub struct RemoveLiquidity<'info> {
     #[account(
         mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes(), bonding_curve_configuration.global_admin.key().as_ref()],
         bump,
     )]
     pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,

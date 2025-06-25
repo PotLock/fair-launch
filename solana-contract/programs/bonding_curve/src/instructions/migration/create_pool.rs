@@ -17,7 +17,7 @@ pub struct InitializeMeteoraPool<'info> {
 
     #[account(
         mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes(), dex_configuration_account.global_admin.key().as_ref()],
         bump,
     )]
     pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
@@ -323,7 +323,7 @@ pub struct InitializePumpswapPool<'info> {
 
     #[account(
         mut,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes(), dex_configuration_account.global_admin.key().as_ref()],
         bump,
     )]
     pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,

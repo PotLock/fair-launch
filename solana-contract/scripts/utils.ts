@@ -1,6 +1,8 @@
 import { Keypair, PublicKey, Connection } from "@solana/web3.js";
 import { getAssociatedTokenAddress, getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import fs from 'fs';
+import { Transaction, TransactionInstruction } from "@solana/web3.js";
+import { sendAndConfirmTransaction } from "@solana/web3.js";
 
 const CURVE_CONFIGURATION_SEED = "curve_configuration"
 const POOL_SEED_PREFIX = "bonding_curve"
@@ -15,7 +17,7 @@ const ALLOCATION_SEED_PREFIX = "allocation"
 /// Fair Launch
 const LAUNCHPAD_SEED_PREFIX = "launchpad"
 const FAIR_LAUNCH_DATA_SEED_PREFIX = "fair_launch_data"
-const CONTRIBUTION_VAULT_SEED_PREFIX = "contribution_vault"
+const CONTRIBUTION_VAULT_SEED_PREFIX = "fair_launch_vault"
 const BUYER_SEED_PREFIX = "buyer"
 
 
@@ -129,9 +131,9 @@ export function deserializeCurveConfiguration(data) {
 
 
 
-export async function getPDAs(user: PublicKey, mint: PublicKey, programId: PublicKey) {
+export async function getPDAs(admin: PublicKey, user: PublicKey, mint: PublicKey, programId: PublicKey) {
     const [curveConfig] = PublicKey.findProgramAddressSync(
-        [Buffer.from(CURVE_CONFIGURATION_SEED)],
+        [Buffer.from(CURVE_CONFIGURATION_SEED), admin.toBuffer()],
         programId,
 
     );
@@ -283,4 +285,77 @@ export const metadata = {
     "twitter": "",
     "telegram": "",
     "website": ""
+}
+
+/**
+ * Calculate and log transaction size to help with debugging bulk transaction issues
+ * @param transaction - The transaction to analyze
+ * @param description - Description of the transaction for logging
+ * @returns The size in bytes
+ */
+export function calculateTransactionSize(transaction: Transaction, description: string): number {
+    const serializedSize = transaction.serialize().length;
+    console.log(`${description} transaction size: ${serializedSize} bytes`);
+    
+    if (serializedSize > 1200) {
+        console.warn(`⚠️  Transaction size (${serializedSize} bytes) is approaching the 1232 byte limit!`);
+    }
+    
+    return serializedSize;
+}
+
+/**
+ * Split a large array of instructions into batches that fit within transaction size limits
+ * @param instructions - Array of instructions to batch
+ * @param maxInstructionsPerBatch - Maximum instructions per batch (default: 10)
+ * @returns Array of instruction batches
+ */
+export function batchInstructions(
+    instructions: TransactionInstruction[], 
+    maxInstructionsPerBatch: number = 10
+): TransactionInstruction[][] {
+    const batches: TransactionInstruction[][] = [];
+    
+    for (let i = 0; i < instructions.length; i += maxInstructionsPerBatch) {
+        batches.push(instructions.slice(i, i + maxInstructionsPerBatch));
+    }
+    
+    return batches;
+}
+
+/**
+ * Execute multiple transactions with staggered timing to avoid network congestion
+ * @param connection - Solana connection
+ * @param transactions - Array of transactions to execute
+ * @param signers - Array of signers for each transaction
+ * @param interval - Time in milliseconds between transactions (default: 1000)
+ * @returns Array of transaction signatures
+ */
+export async function executeStaggeredTransactions(
+    connection: Connection,
+    transactions: Transaction[],
+    signers: Keypair[][],
+    interval: number = 1000
+): Promise<string[]> {
+    const signatures: string[] = [];
+    
+    for (let i = 0; i < transactions.length; i++) {
+        console.log(`Executing transaction ${i + 1}/${transactions.length}...`);
+        
+        const signature = await sendAndConfirmTransaction(
+            connection,
+            transactions[i],
+            signers[i]
+        );
+        
+        signatures.push(signature);
+        console.log(`Transaction ${i + 1} completed: ${signature}`);
+        
+        // Wait between transactions (except for the last one)
+        if (i < transactions.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, interval));
+        }
+    }
+    
+    return signatures;
 }

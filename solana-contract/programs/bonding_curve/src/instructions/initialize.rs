@@ -8,7 +8,7 @@ pub struct InitializeBondingCurve<'info> {
         init,
         space = CurveConfiguration::ACCOUNT_SIZE,
         payer = admin,
-        seeds = [CURVE_CONFIGURATION_SEED.as_bytes()],
+        seeds = [CURVE_CONFIGURATION_SEED.as_bytes(), admin.key().as_ref()],
         bump,
     )]
     pub bonding_curve_configuration: Box<Account<'info, CurveConfiguration>>,

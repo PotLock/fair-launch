@@ -41,60 +41,60 @@ describe("bonding_curve", () => {
   const governance = Keypair.generate();
   const { vaultProgram } = createProgram(connection);
 
-  // it("Initialize the contract", async () => {
+  it("Initialize the contract", async () => {
 
-  //   try {
-  //     const [curveConfig] = PublicKey.findProgramAddressSync(
-  //       [Buffer.from(CURVE_CONFIGURATION_SEED)],
-  //       program.programId,
+    try {
+      const [curveConfig] = PublicKey.findProgramAddressSync(
+        [Buffer.from(CURVE_CONFIGURATION_SEED)],
+        program.programId,
 
-  //     );
-  //     console.log("Curve Config : ", curveConfig.toBase58())
-  //     // Fee Percentage : 100 = 1%
-  //     const feePercentage = new BN(100);
-  //     const initialQuorum = new BN(500);
-  //     const targetLiquidity = new BN(1000000000);
-  //     const daoQuorum = new BN(500);
-  //     // 0 is linear, 1 is quadratic
-  //     const bondingCurveType = 0;
-  //     const maxTokenSupply = new BN(10000000000);
-  //     const liquidityLockPeriod = new BN(60); // 30 days
-  //     const liquidityPoolPercentage = new BN(50); // 50%
-  //     const initialReserve = new BN(100000000); // 0.1 SOL
-  //     const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
-  //     const reserveRatio = new BN(5000); // 50%
-  //     let recipients = [
-  //       {
-  //         address: feeRecipient.publicKey,
-  //         share: 10000,
-  //         amount: new BN(0),
-  //         lockingPeriod: new BN(60000),
-  //       },
-  //     ]
+      );
+      console.log("Curve Config : ", curveConfig.toBase58())
+      // Fee Percentage : 100 = 1%
+      const feePercentage = new BN(100);
+      const initialQuorum = new BN(500);
+      const targetLiquidity = new BN(1000000000);
+      const daoQuorum = new BN(500);
+      // 0 is linear, 1 is quadratic
+      const bondingCurveType = 0;
+      const maxTokenSupply = new BN(10000000000);
+      const liquidityLockPeriod = new BN(60); // 30 days
+      const liquidityPoolPercentage = new BN(50); // 50%
+      const initialReserve = new BN(100000000); // 0.1 SOL
+      const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
+      const reserveRatio = new BN(5000); // 50%
+      let recipients = [
+        {
+          address: feeRecipient.publicKey,
+          share: 10000,
+          amount: new BN(0),
+          lockingPeriod: new BN(60000),
+        },
+      ]
 
 
-  //     const tx = new Transaction()
-  //       .add(
-  //         await program.methods
+      const tx = new Transaction()
+        .add(
+          await program.methods
 
-  //           .initialize(signer.payer.publicKey, initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
-  //           .accountsStrict({
+            .initialize(signer.payer.publicKey, initialQuorum, feePercentage, targetLiquidity, governance.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
+            .accountsStrict({
 
-  //             bondingCurveConfiguration: curveConfig,
-  //             admin: signer.payer.publicKey,
-  //             rent: SYSVAR_RENT_PUBKEY,
-  //             systemProgram: SystemProgram.programId
-  //           })
-  //           .instruction()
-  //       )
-  //     tx.feePayer = signer.payer.publicKey
-  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
-  //     console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
-  //   } catch (error) {
-  //     console.log("Error in initialization :", error)
-  //   }
-  // });
+              bondingCurveConfiguration: curveConfig,
+              admin: signer.payer.publicKey,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId
+            })
+            .instruction()
+        )
+      tx.feePayer = signer.payer.publicKey
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], { skipPreflight: true, commitment: "confirmed" })
+      console.log("Successfully initialized : ", `https://solscan.io/tx/${sig}?cluster=devnet`)
+    } catch (error) {
+      console.log("Error in initialization :", error)
+    }
+  });
 
   // it(" create bonding curve pool with SPL token ", async () => {
 
@@ -1126,59 +1126,59 @@ describe("bonding_curve", () => {
   // });
 
 
-  it("pause launchpad with fair launch", async () => {
-    try {
-      const { launchpad, fairLaunchData } = getPauseLaunchPDAs(signer.payer.publicKey);
+  // it("pause launchpad with fair launch", async () => {
+  //   try {
+  //     const { launchpad, fairLaunchData } = getPauseLaunchPDAs(signer.payer.publicKey);
 
-      const tx = new Transaction().add(
-        await program.methods
-          .pauseLaunchpad()
-          .accountsStrict({
-            launchPadAccount: launchpad,
-            whitelistData: null,
-            fairLaunchData: fairLaunchData,
-            authority: signer.payer.publicKey,
-          })
-          .instruction()
-      );
-      tx.feePayer = signer.payer.publicKey;
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], {
-        skipPreflight: true,
-        commitment: "confirmed",
-      });
-      console.log("Successfully paused fair launch:", `https://solscan.io/tx/${sig}?cluster=devnet`);
-    } catch (error) {
-      console.log("Error in pause fair launch:", error);
-    }
-  });
+  //     const tx = new Transaction().add(
+  //       await program.methods
+  //         .pauseLaunchpad()
+  //         .accountsStrict({
+  //           launchPadAccount: launchpad,
+  //           whitelistData: null,
+  //           fairLaunchData: fairLaunchData,
+  //           authority: signer.payer.publicKey,
+  //         })
+  //         .instruction()
+  //     );
+  //     tx.feePayer = signer.payer.publicKey;
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], {
+  //       skipPreflight: true,
+  //       commitment: "confirmed",
+  //     });
+  //     console.log("Successfully paused fair launch:", `https://solscan.io/tx/${sig}?cluster=devnet`);
+  //   } catch (error) {
+  //     console.log("Error in pause fair launch:", error);
+  //   }
+  // });
 
-  it("unpause launchpad with fair launch", async () => {
-    try {
-      const { launchpad, fairLaunchData } = getPauseLaunchPDAs(signer.payer.publicKey);
+  // it("unpause launchpad with fair launch", async () => {
+  //   try {
+  //     const { launchpad, fairLaunchData } = getPauseLaunchPDAs(signer.payer.publicKey);
 
-      const tx = new Transaction().add(
-        await program.methods
-          .unpauseLaunchpad()
-          .accountsStrict({
-            launchPadAccount: launchpad,
-            whitelistData: null,
-            fairLaunchData: fairLaunchData,
-            authority: signer.payer.publicKey,
-          })
-          .instruction()
-      );
-      tx.feePayer = signer.payer.publicKey;
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-      const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], {
-        skipPreflight: true,
-        commitment: "confirmed",
-      });
-      console.log("Successfully unpaused fair launch:", `https://solscan.io/tx/${sig}?cluster=devnet`);
-    } catch (error) {
-      console.log("Error in unpause fair launch:", error);
-    }
-  });
+  //     const tx = new Transaction().add(
+  //       await program.methods
+  //         .unpauseLaunchpad()
+  //         .accountsStrict({
+  //           launchPadAccount: launchpad,
+  //           whitelistData: null,
+  //           fairLaunchData: fairLaunchData,
+  //           authority: signer.payer.publicKey,
+  //         })
+  //         .instruction()
+  //     );
+  //     tx.feePayer = signer.payer.publicKey;
+  //     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  //     const sig = await sendAndConfirmTransaction(connection, tx, [signer.payer], {
+  //       skipPreflight: true,
+  //       commitment: "confirmed",
+  //     });
+  //     console.log("Successfully unpaused fair launch:", `https://solscan.io/tx/${sig}?cluster=devnet`);
+  //   } catch (error) {
+  //     console.log("Error in unpause fair launch:", error);
+  //   }
+  // });
 
 
   // it(" create allocation ", async () => {

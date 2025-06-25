@@ -13,15 +13,11 @@ import {
 import {
     TOKEN_PROGRAM_ID,
     MINT_SIZE,
-    getMinimumBalanceForRentExemptMint,
-    getOrCreateAssociatedTokenAccount,
     createMintToInstruction,
-    createInitializeMint2Instruction,
     createInitializeMintInstruction,
     getAssociatedTokenAddress,
     ASSOCIATED_TOKEN_PROGRAM_ID,
     createAssociatedTokenAccountInstruction,
-    getAssociatedTokenAddressSync,
 
 } from "@solana/spl-token";
 import {
@@ -38,8 +34,12 @@ import { getAllocationPDAs, getFairLaunchPDAs, getPDAs } from "./utils";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 dotenv.config()
 
-const mintExample = new PublicKey("24Uhd6Q9pJ9TEc561BTQpDfEucW9egYuYg9Ud4ijDKFz");
+
 const BONDING_CURVE_IDL = require("../target/idl/bonding_curve.json");
+
+const TX_INTERVAL = 1000;
+
+
 
 async function main() {
     const connection = new Connection("https://api.devnet.solana.com", {
@@ -55,7 +55,7 @@ async function main() {
     anchor.setProvider(provider);
 
     const program = new Program(BONDING_CURVE_IDL, provider);
-
+    console.log("Program:", program.programId.toBase58());
 
     console.log("Signer:", signer.publicKey.toBase58());
     const user1 = Keypair.fromSecretKey(bs58.decode(process.env.USER_PRIVATE_KEY))
@@ -76,134 +76,196 @@ async function main() {
     };
 
     try {
-        const decimals = 9;
-
-        const createMintAccountInstruction = SystemProgram.createAccount({
-            fromPubkey: signer.publicKey,
-            newAccountPubkey: mint.publicKey,
-            space: MINT_SIZE,
-            lamports: await connection.getMinimumBalanceForRentExemption(MINT_SIZE),
-            programId: TOKEN_PROGRAM_ID,
-        });
-
-        const initializeMintInstruction = createInitializeMintInstruction(
-            mint.publicKey,
-            decimals,
-            signer.publicKey,
-            signer.publicKey,
+        // Generate all transactions first
+        const transactionList = await generateTransactions(
+            connection,
+            program,
+            signer,
+            mint,
+            tokenMetadata,
+            [team.publicKey, advisor.publicKey],
+            provider
         );
 
-        const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
-            {
-                metadata: PublicKey.findProgramAddressSync(
-                    [
-                        Buffer.from("metadata"),
-                        PROGRAM_ID.toBuffer(),
-                        mint.publicKey.toBuffer(),
-                    ],
-                    PROGRAM_ID,
-                )[0],
-                mint: mint.publicKey,
-                mintAuthority: signer.publicKey,
-                payer: signer.publicKey,
-                updateAuthority: signer.publicKey,
-            },
-            {
-                createMetadataAccountArgsV3: {
-                    data: {
-                        name: tokenMetadata.name,
-                        symbol: tokenMetadata.symbol,
-                        uri: tokenMetadata.uri,
-                        sellerFeeBasisPoints: tokenMetadata.sellerFeeBasisPoints,
-                        creators: tokenMetadata.creators,
-                        collection: tokenMetadata.collection,
-                        uses: tokenMetadata.uses,
-                    },
-                    isMutable: true,
-                    collectionDetails: null,
-                },
+        console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
+        const txResults = await executeTransactions(connection, transactionList, signer, mint);
+        console.log("\n=== Transaction Results ===");
+        txResults.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                console.log(`Transaction ${index + 1}: ${result.value}`);
+            } else {
+                console.log(`Transaction ${index + 1} failed:`, result.reason);
             }
-        );
-
-        const associatedtoken = await getAssociatedTokenAddress(
-            mint.publicKey,
-            signer.publicKey,
-            false,
-            TOKEN_PROGRAM_ID,
-            ASSOCIATED_TOKEN_PROGRAM_ID
-        );
-
-        let associatedTokenAccountInstruction = null;
-        let tokenInstructions = [
-            createMintAccountInstruction,
-            initializeMintInstruction,
-            createMetadataInstruction
-        ];
-
-        try {
-            await connection.getTokenAccountBalance(associatedtoken);
-            console.log("Associated token account already exists");
-        } catch (error) {
-            console.log("Creating associated token account");
-            associatedTokenAccountInstruction = createAssociatedTokenAccountInstruction(
-                signer.publicKey,
-                associatedtoken,
-                signer.publicKey,
-                mint.publicKey,
-                TOKEN_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID
-            );
-            tokenInstructions.push(associatedTokenAccountInstruction);
-        }
-
-        const totalSupply = 1_000_000;
-
-        const mintInstruction = createMintToInstruction(
-            mint.publicKey,
-            associatedtoken,
-            signer.publicKey,
-            totalSupply * Math.pow(10, decimals)
-        );
-
-        tokenInstructions.push(mintInstruction);
-
-
-
-        // @ts-ignore
-        const initializeInstruction = await initializeBondingCurve(program, mint.publicKey, signer);
-
-        const createAllocationsInstructions = await createAllocations(program, mint.publicKey, [team.publicKey, advisor.publicKey], signer);
-
-
-        const createFairLaunchInstructions = await createFairLaunch(program, mint.publicKey, signer);
-
-        const transaction = new Transaction().add(...tokenInstructions, initializeInstruction , ...createAllocationsInstructions, createFairLaunchInstructions);
-
-        const signature = await provider.sendAndConfirm(transaction, [signer, mint]);
-        console.log("Transaction signature:", signature);
+        });
 
     } catch (error) {
         console.error("Error:", error);
     }
 }
 
-async function initializeBondingCurve(program: Program<BondingCurve>, mint: PublicKey, signer: Keypair): Promise<TransactionInstruction> {
+async function generateTransactions(
+    connection: Connection,
+    program: Program<BondingCurve>,
+    signer: Keypair,
+    mint: Keypair,
+    tokenMetadata: any,
+    allocationWallets: PublicKey[],
+    provider: anchor.AnchorProvider
+): Promise<Transaction[]> {
+    const transactions: Transaction[] = [];
 
-    const { curveConfig } = await getPDAs(signer.publicKey, mint, program.programId);
+    const { blockhash } = await connection.getLatestBlockhash();
 
-    // Fee Percentage : 100 = 1%
-    const feePercentage = new BN(100);
+    const tokenTransaction = await createTokenTransaction(connection, signer, mint, tokenMetadata);
+    tokenTransaction.recentBlockhash = blockhash;
+    tokenTransaction.feePayer = signer.publicKey;
+    tokenTransaction.partialSign(signer, mint);
+    transactions.push(tokenTransaction);
+
+    const bondingCurveTransaction = await createBondingCurveTransaction(program, mint.publicKey, signer);
+    bondingCurveTransaction.recentBlockhash = blockhash;
+    bondingCurveTransaction.feePayer = signer.publicKey;
+    bondingCurveTransaction.partialSign(signer);
+    transactions.push(bondingCurveTransaction);
+
+    const allocationTransactions = await createAllocationTransactions(program, mint.publicKey, allocationWallets, signer);
+    allocationTransactions.forEach(tx => {
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = signer.publicKey;
+        tx.partialSign(signer);
+    });
+    transactions.push(...allocationTransactions);
+
+    const fairLaunchTransaction = await createFairLaunchTransaction(program, mint.publicKey, signer);
+    fairLaunchTransaction.recentBlockhash = blockhash;
+    fairLaunchTransaction.feePayer = signer.publicKey;
+    fairLaunchTransaction.partialSign(signer);
+    transactions.push(fairLaunchTransaction);
+
+    const liquidityPoolTransaction = await createLiquidityPoolTransaction(program, mint.publicKey, signer);
+    liquidityPoolTransaction.recentBlockhash = blockhash;
+    liquidityPoolTransaction.feePayer = signer.publicKey;
+    liquidityPoolTransaction.partialSign(signer);
+    transactions.push(liquidityPoolTransaction);
+
+    transactions.forEach((tx, index) => {
+        const size = tx.serialize().length;
+        console.log(`Transaction ${index + 1} size: ${size} bytes`);
+        if (size > 1232) {
+            console.warn(`Transaction ${index + 1} approaching size limit!`);
+        }
+    });
+
+    return transactions;
+}
+
+async function createTokenTransaction(
+    connection: Connection,
+    signer: Keypair,
+    mint: Keypair,
+    tokenMetadata: any
+): Promise<Transaction> {
+    const decimals = 9;
+
+    const createMintAccountInstruction = SystemProgram.createAccount({
+        fromPubkey: signer.publicKey,
+        newAccountPubkey: mint.publicKey,
+        space: MINT_SIZE,
+        lamports: await connection.getMinimumBalanceForRentExemption(MINT_SIZE),
+        programId: TOKEN_PROGRAM_ID,
+    });
+
+    const initializeMintInstruction = createInitializeMintInstruction(
+        mint.publicKey,
+        decimals,
+        signer.publicKey,
+        signer.publicKey,
+    );
+
+    const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
+        {
+            metadata: PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("metadata"),
+                    PROGRAM_ID.toBuffer(),
+                    mint.publicKey.toBuffer(),
+                ],
+                PROGRAM_ID,
+            )[0],
+            mint: mint.publicKey,
+            mintAuthority: signer.publicKey,
+            payer: signer.publicKey,
+            updateAuthority: signer.publicKey,
+        },
+        {
+            createMetadataAccountArgsV3: {
+                data: {
+                    name: tokenMetadata.name,
+                    symbol: tokenMetadata.symbol,
+                    uri: tokenMetadata.uri,
+                    sellerFeeBasisPoints: tokenMetadata.sellerFeeBasisPoints,
+                    creators: tokenMetadata.creators,
+                    collection: tokenMetadata.collection,
+                    uses: tokenMetadata.uses,
+                },
+                isMutable: true,
+                collectionDetails: null,
+            },
+        }
+    );
+
+    const associatedtoken = await getAssociatedTokenAddress(
+        mint.publicKey,
+        signer.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const associatedTokenAccountInstruction = createAssociatedTokenAccountInstruction(
+        signer.publicKey,
+        associatedtoken,
+        signer.publicKey,
+        mint.publicKey,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const totalSupply = 1_000_000;
+    const mintInstruction = createMintToInstruction(
+        mint.publicKey,
+        associatedtoken,
+        signer.publicKey,
+        totalSupply * Math.pow(10, 9)
+    );
+
+    return new Transaction().add(
+        createMintAccountInstruction,
+        initializeMintInstruction,
+        createMetadataInstruction,
+        associatedTokenAccountInstruction,
+        mintInstruction
+    );
+}
+
+async function createBondingCurveTransaction(
+    program: Program<BondingCurve>,
+    mint: PublicKey,
+    signer: Keypair
+): Promise<Transaction> {
+    const { curveConfig } = await getPDAs(signer.publicKey, signer.publicKey, mint, program.programId);
+
+    const feePercentage = 100;
     const initialQuorum = new BN(500);
     const targetLiquidity = new BN(1000000000);
-    const daoQuorum = new BN(500);
-    // 0 is linear, 1 is quadratic
+    const daoQuorum = 500;
     const bondingCurveType = 0;
     const maxTokenSupply = new BN(10000000000);
-    const liquidityLockPeriod = new BN(60); // 30 days
-    const liquidityPoolPercentage = new BN(50); // 50%
-    const initialReserve = new BN(100000000); // 0.1 SOL
-    const initialSupply = new BN(100000000); // 100 SPL tokens with 6 decimals 
-    const reserveRatio = new BN(5000); // 50%
+    const liquidityLockPeriod = new BN(60);
+    const liquidityPoolPercentage = 50;
+    const initialReserve = new BN(100000000);
+    const initialSupply = new BN(100000000);
+    const reserveRatio = 5000;
     let recipients = [
         {
             address: signer.publicKey,
@@ -212,10 +274,10 @@ async function initializeBondingCurve(program: Program<BondingCurve>, mint: Publ
             lockingPeriod: new BN(60000),
         },
     ]
-    // @ts-ignore
-    const initializeInstruction = await program.methods.initialize(signer.publicKey, initialQuorum, feePercentage, targetLiquidity, signer.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
-        .accountsStrict({
 
+    const initializeInstruction = await program.methods
+        .initialize(signer.publicKey, feePercentage, initialQuorum, targetLiquidity, signer.publicKey, daoQuorum, bondingCurveType, maxTokenSupply, liquidityLockPeriod, liquidityPoolPercentage, initialReserve, initialSupply, recipients, reserveRatio)
+        .accountsStrict({
             bondingCurveConfiguration: curveConfig,
             admin: signer.publicKey,
             rent: SYSVAR_RENT_PUBKEY,
@@ -223,13 +285,17 @@ async function initializeBondingCurve(program: Program<BondingCurve>, mint: Publ
         })
         .instruction();
 
-    return initializeInstruction;
-
+    return new Transaction().add(initializeInstruction);
 }
 
-async function createAllocations(program: Program<BondingCurve>, mint: PublicKey, wallets: PublicKey[], signer: Keypair): Promise<TransactionInstruction[]> {
-
+async function createAllocationTransactions(
+    program: Program<BondingCurve>,
+    mint: PublicKey,
+    wallets: PublicKey[],
+    signer: Keypair
+): Promise<Transaction[]> {
     const { allocations, allocationTokenAccounts } = getAllocationPDAs(mint, wallets, program.programId);
+    const transactions: Transaction[] = [];
 
     let percentage = new BN(10)
     let totalTokens = new BN(1000000000000)
@@ -249,9 +315,7 @@ async function createAllocations(program: Program<BondingCurve>, mint: PublicKey
     }
 
 
-    const instructions = []
     for (let i = 0; i < wallets.length; i++) {
-
         const createAllocationInstruction = await program.methods
             .createAllocation("Team", percentage.toNumber(), totalTokens, vesting)
             .accountsStrict({
@@ -267,26 +331,28 @@ async function createAllocations(program: Program<BondingCurve>, mint: PublicKey
             })
             .instruction()
 
-        instructions.push(createAllocationInstruction)
+        transactions.push(new Transaction().add(createAllocationInstruction));
     }
 
-    return instructions;
-
+    return transactions;
 }
 
-async function createFairLaunch(program: Program<BondingCurve>, mint: PublicKey, signer: Keypair): Promise<TransactionInstruction> {
-
+async function createFairLaunchTransaction(
+    program: Program<BondingCurve>,
+    mint: PublicKey,
+    signer: Keypair
+): Promise<Transaction> {
     const { launchpad, fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(signer.publicKey, mint, signer.publicKey, program.programId);
 
-    let softCap = new BN(1_000_000_000); // 1 SOL
-    let hardCap = new BN(10_000_000_000); // 10 SOL
-    let minContribution = new BN(100_000_000); // 0.1 SOL
-    let maxContribution = new BN(2_000_000_000); // 2 SOL
+    let softCap = new BN(1_000_000_000);
+    let hardCap = new BN(10_000_000_000);
+    let minContribution = new BN(100_000_000);
+    let maxContribution = new BN(2_000_000_000);
     let maxTokensPerWallet = new BN(1000);
-    let distributionDelay = new BN(3600); // 1 hour
+    let distributionDelay = new BN(3600);
     let currentTime = Math.floor(Date.now() / 1000);
-    let startTime = new BN(currentTime + 60); // 1 min from now
-    let endTime = new BN(currentTime + 3600); // 1 hour from now
+    let startTime = new BN(currentTime + 60);
+    let endTime = new BN(currentTime + 3600);
 
     const createFairLaunchInstruction = await program.methods
         .createFairLaunch(
@@ -313,14 +379,63 @@ async function createFairLaunch(program: Program<BondingCurve>, mint: PublicKey,
         })
         .instruction();
 
-    return createFairLaunchInstruction;
+    return new Transaction().add(createFairLaunchInstruction);
+}
+
+async function createLiquidityPoolTransaction(
+    program: Program<BondingCurve>,
+    mint: PublicKey,
+    signer: Keypair
+): Promise<Transaction> {
+    const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = await getPDAs(signer.publicKey, signer.publicKey, mint, program.programId);
+    const createLiquidityPoolInstruction = await program.methods
+        .createPool()
+        .accountsStrict({
+              bondingCurveConfiguration: curveConfig,
+              bondingCurveAccount: bondingCurve,
+              tokenMint: mint,
+              poolTokenAccount: poolTokenAccount,
+              poolSolVault: poolSolVault,
+              userTokenAccount: userTokenAccount,
+              user: signer.publicKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID
+        })
+        .instruction();
+    return new Transaction().add(createLiquidityPoolInstruction);
+
 
 }
 
 
+async function executeTransactions(
+    solanaConnection: Connection, 
+    transactionList: Transaction[], 
+    payer: Keypair,
+    mint?: Keypair
+): Promise<PromiseSettledResult<string>[]> {
+    let result: PromiseSettledResult<string>[] = [];
+    
+    let staggeredTransactions: Promise<string>[] = transactionList.map((transaction, i, allTx) => {
+        return (new Promise((resolve, reject) => {
+            setTimeout(() => {
+                console.log(`Requesting Transaction ${i + 1}/${allTx.length}`);
+                solanaConnection.getLatestBlockhash()
+                    .then(recentHash => transaction.recentBlockhash = recentHash.blockhash)
+                    .then(() => {
+                        const signers = i === 0 && mint ? [payer, mint] : [payer];
+                        return sendAndConfirmTransaction(solanaConnection, transaction, signers);
+                    })
+                    .then(resolve)
+                    .catch(reject);
+            }, i * TX_INTERVAL);
+        }));
+    });
 
-
-
-
+    result = await Promise.allSettled(staggeredTransactions);
+    return result;
+}
 
 main();
