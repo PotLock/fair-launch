@@ -25,20 +25,25 @@ export const FeesStep = () => {
             key.includes('transferFee') || 
             key.includes('burnFee') || 
             key.includes('feeRecipientAddress') ||
-            key.includes('adminWalletAddress')
+            key.includes('adminWalletAddress') ||
+            key.includes('totalFee') // include totalFee error
         );
         
-        const hasRequiredFields = fees.mintFee && 
-                                 fees.transferFee && 
-                                 fees.burnFee && 
-                                 fees.feeRecipientAddress && 
-                                 fees.feeRecipientAddress.trim() !== '';
+        // Allow zero, so check for undefined/null, not falsy
+        const hasRequiredFields = (fees.mintFee !== undefined && fees.mintFee !== null)
+                                 && (fees.transferFee !== undefined && fees.transferFee !== null)
+                                 && (fees.burnFee !== undefined && fees.burnFee !== null)
+                                 && fees.feeRecipientAddress && fees.feeRecipientAddress.trim() !== '';
+        
+        // Check that the sum does not exceed 100
+        const totalFee = Number(fees.mintFee) + Number(fees.transferFee) + Number(fees.burnFee);
+        const isTotalFeeValid = !isNaN(totalFee) && totalFee <= 100;
         
         // If admin controls are enabled, admin wallet address is required
         const hasValidAdminControls = !fees.adminControls.isEnabled || 
                                      (fees.adminControls.isEnabled && fees.adminControls.walletAddress && fees.adminControls.walletAddress.trim() !== '');
         
-        return !hasErrors && hasRequiredFields && hasValidAdminControls;
+        return !hasErrors && hasRequiredFields && hasValidAdminControls && isTotalFeeValid;
     };
 
     return (
