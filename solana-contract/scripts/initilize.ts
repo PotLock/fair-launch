@@ -295,6 +295,8 @@ async function createAllocationTransactions(
     signer: Keypair
 ): Promise<Transaction[]> {
     const { allocations, allocationTokenAccounts } = getAllocationPDAs(mint, wallets, program.programId);
+    console.log("Allocation wallets:", wallets);
+    console.log("Allocation's accounts:", allocations);
     const transactions: Transaction[] = [];
 
     let percentage = new BN(10)

@@ -11,14 +11,14 @@ const FEE_POOL_SEED_PREFIX = "fee_pool"
 const FEE_POOL_VAULT_PREFIX = "fee_pool_vault"
 
 /// Allocation
-const ALLOCATION_SEED_PREFIX = "allocation"
+export const ALLOCATION_SEED_PREFIX = "allocation"
 
 
 /// Fair Launch
-const LAUNCHPAD_SEED_PREFIX = "launchpad"
-const FAIR_LAUNCH_DATA_SEED_PREFIX = "fair_launch_data"
-const CONTRIBUTION_VAULT_SEED_PREFIX = "fair_launch_vault"
-const BUYER_SEED_PREFIX = "buyer"
+export const LAUNCHPAD_SEED_PREFIX = "launchpad"
+export const FAIR_LAUNCH_DATA_SEED_PREFIX = "fair_launch_data"
+export const CONTRIBUTION_VAULT_SEED_PREFIX = "fair_launch_vault"
+export const BUYER_SEED_PREFIX = "buyer"
 
 
 
@@ -129,7 +129,94 @@ export function deserializeCurveConfiguration(data) {
     };
 }
 
+export const deserializeAllocationAndVesting = (data) => {
+    if (data.length < 8) {
+        throw new Error(`Invalid account data length: expected at least 8 bytes for discriminator, got ${data.length}`);
+    }
 
+    let offset = 8; // Skip the 8-byte discriminator
+
+    // category: String
+    // String is serialized as: 4 bytes (length) + string bytes
+    const categoryLength = data.readUInt32LE(offset);
+    offset += 4;
+    const category = data.slice(offset, offset + categoryLength).toString('utf8');
+    offset += categoryLength;
+
+    // wallet: Pubkey (32 bytes)
+    const wallet = new PublicKey(data.slice(offset, offset + 32));
+    offset += 32;
+
+    // percentage: u8 (1 byte)
+    const percentage = data.readUInt8(offset);
+    offset += 1;
+
+    // total_tokens: u64 (8 bytes, little-endian)
+    const totalTokens = data.readBigUInt64LE(offset);
+    offset += 8;
+
+    // claimed_tokens: u64 (8 bytes, little-endian)
+    const claimedTokens = data.readBigUInt64LE(offset);
+    offset += 8;
+
+    // vesting: Option<Vesting>
+    // Option is serialized as: 1 byte (0 = None, 1 = Some) + data if Some
+    const hasVesting = data.readUInt8(offset) !== 0;
+    offset += 1;
+
+    let vesting = null;
+    if (hasVesting) {
+        // cliff_period: i64 (8 bytes, little-endian, signed)
+        const cliffPeriod = data.readBigInt64LE(offset);
+        offset += 8;
+
+        // start_time: i64 (8 bytes, little-endian, signed)
+        const startTime = data.readBigInt64LE(offset);
+        offset += 8;
+
+        // duration: i64 (8 bytes, little-endian, signed)
+        const duration = data.readBigInt64LE(offset);
+        offset += 8;
+
+        // interval: i64 (8 bytes, little-endian, signed)
+        const interval = data.readBigInt64LE(offset);
+        offset += 8;
+
+        // released: u64 (8 bytes, little-endian, unsigned)
+        const released = data.readBigUInt64LE(offset);
+        offset += 8;
+
+        vesting = {
+            cliffPeriod: cliffPeriod.toString(), // Convert to string to avoid precision loss
+            startTime: startTime.toString(),
+            duration: duration.toString(),
+            interval: interval.toString(),
+            released: Number(released), // Convert to number if safe, else keep as string
+            // Add human-readable timestamps
+            startTimeDate: new Date(Number(startTime) * 1000).toISOString(),
+            cliffEndDate: new Date((Number(startTime) + Number(cliffPeriod)) * 1000).toISOString(),
+            endDate: new Date((Number(startTime) + Number(duration)) * 1000).toISOString(),
+        };
+    }
+
+    // bump: u8 (1 byte)
+    const bump = data.readUInt8(offset);
+    offset += 1;
+
+    return {
+        category,
+        wallet: wallet.toBase58(),
+        percentage,
+        totalTokens: Number(totalTokens), // Convert to number if safe
+        claimedTokens: Number(claimedTokens),
+        vesting,
+        bump,
+        // Add calculated fields for convenience
+        unclaimedTokens: Number(totalTokens) - Number(claimedTokens),
+        claimProgress: Number(claimedTokens) / Number(totalTokens) * 100, // Percentage claimed
+        isFullyClaimed: Number(claimedTokens) >= Number(totalTokens),
+    };
+}
 
 export async function getPDAs(admin: PublicKey, user: PublicKey, mint: PublicKey, programId: PublicKey) {
     const [curveConfig] = PublicKey.findProgramAddressSync(
