@@ -12,7 +12,8 @@
         "createToken2022": "ts-node scripts/create-token2022.ts",
         "fetchTokensByOwners": "ts-node scripts/fetchTokensByOwners.ts",
         "fetchToken": "ts-node scripts/fetchToken.ts",
-        "initilize": "ts-node scripts/initilize.ts"
+        "initilize": "ts-node scripts/initilize.ts",
+        "delete": "ts-node scripts/delete.ts"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.30.1",

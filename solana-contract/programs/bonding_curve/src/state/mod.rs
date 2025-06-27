@@ -11,3 +11,4 @@ pub use curve_configuration::*;
 pub use meteora::*;
 pub use pumpswap::*;
 pub use launchpad::*;
+pub use allocation::*;

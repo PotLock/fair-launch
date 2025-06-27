@@ -23,3 +23,6 @@ pub use launchpad::*;
 
 pub mod allocation;
 pub use allocation::*;
+
+pub mod delete;
+pub use delete::*;

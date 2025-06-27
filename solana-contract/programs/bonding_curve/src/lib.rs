@@ -10,7 +10,7 @@ use crate::instructions::*;
 use crate::state::Recipient;
 use crate::instructions::allocation::{CreateAllocation, ClaimTokens, create_allocation, claim_tokens};
 use crate::state::allocation::Vesting;
-declare_id!("2133PDFLFMiJyzqKU55up2wThH68QjVFjtrtC5Mx91TY");
+declare_id!("DYd5zDvFtNGRKahZQyvznQe5wLdKBrHPGJKpK31P2DzV");
 
 #[program]
 pub mod bonding_curve {
@@ -209,5 +209,34 @@ pub mod bonding_curve {
         now: i64,
     ) -> Result<u64> {
         instructions::claim_tokens(ctx, now)
+    }
+
+    // ==========================================================================
+    // Delete/Close Functions
+    // ==========================================================================
+    pub fn delete_bonding_curve(ctx: Context<DeleteBondingCurve>) -> Result<()> {
+        instructions::delete::delete_bonding_curve(ctx)
+    }
+
+    pub fn delete_curve_configuration(ctx: Context<DeleteCurveConfiguration>) -> Result<()> {
+        instructions::delete::delete_curve_configuration(ctx)
+    }
+
+    pub fn delete_allocation(ctx: Context<DeleteAllocation>) -> Result<()> {
+        instructions::delete::delete_allocation(ctx)
+    }
+
+    pub fn delete_launchpad_account(ctx: Context<DeleteLaunchPadAccount>) -> Result<()> {
+        instructions::delete::delete_launchpad_account(ctx)
+    }
+
+    pub fn delete_fair_launch_data(ctx: Context<DeleteFairLaunchData>) -> Result<()> {
+        instructions::delete::delete_fair_launch_data(ctx)
+    }
+
+    pub fn delete_vault(ctx: Context<DeleteVault>, vault_seeds: Vec<Vec<u8>>) -> Result<()> {
+        // Convert Vec<Vec<u8>> to Vec<&[u8]> for the CPI call
+        let seed_refs: Vec<&[u8]> = vault_seeds.iter().map(|v| v.as_slice()).collect();
+        instructions::delete::delete_vault(ctx, seed_refs)
     }
 }

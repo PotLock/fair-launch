@@ -51,9 +51,9 @@ const program = anchor.workspace.BondingCurve as Program<BondingCurve>;
 const connection = new Connection(clusterApiUrl("devnet"), 'confirmed')
 
 
-export function getPDAs(user: PublicKey, mint: PublicKey) {
+export function getPDAs(admin: PublicKey, user: PublicKey, mint: PublicKey) {
   const [curveConfig] = PublicKey.findProgramAddressSync(
-    [Buffer.from(CURVE_CONFIGURATION_SEED)],
+    [Buffer.from(CURVE_CONFIGURATION_SEED), admin.toBuffer()],
     program.programId,
 
   );
