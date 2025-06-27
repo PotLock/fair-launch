@@ -462,33 +462,39 @@ export const useDeployToken = () => {
     tokenTransaction.recentBlockhash = blockhash;
     tokenTransaction.feePayer = anchorWallet?.publicKey;
     tokenTransaction.partialSign(mintKeypair)
-    transactions.push(tokenTransaction);
+    const tokenTx = await anchorWallet?.signTransaction(tokenTransaction);
+    transactions.push(tokenTx);
 
-    // // Generate bonding curve transaction
+    // Generate bonding curve transaction
     // const bondingCurveTransaction = await createBondingCurveTransaction();
     // bondingCurveTransaction.recentBlockhash = blockhash;
     // bondingCurveTransaction.feePayer = anchorWallet?.publicKey;
-    // transactions.push(bondingCurveTransaction);
+    // const bondingCurveTx = await anchorWallet?.signTransaction(bondingCurveTransaction);
+    // transactions.push(bondingCurveTx);
 
-    // // Generate allocation transactions
+    // Generate allocation transactions
     // const allocationTransactions = await createAllocationTransactions();
-    // allocationTransactions.forEach(tx => {
+    // allocationTransactions.forEach(async (tx) => {
     //   tx.recentBlockhash = blockhash;
     //   tx.feePayer = anchorWallet?.publicKey;
+    //   const allocationTx = await anchorWallet?.signTransaction(tx);
+    //   transactions.push(allocationTx);
     // });
     // transactions.push(...allocationTransactions);
 
-    // // Generate fair launch transaction
+    // Generate fair launch transaction
     // const fairLaunchTransaction = await createFairLaunchTransaction();
     // fairLaunchTransaction.recentBlockhash = blockhash;
     // fairLaunchTransaction.feePayer = anchorWallet?.publicKey;
-    // transactions.push(fairLaunchTransaction);
+    // const fairLaunchTx = await anchorWallet?.signTransaction(fairLaunchTransaction);
+    // transactions.push(fairLaunchTx);
 
     // // Generate liquidity pool transaction
     // const liquidityPoolTransaction = await createLiquidityPoolTransaction();
     // liquidityPoolTransaction.recentBlockhash = blockhash;
     // liquidityPoolTransaction.feePayer = anchorWallet?.publicKey;
-    // transactions.push(liquidityPoolTransaction);
+    // const liquidityPoolTx = await anchorWallet?.signTransaction(liquidityPoolTransaction);
+    // transactions.push(liquidityPoolTx);
 
     // Log transaction sizes
     transactions.forEach((tx, index) => {
@@ -514,11 +520,9 @@ export const useDeployToken = () => {
             console.log(`Requesting Transaction ${i + 1}/${allTx.length}`);
             const { blockhash } = await connection.getLatestBlockhash();
             transaction.recentBlockhash = blockhash;
-            const signedTx = await anchorWallet?.signTransaction(transaction);
-            const txid = await connection.sendRawTransaction(signedTx?.serialize() || new Uint8Array());
-            await connection.confirmTransaction(txid);
-            console.log(`Transaction ${i + 1} completed:`, txid);
-            resolve(txid);
+            const signedTx = await connection.sendTransaction(transaction, [mintKeypair]);
+            console.log('signedTx', signedTx);
+            resolve(signedTx);
           } catch (error) {
             console.error(`Transaction ${i + 1} failed:`, error);
             reject(error);
