@@ -10,8 +10,9 @@ import {
     createSetAuthorityInstruction,
     getAssociatedTokenAddress,
     getMinimumBalanceForRentExemptMint,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import {
     PublicKey,
     SYSVAR_RENT_PUBKEY,
@@ -23,9 +24,13 @@ import { BN } from "bn.js";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
-import { getPDAs } from "../utils/sol";
+import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
-import { useRouter } from "@tanstack/react-router";
+import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
+import { Keypair } from "@solana/web3.js";
+
+
+const TX_INTERVAL = 1000;
 
 const uploadMetadataToPinata = async (metadata: {
     name: string;
@@ -33,6 +38,9 @@ const uploadMetadataToPinata = async (metadata: {
     description?: string;
     image?: string;
     banner?: string;
+    template?: string;
+    pricingMechanism?: string;
+    exchange?: string;
 }) => {
     try {
         const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
@@ -57,350 +65,535 @@ const uploadMetadataToPinata = async (metadata: {
 };
 
 export const useDeployToken = () => {
-  const { basicInfo, allocation, dexListing, saleSetup, adminSetup } = useDeployStore();
-  const walletSol = useWallet();
-  const { publicKey, sendTransaction, signTransaction } = walletSol;
-  const { anchorWallet, program, governanceKeypair, connection, mintKeypair } = useAnchorProvider();
+  const { basicInfo, allocation, dexListing, saleSetup, adminSetup, selectedTemplate, selectedPricing, selectedExchange } = useDeployStore();
+  const { program, connection } = useAnchorProvider();
+  const anchorWallet = useAnchorWallet();
+  const mintKeypair = Keypair.generate();
+  
+  console.log('mintKeypair', mintKeypair.publicKey.toBase58());
 
-  const onLaunchToken = (
-    feePool: PublicKey,
-    curveConfig: PublicKey
-  ) => {
-    try {
-      if (!anchorWallet?.publicKey || !publicKey) {
-        toast.error("Please connect wallet!");
-        return;
+  const createTokenTransaction = async (): Promise<Transaction> => {
+    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !connection || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    const decimals = Number(basicInfo.decimals || 9);
+    const supply = basicInfo.supply || "1000000";
+    
+    // Calculate mint amount with decimals
+    let mintAmount: string;
+    if (decimals === 0) {
+      mintAmount = supply;
+    } else {
+      mintAmount = supply + "0".repeat(decimals);
+    }
+
+    const mintAmountNumber = Number(mintAmount);
+    if (isNaN(mintAmountNumber) || mintAmountNumber <= 0) {
+      throw new Error("Invalid mint amount calculated");
+    }
+
+    const lamports = await getMinimumBalanceForRentExemptMint(connection);
+    const tokenATA = await getAssociatedTokenAddress(
+      mintKeypair.publicKey,
+      anchorWallet?.publicKey
+    );
+
+    // Upload metadata to Pinata
+    const metadataUri = await uploadMetadataToPinata({
+      name: basicInfo.name,
+      symbol: basicInfo.symbol,
+      description: basicInfo.description || "",
+      image: basicInfo.avatarUrl || "",
+      banner: basicInfo.bannerUrl || "",
+      template: selectedTemplate,
+      pricingMechanism: selectedPricing,
+      exchange: selectedExchange
+    });
+
+    const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
+
+    const metadataInstruction = createCreateMetadataAccountV3Instruction(
+      {
+        metadata: mintMetadataId,
+        updateAuthority: anchorWallet?.publicKey,
+        mint: mintKeypair.publicKey,
+        mintAuthority: anchorWallet?.publicKey,
+        payer: anchorWallet?.publicKey,
+      },
+      {
+        createMetadataAccountArgsV3: {
+          data: {
+            name: basicInfo.name,
+            symbol: basicInfo.symbol,
+            uri: metadataUri,
+            sellerFeeBasisPoints: 0,
+            creators: null,
+            collection: null,
+            uses: null,
+          },
+          isMutable: true,
+          collectionDetails: null,
+        },
       }
+    );
 
-      // Validate basic info
-      if (!basicInfo.name || !basicInfo.symbol || !basicInfo.supply || !basicInfo.decimals) {
-        toast.error("Basic token information is incomplete!");
-        return;
+    const transaction = new Transaction().add(
+      SystemProgram.createAccount({
+        fromPubkey: anchorWallet?.publicKey,
+        newAccountPubkey: mintKeypair.publicKey,
+        space: MINT_SIZE,
+        lamports: lamports,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      createInitializeMintInstruction(
+        mintKeypair.publicKey,
+        decimals,
+        anchorWallet?.publicKey,
+        anchorWallet?.publicKey,
+        TOKEN_PROGRAM_ID
+      ),
+      createAssociatedTokenAccountInstruction(
+        anchorWallet?.publicKey,
+        tokenATA,
+        anchorWallet?.publicKey,
+        mintKeypair.publicKey,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      ),
+      createMintToInstruction(
+        mintKeypair.publicKey,
+        tokenATA,
+        anchorWallet?.publicKey,
+        mintAmountNumber
+      ),
+      metadataInstruction
+    );
+
+    // Add authority revocation instructions if enabled
+    if (adminSetup.revokeMintAuthority.isEnabled) {
+      if (!adminSetup.revokeMintAuthority.walletAddress?.trim()) {
+        throw new Error("Mint authority wallet address is required when revoke mint authority is enabled");
       }
-
-      // Validate supply and decimals are valid numbers
-      if (isNaN(Number(basicInfo.supply)) || Number(basicInfo.supply) <= 0) {
-        toast.error("Token supply must be a valid positive number!");
-        return;
-      }
-
-      if (isNaN(Number(basicInfo.decimals)) || Number(basicInfo.decimals) < 0) {
-        toast.error("Token decimals must be a valid non-negative number!");
-        return;
-      }
-
-      // Validate allocation data
-      if (!allocation || allocation.length === 0) {
-        toast.error("At least one allocation is required!");
-        return;
-      }
-
-      // Validate that allocation items have valid data (not just empty defaults)
-      const invalidAllocations = allocation.filter(item => 
-        item.percentage <= 0 || 
-        !item.walletAddress || 
-        !item.walletAddress.trim()
-      );
-      
-      if (invalidAllocations.length > 0) {
-        toast.error("All allocations must have valid percentages and wallet addresses!");
-        return;
-      }
-
-      // Validate total percentage equals 100
-      const totalPercentage = allocation.reduce((sum, item) => sum + item.percentage, 0);
-      if (totalPercentage !== 100) {
-        toast.error(`Total allocation percentage must equal 100%. Current total: ${totalPercentage}%`);
-        return;
-      }
-
-      // Validate all wallet addresses
-      const invalidWallets = allocation.filter(item => !item.walletAddress || !item.walletAddress.trim());
-      if (invalidWallets.length > 0) {
-        toast.error("All allocations must have valid wallet addresses!");
-        return;
-      }
-
-      // Validate wallet addresses are valid Solana addresses
-      const invalidSolanaWallets = allocation.filter(item => {
-        try {
-          new PublicKey(item.walletAddress);
-          return false;
-        } catch (error) {
-          return true;
-        }
-      });
-      
-      if (invalidSolanaWallets.length > 0) {
-        toast.error("One or more wallet addresses are invalid Solana addresses!");
-        return;
-      }
-
-      const feePercentage = new BN(100);
-      const initialQuorum = new BN(500);
-      const daoQuorum = new BN(500);
-      const bondingCurveType = 1;
-      const maxTokenSupply = new BN(10000000000);
-
-      const recipients = allocation.map((item) => {
-        if (!item.walletAddress) {
-          throw new Error(`Invalid wallet address: address is empty`);
-        }
-        try {
-          const share = Math.round(item.percentage * 100);
-          // console.log(`Converting ${item.percentage}% to ${share} basis points`);
-          return {
-            share,
-            address: new PublicKey(item.walletAddress),
-            lockingPeriod: new BN(item.lockupPeriod),
-            amount: new BN(0),
-          };
-        } catch (error) {
-          throw new Error(`Invalid wallet address: ${item.walletAddress}`);
-        }
-      });
-
-      // Validate total share percentage equals 10000 (100%)
-      const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
-      // console.log(`Total share in basis points: ${totalShare}`);
-      if (totalShare !== 10000) {
-        toast.error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
-        return;
-      }
-
-      // Debug logging
-      // console.log("Final recipients:", recipients);
-      // console.log("Total share:", recipients.reduce((sum, item) => sum + item.share, 0));
-
-      // Get target liquidity based on liquidity source type
-      let targetLiquidity = new BN(1);
-      switch (dexListing.liquiditySource) {
-        case 'wallet':
-          const walletAmount = dexListing.walletLiquidityAmount || (dexListing.liquidityData as any)?.solAmount || 0;
-          targetLiquidity = new BN(walletAmount);
-          break;
-        case 'sale':
-          targetLiquidity = new BN(saleSetup.softCap || 0);
-          break;
-        case 'bonding':
-          targetLiquidity = new BN(dexListing.liquidityPercentage);
-          break;
-        case 'team':
-          targetLiquidity = new BN(dexListing.liquidityPercentage);
-          break;
-        case 'external':
-          targetLiquidity = new BN(dexListing.liquidityPercentage);
-          break;
-        case 'hybrid':
-          targetLiquidity = new BN(dexListing.liquidityPercentage);
-          break;
-        default:
-          targetLiquidity = new BN(0);
-      }
-
-      return program.methods
-        .initialize(
-          initialQuorum,
-          feePercentage,
-          targetLiquidity,
-          governanceKeypair.publicKey,
-          daoQuorum,
-          bondingCurveType,
-          maxTokenSupply,
-          new BN(dexListing.liquidityLockupPeriod),
-          new BN(dexListing.liquidityPercentage),
-          recipients
+      transaction.add(
+        createSetAuthorityInstruction(
+          mintKeypair.publicKey,
+          anchorWallet?.publicKey,
+          AuthorityType.MintTokens,
+          new PublicKey(adminSetup.revokeMintAuthority.walletAddress)
         )
-        .accounts({
-          configurationAccount: curveConfig,
-          admin: publicKey,
+      );
+    }
+
+    if (adminSetup.revokeFreezeAuthority.isEnabled) {
+      if (!adminSetup.revokeFreezeAuthority.walletAddress?.trim()) {
+        throw new Error("Freeze authority wallet address is required when revoke freeze authority is enabled");
+      }
+      transaction.add(
+        createSetAuthorityInstruction(
+          mintKeypair.publicKey,
+          anchorWallet?.publicKey,
+          AuthorityType.FreezeAccount,
+          new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress)
+        )
+      );
+    }
+
+    return transaction;
+  };
+
+  const createBondingCurveTransaction = async (): Promise<Transaction> => {
+    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    const { curveConfig } = await getPDAs(
+      anchorWallet?.publicKey,
+      mintKeypair.publicKey,
+      program
+    );
+
+    const feePercentage = 100;
+    const initialQuorum = new BN(500);
+    const targetLiquidity = new BN(dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 1000000000);
+    const daoQuorum = 500;
+    const bondingCurveType = 0;
+    
+    // Calculate maxTokenSupply from basic info
+    const supply = basicInfo.supply || "0";
+    const decimals = Number(basicInfo.decimals || 0);
+    
+    if (isNaN(decimals) || decimals < 0) {
+      throw new Error("Invalid token decimals value");
+    }
+    
+    let maxTokenSupplyValue: string;
+    if (decimals === 0) {
+      maxTokenSupplyValue = supply;
+    } else {
+      maxTokenSupplyValue = supply + "0".repeat(decimals);
+    }
+    
+    const maxTokenSupply = new BN(maxTokenSupplyValue);
+    const liquidityLockPeriod = new BN(dexListing.liquidityLockupPeriod || 60);
+    const liquidityPoolPercentage = dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 50;
+    const initialReserve = new BN(100000000);
+    const initialSupply = new BN(100000000);
+    const reserveRatio = 5000;
+
+    // Create recipients array from allocation data
+    const recipients = allocation.map((item) => {
+      if (!item.walletAddress) {
+        throw new Error(`Invalid wallet address: address is empty`);
+      }
+      try {
+        const share = Math.round(item.percentage * 100);
+        return {
+          address: new PublicKey(item.walletAddress),
+          share,
+          amount: new BN(0),
+          lockingPeriod: new BN(item.lockupPeriod || 60000),
+        };
+      } catch (error) {
+        throw new Error(`Invalid wallet address: ${item.walletAddress}`);
+      }
+    });
+
+    // Validate total share percentage equals 10000 (100%)
+    const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
+    if (totalShare !== 10000) {
+      throw new Error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
+    }
+
+    const instruction = await program.methods
+      .initialize(
+        anchorWallet?.publicKey,
+        feePercentage,
+        initialQuorum,
+        targetLiquidity,
+        anchorWallet?.publicKey,
+        daoQuorum,
+        bondingCurveType,
+        maxTokenSupply,
+        liquidityLockPeriod,
+        liquidityPoolPercentage,
+        initialReserve,
+        initialSupply,
+        recipients,
+        reserveRatio
+      )
+      .accountsStrict({
+        bondingCurveConfiguration: curveConfig,
+        admin: anchorWallet?.publicKey,
+        rent: SYSVAR_RENT_PUBKEY,
+        systemProgram: SystemProgram.programId
+      })
+      .instruction();
+
+    return new Transaction().add(instruction);
+  };
+
+  const createAllocationTransactions = async (): Promise<Transaction[]> => {
+    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    if (!allocation || allocation.length === 0) {
+      return [];
+    }
+
+    const allocationWallets = allocation.map(item => new PublicKey(item.walletAddress));
+    const { allocations, allocationTokenAccounts } = await getAllocationPDAs(mintKeypair.publicKey, allocationWallets, program.programId);
+
+    const transactions: Transaction[] = [];
+
+    for (let i = 0; i < allocation.length; i++) {
+      const item = allocation[i];
+      const percentage = new BN(item.percentage || 0);
+      
+      // Calculate totalTokens from basic info
+      const supply = basicInfo.supply || "0";
+      const decimals = Number(basicInfo.decimals || 0);
+      
+      if (isNaN(decimals) || decimals < 0) {
+        throw new Error("Invalid token decimals value");
+      }
+      
+      let totalTokensValue: string;
+      if (decimals === 0) {
+        totalTokensValue = supply;
+      } else {
+        totalTokensValue = supply + "0".repeat(decimals);
+      }
+      
+      const totalTokens = new BN(totalTokensValue);
+      const currentTime = Math.floor(Date.now() / 1000);
+      const startTime = new BN(currentTime + 1000);
+      const cliffPeriod = new BN(item.lockupPeriod || 1000);
+      const duration = new BN(item.lockupPeriod || 1000);
+      const interval = new BN(1000);
+      const released = new BN(0);
+
+      const vesting = {
+        cliffPeriod,
+        startTime,
+        duration,
+        interval,
+        released,
+      };
+
+      const instruction = await program.methods
+        .createAllocation("Allocation", percentage.toNumber(), totalTokens, vesting)
+        .accountsStrict({
+          allocation: allocations[i],
+          wallet: allocationWallets[i],
           tokenMint: mintKeypair.publicKey,
-          feePoolAccount: feePool,
+          allocationVault: allocationTokenAccounts[i],
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
+          authority: anchorWallet?.publicKey,
         })
-        .signers([walletSol as any])
         .instruction();
-    } catch (error) {
-      console.error('Error in onLaunchToken:', error);
-      toast.error(`Error preparing token launch: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return null;
+
+      transactions.push(new Transaction().add(instruction));
     }
+
+    return transactions;
+  };
+
+  const createFairLaunchTransaction = async (): Promise<Transaction> => {
+    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    const { launchpad, fairLaunchData, launchpadTokenAccount, contributionVault } = await getFairLaunchPDAs(
+      anchorWallet?.publicKey,
+      mintKeypair.publicKey,
+      anchorWallet?.publicKey,
+      program.programId
+    );
+
+    const softCap = new BN(Number(saleSetup.softCap) || 1_000_000_000);
+    const hardCap = new BN(Number(saleSetup.hardCap) || 10_000_000_000);
+    const minContribution = new BN(Number(saleSetup.minimumContribution) || 100_000_000);
+    const maxContribution = new BN(Number(saleSetup.maximumContribution) || 2_000_000_000);
+    const maxTokensPerWallet = new BN(Number(saleSetup.maxTokenPerWallet) || 1000);
+    const distributionDelay = new BN(saleSetup.distributionDelay || 3600);
+    const currentTime = Math.floor(Date.now() / 1000);
+    const startTime = new BN(currentTime + 60);
+    const endTime = new BN(currentTime + 3600);
+
+    const instruction = await program.methods
+      .createFairLaunch(
+        softCap,
+        hardCap,
+        startTime,
+        endTime,
+        minContribution,
+        maxContribution,
+        maxTokensPerWallet,
+        distributionDelay
+      )
+      .accountsStrict({
+        launchPadAccount: launchpad,
+        fairLaunchData: fairLaunchData,
+        tokenMint: mintKeypair.publicKey,
+        launchpadVault: launchpadTokenAccount,
+        contributionVault: contributionVault,
+        authority: anchorWallet?.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .instruction();
+
+    return new Transaction().add(instruction);
+  };
+
+  const createLiquidityPoolTransaction = async (): Promise<Transaction> => {
+    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = await getPDAs(
+      anchorWallet?.publicKey,
+      mintKeypair.publicKey,
+      program
+    );
+
+    const instruction = await program.methods
+      .createPool()
+      .accountsStrict({
+        bondingCurveConfiguration: curveConfig,
+        bondingCurveAccount: bondingCurve,
+        tokenMint: mintKeypair.publicKey,
+        poolTokenAccount: poolTokenAccount,
+        poolSolVault: poolSolVault,
+        userTokenAccount: userTokenAccount,
+        user: anchorWallet?.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
+        systemProgram: SystemProgram.programId,
+        associatedTokenProgram: ASSOCIATED_PROGRAM_ID
+      })
+      .instruction();
+
+    return new Transaction().add(instruction);
+  };
+
+  const generateTransactions = async (): Promise<Transaction[]> => {
+    if (!anchorWallet?.publicKey || !connection || !program?.programId || !mintKeypair?.publicKey) {
+      throw new Error("Please connect wallet and ensure all dependencies are available");
+    }
+
+    // Validate basic info
+    if (!basicInfo.name || !basicInfo.symbol || !basicInfo.supply || !basicInfo.decimals) {
+      throw new Error("Basic token information is incomplete");
+    }
+    
+    const transactions: Transaction[] = [];
+    const { blockhash } = await connection.getLatestBlockhash();
+
+    // Generate token transaction
+    const tokenTransaction = await createTokenTransaction();
+    tokenTransaction.recentBlockhash = blockhash;
+    tokenTransaction.feePayer = anchorWallet?.publicKey;
+    tokenTransaction.partialSign(mintKeypair)
+    transactions.push(tokenTransaction);
+
+    // // Generate bonding curve transaction
+    // const bondingCurveTransaction = await createBondingCurveTransaction();
+    // bondingCurveTransaction.recentBlockhash = blockhash;
+    // bondingCurveTransaction.feePayer = anchorWallet?.publicKey;
+    // transactions.push(bondingCurveTransaction);
+
+    // // Generate allocation transactions
+    // const allocationTransactions = await createAllocationTransactions();
+    // allocationTransactions.forEach(tx => {
+    //   tx.recentBlockhash = blockhash;
+    //   tx.feePayer = anchorWallet?.publicKey;
+    // });
+    // transactions.push(...allocationTransactions);
+
+    // // Generate fair launch transaction
+    // const fairLaunchTransaction = await createFairLaunchTransaction();
+    // fairLaunchTransaction.recentBlockhash = blockhash;
+    // fairLaunchTransaction.feePayer = anchorWallet?.publicKey;
+    // transactions.push(fairLaunchTransaction);
+
+    // // Generate liquidity pool transaction
+    // const liquidityPoolTransaction = await createLiquidityPoolTransaction();
+    // liquidityPoolTransaction.recentBlockhash = blockhash;
+    // liquidityPoolTransaction.feePayer = anchorWallet?.publicKey;
+    // transactions.push(liquidityPoolTransaction);
+
+    // Log transaction sizes
+    transactions.forEach((tx, index) => {
+      const size = tx.serialize().length;
+      console.log(`Transaction ${index + 1} size: ${size} bytes`);
+      if (size > 1232) {
+        console.warn(`Transaction ${index + 1} approaching size limit!`);
+      }
+    });
+
+    return transactions;
+  };
+
+  const executeTransactions = async (transactionList: Transaction[]): Promise<PromiseSettledResult<string>[]> => {
+    if (!connection) {
+      throw new Error("Connection and signTransaction not available");
+    }
+
+    const staggeredTransactions: Promise<string>[] = transactionList.map((transaction, i, allTx) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+          try {
+            console.log(`Requesting Transaction ${i + 1}/${allTx.length}`);
+            const { blockhash } = await connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            const signedTx = await anchorWallet?.signTransaction(transaction);
+            const txid = await connection.sendRawTransaction(signedTx?.serialize() || new Uint8Array());
+            await connection.confirmTransaction(txid);
+            console.log(`Transaction ${i + 1} completed:`, txid);
+            resolve(txid);
+          } catch (error) {
+            console.error(`Transaction ${i + 1} failed:`, error);
+            reject(error);
+          }
+        }, i * TX_INTERVAL);
+      });
+    });
+
+    return await Promise.allSettled(staggeredTransactions);
   };
 
   const deployToken = useCallback(async () => {
     try {
-      if (!anchorWallet?.publicKey || !publicKey || !signTransaction) {
+      if (!anchorWallet?.publicKey) {
         toast.error("Please connect wallet!");
         return;
       }
 
-      const lamports = await getMinimumBalanceForRentExemptMint(connection);
-      const tokenATA = await getAssociatedTokenAddress(
-        mintKeypair.publicKey,
-        publicKey
-      );
-
-      const { curveConfig, feePool } = await getPDAs(
-        anchorWallet?.publicKey,
-        mintKeypair.publicKey,
-        program
-      );
-
-      const accountInfo = await connection.getAccountInfo(curveConfig);
-      if (accountInfo !== null) {
-        toast.error("Configuration account already exists!");
+      if (!program?.programId) {
+        toast.error("Program not initialized!");
         return;
       }
 
-      // Check if mint account already exists
-      const mintAccountInfo = await connection.getAccountInfo(mintKeypair.publicKey);
-      if (mintAccountInfo !== null) {
-        toast.error('Mint account already exists!');
+      if (!mintKeypair?.publicKey) {
+        toast.error("Mint keypair not initialized!");
         return;
       }
 
-      // Upload metadata to Pinata
-      const metadataUri = await uploadMetadataToPinata({
-        name: basicInfo.name,
-        symbol: basicInfo.symbol,
-        description: basicInfo.description || "",
-        image: basicInfo.avatarUrl || "",
-        banner: basicInfo.bannerUrl || ""
+      if (!connection) {
+        toast.error("Solana connection not available!");
+        return;
+      }
+
+      // Generate all transactions first
+      const transactionList = await generateTransactions();
+
+      console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
+      const txResults = await executeTransactions(transactionList);
+      
+      console.log("\n=== Transaction Results ===");
+      let successCount = 0;
+      txResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`Transaction ${index + 1}: ${result.value}`);
+          successCount++;
+        } else {
+          console.log(`Transaction ${index + 1} failed:`, result.reason);
+          // Show specific error messages based on transaction type
+          if (index === 0) {
+            toast.error(`Token creation failed: ${result.reason}`);
+          } else if (index === 1) {
+            toast.error(`Bonding curve creation failed: ${result.reason}`);
+          } else if (index < 2 + allocation.length) {
+            toast.error(`Allocation creation failed: ${result.reason}`);
+          } else if (index === 2 + allocation.length) {
+            toast.error(`Fair launch creation failed: ${result.reason}`);
+          } else {
+            toast.error(`Liquidity pool creation failed: ${result.reason}`);
+          }
+        }
       });
 
-      const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
-
-      const metadataInstruction = createCreateMetadataAccountV3Instruction(
-        {
-          metadata: mintMetadataId,
-          updateAuthority: publicKey,
-          mint: mintKeypair.publicKey,
-          mintAuthority: publicKey,
-          payer: publicKey,
-        },
-        {
-          createMetadataAccountArgsV3: {
-            data: {
-              name: basicInfo.name,
-              symbol: basicInfo.symbol,
-              uri: metadataUri,
-              sellerFeeBasisPoints: 0,
-              creators: null,
-              collection: null,
-              uses: null,
-            },
-            isMutable: true,
-            collectionDetails: null,
-          },
-        }
-      );
-
-      const curveConfigIns = await onLaunchToken(feePool, curveConfig);
-
-      if (!curveConfigIns) {
-        toast.error("Failed to prepare token launch configuration!");
-        return;
+      if (successCount === transactionList.length) {
+        toast.success("Token deployed successfully! 🎉");
+        return txResults[0].status === 'fulfilled' ? txResults[0].value : undefined; // Return the first transaction ID
+      } else {
+        toast.error(`Deployment partially failed. ${successCount}/${transactionList.length} transactions succeeded.`);
       }
 
-      const createNewTokenTransaction = new Transaction().add(
-        SystemProgram.createAccount({
-          fromPubkey: publicKey,
-          newAccountPubkey: mintKeypair.publicKey,
-          space: MINT_SIZE,
-          lamports: lamports,
-          programId: TOKEN_PROGRAM_ID,
-        }),
-        createInitializeMintInstruction(
-          mintKeypair.publicKey,
-          Number(basicInfo.decimals),
-          publicKey,
-          publicKey,
-          TOKEN_PROGRAM_ID
-        ),
-        createAssociatedTokenAccountInstruction(
-          publicKey,
-          tokenATA,
-          publicKey,
-          mintKeypair.publicKey
-        ),
-        createMintToInstruction(
-          mintKeypair.publicKey,
-          tokenATA,
-          publicKey,
-          Number(basicInfo.supply) * Math.pow(10, Number(basicInfo.decimals))
-        ),
-        metadataInstruction
-      );
-
-      if (adminSetup.revokeMintAuthority.isEnabled) {
-        // Validate mint authority wallet address
-        if (!adminSetup.revokeMintAuthority.walletAddress || !adminSetup.revokeMintAuthority.walletAddress.trim()) {
-          toast.error("Mint authority wallet address is required when revoke mint authority is enabled!");
-          return;
-        }
-        try {
-          new PublicKey(adminSetup.revokeMintAuthority.walletAddress);
-        } catch (error) {
-          toast.error("Invalid mint authority wallet address!");
-          return;
-        }
-        
-        createNewTokenTransaction.add(
-          createSetAuthorityInstruction(
-            mintKeypair.publicKey,
-            publicKey,
-            AuthorityType.MintTokens,
-            new PublicKey(adminSetup.revokeMintAuthority.walletAddress)
-          )
-        );
-      }
-
-      if (adminSetup.revokeFreezeAuthority.isEnabled) {
-        // Validate freeze authority wallet address
-        if (!adminSetup.revokeFreezeAuthority.walletAddress || !adminSetup.revokeFreezeAuthority.walletAddress.trim()) {
-          toast.error("Freeze authority wallet address is required when revoke freeze authority is enabled!");
-          return;
-        }
-        try {
-          new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress);
-        } catch (error) {
-          toast.error("Invalid freeze authority wallet address!");
-          return;
-        }
-        
-        createNewTokenTransaction.add(
-          createSetAuthorityInstruction(
-            mintKeypair.publicKey,
-            publicKey,
-            AuthorityType.FreezeAccount,
-            new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress)
-          )
-        );
-      }
-
-      createNewTokenTransaction.add(curveConfigIns as TransactionInstruction);
-
-      // Get the latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      createNewTokenTransaction.recentBlockhash = blockhash;
-      createNewTokenTransaction.feePayer = publicKey;
-
-      // Sign with mintKeypair
-      createNewTokenTransaction.partialSign(mintKeypair);
-
-      // Sign with wallet
-      const signedTx = await signTransaction(createNewTokenTransaction);
-
-      // Send raw transaction
-      const txid = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(txid);
-      return txid;
     } catch (error) {
       console.error('Deploy token error:', error);
-      throw error; // Re-throw the error so the calling component can handle it
+      toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
     }
-  }, [publicKey, connection, signTransaction, sendTransaction, basicInfo, allocation, dexListing, adminSetup, saleSetup]);
+  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange]);
 
   return { deployToken };
 };

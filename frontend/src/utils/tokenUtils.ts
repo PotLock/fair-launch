@@ -27,6 +27,54 @@ export interface TokenInfo {
   createdOn: string;
 }
 
+export interface BondingCurveTokenInfo {
+  creator: string;
+  totalSupply: number;
+  reserveBalance: number;
+  reserveToken: number;
+  token: string;
+  bump: number;
+}
+
+export interface LaunchPadTokenInfo {
+  authority: string;
+  tokenMint: string;
+  startTime: number;
+  endTime: number;
+  vault: string;
+  launchType: 'Whitelist' | 'FairLaunch';
+  whitelistData?: string;
+  fairLaunchData?: string;
+  bump: number;
+}
+
+export interface FairLaunchData {
+  launchpad: string;
+  vault: string;
+  softCap: number;
+  hardCap: number;
+  minContribution: number;
+  maxContribution: number;
+  maxTokensPerWallet: number;
+  distributionDelay: number;
+  totalRaised: number;
+  paused: boolean;
+  bump: number;
+}
+
+export interface WhitelistLaunchData {
+  launchpad: string;
+  tokenPrice: number;
+  purchaseLimitPerWallet: number;
+  totalSupply: number;
+  soldTokens: number;
+  whitelistedUsers: string[];
+  buyers: string[];
+  paused: boolean;
+  whitelistDuration: number;
+  bump: number;
+}
+
 export async function getMintAccounts(walletAddress: string): Promise<MintAccount[]> {
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
@@ -36,6 +84,7 @@ export async function getMintAccounts(walletAddress: string): Promise<MintAccoun
     const tokenAccounts = await connection.getTokenAccountsByOwner(publicKey, {
       programId: TOKEN_PROGRAM_ID,
     });
+
     const listMintAccounts: MintAccount[] = [];
 
     for (const account of tokenAccounts.value) {
@@ -129,3 +178,118 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
     throw error;
   }
 }
+
+export async function getAllTokensCreatedByBondingCurve(): Promise<string[]> {
+  const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+  
+  try {
+    // Get all accounts owned by the bonding curve program
+    const programId = new PublicKey('2133PDFLFMiJyzqKU55up2wThH68QjVFjtrtC5Mx91TY');
+    
+    // Get all program accounts
+    const accounts = await connection.getProgramAccounts(programId, {
+      filters: [
+        {
+          dataSize: 48, // Size of BondingCurve account (8 bytes discriminator + 40 bytes data)
+        }
+      ]
+    });
+
+    console.log(`Found ${accounts.length} bonding curve accounts`);
+
+    const mintAddresses: string[] = [];
+
+    for (const account of accounts) {
+      try {
+        // The bonding curve account stores the token mint address
+        // We need to extract it from the account data
+        const accountData = account.account.data;
+        
+        // Skip discriminator (8 bytes)
+        const dataWithoutDiscriminator = accountData.slice(8);
+        
+        // The token mint address is stored in the account data
+        // For BondingCurve account, the token field is at a specific offset
+        // This is a simplified approach - you might need to adjust based on actual data layout
+        if (dataWithoutDiscriminator.length >= 32) {
+          // Extract the token mint address (assuming it's stored as a PublicKey)
+          const tokenMintBytes = dataWithoutDiscriminator.slice(16, 48); // Adjust offset as needed
+          const tokenMint = new PublicKey(tokenMintBytes);
+          mintAddresses.push(tokenMint.toString());
+        }
+      } catch (error) {
+        console.error('Error processing account:', account.pubkey.toString(), error);
+        continue;
+      }
+    }
+
+    console.log(`Extracted ${mintAddresses.length} mint addresses`);
+    return mintAddresses;
+  } catch (error) {
+    console.error('Error fetching all bonding curve tokens:', error);
+    return [];
+  }
+}
+
+export async function getAllTokensCreatedByBondingCurveWithDetails(): Promise<{
+  mintAddress: string;
+  bondingCurveAccount: string;
+  creator?: string;
+}[]> {
+  const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+  
+  try {
+    // Get all accounts owned by the bonding curve program
+    const programId = new PublicKey('2133PDFLFMiJyzqKU55up2wThH68QjVFjtrtC5Mx91TY');
+    
+    // Get all program accounts
+    const accounts = await connection.getProgramAccounts(programId, {
+      filters: [
+        {
+          dataSize: 48, // Size of BondingCurve account
+        }
+      ]
+    });
+
+    console.log(`Found ${accounts.length} bonding curve accounts`);
+
+    const tokenDetails: {
+      mintAddress: string;
+      bondingCurveAccount: string;
+      creator?: string;
+    }[] = [];
+
+    for (const account of accounts) {
+      try {
+        const accountData = account.account.data;
+        const dataWithoutDiscriminator = accountData.slice(8);
+        
+        if (dataWithoutDiscriminator.length >= 32) {
+          // Extract token mint address
+          const tokenMintBytes = dataWithoutDiscriminator.slice(16, 48); // Adjust offset as needed
+          const tokenMint = new PublicKey(tokenMintBytes);
+          
+          // Extract creator address (first 32 bytes after discriminator)
+          const creatorBytes = dataWithoutDiscriminator.slice(0, 32);
+          const creator = new PublicKey(creatorBytes);
+          
+          tokenDetails.push({
+            mintAddress: tokenMint.toString(),
+            bondingCurveAccount: account.pubkey.toString(),
+            creator: creator.toString()
+          });
+        }
+      } catch (error) {
+        console.error('Error processing account:', account.pubkey.toString(), error);
+        continue;
+      }
+    }
+
+    console.log(`Extracted ${tokenDetails.length} token details`);
+    return tokenDetails;
+  } catch (error) {
+    console.error('Error fetching all bonding curve tokens with details:', error);
+    return [];
+  }
+}
+

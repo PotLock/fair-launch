@@ -21,6 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -64,7 +65,24 @@ const tokenOptions = [
 function TokenDetail() {
     const [selectedPayment, setSelectedPayment] = useState(paymentOptions[0]);
     const [selectedToken, setSelectedToken] = useState(tokenOptions[0]);
+    const [payAmount, setPayAmount] = useState("");
+    const [receiveAmount, setReceiveAmount] = useState("");
+    const { publicKey } = useWallet();
+    const isLoggedIn = !!publicKey;
     
+
+    const handlePayAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        // Only allow numbers and decimals
+        if (/^\d*\.?\d*$/.test(val)) setPayAmount(val);
+    };
+
+    const handleReceiveAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        // Only allow numbers and decimals
+        if (/^\d*\.?\d*$/.test(val)) setReceiveAmount(val);
+    };
+
     return (
         <div className="min-h-screen container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
@@ -111,7 +129,7 @@ function TokenDetail() {
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             <span className="font-medium">ACTIVE</span>
-                            <span className="ml-auto text-sm text-gray-500">24d | 12h 32m 30s</span>
+                            <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">24d | 12h 32m 30s</span>
                         </div>
 
                         <div className="text-3xl font-bold text-green-600 mb-3">$750,433</div>
@@ -145,7 +163,13 @@ function TokenDetail() {
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
                             <div className="text-sm text-gray-500 mb-2">You Pay</div>
                             <div className="flex items-center justify-between">
-                                <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                                <input
+                                    type="text"
+                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                    placeholder="0.00"
+                                    value={payAmount}
+                                    onChange={handlePayAmountChange}
+                                />
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -178,7 +202,13 @@ function TokenDetail() {
                         <div className="bg-gray-50 rounded-lg p-4 mb-6">
                             <div className="text-sm text-gray-500 mb-2">You Receive</div>
                             <div className="flex items-center justify-between">
-                                <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                                <input 
+                                    type="text" 
+                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                    placeholder="0.00"
+                                    value={receiveAmount} 
+                                    onChange={handleReceiveAmountChange} 
+                                />
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -208,8 +238,11 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500 mt-1">$7,386</div>
                         </div>
 
-                        <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4">
-                            Buy $CURATE
+                        <button
+                            className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0}
+                        >
+                            {isLoggedIn ? 'Buy $CURATE' : 'Connect Wallet to Buy'}
                         </button>
                     </div>
                     <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mt-4">
@@ -409,7 +442,7 @@ function TokenDetail() {
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span className="font-medium">ACTIVE</span>
-                        <span className="ml-auto text-sm text-gray-500">24d | 12h 32m 30s</span>
+                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">24d | 12h 32m 30s</span>
                     </div>
 
                     <div className="text-3xl font-bold text-green-600 mb-3">$750,433</div>
@@ -443,7 +476,13 @@ function TokenDetail() {
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <div className="text-sm text-gray-500 mb-2">You Pay</div>
                         <div className="flex items-center justify-between">
-                            <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                            <input
+                                type="text"
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                placeholder="0.00"
+                                value={payAmount}
+                                onChange={handlePayAmountChange}
+                            />
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -476,7 +515,13 @@ function TokenDetail() {
                     <div className="bg-gray-50 rounded-lg p-4 mb-6">
                         <div className="text-sm text-gray-500 mb-2">You Receive</div>
                         <div className="flex items-center justify-between">
-                            <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                            <input 
+                                type="text" 
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                placeholder="0.00"
+                                value={receiveAmount} 
+                                onChange={handleReceiveAmountChange} 
+                            />
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -506,8 +551,11 @@ function TokenDetail() {
                         <div className="text-sm text-gray-500 mt-1">$7,386</div>
                     </div>
 
-                    <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4">
-                        Buy $CURATE
+                    <button
+                        className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0}
+                    >
+                        {isLoggedIn ? 'Buy $CURATE' : 'Connect Wallet to Buy'}
                     </button>
                 </div>
                 <div className="absolute bottom-5 left-0 right-0 p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg">
