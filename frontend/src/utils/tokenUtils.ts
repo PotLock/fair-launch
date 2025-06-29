@@ -25,6 +25,14 @@ export interface TokenInfo {
   mintAuthority: string;
   freezeAuthority: string;
   createdOn: string;
+  social: {
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+    discord?: string;
+    farcaster?: string;
+  }
+  pricing: string;
 }
 
 export interface BondingCurveTokenInfo {
@@ -169,7 +177,9 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
       supply: data.result.token_info.supply / 10 ** data.result.token_info.decimals,
       mintAuthority: data.result.token_info.mint_authority,
       freezeAuthority: data.result.token_info.freeze_authority,
-      createdOn: formattedDate
+      createdOn: formattedDate,
+      social: metadataJson.social,
+      pricing: metadataJson.pricing
     };
 
     return tokenInfo;

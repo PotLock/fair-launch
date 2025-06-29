@@ -12,7 +12,7 @@ import {
     getMinimumBalanceForRentExemptMint,
     ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
+import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import {
     PublicKey,
     SYSVAR_RENT_PUBKEY,
@@ -28,20 +28,12 @@ import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Keypair } from "@solana/web3.js";
+import { Metadata } from "../types";
 
 
 const TX_INTERVAL = 1000;
 
-const uploadMetadataToPinata = async (metadata: {
-    name: string;
-    symbol: string;
-    description?: string;
-    image?: string;
-    banner?: string;
-    template?: string;
-    pricingMechanism?: string;
-    exchange?: string;
-}) => {
+const uploadMetadataToPinata = async (metadata: Metadata) => {
     try {
         const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
             method: 'POST',
@@ -65,12 +57,9 @@ const uploadMetadataToPinata = async (metadata: {
 };
 
 export const useDeployToken = () => {
-  const { basicInfo, allocation, dexListing, saleSetup, adminSetup, selectedTemplate, selectedPricing, selectedExchange } = useDeployStore();
-  const { program, connection } = useAnchorProvider();
+  const { basicInfo, socials, allocation, dexListing, saleSetup, adminSetup, selectedTemplate, selectedPricing, selectedExchange } = useDeployStore();
+  const { program, connection,mintKeypair } = useAnchorProvider();
   const anchorWallet = useAnchorWallet();
-  const mintKeypair = Keypair.generate();
-  
-  console.log('mintKeypair', mintKeypair.publicKey.toBase58());
 
   const createTokenTransaction = async (): Promise<Transaction> => {
     if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !connection || !program) {
@@ -99,6 +88,14 @@ export const useDeployToken = () => {
       anchorWallet?.publicKey
     );
 
+    const metadataSocials = {
+      website: socials.website || "",
+      twitter: socials.twitter || "",
+      telegram: socials.telegram || "",
+      discord: socials.discord || "", 
+      farcaster: socials.farcaster || "",
+    }
+
     // Upload metadata to Pinata
     const metadataUri = await uploadMetadataToPinata({
       name: basicInfo.name,
@@ -107,8 +104,9 @@ export const useDeployToken = () => {
       image: basicInfo.avatarUrl || "",
       banner: basicInfo.bannerUrl || "",
       template: selectedTemplate,
-      pricingMechanism: selectedPricing,
-      exchange: selectedExchange
+      pricing: selectedPricing,
+      exchange: selectedExchange,
+      social: metadataSocials
     });
 
     const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
@@ -520,9 +518,11 @@ export const useDeployToken = () => {
             console.log(`Requesting Transaction ${i + 1}/${allTx.length}`);
             const { blockhash } = await connection.getLatestBlockhash();
             transaction.recentBlockhash = blockhash;
-            const signedTx = await connection.sendTransaction(transaction, [mintKeypair]);
-            console.log('signedTx', signedTx);
-            resolve(signedTx);
+            const signedTx = await anchorWallet?.signTransaction(transaction);
+            const rawTx = signedTx?.serialize() || new Uint8Array(0);
+            const txId = await connection.sendRawTransaction(rawTx);
+            await connection.confirmTransaction(txId);
+            resolve(txId);
           } catch (error) {
             console.error(`Transaction ${i + 1} failed:`, error);
             reject(error);

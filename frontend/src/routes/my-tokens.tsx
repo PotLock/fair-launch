@@ -120,6 +120,7 @@ function MyTokens() {
                             name={token.name}
                             symbol={token.symbol}
                             supply={token.supply.toString()}
+                            mintAddress={token.id}
                         />
                     ))}
                 </div>
