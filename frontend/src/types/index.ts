@@ -265,3 +265,21 @@ export interface PricingTemplate {
     value: string;
     longDescription?: string;
 }
+
+export interface Metadata {
+    name: string;
+    symbol: string;
+    description?: string;
+    image?: string;
+    banner?: string;
+    template?: string;
+    pricing?: string;
+    exchange?: string;
+    social?:{
+        website?: string;
+        twitter?: string;
+        telegram?: string;
+        discord?: string;
+        farcaster?: string;
+    }
+}

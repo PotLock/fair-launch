@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { 
@@ -20,7 +20,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { useState } from "react";
+import { useCallback, useState,useEffect } from "react";
+import { getTokenInfo, TokenInfo } from "../../utils/tokenUtils";
+import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
+import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
+import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
+import { useTokenTrading } from "../../hook/useTokenTrading";
+import { BN } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -28,81 +35,241 @@ export const Route = createFileRoute("/token/$tokenId")({
 
 const COLORS = ['#00A478', '#8B5CF6', '#3B82F6', '#059669', '#DC2626', '#2563EB'];
 
-const allocationData = [
-    { name: 'Public sale', value: 15, tokens: '150,000,000', usdValue: '$75,000,000', details: '20% at TGE, then 20% monthly' },
-    { name: 'Team', value: 20, tokens: '200,000,000', usdValue: '$100,000,000', details: '1 year cliff, then 25% quarterly' },
-    { name: 'Ecosystem', value: 25, tokens: '250,000,000', usdValue: '$125,000,000', details: '10% at TGE, then 15% quarterly' },
-    { name: 'Treasury', value: 15, tokens: '150,000,000', usdValue: '$75,000,000', details: 'Locked for 2 years, then 10% quarterly' },
-    { name: 'Advisors', value: 10, tokens: '100,000,000', usdValue: '$50,000,000', details: '6 month cliff, then 25% quarterly' },
-    { name: 'Liquidity', value: 15, tokens: '150,000,000', usdValue: '$75,000,000', details: '50% at TGE, 50% locked for 1 year' }
+const getEmptyAllocationData = () => [
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
+    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' }
 ];
 
-const vestingData = [
-    { month: 1, development: 10, marketing: 5 },
-    { month: 3, development: 20, marketing: 15 },
-    { month: 6, development: 40, marketing: 30 },
-    { month: 9, development: 60, marketing: 45 },
-    { month: 12, development: 80, marketing: 60 },
-    { month: 15, development: 100, marketing: 75 }
+const getEmptyVestingData = () => [
+    { month: '-', development: 0, marketing: 0 },
+    { month: '-', development: 0, marketing: 0 },
+    { month: '-', development: 0, marketing: 0 },
+    { month: '-', development: 0, marketing: 0 },
+    { month: '-', development: 0, marketing: 0 },
+    { month: '-', development: 0, marketing: 0 }
 ];
 
-const bondingCurveData = Array.from({ length: 20 }, (_, i) => ({
-    raised: i * 500,
-    price: Math.pow(1.1, i) * 0.001
+const getEmptyBondingCurveData = () => Array.from({ length: 20 }, (_, i) => ({
+    raised: '-',
+    price: '-'
 }));
 
-const paymentOptions = [
-    { name: 'SOL', icon: '/chains/sol.jpeg' },
-    { name: 'USDC', icon: '/icons/dollar-sign.svg' },
-];
-
-const tokenOptions = [
-    { name: 'CURATE', icon: '/curate.png' },
-    { name: 'USDC', icon: '/icons/dollar-sign.svg' },
-];
-
 function TokenDetail() {
-    const [selectedPayment, setSelectedPayment] = useState(paymentOptions[0]);
-    const [selectedToken, setSelectedToken] = useState(tokenOptions[0]);
+    const {tokenId} = useParams({from: "/token/$tokenId"})
+    const anchorWallet = useAnchorWallet();
+    const [selectedPayment, setSelectedPayment] = useState<{ name: string; icon: string } | null>(null);
+    const [selectedReceive, setSelectedReceive] = useState<{ name: string; icon: string } | null>(null);
+    const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+    const [payAmount, setPayAmount] = useState("");
+    const [receiveAmount, setReceiveAmount] = useState("");
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [loading, setLoading] = useState(true);
+    const { publicKey } = useWallet();
+    const { buyToken } = useTokenTrading();
+    const isLoggedIn = !!publicKey;
     
+    const loadInfoToken = useCallback(async () => {
+        try {
+            setLoading(true);
+            const tokenInfo = await getTokenInfo(tokenId);
+            console.log(tokenInfo);
+            setTokenInfo(tokenInfo);
+        } catch (error) {
+            console.error('Error loading token info:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [tokenId]);
+
+    useEffect(() => {
+        loadInfoToken();
+    }, [loadInfoToken]);
+
+    useEffect(() => {
+        if (tokenInfo) {
+            setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+        }
+    }, [tokenInfo]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+    
+    const handlePayAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (/^\d*\.?\d*$/.test(val)) setPayAmount(val);
+    };
+
+    const handleReceiveAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (/^\d*\.?\d*$/.test(val)) setReceiveAmount(val);
+    };
+
+    if (loading) {
+        return <TokenDetailSkeleton />;
+    }
+
+    if (!tokenInfo) {
+        return (
+            <div className="min-h-screen container mx-auto py-10 flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Not Found</h2>
+                    <p className="text-gray-500">The token you're looking for doesn't exist or has been removed.</p>
+                </div>
+            </div>
+        );
+    }
+
+    const tokenOptions = [
+        { name: 'SOL', icon: '/chains/sol.jpeg' },
+        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatar }] : [])
+    ];
+    
+
+    const hasSocialLinks = !!(tokenInfo?.social?.website || tokenInfo?.social?.twitter || tokenInfo?.social?.telegram || tokenInfo?.social?.discord || tokenInfo?.social?.farcaster);
+
+    const getSocialUrl = (type: string, value?: string) => {
+        if (!value) return null;
+        switch (type) {
+            case 'website':
+                return value.startsWith('http') ? value : `https://${value}`;
+            case 'twitter':
+                return value.startsWith('http') ? value : `https://x.com/${value}`;
+            case 'telegram':
+                return value.startsWith('http') ? value : `https://t.me/${value}`;
+            case 'discord':
+                return value.startsWith('http') ? value : `https://discord.gg/${value}`;
+            case 'farcaster':
+                return value.startsWith('http') ? value : `https://warpcast.com/${value}`;  
+            default:
+                return value;
+        }
+    };
+
+    const handlePaymentChange = (option: { name: string; icon: string }) => {
+        setSelectedPayment(option);
+        if (option.name === 'SOL' && tokenInfo) {
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+        } else {
+            setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
+        }
+    };
+
+    const handleReceiveChange = (option: { name: string; icon: string }) => {
+        setSelectedReceive(option);
+        if (option.name === tokenInfo?.symbol) {
+            setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
+        } else {
+            if (tokenInfo) {
+                setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+            }
+        }
+    };
+
+    const handleBuyAndSell = async () => {
+        try{
+            if (!tokenInfo || !anchorWallet) return;
+            const mint = new PublicKey(tokenInfo?.id);
+            const amount = 100000000;
+            const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
+            const feeRecipient = new PublicKey(tokenInfo?.mintAuthority || '');
+            const feeRecipient2 = new PublicKey(tokenInfo?.mintAuthority || '');
+            const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
+            const tx = await buyToken(mint, amount, admin, feeRecipient, feeRecipient2, multisig);
+            console.log(tx);
+        } catch (error) {
+            console.error('Error buying token:', error);
+        }
+    }
+
     return (
         <div className="min-h-screen container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
-                        <img src="/curate.png" alt="CURATE" className="w-full h-64 object-cover rounded-lg" />
+                        <img src={tokenInfo?.banner} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
                         <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
                             style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
                     </div>
                     <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
                         <div className="flex items-center gap-3">
-                            <img src="/curate.png" alt="CURATE" className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
+                            <img src={tokenInfo?.avatar} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
                             <div className="flex flex-col">
-                                <span className="text-3xl font-bold text-white uppercase">CURATE</span>
+                                <span className="text-3xl font-bold text-white uppercase">{tokenInfo?.name}</span>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-lg text-white">$CURATE</span>
+                                    <span className="text-lg text-white">${tokenInfo?.symbol}</span>
                                     <Badge variant="default" className="bg-green-500 text-white border-white border text-xs px-2 py-0.5 rounded-full">Meme Coin</Badge>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
-                            <button className="w-6 h-6 rounded-full flex items-center justify-center">
-                                <Globe className="w-6 h-6 text-white hover:text-gray-00" />
-                            </button>
-                            <button className="w-6 h-6 rounded-full flex items-center justify-center">
-                                <img src="/icons/book.svg" alt="Twitter" className="w-6 h-6 text-white" />
-                            </button>
-                            <button className="w-6 h-6 rounded-full flex items-center justify-center">
-                                <img src="/icons/discord.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
-                            </button>
-                            <button className="w-6 h-6 rounded-full flex items-center justify-center">
-                                <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
-                            </button>
-                            <button className="w-6 h-6 rounded-full flex items-center justify-center">
-                                <img src="/icons/telegram.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
-                            </button>
-
-                        </div>
+                        {hasSocialLinks && (
+                            <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
+                                {tokenInfo?.social?.website && (
+                                    <button 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        onClick={() => {
+                                            const url = getSocialUrl('website', tokenInfo.social.website);
+                                            if (url) window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <Globe className="w-6 h-6 text-white hover:text-gray-200" />
+                                    </button>
+                                )}
+                                {tokenInfo?.social?.farcaster && (
+                                    <button 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        onClick={() => {
+                                            const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
+                                            if (url) window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <img src="/icons/book.svg" alt="Farcaster" className="w-6 h-6 text-white hover:text-gray-200" />
+                                    </button>
+                                )}
+                                {tokenInfo?.social?.discord && (
+                                    <button 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        onClick={() => {
+                                            const url = getSocialUrl('discord', tokenInfo.social.discord);
+                                            if (url) window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <img src="/icons/discord.svg" alt="Discord" className="w-6 h-6 text-white hover:text-gray-200" />
+                                    </button>
+                                )}
+                                {tokenInfo?.social?.twitter && (
+                                    <button 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        onClick={() => {
+                                            const url = getSocialUrl('twitter', tokenInfo.social.twitter);
+                                            if (url) window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
+                                    </button>
+                                )}
+                                {tokenInfo?.social?.telegram && (
+                                    <button 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        onClick={() => {
+                                            const url = getSocialUrl('telegram', tokenInfo.social.telegram);
+                                            if (url) window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <img src="/icons/telegram.svg" alt="Telegram" className="w-6 h-6 text-white hover:text-gray-200" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -111,10 +278,10 @@ function TokenDetail() {
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             <span className="font-medium">ACTIVE</span>
-                            <span className="ml-auto text-sm text-gray-500">24d | 12h 32m 30s</span>
+                            <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdOn ? calculateTimeSinceCreation(tokenInfo.createdOn, currentTime) : "-"}</span>
                         </div>
 
-                        <div className="text-3xl font-bold text-green-600 mb-3">$750,433</div>
+                        <div className="text-3xl font-bold text-green-600 mb-3">-</div>
 
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
                             <div className="bg-green-600 h-2 rounded-full w-[60%]"></div>
@@ -122,15 +289,15 @@ function TokenDetail() {
 
                         <div className="grid grid-cols-3">
                             <div>
-                                <div className="text-lg font-semibold">$0.0521</div>
+                                <div className="text-lg font-semibold">-</div>
                                 <div className="text-sm text-gray-500">Current Price</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">1,200</div>
+                                <div className="text-lg font-semibold">-</div>
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">$1M</div>
+                                <div className="text-lg font-semibold">-</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
@@ -145,45 +312,18 @@ function TokenDetail() {
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
                             <div className="text-sm text-gray-500 mb-2">You Pay</div>
                             <div className="flex items-center justify-between">
-                                <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                                <input
+                                    type="text"
+                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                    placeholder="0.00"
+                                    value={payAmount}
+                                    onChange={handlePayAmountChange}
+                                />
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                            <img src={selectedPayment.icon} alt={selectedPayment.name} className="w-5 h-5 rounded-full" />
-                                            <span>{selectedPayment.name}</span>
-                                            <div className="relative w-4 h-4 mr-5">
-                                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                                            </div>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                                        {paymentOptions.map((option) => (
-                                            <DropdownMenuItem
-                                                key={option.name}
-                                                onSelect={() => setSelectedPayment(option)}
-                                                className="cursor-pointer hover:bg-gray-100"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
-                                                    <span>{option.name}</span>
-                                                </div>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                            <div className="text-sm text-gray-500 mt-1">$7,386</div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                            <div className="text-sm text-gray-500 mb-2">You Receive</div>
-                            <div className="flex items-center justify-between">
-                                <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                            <img src={selectedToken.icon} alt={selectedToken.name} className="w-5 h-5 rounded-full" />
-                                            <span>{selectedToken.name}</span>
+                                            <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                            <span>{selectedPayment?.name}</span>
                                             <div className="relative w-4 h-4 mr-5">
                                                 <ChevronDown className="h-4 w-4 text-gray-500" />
                                             </div>
@@ -193,7 +333,7 @@ function TokenDetail() {
                                         {tokenOptions.map((option) => (
                                             <DropdownMenuItem
                                                 key={option.name}
-                                                onSelect={() => setSelectedToken(option)}
+                                                onSelect={() => handlePaymentChange(option)}
                                                 className="cursor-pointer hover:bg-gray-100"
                                             >
                                                 <div className="flex items-center gap-2">
@@ -205,11 +345,53 @@ function TokenDetail() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">$7,386</div>
+                            <div className="text-sm text-gray-500 mt-1">-</div>
                         </div>
 
-                        <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4">
-                            Buy $CURATE
+                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <div className="text-sm text-gray-500 mb-2">You Receive</div>
+                            <div className="flex items-center justify-between">
+                                <input 
+                                    type="text" 
+                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                    placeholder="0.00"
+                                    value={receiveAmount} 
+                                    onChange={handleReceiveAmountChange} 
+                                />
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                            <img src={selectedReceive?.icon} alt={selectedReceive?.name} className="w-5 h-5 rounded-full" />
+                                            <span>{selectedReceive?.name}</span>
+                                            <div className="relative w-4 h-4 mr-5">
+                                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                                            </div>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                        {tokenOptions.map((option) => (
+                                            <DropdownMenuItem
+                                                key={option.name}
+                                                onSelect={() => handleReceiveChange(option)}
+                                                className="cursor-pointer hover:bg-gray-100"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                    <span>{option.name}</span>
+                                                </div>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">-</div>
+                        </div>
+
+                        <button
+                            className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0}
+                        >
+                            {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
                         </button>
                     </div>
                     <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mt-4">
@@ -222,8 +404,7 @@ function TokenDetail() {
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Description</h2>
                     <p className="text-gray-600 text-sm">
-                        CURATE is the native utility and governance token powering the Curate.fun ecosystem, a decentralized platform for automating content curation through crowdsourcing and AI.
-                        Built for communities and content creator networks, CURATE incentivizes participation, rewards contribution, and enables automated content discovery. Through its innovative staking and approval in automated publishing and revenue sharing, CURATE fuels every step in the lifecycle of collaborative publishing.
+                        {tokenInfo?.description}
                     </p>
                 </Card>
 
@@ -233,29 +414,29 @@ function TokenDetail() {
                         <div className="flex flex-col gap-2">
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Initial Market Cap</p>
-                                <p className="text-sm font-semibold">2,500,000,000</p>
+                                <p className="text-sm font-semibold">-</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Total supply</p>
-                                <p className="text-sm font-semibold">1,000,000,000</p>
+                                <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.supply || 0)}</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Min. Contribution</p>
-                                <p className="text-sm font-semibold">0.1 SOL</p>
+                                <p className="text-sm font-semibold">- SOL</p>
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Current price</p>
-                                <p className="text-sm font-semibold">$0.0521</p>
+                                <p className="text-sm font-semibold">-</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                                <p className="text-sm font-semibold">$1,500,000</p>
+                                <p className="text-sm font-semibold">-</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
-                                <p className="text-sm font-semibold">10 SOL</p>
+                                <p className="text-sm font-semibold">-</p>
                             </div>
                         </div>
                     </div>
@@ -263,8 +444,8 @@ function TokenDetail() {
                         <label className="text-sm text-gray-500">Contract Address</label>
                         <div className="flex flex-row gap-2 items-center">
                             <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
-                            <p className="text-sm text-gray-500">8sWkTMrhoVbWuW......qvJNgS2f7jo</p>
-                            <button className="w-4 h-4 rounded-full flex items-center justify-center">
+                            <p className="text-sm text-gray-500">{truncateAddress(tokenInfo?.mintAuthority || '')}</p>
+                            <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenInfo?.mintAuthority || '')}>
                                 <Copy className="w-4 h-4 text-black hover:text-gray-500" />
                             </button>
                         </div>
@@ -278,7 +459,7 @@ function TokenDetail() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        data={allocationData}
+                                        data={getEmptyAllocationData()}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={75}
@@ -286,7 +467,7 @@ function TokenDetail() {
                                         paddingAngle={2}
                                         dataKey="value"
                                     >
-                                        {allocationData.map((_, index) => (
+                                        {getEmptyAllocationData().map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
@@ -307,7 +488,7 @@ function TokenDetail() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {allocationData.map((item, index) => (
+                                {getEmptyAllocationData().map((item, index) => (
                                     <tr key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                                         <td className="py-4">
                                             <div className="flex items-center gap-2">
@@ -330,7 +511,7 @@ function TokenDetail() {
                     <h2 className="text-xl font-medium mb-4">Vesting Schedule</h2>
                     <div className="w-full h-[220px] md:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={vestingData}>
+                            <LineChart data={getEmptyVestingData()}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="month"
@@ -360,48 +541,52 @@ function TokenDetail() {
                     </div>
                 </Card>
                                 
-                <Card className="p-4 md:p-6 shadow-none">
-                    <h2 className="text-xl font-medium mb-4">Bonding Curve Price Chart</h2>
-                    <div className="mb-6 w-full h-[220px] md:h-[320px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={bondingCurveData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis
-                                    dataKey="raised"
-                                    tick={{ fontSize: 14 }}
-                                    padding={{ left: 10, right: 10 }}
-                                />
-                                <YAxis tick={{ fontSize: 14 }} />
-                                <Tooltip contentStyle={{ fontSize: 14 }} />
-                                <Line
-                                    type="monotone"
-                                    dataKey="price"
-                                    stroke="#8884d8"
-                                    strokeWidth={3}
-                                    dot={{ r: 4 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <p className="text-sm text-gray-500 mb-1">Initial Price</p>
-                            <p className="font-semibold">0.001 SOL</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 mb-1">Final Price</p>
-                            <p className="font-semibold">0.005 SOL</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                            <p className="font-semibold">1500 SOL</p>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-4">
-                        This token uses a bonding curve, meaning its price changes dynamically based on demand and supply.
-                        The price increases as more tokens are minted and purchased.
-                    </p>
-                </Card>
+                {
+                    tokenInfo.pricing === 'bonding-curve' && (
+                        <Card className="p-4 md:p-6 shadow-none">
+                            <h2 className="text-xl font-medium mb-4">Bonding Curve Price Chart</h2>
+                            <div className="mb-6 w-full h-[220px] md:h-[320px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={getEmptyBondingCurveData()}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="raised"
+                                            tick={{ fontSize: 14 }}
+                                            padding={{ left: 10, right: 10 }}
+                                        />
+                                        <YAxis tick={{ fontSize: 14 }} />
+                                        <Tooltip contentStyle={{ fontSize: 14 }} />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="price"
+                                            stroke="#8884d8"
+                                            strokeWidth={3}
+                                            dot={{ r: 4 }}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-1">Initial Price</p>
+                                    <p className="font-semibold">- SOL</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-1">Final Price</p>
+                                    <p className="font-semibold">- SOL</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-1">Target Raise</p>
+                                    <p className="font-semibold">- SOL</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-4">
+                                This token uses a bonding curve, meaning its price changes dynamically based on demand and supply.
+                                The price increases as more tokens are minted and purchased.
+                            </p>
+                        </Card>
+                    )
+                }
             </div>
             
             <div className="border border-gray-200 rounded-lg max-h-[730px] bg-gray-50 relative hidden md:block">
@@ -409,10 +594,10 @@ function TokenDetail() {
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span className="font-medium">ACTIVE</span>
-                        <span className="ml-auto text-sm text-gray-500">24d | 12h 32m 30s</span>
+                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdOn ? calculateTimeSinceCreation(tokenInfo.createdOn, currentTime) : "-"}</span>
                     </div>
 
-                    <div className="text-3xl font-bold text-green-600 mb-3">$750,433</div>
+                    <div className="text-3xl font-bold text-green-600 mb-3">-</div>
 
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
                         <div className="bg-green-600 h-2 rounded-full w-[60%]"></div>
@@ -420,15 +605,15 @@ function TokenDetail() {
 
                     <div className="grid grid-cols-3">
                         <div>
-                            <div className="text-lg font-semibold">$0.0521</div>
+                            <div className="text-lg font-semibold">-</div>
                             <div className="text-sm text-gray-500">Current Price</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">1,200</div>
+                            <div className="text-lg font-semibold">-</div>
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">$1M</div>
+                            <div className="text-lg font-semibold">-</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>
@@ -443,45 +628,18 @@ function TokenDetail() {
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <div className="text-sm text-gray-500 mb-2">You Pay</div>
                         <div className="flex items-center justify-between">
-                            <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
+                            <input
+                                type="text"
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                placeholder="0.00"
+                                value={payAmount}
+                                onChange={handlePayAmountChange}
+                            />
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                        <img src={selectedPayment.icon} alt={selectedPayment.name} className="w-5 h-5 rounded-full" />
-                                        <span>{selectedPayment.name}</span>
-                                        <div className="relative w-4 h-4 mr-5">
-                                            <ChevronDown className="h-4 w-4 text-gray-500" />
-                                        </div>
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                                    {paymentOptions.map((option) => (
-                                        <DropdownMenuItem
-                                            key={option.name}
-                                            onSelect={() => setSelectedPayment(option)}
-                                            className="cursor-pointer hover:bg-gray-100"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
-                                                <span>{option.name}</span>
-                                            </div>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">$7,386</div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <div className="text-sm text-gray-500 mb-2">You Receive</div>
-                        <div className="flex items-center justify-between">
-                            <input type="text" className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" placeholder="0.00" />
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                        <img src={selectedToken.icon} alt={selectedToken.name} className="w-5 h-5 rounded-full" />
-                                        <span>{selectedToken.name}</span>
+                                        <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                        <span>{selectedPayment?.name}</span>
                                         <div className="relative w-4 h-4 mr-5">
                                             <ChevronDown className="h-4 w-4 text-gray-500" />
                                         </div>
@@ -491,7 +649,7 @@ function TokenDetail() {
                                     {tokenOptions.map((option) => (
                                         <DropdownMenuItem
                                             key={option.name}
-                                            onSelect={() => setSelectedToken(option)}
+                                            onSelect={() => handlePaymentChange(option)}
                                             className="cursor-pointer hover:bg-gray-100"
                                         >
                                             <div className="flex items-center gap-2">
@@ -503,11 +661,54 @@ function TokenDetail() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                        <div className="text-sm text-gray-500 mt-1">$7,386</div>
+                        <div className="text-sm text-gray-500 mt-1">-</div>
                     </div>
 
-                    <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4">
-                        Buy $CURATE
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div className="text-sm text-gray-500 mb-2">You Receive</div>
+                        <div className="flex items-center justify-between">
+                            <input 
+                                type="text" 
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                placeholder="0.00"
+                                value={receiveAmount} 
+                                onChange={handleReceiveAmountChange} 
+                            />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                        <img src={selectedReceive?.icon} alt={selectedReceive?.name} className="w-5 h-5 rounded-full" />
+                                        <span>{selectedReceive?.name}</span>
+                                        <div className="relative w-4 h-4 mr-5">
+                                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                                        </div>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                    {tokenOptions.map((option) => (
+                                        <DropdownMenuItem
+                                            key={option.name}
+                                            onSelect={() => handleReceiveChange(option)}
+                                            className="cursor-pointer hover:bg-gray-100"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                <span>{option.name}</span>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">-</div>
+                    </div>
+
+                    <button
+                        className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={handleBuyAndSell}
+                        disabled={!isLoggedIn}
+                    >
+                        {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
                     </button>
                 </div>
                 <div className="absolute bottom-5 left-0 right-0 p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg">

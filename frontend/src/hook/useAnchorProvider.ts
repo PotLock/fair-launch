@@ -7,6 +7,16 @@ import { Keypair } from "@solana/web3.js";
 export default function useAnchorProvider() {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
+  
+  // Validate that we have the required dependencies
+  if (!connection) {
+    throw new Error("Solana connection is not available");
+  }
+  
+  if (!anchorWallet) {
+    throw new Error("Anchor wallet is not available");
+  }
+
   const providerProgram = new anchor.AnchorProvider(
     connection,
     anchorWallet as any,
@@ -14,6 +24,7 @@ export default function useAnchorProvider() {
       preflightCommitment: "confirmed",
     }
   );
+  
   const program = new Program(
     idlBondingCurve as anchor.Idl,
     providerProgram as any
@@ -21,6 +32,7 @@ export default function useAnchorProvider() {
 
   const governanceKeypair = Keypair.generate();
   const mintKeypair = Keypair.generate();
+  
   return {
     connection,
     anchorWallet,

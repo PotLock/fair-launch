@@ -4,6 +4,8 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { getMintAccounts, getTokenInfo, TokenInfo } from "../utils/tokenUtils";
 
+// Helper function to add delay between requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const Route = createFileRoute("/my-tokens")({
     component: MyTokens,
@@ -26,10 +28,23 @@ function MyTokens() {
         try {
             const listMintAccounts = await getMintAccounts(publicKey.toBase58());
             
-            const tokenInfoPromises = listMintAccounts.map(mintAccount => 
-                getTokenInfo(mintAccount.mint)
-            );
-            const tokens = await Promise.all(tokenInfoPromises);
+            // Process tokens sequentially with delays to avoid rate limiting
+            const tokens: TokenInfo[] = [];
+            for (let i = 0; i < listMintAccounts.length; i++) {
+                try {
+                    const tokenInfo = await getTokenInfo(listMintAccounts[i].mint);
+                    tokens.push(tokenInfo);
+                    
+                    // Add a delay between requests (500ms) to avoid rate limiting
+                    if (i < listMintAccounts.length - 1) {
+                        await delay(500);
+                    }
+                } catch (err) {
+                    console.error(`Failed to fetch token info for mint ${listMintAccounts[i].mint}:`, err);
+                    // Continue with other tokens even if one fails
+                }
+            }
+            
             setListTokens(tokens);
         } catch (err) {
             setError('Failed to fetch token balances');
@@ -105,6 +120,7 @@ function MyTokens() {
                             name={token.name}
                             symbol={token.symbol}
                             supply={token.supply.toString()}
+                            mintAddress={token.id}
                         />
                     ))}
                 </div>

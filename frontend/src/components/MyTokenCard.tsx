@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { formatNumberWithCommas } from "../utils";
+import { useNavigate } from "@tanstack/react-router";
 
 interface MyTokenCardProps {
     avatar?: string;
@@ -9,11 +10,13 @@ interface MyTokenCardProps {
     symbol: string;
     supply: string;
     progress?: number;
+    mintAddress: string;
 }
 
-export function MyTokenCard({ avatar, name, symbol, supply, progress = 0 }: MyTokenCardProps) {
+export function MyTokenCard({ avatar, name, symbol, supply, progress = 0, mintAddress }: MyTokenCardProps) {
+    const navigate = useNavigate();
     return (
-        <Card className="w-full max-w-lg">
+        <Card className="w-full max-w-lg" onClick={() => navigate({to: `/token/${mintAddress}`})}>
             <CardHeader className="flex flex-row items-start justify-between pb-4">
                 <div className="flex items-center gap-3">
                     <div className="rounded-full flex items-center justify-center">
@@ -41,7 +44,12 @@ export function MyTokenCard({ avatar, name, symbol, supply, progress = 0 }: MyTo
                         <div className="text-base font-semibold">{formatNumberWithCommas(supply)} ${symbol}</div>
                         <div className="text-gray-400 text-base">$250,000</div>
                     </div>
-                    <Button className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-md shadow">
+                    <Button 
+                        className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-md shadow" 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate({to: `/token/${mintAddress}`});
+                        }}>
                         View Token
                     </Button>
                 </div>
