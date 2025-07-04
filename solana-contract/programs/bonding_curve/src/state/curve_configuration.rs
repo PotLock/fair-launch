@@ -40,6 +40,7 @@ pub struct Recipient {
 /// CURVE CONFIGURATION ACCOUNT
 #[account]
 pub struct CurveConfiguration {
+    pub config_index: u64,
     pub global_admin: Pubkey,
     pub fee_admin: Pubkey,
     pub initial_quorum: u64,
@@ -68,6 +69,7 @@ impl CurveConfiguration {
         8 + 32 + 32 + 8 + 1 + 2 + 32 + 2 + 1 + 8 + 2 + 1 + 1 + 8 + 8 + 2 + 8 + 8 + 500;
 
     pub fn new(
+        config_index: u64,
         admin: Pubkey,
         initial_quorum: u64,
         fee_percentage: u16,
@@ -104,6 +106,7 @@ impl CurveConfiguration {
             .collect();
 
         Ok(Self {
+            config_index,
             global_admin: admin,
             fee_admin: admin,
             initial_quorum,

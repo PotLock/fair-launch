@@ -6,11 +6,13 @@ pub mod instructions;
 pub mod state;
 pub mod utils;
 
+use crate::instructions::allocation::{
+    claim_tokens, create_allocation, ClaimTokens, CreateAllocation,
+};
 use crate::instructions::*;
-use crate::state::Recipient;
-use crate::instructions::allocation::{CreateAllocation, ClaimTokens, create_allocation, claim_tokens};
 use crate::state::allocation::Vesting;
-declare_id!("DYd5zDvFtNGRKahZQyvznQe5wLdKBrHPGJKpK31P2DzV");
+use crate::state::Recipient;
+declare_id!("Ffw1pspaHRwfoJMpesr13cBNtTpd8R6hEWaMv6Hg6TYG");
 
 #[program]
 pub mod bonding_curve {
@@ -22,8 +24,9 @@ pub mod bonding_curve {
     // Bonding Curve Functions
     // ============================================================================
 
-    pub fn initialize(
-        ctx: Context<InitializeBondingCurve>,
+    pub fn create_pool(
+        ctx: Context<CreateLiquidityPool>,
+        config_index: u64,
         admin: Pubkey,
         fee_percentage: u16,
         initial_quorum: u64,
@@ -39,8 +42,9 @@ pub mod bonding_curve {
         recipients: Vec<Recipient>,
         reserve_ratio: u16,
     ) -> Result<()> {
-        instructions::initialize(
+        instructions::create_pool(
             ctx,
+            config_index,
             admin,
             fee_percentage,
             initial_quorum,
@@ -56,10 +60,6 @@ pub mod bonding_curve {
             recipients,
             reserve_ratio,
         )
-    }
-
-    pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
-        instructions::create_pool(ctx)
     }
 
     pub fn buy<'info>(ctx: Context<'_, '_, '_, 'info, Buy<'info>>, amount: u64) -> Result<()> {
@@ -103,7 +103,6 @@ pub mod bonding_curve {
     // Migrate Liquidity Pool Bonding Curve to DEX
     // ============================================================================
 
-
     pub fn migrate_meteora_pool(ctx: Context<InitializeMeteoraPool>) -> Result<()> {
         instructions::initialize_pool_meteora_with_config(ctx)
     }
@@ -112,21 +111,28 @@ pub mod bonding_curve {
         instructions::initialize_pool_pumpswap(ctx, index)
     }
 
-
     // ============================================================================
     // Whitelist Launchpad Functions
     // ============================================================================
 
     pub fn create_whitelist_launch(
-        ctx: Context<CreateWhitelistLaunch>, 
-        token_price: u64, 
-        purchase_limit_per_wallet: u64, 
+        ctx: Context<CreateWhitelistLaunch>,
+        token_price: u64,
+        purchase_limit_per_wallet: u64,
         total_supply: u64,
-        whitelist_duration: i64, 
-        start_time: i64, 
-        end_time: i64
+        whitelist_duration: i64,
+        start_time: i64,
+        end_time: i64,
     ) -> Result<()> {
-        instructions::create_whitelist_launch(ctx, token_price, purchase_limit_per_wallet, total_supply, whitelist_duration, start_time, end_time)
+        instructions::create_whitelist_launch(
+            ctx,
+            token_price,
+            purchase_limit_per_wallet,
+            total_supply,
+            whitelist_duration,
+            start_time,
+            end_time,
+        )
     }
     pub fn add_whitelist(ctx: Context<AddWhitelist>, user: Pubkey) -> Result<()> {
         instructions::add_whitelist(ctx, user)
@@ -141,7 +147,7 @@ pub mod bonding_curve {
     // ============================================================================
 
     pub fn create_fair_launch(
-        ctx: Context<CreateFairLaunch>, 
+        ctx: Context<CreateFairLaunch>,
         soft_cap: u64,
         hard_cap: u64,
         start_time: i64,
@@ -152,7 +158,7 @@ pub mod bonding_curve {
         distribution_delay: i64,
     ) -> Result<()> {
         instructions::create_fair_launch(
-            ctx, 
+            ctx,
             soft_cap,
             hard_cap,
             start_time,
@@ -164,10 +170,7 @@ pub mod bonding_curve {
         )
     }
 
-    pub fn contribute_fair_launch(
-        ctx: Context<ContributeFairLaunch>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn contribute_fair_launch(ctx: Context<ContributeFairLaunch>, amount: u64) -> Result<()> {
         instructions::contribute_fair_launch(ctx, amount)
     }
 
@@ -204,10 +207,7 @@ pub mod bonding_curve {
         instructions::create_allocation(ctx, category, percentage, total_tokens, vesting)
     }
 
-    pub fn claim_tokens(
-        ctx: Context<ClaimTokens>,
-        now: i64,
-    ) -> Result<u64> {
+    pub fn claim_tokens(ctx: Context<ClaimTokens>, now: i64) -> Result<u64> {
         instructions::claim_tokens(ctx, now)
     }
 
