@@ -134,11 +134,11 @@ const config: Config = {
           items: [
             {
               label: '💬 Telegram',
-              href: 'https://t.me/potlaunch',
+              href: 'https://potlock.org/community',
             },
             {
               label: '🕊️ Twitter',
-              href: 'https://x.com/potlaunch',
+              href: 'https://x.com/potlock_',
             },
           ],
         },
