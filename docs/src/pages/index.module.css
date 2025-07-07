@@ -8,6 +8,7 @@
   text-align: center;
   position: relative;
   overflow: hidden;
+  color: #000;
 }
 
 @media screen and (max-width: 996px) {
@@ -16,8 +17,9 @@
   }
 }
 
-.buttons {
+.buttonsContainer {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 20px;
 }

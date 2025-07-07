@@ -5,48 +5,48 @@ import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
+  emoji: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    title: 'Token Launchpad',
+    emoji: '🚀',
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Discover and participate in token launches on our platform. Browse through a curated list of 
+        tokens created through bonding curves and support projects you believe in.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    title: 'Token Deployer',
+    emoji: '🪙',
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Easily create and deploy your own SPL tokens without coding. Our step-by-step wizard guides you 
+        through token creation, bonding curves, liquidity setup, and DEX listing.
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    title: 'Token Management',
+    emoji: '📈',
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        View and manage all your created tokens in one place. Track your token performance, 
+        trading activity, and detailed analytics with comprehensive charts and metrics.
       </>
     ),
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, emoji, description}: FeatureItem) {
   return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+    <div className={clsx('col col--4')}>  
+      <div className="text--center" style={{ fontSize: '2.5rem', marginBottom: 8 }}>
+        {emoji}
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>
