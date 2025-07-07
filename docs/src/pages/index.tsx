@@ -20,7 +20,7 @@ function HomepageHeader() {
         <div className={styles.buttonsContainer}>
           <Link
             className="button button--primary button--lg"
-            to="https://launch.potlock.io">
+            to="https://potlaunch.com">
             Start Creating
           </Link>
           <Link

@@ -147,12 +147,12 @@ const config: Config = {
           items: [
             {
               label: '🔒 POTLAUNCH',
-              href: 'https://launch.potlock.io',
+              href: 'https://potlaunch.com',
             }
           ],
         },
       ],
-      copyright: `Built with ❤️ POTLOCK`,
+      copyright: `Built with ❤️ by <a href="https://potlock.org" target="_blank" rel="noopener noreferrer">POTLOCK</a>`,
     },
     prism: {
       theme: prismThemes.github,

@@ -28,3 +28,8 @@
   --ifm-color-primary-lightest: #dbeafe;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Make the POTLOCK footer link white */
+.footer__copyright a {
+  color: #fff !important;
+}
