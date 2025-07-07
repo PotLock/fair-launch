@@ -4,6 +4,7 @@ import { SOL_NETWORK } from "../configs/env.config";
 import { PublicKey } from "@solana/web3.js";
 import { PREFIX_TOKEN } from "./common";
 import { getAssociatedTokenAddress, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import * as anchor from "@coral-xyz/anchor";
 
 export const ALLOCATION_SEED_PREFIX = "allocation";
 
@@ -52,28 +53,16 @@ export const formatNumberToK = (x: number) => {
   }
 };
 
-export async function getPDAs(user: PublicKey, mint: PublicKey, program: any) {
-  // Validate parameters
-  if (!user) {
-    throw new Error("User public key is required");
-  }
-  if (!mint) {
-    throw new Error("Mint public key is required");
-  }
-  if (!program) {
-    throw new Error("Program is required");
-  }
-  if (!program.programId) {
-    throw new Error("Program ID is required");
-  }
-
+export async function getBondingCurveConfig(admin: PublicKey, configIndex: number, program: any) {
+  const configIndexBuffer = new anchor.BN(configIndex).toArrayLike(Buffer, "le", 8);
   const [curveConfig] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from(PREFIX_TOKEN.CURVE_CONFIGURATION_SEED),
-      user.toBuffer(),
-    ],
+    [Buffer.from(PREFIX_TOKEN.CURVE_CONFIGURATION_SEED), admin.toBuffer(), configIndexBuffer],
     program.programId
   );
+  return curveConfig;
+}
+
+export function getPDAs(user: PublicKey, mint: PublicKey, program: any) {
 
   const [bondingCurve] = PublicKey.findProgramAddressSync(
     [Buffer.from(PREFIX_TOKEN.POOL_SEED_PREFIX), mint.toBuffer()],
@@ -85,34 +74,20 @@ export async function getPDAs(user: PublicKey, mint: PublicKey, program: any) {
     program.programId
   );
 
-  const poolTokenAccount = await getAssociatedTokenAddress(
-    mint,
-    bondingCurve,
-    true
-  );
-  const userTokenAccount = await getAssociatedTokenAddress(mint, user, true);
+  const poolTokenAccount = getAssociatedTokenAddressSync(
+    mint, bondingCurve, true
+  )
 
-  const [feePool] = PublicKey.findProgramAddressSync(
-    [Buffer.from(PREFIX_TOKEN.FEE_POOL_SEED_PREFIX), mint.toBuffer()],
-
-    program.programId
-  );
-
-  const [feePoolVault, feePoolVaultBump] = PublicKey.findProgramAddressSync(
-    [Buffer.from(PREFIX_TOKEN.FEE_POOL_VAULT_PREFIX), mint.toBuffer()],
-    program.programId
-  );
+  const userTokenAccount = getAssociatedTokenAddressSync(
+    mint, user, true
+  )
 
   return {
     userTokenAccount,
-    curveConfig,
     bondingCurve,
     poolSolVault,
     poolSolVaultBump,
     poolTokenAccount,
-    feePool,
-    feePoolVault,
-    feePoolVaultBump,
   };
 }
 
@@ -172,37 +147,32 @@ export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: 
     throw new Error("Program ID is required");
   }
 
-  const [launchpad] = PublicKey.findProgramAddressSync(
-    [Buffer.from(LAUNCHPAD_SEED_PREFIX), authority.toBuffer()],
-    programId
-  );
 
   const [fairLaunchData] = PublicKey.findProgramAddressSync(
-    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), launchpad.toBuffer()],
+    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), authority.toBuffer()],
     programId
   );
 
   const [fairLaunchVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), fairLaunchData.toBuffer()],
     programId
   );
 
   const [buyerAccount] = PublicKey.findProgramAddressSync(
-    [Buffer.from(BUYER_SEED_PREFIX), launchpad.toBuffer(), buyer.toBuffer()],
+    [Buffer.from(BUYER_SEED_PREFIX), authority.toBuffer(), buyer.toBuffer()],
     programId
   );
 
   const launchpadTokenAccount = getAssociatedTokenAddressSync(
-    mint, launchpad, true
+    mint, fairLaunchData, true
   );
 
   const [contributionVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), launchpad.toBuffer()],
+    [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), fairLaunchData.toBuffer()],
     programId
   );
 
   return {
-    launchpad,
     fairLaunchData,
     fairLaunchVault,
     launchpadTokenAccount,

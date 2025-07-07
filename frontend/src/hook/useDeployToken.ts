@@ -1,30 +1,30 @@
 import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import { findMintMetadataId } from "@solana-nft-programs/common";
 import {
-    AuthorityType,
-    MINT_SIZE,
-    TOKEN_PROGRAM_ID,
-    createAssociatedTokenAccountInstruction,
-    createInitializeMintInstruction,
-    createMintToInstruction,
-    createSetAuthorityInstruction,
-    getAssociatedTokenAddress,
-    getMinimumBalanceForRentExemptMint,
-    ASSOCIATED_TOKEN_PROGRAM_ID,
+  AuthorityType,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction,
+  createMintToInstruction,
+  createSetAuthorityInstruction,
+  getAssociatedTokenAddress,
+  getMinimumBalanceForRentExemptMint,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { useAnchorWallet } from "@solana/wallet-adapter-react";
+import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import {
-    PublicKey,
-    SYSVAR_RENT_PUBKEY,
-    SystemProgram,
-    Transaction,
-    TransactionInstruction,
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
 import { BN } from "bn.js";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
-import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
+import { getPDAs, getAllocationPDAs, getFairLaunchPDAs, getBondingCurveConfig } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Keypair } from "@solana/web3.js";
@@ -34,41 +34,45 @@ import { Metadata } from "../types";
 const TX_INTERVAL = 1000;
 
 const uploadMetadataToPinata = async (metadata: Metadata) => {
-    try {
-        const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
-            },
-            body: JSON.stringify(metadata)
-        });
+  try {
+    const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
+      },
+      body: JSON.stringify(metadata)
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
-    } catch (error) {
-        console.error('Error uploading metadata to Pinata:', error);
-        throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const result = await response.json();
+    return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+  } catch (error) {
+    console.error('Error uploading metadata to Pinata:', error);
+    throw error;
+  }
 };
 
 export const useDeployToken = () => {
   const { basicInfo, socials, allocation, dexListing, saleSetup, adminSetup, selectedTemplate, selectedPricing, selectedExchange } = useDeployStore();
-  const { program, connection,mintKeypair } = useAnchorProvider();
+  const { program, connection, mintKeypair } = useAnchorProvider();
   const anchorWallet = useAnchorWallet();
 
+  const walletSol = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = walletSol;
+
+
   const createTokenTransaction = async (): Promise<Transaction> => {
-    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !connection || !program) {
+    if (!publicKey || !mintKeypair?.publicKey || !connection || !program) {
       throw new Error("Required dependencies not available");
     }
 
     const decimals = Number(basicInfo.decimals || 9);
     const supply = basicInfo.supply || "1000000";
-    
+
     // Calculate mint amount with decimals
     let mintAmount: string;
     if (decimals === 0) {
@@ -85,14 +89,14 @@ export const useDeployToken = () => {
     const lamports = await getMinimumBalanceForRentExemptMint(connection);
     const tokenATA = await getAssociatedTokenAddress(
       mintKeypair.publicKey,
-      anchorWallet?.publicKey
+      publicKey
     );
 
     const metadataSocials = {
       website: socials.website || "",
       twitter: socials.twitter || "",
       telegram: socials.telegram || "",
-      discord: socials.discord || "", 
+      discord: socials.discord || "",
       farcaster: socials.farcaster || "",
     }
 
@@ -114,10 +118,10 @@ export const useDeployToken = () => {
     const metadataInstruction = createCreateMetadataAccountV3Instruction(
       {
         metadata: mintMetadataId,
-        updateAuthority: anchorWallet?.publicKey,
+        updateAuthority: publicKey,
         mint: mintKeypair.publicKey,
-        mintAuthority: anchorWallet?.publicKey,
-        payer: anchorWallet?.publicKey,
+        mintAuthority: publicKey,
+        payer: publicKey,
       },
       {
         createMetadataAccountArgsV3: {
@@ -138,7 +142,7 @@ export const useDeployToken = () => {
 
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
-        fromPubkey: anchorWallet?.publicKey,
+        fromPubkey: publicKey,
         newAccountPubkey: mintKeypair.publicKey,
         space: MINT_SIZE,
         lamports: lamports,
@@ -147,14 +151,14 @@ export const useDeployToken = () => {
       createInitializeMintInstruction(
         mintKeypair.publicKey,
         decimals,
-        anchorWallet?.publicKey,
-        anchorWallet?.publicKey,
+        publicKey,
+        publicKey,
         TOKEN_PROGRAM_ID
       ),
       createAssociatedTokenAccountInstruction(
-        anchorWallet?.publicKey,
+        publicKey,
         tokenATA,
-        anchorWallet?.publicKey,
+        publicKey,
         mintKeypair.publicKey,
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
@@ -162,7 +166,7 @@ export const useDeployToken = () => {
       createMintToInstruction(
         mintKeypair.publicKey,
         tokenATA,
-        anchorWallet?.publicKey,
+        publicKey,
         mintAmountNumber
       ),
       metadataInstruction
@@ -176,7 +180,7 @@ export const useDeployToken = () => {
       transaction.add(
         createSetAuthorityInstruction(
           mintKeypair.publicKey,
-          anchorWallet?.publicKey,
+          publicKey,
           AuthorityType.MintTokens,
           new PublicKey(adminSetup.revokeMintAuthority.walletAddress)
         )
@@ -190,7 +194,7 @@ export const useDeployToken = () => {
       transaction.add(
         createSetAuthorityInstruction(
           mintKeypair.publicKey,
-          anchorWallet?.publicKey,
+          publicKey,
           AuthorityType.FreezeAccount,
           new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress)
         )
@@ -201,129 +205,172 @@ export const useDeployToken = () => {
   };
 
   const createBondingCurveTransaction = async (): Promise<Transaction> => {
-    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !mintKeypair?.publicKey || !program) {
       throw new Error("Required dependencies not available");
     }
 
-    const { curveConfig } = await getPDAs(
-      anchorWallet?.publicKey,
-      mintKeypair.publicKey,
-      program
-    );
+    // const index = new BN(0);
+    // const mintExample = new PublicKey("EnGe9Wmd8VQdqbvBZgFz6XbTohTwCDwmUpEVsiU1MAHB");
+    // const curveConfig = await getBondingCurveConfig(publicKey, index.toNumber(), program);
+    // const { bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = await getPDAs(publicKey, publicKey, mintExample, program);
+    // console.log("curveConfig", curveConfig.toBase58());
+    // console.log("bondingCurve", bondingCurve.toBase58());
+    // console.log("poolTokenAccount", poolTokenAccount.toBase58());
+    // console.log("poolSolVault", poolSolVault.toBase58());
+    // console.log("userTokenAccount", userTokenAccount.toBase58());
+    // console.log("mintKeypair", mintKeypair.publicKey.toBase58());
 
-    const feePercentage = 100;
+    // const feePercentage = 100;
+    // const initialQuorum = new BN(500);
+    // const targetLiquidity = new BN(dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 1000000000);
+    // const daoQuorum = 500;
+    // const bondingCurveType = 0;
+
+    // // Calculate maxTokenSupply from basic info
+    // const supply = basicInfo.supply || "0";
+    // const decimals = Number(basicInfo.decimals || 0);
+
+    // if (isNaN(decimals) || decimals < 0) {
+    //   throw new Error("Invalid token decimals value");
+    // }
+
+    // let maxTokenSupplyValue: string;
+    // if (decimals === 0) {
+    //   maxTokenSupplyValue = supply;
+    // } else {
+    //   maxTokenSupplyValue = supply + "0".repeat(decimals);
+    // }
+
+    // const maxTokenSupply = new BN(maxTokenSupplyValue);
+    // const liquidityLockPeriod = new BN(dexListing.liquidityLockupPeriod || 60);
+    // const liquidityPoolPercentage = dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 50;
+
+    const index = new BN(0);
+
+    const curveConfig = await getBondingCurveConfig(publicKey, index.toNumber(), program)
+    const mintExample = new PublicKey("EnGe9Wmd8VQdqbvBZgFz6XbTohTwCDwmUpEVsiU1MAHB")
+    const { bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, mintExample, program)
+    console.log("publicKey", publicKey.toBase58())
+    console.log("curveConfig", curveConfig.toBase58())
+    console.log("poolTokenAccount", poolTokenAccount.toBase58())
+    console.log("poolSolVault", poolSolVault.toBase58())
+    console.log("userTokenAccount", userTokenAccount.toBase58())
+    console.log("bondingCurve", bondingCurve.toBase58())
+    console.log("mintExample", mintExample.toBase58())
+
+
+    // Fee Percentage : 100 = 1%
+    const feePercentage = new BN(100);
     const initialQuorum = new BN(500);
-    const targetLiquidity = new BN(dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 1000000000);
-    const daoQuorum = 500;
+    const targetLiquidity = new BN(1000000000);
+    const daoQuorum = new BN(500);
+    // 0 is linear, 1 is quadratic
     const bondingCurveType = 0;
-    
-    // Calculate maxTokenSupply from basic info
-    const supply = basicInfo.supply || "0";
-    const decimals = Number(basicInfo.decimals || 0);
-    
-    if (isNaN(decimals) || decimals < 0) {
-      throw new Error("Invalid token decimals value");
-    }
-    
-    let maxTokenSupplyValue: string;
-    if (decimals === 0) {
-      maxTokenSupplyValue = supply;
-    } else {
-      maxTokenSupplyValue = supply + "0".repeat(decimals);
-    }
-    
-    const maxTokenSupply = new BN(maxTokenSupplyValue);
-    const liquidityLockPeriod = new BN(dexListing.liquidityLockupPeriod || 60);
-    const liquidityPoolPercentage = dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 50;
-    const initialReserve = new BN(100000000);
-    const initialSupply = new BN(100000000);
-    const reserveRatio = 5000;
-
+    const maxTokenSupply = new BN(10000000000);
+    const liquidityLockPeriod = new BN(60); // 30 days
+    const liquidityPoolPercentage = new BN(50); // 50%
+    const initialPrice = new BN(100); // 0.0000001 SOL
+    const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
+    const reserveRatio = new BN(5000); // 50%
     // Create recipients array from allocation data
-    const recipients = allocation.map((item) => {
-      if (!item.walletAddress) {
-        throw new Error(`Invalid wallet address: address is empty`);
-      }
-      try {
-        const share = Math.round(item.percentage * 100);
-        return {
-          address: new PublicKey(item.walletAddress),
-          share,
-          amount: new BN(0),
-          lockingPeriod: new BN(item.lockupPeriod || 60000),
-        };
-      } catch (error) {
-        throw new Error(`Invalid wallet address: ${item.walletAddress}`);
-      }
-    });
-
-    // Validate total share percentage equals 10000 (100%)
-    const totalShare = recipients.reduce((sum, item) => sum + item.share, 0);
-    if (totalShare !== 10000) {
-      throw new Error(`Total allocation percentage must equal 100%. Current total: ${totalShare / 100}%`);
-    }
+    // const recipients = allocation.map((item) => {
+    //   if (!item.walletAddress) {
+    //     throw new Error(`Invalid wallet address: address is empty`);
+    //   }
+    //   try {
+    //     const share = Math.round(item.percentage * 100);
+    //     return {
+    //       address: new PublicKey(item.walletAddress),
+    //       share,
+    //       amount: new BN(0),
+    //       lockingPeriod: new BN(item.lockupPeriod || 60000),
+    //     };
+    //   } catch (error) {
+    //     throw new Error(`Invalid wallet address: ${item.walletAddress}`);
+    //   }
+    // });
+    const feeRecipient = Keypair.generate();
+    let recipients = [
+      {
+        address: feeRecipient.publicKey,
+        share: 10000,
+        amount: new BN(0),
+        lockingPeriod: new BN(60000),
+      },
+    ]
+    console.log("recipients", recipients)
 
     const instruction = await program.methods
-      .initialize(
-        anchorWallet?.publicKey,
+      .createPool(
+        index,
+        publicKey,
         feePercentage,
         initialQuorum,
         targetLiquidity,
-        anchorWallet?.publicKey,
+        publicKey,
         daoQuorum,
         bondingCurveType,
         maxTokenSupply,
         liquidityLockPeriod,
         liquidityPoolPercentage,
-        initialReserve,
+        initialPrice,
         initialSupply,
         recipients,
         reserveRatio
       )
       .accountsStrict({
         bondingCurveConfiguration: curveConfig,
-        admin: anchorWallet?.publicKey,
+        bondingCurveAccount: bondingCurve,
+        tokenMint: mintExample,
+        poolTokenAccount: poolTokenAccount,
+        poolSolVault: poolSolVault,
+        userTokenAccount: userTokenAccount,
+        admin: publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
         rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId
+        systemProgram: SystemProgram.programId,
+        associatedTokenProgram: ASSOCIATED_PROGRAM_ID
       })
+      .signers([walletSol as any])
       .instruction();
 
     return new Transaction().add(instruction);
   };
 
   const createAllocationTransactions = async (): Promise<Transaction[]> => {
-    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !mintKeypair?.publicKey || !program) {
       throw new Error("Required dependencies not available");
     }
 
+    const mintExample = new PublicKey("EnGe9Wmd8VQdqbvBZgFz6XbTohTwCDwmUpEVsiU1MAHB")
     if (!allocation || allocation.length === 0) {
       return [];
     }
 
     const allocationWallets = allocation.map(item => new PublicKey(item.walletAddress));
-    const { allocations, allocationTokenAccounts } = await getAllocationPDAs(mintKeypair.publicKey, allocationWallets, program.programId);
+    const { allocations, allocationTokenAccounts } = getAllocationPDAs(mintExample, allocationWallets, program.programId);
 
     const transactions: Transaction[] = [];
 
     for (let i = 0; i < allocation.length; i++) {
       const item = allocation[i];
       const percentage = new BN(item.percentage || 0);
-      
+
       // Calculate totalTokens from basic info
       const supply = basicInfo.supply || "0";
       const decimals = Number(basicInfo.decimals || 0);
-      
+
       if (isNaN(decimals) || decimals < 0) {
         throw new Error("Invalid token decimals value");
       }
-      
+
       let totalTokensValue: string;
       if (decimals === 0) {
         totalTokensValue = supply;
       } else {
         totalTokensValue = supply + "0".repeat(decimals);
       }
-      
+
       const totalTokens = new BN(totalTokensValue);
       const currentTime = Math.floor(Date.now() / 1000);
       const startTime = new BN(currentTime + 1000);
@@ -345,14 +392,15 @@ export const useDeployToken = () => {
         .accountsStrict({
           allocation: allocations[i],
           wallet: allocationWallets[i],
-          tokenMint: mintKeypair.publicKey,
+          tokenMint: mintExample,
           allocationVault: allocationTokenAccounts[i],
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
-          authority: anchorWallet?.publicKey,
+          authority: publicKey,
         })
+        .signers([walletSol as any])
         .instruction();
 
       transactions.push(new Transaction().add(instruction));
@@ -362,14 +410,14 @@ export const useDeployToken = () => {
   };
 
   const createFairLaunchTransaction = async (): Promise<Transaction> => {
-    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !mintKeypair?.publicKey || !program) {
       throw new Error("Required dependencies not available");
     }
 
-    const { launchpad, fairLaunchData, launchpadTokenAccount, contributionVault } = await getFairLaunchPDAs(
-      anchorWallet?.publicKey,
+    const { fairLaunchData, launchpadTokenAccount, contributionVault } = await getFairLaunchPDAs(
+      publicKey,
       mintKeypair.publicKey,
-      anchorWallet?.publicKey,
+      publicKey,
       program.programId
     );
 
@@ -395,55 +443,25 @@ export const useDeployToken = () => {
         distributionDelay
       )
       .accountsStrict({
-        launchPadAccount: launchpad,
         fairLaunchData: fairLaunchData,
         tokenMint: mintKeypair.publicKey,
         launchpadVault: launchpadTokenAccount,
         contributionVault: contributionVault,
-        authority: anchorWallet?.publicKey,
+        authority: publicKey,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
         rent: SYSVAR_RENT_PUBKEY,
       })
+      .signers([walletSol as any])
       .instruction();
 
     return new Transaction().add(instruction);
   };
 
-  const createLiquidityPoolTransaction = async (): Promise<Transaction> => {
-    if (!anchorWallet?.publicKey || !mintKeypair?.publicKey || !program) {
-      throw new Error("Required dependencies not available");
-    }
-
-    const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = await getPDAs(
-      anchorWallet?.publicKey,
-      mintKeypair.publicKey,
-      program
-    );
-
-    const instruction = await program.methods
-      .createPool()
-      .accountsStrict({
-        bondingCurveConfiguration: curveConfig,
-        bondingCurveAccount: bondingCurve,
-        tokenMint: mintKeypair.publicKey,
-        poolTokenAccount: poolTokenAccount,
-        poolSolVault: poolSolVault,
-        userTokenAccount: userTokenAccount,
-        user: anchorWallet?.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-        associatedTokenProgram: ASSOCIATED_PROGRAM_ID
-      })
-      .instruction();
-
-    return new Transaction().add(instruction);
-  };
 
   const generateTransactions = async (): Promise<Transaction[]> => {
-    if (!anchorWallet?.publicKey || !connection || !program?.programId || !mintKeypair?.publicKey) {
+    if (!publicKey || !connection || !program?.programId || !mintKeypair?.publicKey) {
       throw new Error("Please connect wallet and ensure all dependencies are available");
     }
 
@@ -451,48 +469,39 @@ export const useDeployToken = () => {
     if (!basicInfo.name || !basicInfo.symbol || !basicInfo.supply || !basicInfo.decimals) {
       throw new Error("Basic token information is incomplete");
     }
-    
+
     const transactions: Transaction[] = [];
-    const { blockhash } = await connection.getLatestBlockhash();
 
     // Generate token transaction
-    const tokenTransaction = await createTokenTransaction();
-    tokenTransaction.recentBlockhash = blockhash;
-    tokenTransaction.feePayer = anchorWallet?.publicKey;
-    tokenTransaction.partialSign(mintKeypair)
-    const tokenTx = await anchorWallet?.signTransaction(tokenTransaction);
-    transactions.push(tokenTx);
+    // const tokenTransaction = await createTokenTransaction();
+    // transactions.push(tokenTransaction);
 
     // Generate bonding curve transaction
     // const bondingCurveTransaction = await createBondingCurveTransaction();
     // bondingCurveTransaction.recentBlockhash = blockhash;
-    // bondingCurveTransaction.feePayer = anchorWallet?.publicKey;
-    // const bondingCurveTx = await anchorWallet?.signTransaction(bondingCurveTransaction);
-    // transactions.push(bondingCurveTx);
+    // bondingCurveTransaction.feePayer = publicKey;
+    // transactions.push(bondingCurveTransaction);
 
-    // Generate allocation transactions
+    // //Generate allocation transactions
     // const allocationTransactions = await createAllocationTransactions();
     // allocationTransactions.forEach(async (tx) => {
     //   tx.recentBlockhash = blockhash;
-    //   tx.feePayer = anchorWallet?.publicKey;
-    //   const allocationTx = await anchorWallet?.signTransaction(tx);
-    //   transactions.push(allocationTx);
+    //   tx.feePayer = publicKey;
+    //   transactions.push(tx);
     // });
     // transactions.push(...allocationTransactions);
 
-    // Generate fair launch transaction
+    // // Generate fair launch transaction
     // const fairLaunchTransaction = await createFairLaunchTransaction();
     // fairLaunchTransaction.recentBlockhash = blockhash;
-    // fairLaunchTransaction.feePayer = anchorWallet?.publicKey;
-    // const fairLaunchTx = await anchorWallet?.signTransaction(fairLaunchTransaction);
-    // transactions.push(fairLaunchTx);
+    // fairLaunchTransaction.feePayer = publicKey;
+    // transactions.push(fairLaunchTransaction);
 
     // // Generate liquidity pool transaction
     // const liquidityPoolTransaction = await createLiquidityPoolTransaction();
     // liquidityPoolTransaction.recentBlockhash = blockhash;
-    // liquidityPoolTransaction.feePayer = anchorWallet?.publicKey;
-    // const liquidityPoolTx = await anchorWallet?.signTransaction(liquidityPoolTransaction);
-    // transactions.push(liquidityPoolTx);
+    // liquidityPoolTransaction.feePayer = publicKey;
+    // transactions.push(liquidityPoolTransaction);
 
     // Log transaction sizes
     transactions.forEach((tx, index) => {
@@ -516,12 +525,11 @@ export const useDeployToken = () => {
         setTimeout(async () => {
           try {
             console.log(`Requesting Transaction ${i + 1}/${allTx.length}`);
-            const { blockhash } = await connection.getLatestBlockhash();
-            transaction.recentBlockhash = blockhash;
-            const signedTx = await anchorWallet?.signTransaction(transaction);
-            const rawTx = signedTx?.serialize() || new Uint8Array(0);
-            const txId = await connection.sendRawTransaction(rawTx);
-            await connection.confirmTransaction(txId);
+            const txId = await sendTransaction(
+              transaction,
+              connection,
+              { signers: [mintKeypair] }
+            );
             resolve(txId);
           } catch (error) {
             console.error(`Transaction ${i + 1} failed:`, error);
@@ -534,9 +542,23 @@ export const useDeployToken = () => {
     return await Promise.allSettled(staggeredTransactions);
   };
 
+  const executeTransaction = async (transaction: Transaction): Promise<string> => {
+    if (!connection) {
+      throw new Error("Connection and signTransaction not available");
+    }
+
+    const signature = await sendTransaction(
+      transaction,
+      connection,
+      // { signers: [walletSol as any] }
+    );
+
+    return signature;
+  };
+
   const deployToken = useCallback(async () => {
     try {
-      if (!anchorWallet?.publicKey) {
+      if (!publicKey) {
         toast.error("Please connect wallet!");
         return;
       }
@@ -557,47 +579,80 @@ export const useDeployToken = () => {
       }
 
       // Generate all transactions first
-      const transactionList = await generateTransactions();
+      // const transactionList = await generateTransactions();
 
-      console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
-      const txResults = await executeTransactions(transactionList);
-      
-      console.log("\n=== Transaction Results ===");
-      let successCount = 0;
-      txResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          console.log(`Transaction ${index + 1}: ${result.value}`);
-          successCount++;
-        } else {
-          console.log(`Transaction ${index + 1} failed:`, result.reason);
-          // Show specific error messages based on transaction type
-          if (index === 0) {
-            toast.error(`Token creation failed: ${result.reason}`);
-          } else if (index === 1) {
-            toast.error(`Bonding curve creation failed: ${result.reason}`);
-          } else if (index < 2 + allocation.length) {
-            toast.error(`Allocation creation failed: ${result.reason}`);
-          } else if (index === 2 + allocation.length) {
-            toast.error(`Fair launch creation failed: ${result.reason}`);
-          } else {
-            toast.error(`Liquidity pool creation failed: ${result.reason}`);
-          }
-        }
-      });
+      // console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
+      const tokenTransaction = await createTokenTransaction();
+      const bondingCurveTransaction = await createBondingCurveTransaction();
+      const allocationTransactions = await createAllocationTransactions();
+      // const fairLaunchTransaction = await createFairLaunchTransaction();
+      const transaction = new Transaction().add(bondingCurveTransaction);
 
-      if (successCount === transactionList.length) {
-        toast.success("Token deployed successfully! 🎉");
-        return txResults[0].status === 'fulfilled' ? txResults[0].value : undefined; // Return the first transaction ID
+      transaction.feePayer = publicKey
+      transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+
+      // Sign the transaction for simulation
+      // transaction.sign(walletSol as any);
+
+      console.log("\n=== SIMULATING TRANSACTION ===");
+
+      // Simulate the transaction (dry-run)
+      const simulation = await connection.simulateTransaction(transaction);
+
+      console.log("✅ Simulation successful!");
+      console.log("Logs:", simulation.value.logs);
+      console.log("Units consumed:", simulation.value.unitsConsumed);
+      console.log("Return data:", simulation.value.returnData);
+
+      const txResults = await executeTransaction(transaction);
+      console.log(txResults);
+
+      if (simulation.value.err) {
+        console.log("❌ Simulation error:", simulation.value.err);
       } else {
-        toast.error(`Deployment partially failed. ${successCount}/${transactionList.length} transactions succeeded.`);
+        console.log("🎉 Transaction would succeed!");
       }
 
     } catch (error) {
-      console.error('Deploy token error:', error);
-      toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error;
+      console.log("❌ Error during simulation:", error);
     }
-  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange]);
+
+    // console.log("\n=== Transaction Results ===");
+    // let successCount = 0;
+    // txResults.forEach((result, index) => {
+    //   if (result.status === 'fulfilled') {
+    //     console.log(`Transaction ${index + 1}: ${result.value}`);
+    //     successCount++;
+    //   } else {
+    //     console.log(`Transaction ${index + 1} failed:`, result.reason);
+    //     // Show specific error messages based on transaction type
+    //     if (index === 0) {
+    //       toast.error(`Token creation failed: ${result.reason}`);
+    //     } else if (index === 1) {
+    //       toast.error(`Bonding curve creation failed: ${result.reason}`);
+    //     } else if (index < 2 + allocation.length) {
+    //       toast.error(`Allocation creation failed: ${result.reason}`);
+    //     } else if (index === 2 + allocation.length) {
+    //       toast.error(`Fair launch creation failed: ${result.reason}`);
+    //     } else {
+    //       toast.error(`Liquidity pool creation failed: ${result.reason}`);
+    //     }
+    //   }
+    // });
+
+    // if (successCount === transactionList.length) {
+    //   toast.success("Token deployed successfully! 🎉");
+    //   return txResults[0].status === 'fulfilled' ? txResults[0].value : undefined; // Return the first transaction ID
+    // } else {
+    //   toast.error(`Deployment partially failed. ${successCount}/${transactionList.length} transactions succeeded.`);
+    // }
+
+    // } catch (error) {
+    //   console.error('Deploy token error:', error);
+    //   toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    //   throw error;
+    // }
+  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange, signTransaction, sendTransaction, publicKey]);
 
   return { deployToken };
 };
