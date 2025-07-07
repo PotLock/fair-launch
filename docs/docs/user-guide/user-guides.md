@@ -25,7 +25,8 @@ sidebar_position: 2
 
 ## 👀 Viewing existing tokens
 
-- Go to [Token Launchpad](https://launch.potlock.io) to see the tokens.
+- To see the tokens you have created, go to [My Tokens](https://launch.potlock.io/my-tokens).
+- To explore all tokens on the platform, visit the [Token Launchpad](https://launch.potlock.io).
 
 ## Trading tokens on the platform
 
