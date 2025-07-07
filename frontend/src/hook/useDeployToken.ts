@@ -245,18 +245,18 @@ export const useDeployToken = () => {
     // const liquidityLockPeriod = new BN(dexListing.liquidityLockupPeriod || 60);
     // const liquidityPoolPercentage = dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 50;
 
-    const index = new BN(0);
+    const index = new BN(1);
 
     const curveConfig = await getBondingCurveConfig(publicKey, index.toNumber(), program)
     const mintExample = new PublicKey("EnGe9Wmd8VQdqbvBZgFz6XbTohTwCDwmUpEVsiU1MAHB")
-    const { bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, mintExample, program)
+    const { bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, mintKeypair.publicKey, program)
     console.log("publicKey", publicKey.toBase58())
     console.log("curveConfig", curveConfig.toBase58())
     console.log("poolTokenAccount", poolTokenAccount.toBase58())
     console.log("poolSolVault", poolSolVault.toBase58())
     console.log("userTokenAccount", userTokenAccount.toBase58())
     console.log("bondingCurve", bondingCurve.toBase58())
-    console.log("mintExample", mintExample.toBase58())
+    console.log("mintExample", mintKeypair.publicKey.toBase58())
 
 
     // Fee Percentage : 100 = 1%
@@ -321,7 +321,7 @@ export const useDeployToken = () => {
       .accountsStrict({
         bondingCurveConfiguration: curveConfig,
         bondingCurveAccount: bondingCurve,
-        tokenMint: mintExample,
+        tokenMint: mintKeypair.publicKey,
         poolTokenAccount: poolTokenAccount,
         poolSolVault: poolSolVault,
         userTokenAccount: userTokenAccount,
@@ -583,16 +583,30 @@ export const useDeployToken = () => {
 
       // console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
       const tokenTransaction = await createTokenTransaction();
+      tokenTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      tokenTransaction.feePayer = publicKey
+      tokenTransaction.partialSign(mintKeypair)
+
+
       const bondingCurveTransaction = await createBondingCurveTransaction();
+      bondingCurveTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      bondingCurveTransaction.feePayer = publicKey
+
       const allocationTransactions = await createAllocationTransactions();
-      // const fairLaunchTransaction = await createFairLaunchTransaction();
-      const transaction = new Transaction().add(bondingCurveTransaction);
+      allocationTransactions.forEach(async (tx) => {
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+        tx.feePayer = publicKey
+      })
+      const fairLaunchTransaction = await createFairLaunchTransaction();
+      fairLaunchTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+      fairLaunchTransaction.feePayer = publicKey
+
+
+      const transaction = new Transaction().add(tokenTransaction).add(bondingCurveTransaction);
 
       transaction.feePayer = publicKey
       transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
 
-      // Sign the transaction for simulation
-      // transaction.sign(walletSol as any);
 
       console.log("\n=== SIMULATING TRANSACTION ===");
 

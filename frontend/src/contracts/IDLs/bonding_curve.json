@@ -1,5 +1,5 @@
 {
-  "address": "37pd5wMfvjYLEvBQdyrffuFTwKDj6ojH1vApX88Lx4W4",
+  "address": "91CVsfBf1XLSv3RLL6MvFYDaBkFrRdRtyAUPKtrChKed",
   "metadata": {
     "name": "bonding_curve",
     "version": "0.1.0",
@@ -3350,113 +3350,78 @@
   "errors": [
     {
       "code": 6000,
-      "name": "OnlyAdmin",
-      "msg": "Only admin can call this function"
+      "name": "InvalidTimeRange",
+      "msg": "Invalid time range"
     },
     {
       "code": 6001,
-      "name": "OnlyDAO",
-      "msg": "Only DAO can call this function"
+      "name": "WhitelistDurationOver",
+      "msg": "Whitelist duration over"
     },
     {
       "code": 6002,
-      "name": "InvalidFee",
-      "msg": "Invalid Fee"
+      "name": "CliffNotReached",
+      "msg": "Cliff period not reached"
     },
     {
       "code": 6003,
-      "name": "InvalidQuorum",
-      "msg": "Invalid Quorum"
+      "name": "SaleNotStarted",
+      "msg": "Sale has not started yet"
     },
     {
       "code": 6004,
-      "name": "DAOAlreadyActivated",
-      "msg": "DAO already activated"
+      "name": "SaleEnded",
+      "msg": "Sale has ended"
     },
     {
       "code": 6005,
-      "name": "OverFlowUnderFlowOccured",
-      "msg": "Overflow or underflow occured"
+      "name": "ContributionBelowMinimum",
+      "msg": "Contribution below minimum"
     },
     {
       "code": 6006,
-      "name": "InsufficientBalance",
-      "msg": "Insufficient balance"
+      "name": "ContributionExceedsMaximum",
+      "msg": "Contribution exceeds maximum"
     },
     {
       "code": 6007,
-      "name": "NotEnoughSolInVault",
-      "msg": "Not enough SOL in vault"
+      "name": "HardCapReached",
+      "msg": "Hard cap reached"
     },
     {
       "code": 6008,
-      "name": "InvalidBondingCurveType",
-      "msg": "Invalid bonding curve type"
+      "name": "SoftCapNotReached",
+      "msg": "Soft cap not reached"
     },
     {
       "code": 6009,
-      "name": "RecipientAlreadyExists",
-      "msg": "Recipient already exists"
+      "name": "DistributionDelayNotReached",
+      "msg": "Distribution delay not reached"
     },
     {
       "code": 6010,
-      "name": "InvalidSharePercentage",
-      "msg": "Invalid share percentage"
+      "name": "MaxTokensPerWalletExceeded",
+      "msg": "Max tokens per wallet exceeded"
     },
     {
       "code": 6011,
-      "name": "FeeRecipientNotFound",
-      "msg": "Fee recipient not found"
+      "name": "InvalidLaunchType",
+      "msg": "Invalid launch type"
     },
     {
       "code": 6012,
-      "name": "InvalidAmount",
-      "msg": "Invalid amount"
+      "name": "SaleIsPaused",
+      "msg": "Sale is paused"
     },
     {
       "code": 6013,
-      "name": "InvalidAuthority",
-      "msg": "Invalid authority"
+      "name": "InvalidAccountRelationship",
+      "msg": "Invalid account relationship"
     },
     {
       "code": 6014,
-      "name": "NotReadyToRemoveLiquidity",
-      "msg": "Not ready to remove liquidity"
-    },
-    {
-      "code": 6015,
-      "name": "TargetLiquidityReached",
-      "msg": "Target liquidity reached"
-    },
-    {
-      "code": 6016,
-      "name": "LiquidityLocked",
-      "msg": "Liquidity locked"
-    },
-    {
-      "code": 6017,
-      "name": "BondingCurveTokenMismatch",
-      "msg": "Bonding curve token B mismatch"
-    },
-    {
-      "code": 6018,
-      "name": "SOLMismatch",
-      "msg": "SOL token A mismatch"
-    },
-    {
-      "code": 6019,
-      "name": "InvalidRecipientAmount",
-      "msg": "Invalid recipient amount"
-    },
-    {
-      "code": 6020,
-      "name": "TransferFailed",
-      "msg": "Transfer failed"
-    },
-    {
-      "code": 6021,
-      "name": "NotEnoughSolInVaultRentExempt",
-      "msg": "Not enough SOL in vault for rent-exempt"
+      "name": "LaunchpadPaused",
+      "msg": "Launchpad is paused"
     }
   ],
   "types": [
