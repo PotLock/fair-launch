@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { SOL_NETWORK } from "../configs/env.config";
 
 interface TokenCardProps {
     banner?: string;
@@ -64,13 +65,13 @@ export function TokenCard({
                 <p className="text-sm text-gray-500 mb-3 line-clamp-2 min-h-[40px]">{description}</p>
                 <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                     <span>Progress</span>
-                    <span>{supply}/1,000,000</span>
+                    <span>{supply}</span>
                 </div>
                 <Progress value={progress} className="h-4 bg-gray-200 mb-4" />
                 <div className="grid grid-cols-2 gap-2 text-xs mb-1">
                     <div>
                         <div className="text-gray-400">Token Address</div>
-                        <a href={`https://solscan.io/token/${address}?cluster=${process.env.PUBLIC_SOL_NETWORK}`} target="_blank" className="font-medium text-gray-800 truncate hover:underline">
+                        <a href={`https://solscan.io/token/${address}?cluster=${SOL_NETWORK}`} target="_blank" className="font-medium text-gray-800 truncate hover:underline">
                             {address.slice(0, 6)}...{address.slice(-6)}
                         </a>
                     </div>
