@@ -245,10 +245,10 @@ export const useDeployToken = () => {
     // const liquidityLockPeriod = new BN(dexListing.liquidityLockupPeriod || 60);
     // const liquidityPoolPercentage = dexListing.liquidityPercentage > 0 ? dexListing.liquidityPercentage : 50;
 
-    const index = new BN(1);
+    const index = new BN(4);
 
     const curveConfig = await getBondingCurveConfig(publicKey, index.toNumber(), program)
-    const mintExample = new PublicKey("EnGe9Wmd8VQdqbvBZgFz6XbTohTwCDwmUpEVsiU1MAHB")
+    const mintExample = new PublicKey("FbFX9KdCbSBExQP64FyJEbuWQo3VM9cTVmaojCNqF4fL")
     const { bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, mintKeypair.publicKey, program)
     console.log("publicKey", publicKey.toBase58())
     console.log("curveConfig", curveConfig.toBase58())
@@ -269,8 +269,12 @@ export const useDeployToken = () => {
     const maxTokenSupply = new BN(10000000000);
     const liquidityLockPeriod = new BN(60); // 30 days
     const liquidityPoolPercentage = new BN(50); // 50%
-    const initialPrice = new BN(100); // 0.0000001 SOL
+    // const initialPrice = new BN(100); // 0.0000001 SOL
+    // const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
+
+    const initialPrice = new BN(100000); // 0.0000001 SOL
     const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
+
     const reserveRatio = new BN(5000); // 50%
     // Create recipients array from allocation data
     // const recipients = allocation.map((item) => {
@@ -549,8 +553,7 @@ export const useDeployToken = () => {
 
     const signature = await sendTransaction(
       transaction,
-      connection,
-      // { signers: [walletSol as any] }
+      connection
     );
 
     return signature;
@@ -578,95 +581,69 @@ export const useDeployToken = () => {
         return;
       }
 
-      // Generate all transactions first
-      // const transactionList = await generateTransactions();
+      // Get latest blockhash once
+      const { blockhash } = await connection.getLatestBlockhash();
 
-      // console.log(`Initiating bulk transaction execution for ${transactionList.length} transactions`);
+      // Create individual transactions to get their instructions
       const tokenTransaction = await createTokenTransaction();
-      tokenTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      tokenTransaction.feePayer = publicKey
-      tokenTransaction.partialSign(mintKeypair)
-
-
       const bondingCurveTransaction = await createBondingCurveTransaction();
-      bondingCurveTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      bondingCurveTransaction.feePayer = publicKey
 
-      const allocationTransactions = await createAllocationTransactions();
-      allocationTransactions.forEach(async (tx) => {
-        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-        tx.feePayer = publicKey
-      })
-      const fairLaunchTransaction = await createFairLaunchTransaction();
-      fairLaunchTransaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-      fairLaunchTransaction.feePayer = publicKey
+      // Create a single transaction with all instructions
+      const combinedTransaction = new Transaction();
+      
+      // Add all instructions from token transaction
+      combinedTransaction.add(...tokenTransaction.instructions);
+      
+      // Add all instructions from bonding curve transaction  
+      combinedTransaction.add(...bondingCurveTransaction.instructions);
 
+      // Set transaction properties
+      combinedTransaction.feePayer = publicKey;
+      combinedTransaction.recentBlockhash = blockhash;
 
-      const transaction = new Transaction().add(tokenTransaction).add(bondingCurveTransaction);
-
-      transaction.feePayer = publicKey
-      transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-
+      // Partial sign with mintKeypair (this is required for mint creation)
+      combinedTransaction.partialSign(mintKeypair);
 
       console.log("\n=== SIMULATING TRANSACTION ===");
 
       // Simulate the transaction (dry-run)
-      const simulation = await connection.simulateTransaction(transaction);
+      const simulation = await connection.simulateTransaction(combinedTransaction);
 
       console.log("✅ Simulation successful!");
       console.log("Logs:", simulation.value.logs);
       console.log("Units consumed:", simulation.value.unitsConsumed);
-      console.log("Return data:", simulation.value.returnData);
-
-      const txResults = await executeTransaction(transaction);
-      console.log(txResults);
 
       if (simulation.value.err) {
         console.log("❌ Simulation error:", simulation.value.err);
-      } else {
-        console.log("🎉 Transaction would succeed!");
+        throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
       }
 
+      console.log("🎉 Transaction would succeed!");
+
+      // Execute the transaction
+      const signature = await sendTransaction(combinedTransaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: 'processed'
+      });
+
+      console.log("Transaction signature:", signature);
+
+      // Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      }
+
+      toast.success("Token deployed successfully! 🎉");
+      return signature;
+
     } catch (error) {
-      console.log("❌ Error during simulation:", error);
+      console.log("❌ Error during deployment:", error);
+      toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
     }
-
-    // console.log("\n=== Transaction Results ===");
-    // let successCount = 0;
-    // txResults.forEach((result, index) => {
-    //   if (result.status === 'fulfilled') {
-    //     console.log(`Transaction ${index + 1}: ${result.value}`);
-    //     successCount++;
-    //   } else {
-    //     console.log(`Transaction ${index + 1} failed:`, result.reason);
-    //     // Show specific error messages based on transaction type
-    //     if (index === 0) {
-    //       toast.error(`Token creation failed: ${result.reason}`);
-    //     } else if (index === 1) {
-    //       toast.error(`Bonding curve creation failed: ${result.reason}`);
-    //     } else if (index < 2 + allocation.length) {
-    //       toast.error(`Allocation creation failed: ${result.reason}`);
-    //     } else if (index === 2 + allocation.length) {
-    //       toast.error(`Fair launch creation failed: ${result.reason}`);
-    //     } else {
-    //       toast.error(`Liquidity pool creation failed: ${result.reason}`);
-    //     }
-    //   }
-    // });
-
-    // if (successCount === transactionList.length) {
-    //   toast.success("Token deployed successfully! 🎉");
-    //   return txResults[0].status === 'fulfilled' ? txResults[0].value : undefined; // Return the first transaction ID
-    // } else {
-    //   toast.error(`Deployment partially failed. ${successCount}/${transactionList.length} transactions succeeded.`);
-    // }
-
-    // } catch (error) {
-    //   console.error('Deploy token error:', error);
-    //   toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    //   throw error;
-    // }
-  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange, signTransaction, sendTransaction, publicKey]);
+  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange, sendTransaction, publicKey]);
 
   return { deployToken };
 };

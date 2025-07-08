@@ -11,17 +11,19 @@ export default defineConfig({
     define: {
       'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),
       'process.env.PUBLIC_JWT_PINATA_SECRET': JSON.stringify(process.env.PUBLIC_JWT_PINATA_SECRET),
-      // 'process.browser': true,
-      // 'global':{}
+      'process.browser': true,
+      'global':{}
     },
     entry: {
       index: "./src/main.tsx"
+    }
+  },
+  resolve: {
+    alias: {
+      stream: "stream-browserify",
+      buffer: "buffer",
+      process: "process/browser",
     },
-    // alias: {
-    //   stream: "stream-browserify",
-    //   buffer: "buffer",
-    //   process: "process/browser",
-    // },
   },
   html: {
     template: "./index.html",
