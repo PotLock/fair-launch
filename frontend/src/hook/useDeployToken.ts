@@ -29,7 +29,7 @@ import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Keypair } from "@solana/web3.js";
 import { Metadata } from "../types";
-
+import { JWT_SECRET } from "../configs/env.config";
 
 const TX_INTERVAL = 1000;
 
@@ -39,7 +39,7 @@ const uploadMetadataToPinata = async (metadata: Metadata) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
+                'Authorization': `Bearer ${JWT_SECRET}`
             },
             body: JSON.stringify(metadata)
         });

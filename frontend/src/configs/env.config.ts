@@ -1,2 +1,4 @@
 const SOL_NETWORK = process.env.PUBLIC_SOL_NETWORK;
-export { SOL_NETWORK };
+const JWT_SECRET = process.env.PUBLIC_JWT_SECRET;
+const HELIUS_API_KEY = process.env.PUBLIC_HELIUS_API_KEY;
+export { SOL_NETWORK, JWT_SECRET, HELIUS_API_KEY };

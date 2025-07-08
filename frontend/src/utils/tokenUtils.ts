@@ -1,10 +1,6 @@
 import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const heliusApiKey = process.env.PUBLIC_HELIUS_API_KEY;
+import { HELIUS_API_KEY } from '../configs/env.config';
 
 export interface MintAccount {
   mint: string;
@@ -121,11 +117,11 @@ export async function getMintAccounts(walletAddress: string): Promise<MintAccoun
 }
 
 export async function getTokenInfo(mint: string): Promise<TokenInfo> {
-  if (!heliusApiKey) {
+  if (!HELIUS_API_KEY) {
     throw new Error('HELIUS_API_KEY is not defined in environment variables');
   }
 
-  const SOLANA_DEVNET_RPC_ENDPOINT = `https://devnet.helius-rpc.com/?api-key=${heliusApiKey}`;
+  const SOLANA_DEVNET_RPC_ENDPOINT = `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
   try {
