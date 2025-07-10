@@ -97,25 +97,14 @@ export function getPDAs(user: PublicKey, mint: PublicKey) {
   };
 }
 
-export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[], programId: PublicKey) {
-  // Validate parameters
-  if (!mint) {
-    throw new Error("Mint public key is required");
-  }
-  if (!wallet || wallet.length === 0) {
-    throw new Error("Wallet addresses are required");
-  }
-  if (!programId) {
-    throw new Error("Program ID is required");
-  }
-
+export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]) {
   let allocations = []
   let allocationTokenAccounts = []
   let userTokenAccounts = []
   for (let i = 0; i < wallet.length; i++) {
       const [allocation] = PublicKey.findProgramAddressSync(
           [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer()],
-          programId
+          new PublicKey(idlBondingCurve.address)
       );
       allocations.push(allocation)
 
@@ -137,37 +126,17 @@ export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[], programI
   };
 }
 
-
-export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: PublicKey, programId: PublicKey) {
-  // Validate parameters
-  if (!authority) {
-    throw new Error("Authority public key is required");
-  }
-  if (!mint) {
-    throw new Error("Mint public key is required");
-  }
-  if (!buyer) {
-    throw new Error("Buyer public key is required");
-  }
-  if (!programId) {
-    throw new Error("Program ID is required");
-  }
-
-
+export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey) {
   const [fairLaunchData] = PublicKey.findProgramAddressSync(
     [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), authority.toBuffer()],
-    programId
+    new PublicKey(idlBondingCurve.address)
   );
 
   const [fairLaunchVault] = PublicKey.findProgramAddressSync(
     [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), fairLaunchData.toBuffer()],
-    programId
+    new PublicKey(idlBondingCurve.address)
   );
 
-  const [buyerAccount] = PublicKey.findProgramAddressSync(
-    [Buffer.from(BUYER_SEED_PREFIX), authority.toBuffer(), buyer.toBuffer()],
-    programId
-  );
 
   const launchpadTokenAccount = getAssociatedTokenAddressSync(
     mint, fairLaunchData, true
@@ -175,14 +144,13 @@ export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey, buyer: 
 
   const [contributionVault] = PublicKey.findProgramAddressSync(
     [Buffer.from(CONTRIBUTION_VAULT_SEED_PREFIX), fairLaunchData.toBuffer()],
-    programId
+    new PublicKey(idlBondingCurve.address)
   );
 
   return {
     fairLaunchData,
     fairLaunchVault,
     launchpadTokenAccount,
-    buyerAccount,
     contributionVault,
   };
 }

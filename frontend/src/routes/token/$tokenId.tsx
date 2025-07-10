@@ -21,13 +21,14 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { getTokenInfo, TokenInfo } from "../../utils/tokenUtils";
+import { getAllocationsAndVesting, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
+import { getTokenByMint } from "../../lib/api";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -76,8 +77,10 @@ function TokenDetail() {
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
-            const tokenInfo = await getTokenInfo(tokenId);
-            setTokenInfo(tokenInfo);
+            const tokenInfo = await getTokenByMint(tokenId);
+            const allocations = await getAllocationsAndVesting([new PublicKey('25gkdigyQtYVreV8gYmrF7WDcckVkx6d2SkbWi6B9W6e')]);
+            console.log("allocations", allocations);
+            setTokenInfo(tokenInfo.data);
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -93,7 +96,7 @@ function TokenDetail() {
     useEffect(() => {
         if (tokenInfo) {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
         }
     }, [tokenInfo]);
 
@@ -132,7 +135,7 @@ function TokenDetail() {
 
     const tokenOptions = [
         { name: 'SOL', icon: '/chains/sol.jpeg' },
-        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatar }] : [])
+        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl }] : [])
     ];
     
 
@@ -159,7 +162,7 @@ function TokenDetail() {
     const handlePaymentChange = (option: { name: string; icon: string }) => {
         setSelectedPayment(option);
         if (option.name === 'SOL' && tokenInfo) {
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
         } else {
             setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
         }
@@ -171,7 +174,7 @@ function TokenDetail() {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
         } else {
             if (tokenInfo) {
-                setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+                setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
             }
         }
     };
@@ -198,13 +201,13 @@ function TokenDetail() {
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
-                        <img src={tokenInfo?.banner} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
+                        <img src={tokenInfo?.bannerUrl} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
                         <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
                             style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
                     </div>
                     <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
                         <div className="flex items-center gap-3">
-                            <img src={tokenInfo?.avatar} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
+                            <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
                             <div className="flex flex-col">
                                 <span className="text-3xl font-bold text-white uppercase">{tokenInfo?.name}</span>
                                 <div className="flex items-center gap-2 mt-2">
@@ -299,7 +302,7 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">-</div>
+                                <div className="text-lg font-semibold">{tokenInfo?.targetRaise}</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
@@ -431,7 +434,7 @@ function TokenDetail() {
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Min. Contribution</p>
-                                <p className="text-sm font-semibold">- SOL</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.minimumContribution} SOL</p>
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -441,11 +444,11 @@ function TokenDetail() {
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                                <p className="text-sm font-semibold">-</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.hardCap} SOL</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
-                                <p className="text-sm font-semibold">-</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.maximumContribution} SOL</p>
                             </div>
                         </div>
                     </div>
@@ -603,7 +606,7 @@ function TokenDetail() {
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span className="font-medium">ACTIVE</span>
-                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdOn ? calculateTimeSinceCreation(tokenInfo.createdOn, currentTime) : "-"}</span>
+                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdAt ? calculateTimeSinceCreation(tokenInfo.createdAt, currentTime) : "-"}</span>
                     </div>
 
                     <div className="text-3xl font-bold text-green-600 mb-3">-</div>
@@ -622,7 +625,7 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">-</div>
+                            <div className="text-lg font-semibold">{tokenInfo?.targetRaise} SOL</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>
@@ -631,7 +634,11 @@ function TokenDetail() {
                 <div className="border border-gray-200 p-4 rounded-t-2xl bg-white">
                     <div className="flex justify-between items-center mb-4">
                         <span className="text-xl font-semibold">Join Presale</span>
-                        <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">Fixed Price</span>
+                        <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">
+                            {tokenInfo?.selectedPricing === 'bonding-curve' ? 'Bonding Curve' : 
+                             tokenInfo?.selectedPricing === 'fixed-price' ? 'Fixed Price' : 
+                             tokenInfo?.selectedPricing}
+                        </span>
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">

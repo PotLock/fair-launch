@@ -108,6 +108,7 @@ export const TokenContainer = () => {
                 tokenName={basicInfo.name || "Token"}
                 onViewToken={handleViewToken}
                 onReturnHome={handleReturnHome}
+                onClose={() => setIsSuccess(false)}
             />
         </div>
     );

@@ -22,8 +22,8 @@ export interface TokenInfo {
   id: string;
   name: string;
   symbol: string;
-  avatar: string;
-  banner?: string;
+  avatarUrl: string;
+  bannerUrl?: string;
   description: string;
   decimals: number;
   supply: number;
@@ -39,6 +39,15 @@ export interface TokenInfo {
   }
   pricing: string;
   curveConfig?: string;
+  mintAddress?: string;
+  targetRaise?: string;
+  createdAt?: string;
+  selectedPricing?: string;
+  selectedExchange?: string;
+  selectedTemplate?: string;
+  hardCap?: string;
+  maximumContribution?: string;
+  minimumContribution?: string;
 }
 
 export interface BondingCurveTokenInfo {
@@ -183,8 +192,8 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
       name: data.result.content.metadata.name,
       symbol: data.result.content.metadata.symbol,
       description: metadataJson.description,
-      avatar: metadataJson.image,
-      banner: metadataJson.banner,
+      avatarUrl: metadataJson.image,
+      bannerUrl: metadataJson.banner,
       decimals: data.result.token_info.decimals,
       supply: data.result.token_info.supply / 10 ** data.result.token_info.decimals,
       mintAuthority: data.result.token_info.mint_authority,

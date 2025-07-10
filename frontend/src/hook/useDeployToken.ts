@@ -23,11 +23,27 @@ import { BN } from "bn.js";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
-import { getPDAs, getBondingCurveConfig } from "../utils/sol";
+import { getPDAs, getBondingCurveConfig, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
+import { createToken } from "../lib/api";
+import { Program } from "@coral-xyz/anchor";
+import { Keypair } from "@solana/web3.js";
 
+// Helper function to convert dates to Unix time
+const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
+  if (dateString) {
+    const date = new Date(dateString);
+    return Math.floor(date.getTime() / 1000) + (daysToAdd * 24 * 60 * 60);
+  }
+  return Math.floor(Date.now() / 1000) + (daysToAdd * 24 * 60 * 60);
+};
+
+// Helper function to convert days to seconds
+const daysToSeconds = (days: number): number => {
+  return days * 24 * 60 * 60;
+};
 
 const uploadMetadataToPinata = async (metadata: Metadata) => {
   try {
@@ -64,7 +80,7 @@ export const useDeployToken = () => {
     selectedPricing, 
     selectedExchange, 
     pricingMechanism,
-    fees,
+    fees
   } = useDeployStore();
   const { program, connection, mintKeypair } = useAnchorProvider();
   const anchorWallet = useAnchorWallet();
@@ -223,28 +239,26 @@ export const useDeployToken = () => {
     const feePercentage = new BN(100);
     const initialQuorum = new BN(500);
     const daoQuorum = new BN(500);
-    const targetLiquidity = new BN(1000000000);
+    const targetLiquidity = new BN(Number(pricingMechanism.targetRaise) * 10 ** 9);
 
     // 0 is linear, 1 is quadratic
     const bondingCurveType = 0;
-    const maxTokenSupply = new BN(10000000000); // total supply
-    const liquidityLockPeriod = new BN(60); // 30 days
-    const liquidityPoolPercentage = new BN(50); // 50%
-    // const initialPrice = new BN(100); // 0.0000001 SOL
-    // const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
-
-    const initialPrice = new BN(1000); // 0.0000001 SOL
+    const maxTokenSupply = new BN(Number(basicInfo.supply) * 10 ** Number(basicInfo.decimals)); // total supply
+    const liquidityLockPeriod =  new BN(toUnixTime(undefined, dexListing.liquidityLockupPeriod)); // unix timestamp
+    const liquidityPoolPercentage = new BN(Number(dexListing.liquidityPercentage)); // 50%
+    
+    const initialPrice = new BN(Number(pricingMechanism.initialPrice) * 10 ** 9); // 0.0000001 SOL
     const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
 
-    const reserveRatio = new BN(5000); // 50%
+    const reserveRatio = new BN(Number(pricingMechanism.reserveRatio) * 100); // 50% = 50 * 100
     const feeRecipient = new PublicKey(fees.feeRecipientAddress);
-
+    console.log("feeRecipient", feeRecipient.toBase58());
     let recipients = [
       {
         address: feeRecipient,
         share: 10000,
         amount: new BN(0),
-        lockingPeriod: new BN(Math.floor(Date.now() / 1000) + (dexListing.liquidityLockupPeriod * 24 * 60 * 60)),
+        lockingPeriod: new BN(toUnixTime(undefined, dexListing.liquidityLockupPeriod)),
       },
     ]
     console.log("recipients", recipients)
@@ -283,6 +297,130 @@ export const useDeployToken = () => {
       .instruction();
 
     return new Transaction().add(instruction);
+  };
+
+  const createAllocationTransactions = async(): Promise<Transaction[]> => {
+    if (!publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+    
+    // Get wallet addresses from allocation store data
+    const wallets = allocation
+      .filter(item => item.walletAddress && item.walletAddress.trim() !== '')
+      .map(item => new PublicKey(item.walletAddress));
+    
+    if (wallets.length === 0) {
+      console.log("No valid wallet addresses found in allocation data");
+      return [];
+    }
+    
+    const { allocations, allocationTokenAccounts } = getAllocationPDAs(mintKeypair.publicKey, wallets);
+    console.log("Allocation wallets:", wallets.map(w => w.toBase58()));
+    console.log("Allocation's accounts:", allocations.map(a => a.toBase58()));
+    const transactions: Transaction[] = [];
+
+    for (let i = 0; i < wallets.length; i++) {
+        const allocationItem = allocation.find(item => item.walletAddress === wallets[i].toBase58());
+        if (!allocationItem) continue;
+        
+        let percentage = new BN(allocationItem.percentage);
+        let totalTokens = new BN(Number(basicInfo.supply) * 10 ** Number(basicInfo.decimals));
+        let startTime = new BN(toUnixTime(undefined, allocationItem.lockupPeriod));
+        let cliffPeriod = new BN(toUnixTime(undefined, allocationItem.vesting.cliff));
+        let duration = new BN(toUnixTime(undefined, allocationItem.vesting.duration));
+        let interval = new BN(toUnixTime(undefined, allocationItem.vesting.interval));
+        let released = new BN(0);
+
+        let vesting = {
+            cliffPeriod: cliffPeriod,
+            startTime: startTime,
+            duration: duration,
+            interval: interval,
+            released: released,
+        }
+
+        const createAllocationInstruction = await program.methods
+            .createAllocation(percentage.toNumber(), totalTokens, vesting)
+            .accountsStrict({
+                allocation: allocations[i],
+                wallet: wallets[i],
+                tokenMint: mintKeypair.publicKey,
+                allocationVault: allocationTokenAccounts[i],
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+                rent: SYSVAR_RENT_PUBKEY,
+                systemProgram: SystemProgram.programId,
+                authority: publicKey,
+            })
+            .instruction()
+
+        transactions.push(new Transaction().add(createAllocationInstruction));
+    }
+
+    return transactions;
+  };
+
+  const createFairLaunchTransaction = async(): Promise<Transaction> => {
+
+    if (!publicKey || !mintKeypair?.publicKey || !program) {
+      throw new Error("Required dependencies not available");
+    }
+
+    const { fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(publicKey, mintKeypair.publicKey);
+
+    let softCap = new BN(Number(saleSetup.softCap) * 10 ** 9);
+    let hardCap = new BN(Number(saleSetup.hardCap) * 10 ** 9);
+    let minContribution = new BN(Number(saleSetup.minimumContribution) * 10 ** 9);
+    let maxContribution = new BN(Number(saleSetup.maximumContribution) * 10 ** 9);
+    let maxTokensPerWallet = new BN(Number(saleSetup.maxTokenPerWallet) * 10 ** 9);
+    let distributionDelay = new BN(toUnixTime(undefined, saleSetup.distributionDelay));
+    let currentTime = Math.floor(Date.now() / 1000);
+    
+    // Convert string dates to Unix timestamps
+    let startTime: any;
+    let endTime: any;
+    
+    if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.launchDate) {
+      // If launch date is provided, convert it to Unix time
+      startTime = new BN(toUnixTime(saleSetup.scheduleLaunch.launchDate));
+    } else {
+      // Default to current time + 1 minute
+      startTime = new BN(currentTime + 60);
+    }
+    
+    if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.endDate) {
+      // If end date is provided, convert it to Unix time
+      endTime = new BN(toUnixTime(saleSetup.scheduleLaunch.endDate));
+    } else {
+      // Default to current time + 1 hour
+      endTime = new BN(currentTime + 3600);
+    }
+
+    const createFairLaunchInstruction = await program.methods
+        .createFairLaunch(
+            softCap,
+            hardCap,
+            startTime,
+            endTime,
+            minContribution,
+            maxContribution,
+            maxTokensPerWallet,
+            distributionDelay
+        )
+        .accountsStrict({
+            fairLaunchData: fairLaunchData,
+            tokenMint: mintKeypair.publicKey,
+            launchpadVault: launchpadTokenAccount,
+            contributionVault: contributionVault,
+            authority: publicKey,
+            systemProgram: SystemProgram.programId,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+            rent: SYSVAR_RENT_PUBKEY,
+        })
+        .instruction();
+
+    return new Transaction().add(createFairLaunchInstruction);
   };
 
   const deployToken = useCallback(async () => {
@@ -329,8 +467,10 @@ export const useDeployToken = () => {
 
       // Partial sign with mintKeypair (this is required for mint creation)
       combinedTransaction.partialSign(mintKeypair);
+      // console.log('mintKeypair', mintKeypair.publicKey.toBase58());
 
-      console.log("\n=== SIMULATING TRANSACTION ===");
+      
+      // console.log("\n=== SIMULATING TRANSACTION ===");
 
       // Simulate the transaction (dry-run)
       const simulation = await connection.simulateTransaction(combinedTransaction);
@@ -344,15 +484,13 @@ export const useDeployToken = () => {
         throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
       }
 
-      console.log("🎉 Transaction would succeed!");
-
       // Execute the transaction
       const signature = await sendTransaction(combinedTransaction, connection, {
         skipPreflight: false,
         preflightCommitment: 'processed'
       });
 
-      console.log("Transaction signature:", signature);
+      // console.log("Transaction signature:", signature);
 
       // Wait for confirmation
       const confirmation = await connection.confirmTransaction(signature, 'confirmed');
@@ -360,6 +498,78 @@ export const useDeployToken = () => {
       if (confirmation.value.err) {
         throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
       }
+
+      const allocationTransactions = await createAllocationTransactions();
+      const fairLaunchTransaction = await createFairLaunchTransaction();
+
+      const combinedTransaction1 = new Transaction();
+      combinedTransaction1.add(...allocationTransactions);
+      combinedTransaction1.add(fairLaunchTransaction);
+
+      // Set transaction properties
+      combinedTransaction1.feePayer = publicKey;
+      combinedTransaction1.recentBlockhash = blockhash;
+
+      combinedTransaction1.partialSign(mintKeypair);
+
+      const simulation1 = await connection.simulateTransaction(combinedTransaction1);
+      console.log("✅ Simulation 1 successful!");
+      console.log("Logs 1:", simulation1.value.logs);
+      console.log("Units consumed 1:", simulation1.value.unitsConsumed);
+
+      if (simulation1.value.err) {
+        console.log("❌ Simulation 1 error:", simulation1.value.err);
+        throw new Error(`Simulation 1 failed: ${JSON.stringify(simulation1.value.err)}`);
+      }
+
+      const signature1 = await sendTransaction(combinedTransaction1, connection, {
+        skipPreflight: false,
+        preflightCommitment: 'processed'
+      });
+
+      const confirmation1 = await connection.confirmTransaction(signature1, 'confirmed');
+      if (confirmation1.value.err) {
+        throw new Error(`Transaction 1 failed: ${JSON.stringify(confirmation1.value.err)}`);
+      }
+
+      // // Create token record in database
+      // try {
+      //   const tokenData = {
+      //     owner: publicKey.toBase58(),
+      //     mintAddress: mintKeypair.publicKey.toBase58(),
+      //     basicInfo,
+      //     socials,
+      //     allocation,
+      //     dexListing:{
+      //       launchLiquidityOn: dexListing.launchLiquidityOn.name,
+      //       liquiditySource: dexListing.liquiditySource,
+      //       liquidityData: dexListing.liquidityData,
+      //       liquidityType: dexListing.liquidityType,
+      //       liquidityPercentage: dexListing.liquidityPercentage,
+      //       liquidityLockupPeriod: dexListing.liquidityLockupPeriod,
+      //       walletLiquidityAmount: dexListing.walletLiquidityAmount,
+      //       externalSolContribution: dexListing.externalSolContribution,
+      //       isAutoBotProtectionEnabled: dexListing.isAutoBotProtectionEnabled,
+      //       isAutoListingEnabled: dexListing.isAutoListingEnabled,
+      //       isPriceProtectionEnabled: dexListing.isPriceProtectionEnabled,
+      //     },
+      //     fees,
+      //     saleSetup,
+      //     adminSetup,
+      //     pricingMechanism,
+      //     selectedTemplate,
+      //     selectedPricing,
+      //     selectedExchange,
+      //   };
+
+      //   await createToken(tokenData);
+      //   console.log("Token record created in database successfully");
+      // } catch (apiError) {
+      //   console.error("Failed to create token record in database:", apiError);
+      //   // Don't throw here as the token was deployed successfully on-chain
+      //   // Just log the error and show a warning toast
+      //   toast.error("Token deployed on-chain but failed to save to database");
+      // }
 
       toast.success("Token deployed successfully! 🎉");
       return signature;
