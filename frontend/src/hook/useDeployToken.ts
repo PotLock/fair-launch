@@ -23,13 +23,10 @@ import { BN } from "bn.js";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
-import { getPDAs, getBondingCurveConfig, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
+import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
-import { createToken } from "../lib/api";
-import { Program } from "@coral-xyz/anchor";
-import { Keypair } from "@solana/web3.js";
 
 // Helper function to convert dates to Unix time
 const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
@@ -38,11 +35,6 @@ const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
     return Math.floor(date.getTime() / 1000) + (daysToAdd * 24 * 60 * 60);
   }
   return Math.floor(Date.now() / 1000) + (daysToAdd * 24 * 60 * 60);
-};
-
-// Helper function to convert days to seconds
-const daysToSeconds = (days: number): number => {
-  return days * 24 * 60 * 60;
 };
 
 const uploadMetadataToPinata = async (metadata: Metadata) => {

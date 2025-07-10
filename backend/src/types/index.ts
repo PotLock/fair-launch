@@ -111,7 +111,8 @@ export const CreateTokenSchema = z.object({
   fees: FeesSchema,
   saleSetup: TokenSaleSetupSchema,
   adminSetup: AdminSetupSchema,
-  address: z.string(),
+  mintAddress: z.string(),
+  owner: z.string(),
 });
 
 // TypeScript types

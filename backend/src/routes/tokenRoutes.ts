@@ -55,7 +55,7 @@ app.get('/', async (c) => {
 });
 
 // Get token by address - This must come before /:id to avoid route conflicts
-app.get('/address/:address', async (c) => {
+app.get('/mint/:address', async (c) => {
   try {
     const address = c.req.param('address');
     
@@ -82,6 +82,33 @@ app.get('/address/:address', async (c) => {
       }, 404);
     }
     
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+// Get token by owner
+app.get('/address/:address', async (c) => {
+  try {
+    const address = c.req.param('address');
+    
+    if (!address || address.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Owner address is required'
+      }, 400);
+    }
+
+    const tokens = await tokenService.getTokensByOwner(address);
+    
+    return c.json({
+      success: true,
+      data: tokens
+    }); 
+  } catch (error) {
+    console.error('Error in get tokens by owner route:', error);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -128,7 +155,7 @@ app.get('/:id', async (c) => {
 app.delete('/all', async (c) => {
   try {
     const result = await tokenService.deleteAllTokens();
-    
+    await tokenService.deleteAllAllocations();
     return c.json({
       success: true,
       data: result,

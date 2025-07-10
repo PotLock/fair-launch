@@ -8,7 +8,7 @@ export class TokenService {
     try {
       // Insert main token data
       const [token] = await db.insert(tokens).values({
-        address: tokenData.address,
+        mintAddress: tokenData.mintAddress,
         name: tokenData.basicInfo.name,
         symbol: tokenData.basicInfo.symbol,
         description: tokenData.basicInfo.description,
@@ -71,6 +71,7 @@ export class TokenService {
         numberOfSignatures: tokenData.adminSetup.numberOfSignatures,
         mintAuthorityWalletAddress: tokenData.adminSetup.mintAuthorityWalletAddress,
         freezeAuthorityWalletAddress: tokenData.adminSetup.freezeAuthorityWalletAddress,
+        owner: tokenData.owner, // Add this line to handle owner
       }).returning();
 
       // Insert allocations
@@ -126,7 +127,7 @@ export class TokenService {
   async getTokenByAddress(address: string) {
     try {
       const token = await db.query.tokens.findFirst({
-        where: eq(tokens.address, address),
+        where: eq(tokens.mintAddress, address),
         with: {
           allocations: true,
         },
@@ -159,6 +160,22 @@ export class TokenService {
     }
   }
 
+  async getTokensByOwner(owner: string) {
+    try {
+      const tokensByOwner = await db.query.tokens.findMany({
+        where: eq(tokens.owner, owner),
+        with: {
+          allocations: true,
+        },
+        orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
+      });
+      return tokensByOwner;
+    } catch (error) {
+      console.error('Error getting tokens by owner:', error);
+      throw new Error('Failed to get tokens by owner');
+    }
+  }
+
   async deleteToken(id: number) {
     try {
       await db.delete(tokens).where(eq(tokens.id, id));
@@ -178,6 +195,16 @@ export class TokenService {
     } catch (error) {
       console.error('Error deleting all tokens:', error);
       throw new Error('Failed to delete all tokens');
+    }
+  }
+
+  async deleteAllAllocations() {
+    try {
+      await db.delete(tokenAllocations);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting all allocations:', error);
+      throw new Error('Failed to delete all allocations');
     }
   }
 } 

@@ -4,7 +4,7 @@ import { relations } from 'drizzle-orm';
 // Bảng chính lưu thông tin token
 export const tokens = pgTable('tokens', {
   id: serial('id').primaryKey(),
-  address: varchar('address', { length: 255 }).notNull(),
+  mintAddress: varchar('mint_address', { length: 255 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   symbol: varchar('symbol', { length: 50 }).notNull(),
   description: text('description'),
@@ -12,6 +12,7 @@ export const tokens = pgTable('tokens', {
   decimals: varchar('decimals', { length: 10 }).notNull(),
   avatarUrl: text('avatar_url'),
   bannerUrl: text('banner_url'),
+  owner: varchar('owner', { length: 255 }),
   
   // Template và pricing
   selectedTemplate: varchar('selected_template', { length: 100 }).notNull(),
