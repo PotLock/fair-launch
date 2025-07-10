@@ -45,3 +45,4 @@ export function calculateTimeSinceCreation(createdOn: string, currentTime?: Date
     
     return `${days}d | ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
 }
+

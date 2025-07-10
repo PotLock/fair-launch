@@ -1,6 +1,15 @@
 import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { HELIUS_API_KEY } from '../configs/env.config';
+import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
+import { 
+  ALLOCATION_SEED_PREFIX, 
+  deserializeAllocationAndVesting, 
+  deserializeBondingCurve,
+  deserializeCurveConfiguration,
+  getBondingCurveConfig
+} from './sol';
+
 
 export interface MintAccount {
   mint: string;
@@ -29,6 +38,7 @@ export interface TokenInfo {
     farcaster?: string;
   }
   pricing: string;
+  curveConfig?: string;
 }
 
 export interface BondingCurveTokenInfo {
@@ -78,6 +88,12 @@ export interface WhitelistLaunchData {
   whitelistDuration: number;
   bump: number;
 }
+
+const connection = new Connection("https://api.devnet.solana.com", {
+  commitment: "confirmed",
+});
+
+const programId = new PublicKey(idlBondingCurve.address);
 
 export async function getMintAccounts(walletAddress: string): Promise<MintAccount[]> {
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
@@ -161,7 +177,7 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
 
     const metadata = await fetch(data.result.content.json_uri);
     const metadataJson = await metadata.json();
-
+    
     const tokenInfo: TokenInfo = {
       id: data.result.id,
       name: data.result.content.metadata.name,
@@ -175,13 +191,48 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
       freezeAuthority: data.result.token_info.freeze_authority,
       createdOn: formattedDate,
       social: metadataJson.social,
-      pricing: metadataJson.pricing
+      pricing: metadataJson.pricing,
     };
 
     return tokenInfo;
   } catch (error) {
     console.error('Error fetching token info:', error);
     throw error;
+  }
+}
+
+export async function getBondingCurveAccounts(mint: PublicKey) {
+  const seeds = [Buffer.from("bonding_curve"), mint.toBuffer()];
+
+  const [bondingCurve, bump] = PublicKey.findProgramAddressSync(seeds, programId);
+
+  const accountInfo = await connection.getAccountInfo(bondingCurve);
+
+  if (!accountInfo) {
+    console.log("PDA account does not exist or has no data.");
+    return;
+  }
+
+  const decodedData = deserializeBondingCurve(accountInfo.data);
+  return decodedData;
+}
+
+export async function getAllocationsAndVesting(wallets: PublicKey[]) {
+  for (const wallet of wallets) {
+    const seeds = [Buffer.from(ALLOCATION_SEED_PREFIX), wallet.toBuffer()];
+    const [allocation, bump] = PublicKey.findProgramAddressSync(seeds, programId);
+
+    console.log("PDA Address:", allocation.toBase58());
+
+    const accountInfo = await connection.getAccountInfo(allocation);
+
+    if (!accountInfo) {
+      console.log("PDA account does not exist or has no data.");
+      return;
+    }
+
+    const decodedData = deserializeAllocationAndVesting(accountInfo.data);
+    return decodedData;
   }
 }
 

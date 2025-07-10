@@ -26,8 +26,8 @@ import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
-import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
+import { Button } from "../../components/ui/button";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -71,12 +71,12 @@ function TokenDetail() {
     const { publicKey } = useWallet();
     const { buyToken } = useTokenTrading();
     const isLoggedIn = !!publicKey;
+    const [isBuying, setIsBuying] = useState(false);
     
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
             const tokenInfo = await getTokenInfo(tokenId);
-            console.log(tokenInfo);
             setTokenInfo(tokenInfo);
         } catch (error) {
             console.error('Error loading token info:', error);
@@ -88,6 +88,7 @@ function TokenDetail() {
     useEffect(() => {
         loadInfoToken();
     }, [loadInfoToken]);
+
 
     useEffect(() => {
         if (tokenInfo) {
@@ -178,21 +179,22 @@ function TokenDetail() {
     const handleBuyAndSell = async () => {
         try{
             if (!tokenInfo || !anchorWallet) return;
+            setIsBuying(true);
             const mint = new PublicKey(tokenInfo?.id);
-            const amount = 100000000;
+            const amount = Number(payAmount) * 10 ** 9;
+            console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
-            const feeRecipient = new PublicKey(tokenInfo?.mintAuthority || '');
-            const feeRecipient2 = new PublicKey(tokenInfo?.mintAuthority || '');
-            const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
-            const tx = await buyToken(mint, amount, admin, feeRecipient, feeRecipient2, multisig);
+            const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
             console.log(tx);
         } catch (error) {
             console.error('Error buying token:', error);
+        } finally {
+            setIsBuying(false);
         }
     }
 
     return (
-        <div className="min-h-screen container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
@@ -387,12 +389,19 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500 mt-1">-</div>
                         </div>
 
-                        <button
+                        <Button
                             className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0}
+                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
                         >
-                            {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
-                        </button>
+                            {isBuying ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                    Processing...
+                                </span>
+                            ) : (
+                                isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'
+                            )}
+                        </Button>
                     </div>
                     <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mt-4">
                         <p className="text-xs text-gray-500 text-center">
@@ -703,13 +712,20 @@ function TokenDetail() {
                         <div className="text-sm text-gray-500 mt-1">-</div>
                     </div>
 
-                    <button
+                    <Button
                         className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={handleBuyAndSell}
-                        disabled={!isLoggedIn}
+                        disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
                     >
-                        {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
-                    </button>
+                        {isBuying ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                Processing...
+                            </span>
+                        ) : (
+                            isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'
+                        )}
+                    </Button>
                 </div>
                 <div className="absolute bottom-5 left-0 right-0 p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg">
                     <p className="text-xs text-gray-500 text-center">
