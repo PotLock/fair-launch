@@ -406,3 +406,94 @@ export function deserializeCurveConfiguration(data: Buffer) {
       reserveRatio,
   };
 }
+
+export function calculateInitialReserveAmount(
+  initialPrice: number,
+  initialSupply: number,
+  reserveRatio: number,
+  tokenDecimals: number
+): number {
+  // Validate inputs
+  if (reserveRatio <= 0) {
+    throw new Error("InvalidAmount: reserve_ratio must be greater than 0");
+  }
+  if (initialSupply <= 0) {
+    throw new Error("InvalidAmount: initial_supply must be greater than 0");
+  }
+  if (initialPrice <= 0) {
+    throw new Error("InvalidAmount: initial_price must be greater than 0");
+  }
+
+  // Convert initial supply to base units (e.g., 1000_000_000 -> 1000)
+  const initialSupplyBase = Math.floor(initialSupply / Math.pow(10, tokenDecimals));
+  if (isNaN(initialSupplyBase) || !isFinite(initialSupplyBase)) {
+    throw new Error("OverFlowUnderFlowOccured: Division overflow");
+  }
+
+  // Calculate initial market cap
+  // Formula: initial_market_cap = initial_price * initial_supply_base
+  const initialMarketCap = initialPrice * initialSupplyBase;
+  if (isNaN(initialMarketCap) || !isFinite(initialMarketCap)) {
+    throw new Error("OverFlowUnderFlowOccured: Multiplication overflow");
+  }
+
+  // Calculate initial reserve amount
+  // Formula: initial_reserve = (initial_market_cap * reserve_ratio) / 10000
+  const initialReserve = (initialMarketCap * reserveRatio) / 10000;
+  if (isNaN(initialReserve) || !isFinite(initialReserve)) {
+    throw new Error("OverFlowUnderFlowOccured: Division overflow");
+  }
+
+  // Validate the result is within safe bounds (using Number.MAX_SAFE_INTEGER as approximation for u64)
+  if (initialReserve > Number.MAX_SAFE_INTEGER) {
+    throw new Error("OverFlowUnderFlowOccured: Result exceeds safe integer bounds");
+  }
+
+  return Math.floor(initialReserve);
+}
+
+/**
+ * Calculates the cost to buy a certain amount of tokens based on a linear bonding curve.
+ *
+ * @param amount The amount of tokens to buy.
+ * @param reserveRatio The reserve ratio for the curve calculation.
+ * @param totalSupply The current total supply of tokens.
+ * @returns The cost to buy the specified amount.
+ */
+export function linearBuyCost(amount: bigint, reserveRatio: number, totalSupply: bigint): bigint {
+  const newSupply = totalSupply + amount;
+
+  const newSupplySquared = newSupply * newSupply;
+  const totalSupplySquared = totalSupply * totalSupply;
+
+  const numerator = (newSupplySquared - totalSupplySquared) / 2n;
+
+  const denominator = BigInt(reserveRatio) * 10000n;
+
+  const cost = numerator / denominator;
+
+  return cost;
+}
+
+/**
+ * Calculates the reward for selling a certain amount of tokens based on a linear bonding curve.
+ *
+ * @param amount The amount of tokens to sell.
+ * @param reserveRatio The reserve ratio for the curve calculation.
+ * @param totalSupply The current total supply of tokens.
+ * @returns The reward for selling the specified amount.
+ */
+export function linearSellCost(amount: bigint, reserveRatio: number, totalSupply: bigint): bigint {
+  const newSupply = totalSupply - amount;
+
+  const totalSupplySquared = totalSupply * totalSupply;
+  const newSupplySquared = newSupply * newSupply;
+
+  const numerator = (totalSupplySquared - newSupplySquared) / 2n;
+
+  const denominator = BigInt(reserveRatio) * 10000n;
+
+  const reward = numerator / denominator;
+
+  return reward;
+}

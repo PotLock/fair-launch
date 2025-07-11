@@ -85,3 +85,14 @@ export async function getTokenByMint(mint: string) {
     throw new Error('Failed to get token by mint');
   }
 }
+
+export async function getTokens() {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens`);
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error getting tokens:', error);
+    throw new Error('Failed to get tokens');
+  }
+}

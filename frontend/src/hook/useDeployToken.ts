@@ -240,7 +240,7 @@ export const useDeployToken = () => {
     const liquidityPoolPercentage = new BN(Number(dexListing.liquidityPercentage)); // 50%
     
     const initialPrice = new BN(Number(pricingMechanism.initialPrice) * 10 ** 9); // 0.0000001 SOL
-    const initialSupply = new BN(100_000_000_000); // 10000 SPL tokens with 6 decimals 
+    const initialSupply = new BN(Number(basicInfo.supply) * 10 ** Number(basicInfo.decimals)); // 10000 SPL tokens with 6 decimals 
 
     const reserveRatio = new BN(Number(pricingMechanism.reserveRatio) * 100); // 50% = 50 * 100
     const feeRecipient = new PublicKey(fees.feeRecipientAddress);

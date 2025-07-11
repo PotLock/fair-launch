@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { getAllocationsAndVesting, TokenInfo } from "../../utils/tokenUtils";
+import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
@@ -29,6 +29,7 @@ import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
+import { linearBuyCost, linearSellCost } from "../../utils/sol";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -65,6 +66,7 @@ function TokenDetail() {
     const [selectedPayment, setSelectedPayment] = useState<{ name: string; icon: string } | null>(null);
     const [selectedReceive, setSelectedReceive] = useState<{ name: string; icon: string } | null>(null);
     const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+    const [bondingCurveInfo, setBondingCurveInfo] = useState<BondingCurveTokenInfo | null>(null);
     const [payAmount, setPayAmount] = useState("");
     const [receiveAmount, setReceiveAmount] = useState("");
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -78,9 +80,9 @@ function TokenDetail() {
         try {
             setLoading(true);
             const tokenInfo = await getTokenByMint(tokenId);
-            const allocations = await getAllocationsAndVesting([new PublicKey('25gkdigyQtYVreV8gYmrF7WDcckVkx6d2SkbWi6B9W6e')]);
-            console.log("allocations", allocations);
+            const bondingCurveInfo = await getBondingCurveAccounts(new PublicKey(tokenId));
             setTokenInfo(tokenInfo.data);
+            setBondingCurveInfo(bondingCurveInfo || null);
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -110,12 +112,58 @@ function TokenDetail() {
     
     const handlePayAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        if (/^\d*\.?\d*$/.test(val)) setPayAmount(val);
+        if (/^\d*\.?\d*$/.test(val)) {
+            setPayAmount(val);
+            // Clear receive amount if pay amount is empty
+            if (!val) {
+                setReceiveAmount("");
+                return;
+            }
+            
+            if (val && tokenInfo && bondingCurveInfo) {
+                const numericVal = parseFloat(val);
+                if (!isNaN(numericVal)) {
+                    // Check if it's a buy operation (SOL -> Token)
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
+                        const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                    // Check if it's a sell operation (Token -> SOL)
+                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                }
+            }
+        }
     };
 
     const handleReceiveAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        if (/^\d*\.?\d*$/.test(val)) setReceiveAmount(val);
+        if (/^\d*\.?\d*$/.test(val)) {
+            setReceiveAmount(val);
+            // Clear pay amount if receive amount is empty
+            if (!val) {
+                setPayAmount("");
+                return;
+            }
+            
+            if (val && tokenInfo && bondingCurveInfo) {
+                const numericVal = parseFloat(val);
+                if (!isNaN(numericVal)) {
+                    // Check if it's a buy operation (SOL -> Token)
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
+                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
+                    }
+                    // Check if it's a sell operation (Token -> SOL)
+                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                }
+            }
+        }
     };
 
     if (loading) {
@@ -163,8 +211,25 @@ function TokenDetail() {
         setSelectedPayment(option);
         if (option.name === 'SOL' && tokenInfo) {
             setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
-        } else {
+        } 
+        else if (option.name === tokenInfo?.symbol) {
             setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
+        }
+        
+        // Recalculate amounts when payment option changes
+        if (payAmount && tokenInfo && bondingCurveInfo) {
+            const numericVal = parseFloat(payAmount);
+            if (!isNaN(numericVal)) {
+                if (option.name === 'SOL' && tokenInfo) {
+                    // Buy operation: SOL -> Token
+                    const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
+                } else if (option.name === tokenInfo?.symbol) {
+                    // Sell operation: Token -> SOL
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                }
+            }
         }
     };
 
@@ -172,9 +237,24 @@ function TokenDetail() {
         setSelectedReceive(option);
         if (option.name === tokenInfo?.symbol) {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
-        } else {
-            if (tokenInfo) {
-                setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        } 
+        else if (option.name === 'SOL' && tokenInfo) {
+            setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        }
+        
+        // Recalculate amounts when receive option changes
+        if (receiveAmount && tokenInfo && bondingCurveInfo) {
+            const numericVal = parseFloat(receiveAmount);
+            if (!isNaN(numericVal)) {
+                if (option.name === tokenInfo?.symbol) {
+                    // Buy operation: SOL -> Token
+                    const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
+                } else if (option.name === 'SOL' && tokenInfo) {
+                    // Sell operation: Token -> SOL
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                }
             }
         }
     };
@@ -187,10 +267,18 @@ function TokenDetail() {
             const amount = Number(payAmount) * 10 ** 9;
             console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
-            const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
-            console.log(tx);
+            
+            const isBuyOperation = selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol;
+            
+            if (isBuyOperation) {
+                const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
+                console.log('Buy transaction:', tx);
+            } else {
+                // TODO: Implement sell token functionality
+                console.log('Sell operation not yet implemented');
+            }
         } catch (error) {
-            console.error('Error buying token:', error);
+            console.error('Error in token operation:', error);
         } finally {
             setIsBuying(false);
         }
@@ -402,7 +490,11 @@ function TokenDetail() {
                                     Processing...
                                 </span>
                             ) : (
-                                isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'
+                                isLoggedIn ? (
+                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                        ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                        : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                ) : 'Connect Wallet to Trade'
                             )}
                         </Button>
                     </div>
@@ -730,7 +822,11 @@ function TokenDetail() {
                                 Processing...
                             </span>
                         ) : (
-                            isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'
+                            isLoggedIn ? (
+                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                    ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                    : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                            ) : 'Connect Wallet to Trade'
                         )}
                     </Button>
                 </div>
