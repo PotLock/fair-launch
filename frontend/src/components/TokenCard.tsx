@@ -5,6 +5,7 @@ import { Progress } from "./ui/progress";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { SOL_NETWORK } from "../configs/env.config";
+import { formatNumberWithCommas } from "../utils";
 
 interface TokenCardProps {
     banner?: string;
@@ -65,7 +66,7 @@ export function TokenCard({
                 <p className="text-sm text-gray-500 mb-3 line-clamp-2 min-h-[40px]">{description}</p>
                 <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                     <span>Progress</span>
-                    <span>{supply}</span>
+                    <span>{formatNumberWithCommas(supply)}</span>
                 </div>
                 <Progress value={progress} className="h-4 bg-gray-200 mb-4" />
                 <div className="grid grid-cols-2 gap-2 text-xs mb-1">
