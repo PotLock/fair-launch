@@ -75,7 +75,7 @@ export const useDeployToken = () => {
     pricingMechanism,
     fees
   } = useDeployStore();
-  const { program, connection, mintKeypair } = useAnchorProvider();
+  const provider = useAnchorProvider();
   const anchorWallet = useAnchorWallet();
 
   const walletSol = useWallet();
@@ -83,7 +83,7 @@ export const useDeployToken = () => {
 
 
   const createTokenTransaction = async (): Promise<Transaction> => {
-    if (!publicKey || !mintKeypair?.publicKey || !connection || !program) {
+    if (!publicKey || !provider?.mintKeypair?.publicKey || !provider?.connection || !provider?.program) {
       throw new Error("Required dependencies not available");
     }
 
@@ -103,9 +103,9 @@ export const useDeployToken = () => {
       throw new Error("Invalid mint amount calculated");
     }
 
-    const lamports = await getMinimumBalanceForRentExemptMint(connection);
+    const lamports = await getMinimumBalanceForRentExemptMint(provider.connection);
     const tokenATA = await getAssociatedTokenAddress(
-      mintKeypair.publicKey,
+      provider.mintKeypair.publicKey,
       publicKey
     );
 
@@ -130,13 +130,13 @@ export const useDeployToken = () => {
       social: metadataSocials
     });
 
-    const mintMetadataId = findMintMetadataId(mintKeypair.publicKey);
+    const mintMetadataId = findMintMetadataId(provider.mintKeypair.publicKey);
 
     const metadataInstruction = createCreateMetadataAccountV3Instruction(
       {
         metadata: mintMetadataId,
         updateAuthority: publicKey,
-        mint: mintKeypair.publicKey,
+        mint: provider.mintKeypair.publicKey,
         mintAuthority: publicKey,
         payer: publicKey,
       },
@@ -160,13 +160,13 @@ export const useDeployToken = () => {
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
         fromPubkey: publicKey,
-        newAccountPubkey: mintKeypair.publicKey,
+        newAccountPubkey: provider.mintKeypair.publicKey,
         space: MINT_SIZE,
         lamports: lamports,
         programId: TOKEN_PROGRAM_ID,
       }),
       createInitializeMintInstruction(
-        mintKeypair.publicKey,
+        provider.mintKeypair.publicKey,
         decimals,
         publicKey,
         publicKey,
@@ -176,12 +176,12 @@ export const useDeployToken = () => {
         publicKey,
         tokenATA,
         publicKey,
-        mintKeypair.publicKey,
+        provider.mintKeypair.publicKey,
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
       ),
       createMintToInstruction(
-        mintKeypair.publicKey,
+        provider.mintKeypair.publicKey,
         tokenATA,
         publicKey,
         mintAmountNumber
@@ -196,7 +196,7 @@ export const useDeployToken = () => {
       }
       transaction.add(
         createSetAuthorityInstruction(
-          mintKeypair.publicKey,
+          provider.mintKeypair.publicKey,
           publicKey,
           AuthorityType.MintTokens,
           new PublicKey(adminSetup.revokeMintAuthority.walletAddress)
@@ -210,7 +210,7 @@ export const useDeployToken = () => {
       }
       transaction.add(
         createSetAuthorityInstruction(
-          mintKeypair.publicKey,
+          provider.mintKeypair.publicKey,
           publicKey,
           AuthorityType.FreezeAccount,
           new PublicKey(adminSetup.revokeFreezeAuthority.walletAddress)
@@ -222,11 +222,11 @@ export const useDeployToken = () => {
   };
 
   const createBondingCurveTransaction = async (): Promise<Transaction> => {
-    if (!publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !provider?.mintKeypair?.publicKey || !provider?.program) {
       throw new Error("Required dependencies not available");
     }
 
-    const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, mintKeypair.publicKey)
+    const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, provider.mintKeypair.publicKey)
 
     // Fee Percentage : 100 = 1%
     const feePercentage = new BN(100);
@@ -256,7 +256,7 @@ export const useDeployToken = () => {
     ]
     console.log("recipients", recipients)
 
-    const instruction = await program.methods
+    const instruction = await provider.program.methods
       .createPool(
         publicKey,
         feePercentage,
@@ -276,7 +276,7 @@ export const useDeployToken = () => {
       .accountsStrict({
         bondingCurveConfiguration: curveConfig,
         bondingCurveAccount: bondingCurve,
-        tokenMint: mintKeypair.publicKey,
+        tokenMint: provider.mintKeypair.publicKey,
         poolTokenAccount: poolTokenAccount,
         poolSolVault: poolSolVault,
         userTokenAccount: userTokenAccount,
@@ -293,7 +293,7 @@ export const useDeployToken = () => {
   };
 
   const createAllocationTransactions = async(): Promise<Transaction[]> => {
-    if (!publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !provider?.mintKeypair?.publicKey || !provider?.program) {
       throw new Error("Required dependencies not available");
     }
     
@@ -307,7 +307,7 @@ export const useDeployToken = () => {
       return [];
     }
     
-    const { allocations, allocationTokenAccounts } = getAllocationPDAs(mintKeypair.publicKey, wallets);
+    const { allocations, allocationTokenAccounts } = getAllocationPDAs(provider.mintKeypair.publicKey, wallets);
     console.log("Allocation wallets:", wallets.map(w => w.toBase58()));
     console.log("Allocation's accounts:", allocations.map(a => a.toBase58()));
     const transactions: Transaction[] = [];
@@ -332,12 +332,12 @@ export const useDeployToken = () => {
             released: released,
         }
 
-        const createAllocationInstruction = await program.methods
+        const createAllocationInstruction = await provider.program.methods
             .createAllocation(percentage.toNumber(), totalTokens, vesting)
             .accountsStrict({
                 allocation: allocations[i],
                 wallet: wallets[i],
-                tokenMint: mintKeypair.publicKey,
+                tokenMint: provider.mintKeypair.publicKey,
                 allocationVault: allocationTokenAccounts[i],
                 tokenProgram: TOKEN_PROGRAM_ID,
                 associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
@@ -355,11 +355,11 @@ export const useDeployToken = () => {
 
   const createFairLaunchTransaction = async(): Promise<Transaction> => {
 
-    if (!publicKey || !mintKeypair?.publicKey || !program) {
+    if (!publicKey || !provider?.mintKeypair?.publicKey || !provider?.program) {
       throw new Error("Required dependencies not available");
     }
 
-    const { fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(publicKey, mintKeypair.publicKey);
+    const { fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(publicKey, provider.mintKeypair.publicKey);
 
     let softCap = new BN(Number(saleSetup.softCap) * 10 ** 9);
     let hardCap = new BN(Number(saleSetup.hardCap) * 10 ** 9);
@@ -391,7 +391,7 @@ export const useDeployToken = () => {
       endTime = new BN(currentTime + 3600);
     }
 
-    const createFairLaunchInstruction = await program.methods
+    const createFairLaunchInstruction = await provider.program.methods
         .createFairLaunch(
             softCap,
             hardCap,
@@ -404,7 +404,7 @@ export const useDeployToken = () => {
         )
         .accountsStrict({
             fairLaunchData: fairLaunchData,
-            tokenMint: mintKeypair.publicKey,
+            tokenMint: provider.mintKeypair.publicKey,
             launchpadVault: launchpadTokenAccount,
             contributionVault: contributionVault,
             authority: publicKey,
@@ -425,23 +425,23 @@ export const useDeployToken = () => {
         return;
       }
 
-      if (!program?.programId) {
+      if (!provider?.program?.programId) {
         toast.error("Program not initialized!");
         return;
       }
 
-      if (!mintKeypair?.publicKey) {
+      if (!provider?.mintKeypair?.publicKey) {
         toast.error("Mint keypair not initialized!");
         return;
       }
 
-      if (!connection) {
+      if (!provider?.connection) {
         toast.error("Solana connection not available!");
         return;
       }
 
       // Get latest blockhash once
-      const { blockhash } = await connection.getLatestBlockhash();
+      const { blockhash } = await provider.connection.getLatestBlockhash();
 
       // Create individual transactions to get their instructions
       const tokenTransaction = await createTokenTransaction();
@@ -461,14 +461,14 @@ export const useDeployToken = () => {
       combinedTransaction.recentBlockhash = blockhash;
 
       // Partial sign with mintKeypair (this is required for mint creation)
-      combinedTransaction.partialSign(mintKeypair);
+      combinedTransaction.partialSign(provider.mintKeypair);
       // console.log('mintKeypair', mintKeypair.publicKey.toBase58());
 
       
       // console.log("\n=== SIMULATING TRANSACTION ===");
 
       // Simulate the transaction (dry-run)
-      const simulation = await connection.simulateTransaction(combinedTransaction);
+      const simulation = await provider.connection.simulateTransaction(combinedTransaction);
 
       console.log("✅ Simulation successful!");
       console.log("Logs:", simulation.value.logs);
@@ -480,7 +480,7 @@ export const useDeployToken = () => {
       }
 
       // Execute the transaction
-      const signature = await sendTransaction(combinedTransaction, connection, {
+      const signature = await sendTransaction(combinedTransaction, provider.connection, {
         skipPreflight: false,
         preflightCommitment: 'processed'
       });
@@ -488,7 +488,7 @@ export const useDeployToken = () => {
       // console.log("Transaction signature:", signature);
 
       // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      const confirmation = await provider.connection.confirmTransaction(signature, 'confirmed');
       
       if (confirmation.value.err) {
         throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
@@ -505,7 +505,7 @@ export const useDeployToken = () => {
       combinedTransaction1.feePayer = publicKey;
       combinedTransaction1.recentBlockhash = blockhash;
 
-      const simulation1 = await connection.simulateTransaction(combinedTransaction1);
+      const simulation1 = await provider.connection.simulateTransaction(combinedTransaction1);
       console.log("✅ Simulation 1 successful!");
       console.log("Logs 1:", simulation1.value.logs);
       console.log("Units consumed 1:", simulation1.value.unitsConsumed);
@@ -515,12 +515,12 @@ export const useDeployToken = () => {
         throw new Error(`Simulation 1 failed: ${JSON.stringify(simulation1.value.err)}`);
       }
 
-      const signature1 = await sendTransaction(combinedTransaction1, connection, {
+      const signature1 = await sendTransaction(combinedTransaction1, provider.connection, {
         skipPreflight: false,
         preflightCommitment: 'processed'
       });
 
-      const confirmation1 = await connection.confirmTransaction(signature1, 'confirmed');
+      const confirmation1 = await provider.connection.confirmTransaction(signature1, 'confirmed');
       if (confirmation1.value.err) {
         throw new Error(`Transaction 1 failed: ${JSON.stringify(confirmation1.value.err)}`);
       }
@@ -529,7 +529,7 @@ export const useDeployToken = () => {
       try {
         const tokenData = {
           owner: publicKey.toBase58(),
-          mintAddress: mintKeypair.publicKey.toBase58(),
+          mintAddress: provider.mintKeypair.publicKey.toBase58(),
           basicInfo,
           socials,
           allocation,
@@ -572,7 +572,7 @@ export const useDeployToken = () => {
       toast.error(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [anchorWallet, connection, program, mintKeypair, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange, sendTransaction, publicKey]);
+  }, [anchorWallet, provider, basicInfo, allocation, dexListing, adminSetup, saleSetup, selectedTemplate, selectedPricing, selectedExchange, sendTransaction, publicKey]);
 
   return { deployToken };
 };

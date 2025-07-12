@@ -8,13 +8,9 @@ export default function useAnchorProvider() {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   
-  // Validate that we have the required dependencies
-  if (!connection) {
-    throw new Error("Solana connection is not available");
-  }
-  
-  if (!anchorWallet) {
-    throw new Error("Anchor wallet is not available");
+  // Return null if wallet or connection is not available
+  if (!connection || !anchorWallet) {
+    return null;
   }
 
   const providerProgram = new anchor.AnchorProvider(
