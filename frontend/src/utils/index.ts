@@ -1,9 +1,15 @@
 import { exchanges } from "../lib/exchanges";
 import { toast } from "react-hot-toast";
+import { tokenTemplates } from "../lib/templates";
 
 export const getExchangeDisplay = (exchange: string) => {
     const exchangeData = exchanges.find(e => e.value === exchange);
     return exchangeData?.title || exchange.charAt(0).toUpperCase() + exchange.slice(1);
+};
+
+export const getTemplateDisplay = (template: string) => {
+    const templateData = tokenTemplates.find(t => t.key === template);
+    return templateData?.label || template.charAt(0).toUpperCase() + template.slice(1);
 };
 
 // Function to format numbers with comma separators
@@ -45,3 +51,20 @@ export function calculateTimeSinceCreation(createdOn: string, currentTime?: Date
     
     return `${days}d | ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
 }
+
+export function formatDateToReadable(dateString: string): string {
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+        return 'Invalid date';
+    }
+    
+    const options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    };
+    
+    return date.toLocaleDateString('en-US', options);
+}
+

@@ -21,13 +21,15 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { getTokenInfo, TokenInfo } from "../../utils/tokenUtils";
+import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
-import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
+import { Button } from "../../components/ui/button";
+import { getTokenByMint } from "../../lib/api";
+import { linearBuyCost, linearSellCost } from "../../utils/sol";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -64,20 +66,23 @@ function TokenDetail() {
     const [selectedPayment, setSelectedPayment] = useState<{ name: string; icon: string } | null>(null);
     const [selectedReceive, setSelectedReceive] = useState<{ name: string; icon: string } | null>(null);
     const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+    const [bondingCurveInfo, setBondingCurveInfo] = useState<BondingCurveTokenInfo | null>(null);
     const [payAmount, setPayAmount] = useState("");
     const [receiveAmount, setReceiveAmount] = useState("");
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const { publicKey } = useWallet();
-    const { buyToken } = useTokenTrading();
+    const { buyToken, sellToken } = useTokenTrading();
     const isLoggedIn = !!publicKey;
+    const [isBuying, setIsBuying] = useState(false);
     
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
-            const tokenInfo = await getTokenInfo(tokenId);
-            console.log(tokenInfo);
-            setTokenInfo(tokenInfo);
+            const tokenInfo = await getTokenByMint(tokenId);
+            const bondingCurveInfo = await getBondingCurveAccounts(new PublicKey(tokenId));
+            setTokenInfo(tokenInfo.data);
+            setBondingCurveInfo(bondingCurveInfo || null);
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -89,10 +94,11 @@ function TokenDetail() {
         loadInfoToken();
     }, [loadInfoToken]);
 
+
     useEffect(() => {
         if (tokenInfo) {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
         }
     }, [tokenInfo]);
 
@@ -106,12 +112,58 @@ function TokenDetail() {
     
     const handlePayAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        if (/^\d*\.?\d*$/.test(val)) setPayAmount(val);
+        if (/^\d*\.?\d*$/.test(val)) {
+            setPayAmount(val);
+            // Clear receive amount if pay amount is empty
+            if (!val) {
+                setReceiveAmount("");
+                return;
+            }
+            
+            if (val && tokenInfo && bondingCurveInfo) {
+                const numericVal = parseFloat(val);
+                if (!isNaN(numericVal)) {
+                    // Check if it's a buy operation (SOL -> Token)
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
+                        const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                    // Check if it's a sell operation (Token -> SOL)
+                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                }
+            }
+        }
     };
 
     const handleReceiveAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        if (/^\d*\.?\d*$/.test(val)) setReceiveAmount(val);
+        if (/^\d*\.?\d*$/.test(val)) {
+            setReceiveAmount(val);
+            // Clear pay amount if receive amount is empty
+            if (!val) {
+                setPayAmount("");
+                return;
+            }
+            
+            if (val && tokenInfo && bondingCurveInfo) {
+                const numericVal = parseFloat(val);
+                if (!isNaN(numericVal)) {
+                    // Check if it's a buy operation (SOL -> Token)
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
+                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
+                    }
+                    // Check if it's a sell operation (Token -> SOL)
+                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                    }
+                }
+            }
+        }
     };
 
     if (loading) {
@@ -131,7 +183,7 @@ function TokenDetail() {
 
     const tokenOptions = [
         { name: 'SOL', icon: '/chains/sol.jpeg' },
-        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatar }] : [])
+        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl }] : [])
     ];
     
 
@@ -158,9 +210,26 @@ function TokenDetail() {
     const handlePaymentChange = (option: { name: string; icon: string }) => {
         setSelectedPayment(option);
         if (option.name === 'SOL' && tokenInfo) {
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
-        } else {
+            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        } 
+        else if (option.name === tokenInfo?.symbol) {
             setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
+        }
+        
+        // Recalculate amounts when payment option changes
+        if (payAmount && tokenInfo && bondingCurveInfo) {
+            const numericVal = parseFloat(payAmount);
+            if (!isNaN(numericVal)) {
+                if (option.name === 'SOL' && tokenInfo) {
+                    // Buy operation: SOL -> Token
+                    const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
+                } else if (option.name === tokenInfo?.symbol) {
+                    // Sell operation: Token -> SOL
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                }
+            }
         }
     };
 
@@ -168,9 +237,24 @@ function TokenDetail() {
         setSelectedReceive(option);
         if (option.name === tokenInfo?.symbol) {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
-        } else {
-            if (tokenInfo) {
-                setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatar });
+        } 
+        else if (option.name === 'SOL' && tokenInfo) {
+            setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        }
+        
+        // Recalculate amounts when receive option changes
+        if (receiveAmount && tokenInfo && bondingCurveInfo) {
+            const numericVal = parseFloat(receiveAmount);
+            if (!isNaN(numericVal)) {
+                if (option.name === tokenInfo?.symbol) {
+                    // Buy operation: SOL -> Token
+                    const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
+                } else if (option.name === 'SOL' && tokenInfo) {
+                    // Sell operation: Token -> SOL
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                }
             }
         }
     };
@@ -178,31 +262,40 @@ function TokenDetail() {
     const handleBuyAndSell = async () => {
         try{
             if (!tokenInfo || !anchorWallet) return;
+            setIsBuying(true);
             const mint = new PublicKey(tokenInfo?.id);
-            const amount = 100000000;
+            const amount = Number(payAmount) * 10 ** 9;
+            console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
-            const feeRecipient = new PublicKey(tokenInfo?.mintAuthority || '');
-            const feeRecipient2 = new PublicKey(tokenInfo?.mintAuthority || '');
-            const multisig = new PublicKey("97S2XVwgi9fiHJQst9qkN1EeVKbXYy1LUS3MDL3BfxpN");
-            const tx = await buyToken(mint, amount, admin, feeRecipient, feeRecipient2, multisig);
-            console.log(tx);
+            
+            const isBuyOperation = selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol;
+            
+            if (isBuyOperation) {
+                const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
+                console.log('Buy transaction:', tx);
+            } else {
+                const tx = await sellToken(mint, amount, admin, tokenInfo?.name || '');
+                console.log('Sell transaction:', tx);
+            }
         } catch (error) {
-            console.error('Error buying token:', error);
+            console.error('Error in token operation:', error);
+        } finally {
+            setIsBuying(false);
         }
     }
 
     return (
-        <div className="min-h-screen container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
-                        <img src={tokenInfo?.banner} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
+                        <img src={tokenInfo?.bannerUrl} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
                         <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
                             style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
                     </div>
                     <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
                         <div className="flex items-center gap-3">
-                            <img src={tokenInfo?.avatar} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
+                            <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
                             <div className="flex flex-col">
                                 <span className="text-3xl font-bold text-white uppercase">{tokenInfo?.name}</span>
                                 <div className="flex items-center gap-2 mt-2">
@@ -297,7 +390,7 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">-</div>
+                                <div className="text-lg font-semibold">{tokenInfo?.targetRaise}</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
@@ -387,12 +480,23 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500 mt-1">-</div>
                         </div>
 
-                        <button
+                        <Button
                             className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0}
+                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
                         >
-                            {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
-                        </button>
+                            {isBuying ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                    Processing...
+                                </span>
+                            ) : (
+                                isLoggedIn ? (
+                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                        ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                        : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                ) : 'Connect Wallet to Trade'
+                            )}
+                        </Button>
                     </div>
                     <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mt-4">
                         <p className="text-xs text-gray-500 text-center">
@@ -422,7 +526,7 @@ function TokenDetail() {
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Min. Contribution</p>
-                                <p className="text-sm font-semibold">- SOL</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.minimumContribution} SOL</p>
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -432,11 +536,11 @@ function TokenDetail() {
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                                <p className="text-sm font-semibold">-</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.hardCap} SOL</p>
                             </div>
                             <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                                 <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
-                                <p className="text-sm font-semibold">-</p>
+                                <p className="text-sm font-semibold">{tokenInfo?.maximumContribution} SOL</p>
                             </div>
                         </div>
                     </div>
@@ -594,7 +698,7 @@ function TokenDetail() {
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span className="font-medium">ACTIVE</span>
-                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdOn ? calculateTimeSinceCreation(tokenInfo.createdOn, currentTime) : "-"}</span>
+                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdAt ? calculateTimeSinceCreation(tokenInfo.createdAt, currentTime) : "-"}</span>
                     </div>
 
                     <div className="text-3xl font-bold text-green-600 mb-3">-</div>
@@ -613,7 +717,7 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">-</div>
+                            <div className="text-lg font-semibold">{tokenInfo?.targetRaise} SOL</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>
@@ -622,7 +726,11 @@ function TokenDetail() {
                 <div className="border border-gray-200 p-4 rounded-t-2xl bg-white">
                     <div className="flex justify-between items-center mb-4">
                         <span className="text-xl font-semibold">Join Presale</span>
-                        <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">Fixed Price</span>
+                        <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">
+                            {tokenInfo?.selectedPricing === 'bonding-curve' ? 'Bonding Curve' : 
+                             tokenInfo?.selectedPricing === 'fixed-price' ? 'Fixed Price' : 
+                             tokenInfo?.selectedPricing}
+                        </span>
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -703,13 +811,24 @@ function TokenDetail() {
                         <div className="text-sm text-gray-500 mt-1">-</div>
                     </div>
 
-                    <button
+                    <Button
                         className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={handleBuyAndSell}
-                        disabled={!isLoggedIn}
+                        disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
                     >
-                        {isLoggedIn ? `Buy $${tokenInfo?.symbol || 'CURATE'}` : 'Connect Wallet to Buy'}
-                    </button>
+                        {isBuying ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                Processing...
+                            </span>
+                        ) : (
+                            isLoggedIn ? (
+                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                    ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                    : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                            ) : 'Connect Wallet to Trade'
+                        )}
+                    </Button>
                 </div>
                 <div className="absolute bottom-5 left-0 right-0 p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg">
                     <p className="text-xs text-gray-500 text-center">

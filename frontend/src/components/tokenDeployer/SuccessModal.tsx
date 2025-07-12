@@ -12,16 +12,18 @@ interface SuccessModalProps {
   tokenName: string;
   onViewToken: () => void;
   onReturnHome: () => void;
+  onClose: () => void;
 }
 
 export const SuccessModal = ({ 
   isOpen, 
   tokenName, 
   onViewToken, 
-  onReturnHome 
+  onReturnHome,
+  onClose
 }: SuccessModalProps) => {
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">Token Created Successfully!</DialogTitle>

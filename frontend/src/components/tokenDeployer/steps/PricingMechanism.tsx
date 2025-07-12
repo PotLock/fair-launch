@@ -101,45 +101,62 @@ export const PricingMechanism = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                                {templatesPricingMechanism.map((template, index) => (
-                                    <div 
-                                        key={index} 
-                                        className={`${template.color} rounded-lg p-5 flex flex-col justify-between min-h-[${template.value === 'custom' ? '120px' : '220px'}]`}
-                                        onClick={() => handleSelectTemplate(template)}
-                                    >
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <img src={template.icon} alt={template.label} className="w-7 h-7" />
-                                            <span className="font-semibold text-base">{template.label}</span>
-                                        </div>
-                                        <p className="text-gray-600 text-xs mb-3">{template.description}</p>
-                                        {template.longDescription && (
-                                            <p className="text-gray-600 text-xs mb-3">{template.longDescription}</p>
-                                        )}
-                                        {template.type && (
-                                            <div className="text-sm space-y-2 mb-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Curve Type:</span>
-                                                    <span className="text-xs">{template.type}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Price Range:</span>
-                                                    <span className="text-xs">{template.priceRange}</span>
-                                                </div>
-                                                <div className="flex items-start justify-between">
-                                                    <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Used by:</span>
-                                                    <span className="text-xs block text-right">{template.usedBy}</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <button
-                                            className={`mt-auto bg-white border border-gray-300 rounded-md py-2 flex flex-row justify-center items-center gap-2 text-sm hover:bg-opacity-80 transition ${template.style}`}
-                                            onClick={() => handleSelectTemplate(template)}
+                                {templatesPricingMechanism.map((template, index) => {
+                                    const isAvailable = template.value === 'linear';
+                                    const isComingSoon = !isAvailable;
+                                    const minHeight = template.value === 'custom' ? '120px' : '220px';
+                                    
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            className={`${template.color} rounded-lg p-5 flex flex-col justify-between ${isComingSoon ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                            style={{ minHeight }}
+                                            onClick={() => isAvailable && handleSelectTemplate(template)}
                                         >
-                                            <span>Select</span>
-                                            <ArrowRight className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <img src={template.icon} alt={template.label} className="w-7 h-7" />
+                                                <span className="font-semibold text-base">{template.label}</span>
+                                            </div>
+                                            <p className="text-gray-600 text-xs mb-3">{template.description}</p>
+                                            {template.longDescription && (
+                                                <p className="text-gray-600 text-xs mb-3">{template.longDescription}</p>
+                                            )}
+                                            {template.type && (
+                                                <div className="text-sm space-y-2 mb-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Curve Type:</span>
+                                                        <span className="text-xs">{template.type}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Price Range:</span>
+                                                        <span className="text-xs">{template.priceRange}</span>
+                                                    </div>
+                                                    <div className="flex items-start justify-between">
+                                                        <span className="font-semibold text-xs min-w-[80px] whitespace-nowrap">Used by:</span>
+                                                        <span className="text-xs block text-right">{template.usedBy}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <button
+                                                className={`mt-auto border rounded-md py-2 flex flex-row justify-center items-center gap-2 text-sm transition ${
+                                                    isAvailable 
+                                                        ? 'bg-white border-gray-300 hover:bg-opacity-80' 
+                                                        : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                } ${template.style}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (isAvailable) {
+                                                        handleSelectTemplate(template);
+                                                    }
+                                                }}
+                                                disabled={isComingSoon}
+                                            >
+                                                <span>{isAvailable ? 'Select' : 'Coming Soon'}</span>
+                                                {isAvailable && <ArrowRight className="w-3 h-3" />}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
