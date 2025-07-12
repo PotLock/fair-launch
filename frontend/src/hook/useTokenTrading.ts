@@ -15,7 +15,7 @@ import { getPDAs } from "../utils/sol";
 import toast from "react-hot-toast";
 
 export const useTokenTrading = () => {
-  const { connection, program } = useAnchorProvider();
+  const provider = useAnchorProvider();
   const anchorWallet = useAnchorWallet();
 
   const buyToken = useCallback(
@@ -25,7 +25,7 @@ export const useTokenTrading = () => {
       admin: PublicKey,
       tokenName: string
     ) => {
-      if (!anchorWallet?.publicKey || !connection || !program) {
+      if (!anchorWallet?.publicKey || !provider?.connection || !provider?.program) {
         throw new Error("Required dependencies not available");
       }
 
@@ -33,7 +33,7 @@ export const useTokenTrading = () => {
         const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(admin, mint)
 
         const tx = new Transaction()        
-          .add(await program.methods.buy(new BN(amount))
+          .add(await provider.program.methods.buy(new BN(amount))
             .accountsStrict({              
               bondingCurveConfiguration: curveConfig,
               bondingCurveAccount: bondingCurve,              
@@ -50,12 +50,12 @@ export const useTokenTrading = () => {
         );
 
         tx.feePayer = anchorWallet.publicKey;
-        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        tx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
         
         const signedTx = await anchorWallet.signTransaction(tx);
         const rawTx = signedTx.serialize();
-        const sig = await connection.sendRawTransaction(rawTx);
-        await connection.confirmTransaction(sig);
+        const sig = await provider.connection.sendRawTransaction(rawTx);
+        await provider.connection.confirmTransaction(sig);
         
         console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`);
         
@@ -69,7 +69,7 @@ export const useTokenTrading = () => {
         throw error;
       }
     },
-    [anchorWallet, connection, program]
+    [anchorWallet, provider]
   );
 
   const sellToken = useCallback(
@@ -80,7 +80,7 @@ export const useTokenTrading = () => {
       tokenName: string,
       feeRecipients?: PublicKey[]
     ) => {
-      if (!anchorWallet?.publicKey || !connection || !program) {
+      if (!anchorWallet?.publicKey || !provider?.connection || !provider?.program) {
         throw new Error("Required dependencies not available");
       }
 
@@ -89,7 +89,7 @@ export const useTokenTrading = () => {
 
         const tx = new Transaction()
           .add(
-            await program.methods
+            await provider.program.methods
               .sell(new BN(amount), poolSolVaultBump)
               .accountsStrict({
                 bondingCurveConfiguration: curveConfig,
@@ -114,12 +114,12 @@ export const useTokenTrading = () => {
           );
 
         tx.feePayer = anchorWallet.publicKey;
-        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        tx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
         
         const signedTx = await anchorWallet.signTransaction(tx);
         const rawTx = signedTx.serialize();
-        const sig = await connection.sendRawTransaction(rawTx);
-        await connection.confirmTransaction(sig);
+        const sig = await provider.connection.sendRawTransaction(rawTx);
+        await provider.connection.confirmTransaction(sig);
         
         console.log("Successfully sell : ", `https://solscan.io/tx/${sig}?cluster=devnet`);
 
@@ -132,7 +132,7 @@ export const useTokenTrading = () => {
         throw error;
       }
     },
-    [anchorWallet, connection, program]
+    [anchorWallet, provider]
   );
 
   return {
