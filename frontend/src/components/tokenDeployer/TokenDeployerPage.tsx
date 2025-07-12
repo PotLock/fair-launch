@@ -19,7 +19,7 @@ const TokenDeployerPage = () => {
 
   return (
     <div className="flex flex-col pt-14 bg-white pb-10">
-      <div className={`w-full px-4 ${currentStep <= 3 ? 'max-w-4xl mx-auto' : 'container mx-auto'}`}>
+      <div className={`w-full px-4 ${currentStep <= 3 ? 'max-w-4xl mx-auto' : 'xl:container mx-auto'}`}>
         {
           currentStep <= 3 &&(
             <>

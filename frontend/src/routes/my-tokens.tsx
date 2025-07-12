@@ -2,10 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MyTokenCard } from "../components/MyTokenCard";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
-import { getMintAccounts, getTokenInfo, TokenInfo } from "../utils/tokenUtils";
-
-// Helper function to add delay between requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { TokenInfo } from "../utils/tokenUtils";
+import { getTokenByAddress } from "../lib/api";
 
 export const Route = createFileRoute("/my-tokens")({
     component: MyTokens,
@@ -26,26 +24,9 @@ function MyTokens() {
         setLoading(true);
         setError(null);
         try {
-            const listMintAccounts = await getMintAccounts(publicKey.toBase58());
-            
-            // Process tokens sequentially with delays to avoid rate limiting
-            const tokens: TokenInfo[] = [];
-            for (let i = 0; i < listMintAccounts.length; i++) {
-                try {
-                    const tokenInfo = await getTokenInfo(listMintAccounts[i].mint);
-                    tokens.push(tokenInfo);
-                    
-                    // Add a delay between requests (500ms) to avoid rate limiting
-                    if (i < listMintAccounts.length - 1) {
-                        await delay(500);
-                    }
-                } catch (err) {
-                    console.error(`Failed to fetch token info for mint ${listMintAccounts[i].mint}:`, err);
-                    // Continue with other tokens even if one fails
-                }
-            }
-            
-            setListTokens(tokens);
+            const tokens = await getTokenByAddress(publicKey.toBase58());
+            console.log("tokens", tokens.data);
+            setListTokens(tokens.data);
         } catch (err) {
             setError('Failed to fetch token balances');
             console.error(err);
@@ -114,13 +95,13 @@ function MyTokens() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {listTokens.map((token) => (
                         <MyTokenCard
-                            avatar={token.avatar}
+                            avatar={token.avatarUrl || ''}
                             key={token.id}
                             progress={10}
                             name={token.name}
                             symbol={token.symbol}
                             supply={token.supply.toString()}
-                            mintAddress={token.id}
+                            mintAddress={token.mintAddress || ''}
                         />
                     ))}
                 </div>

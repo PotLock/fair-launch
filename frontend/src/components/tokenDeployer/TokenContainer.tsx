@@ -15,7 +15,7 @@ export const TokenContainer = () => {
     const router = useRouter();
     const { basicInfo } = useDeployStore();
     const navigate = useNavigate();
-
+    const { resetState } = useDeployStore.getState();
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [txid, setTxid] = useState("");
@@ -48,6 +48,7 @@ export const TokenContainer = () => {
 
     const handleViewToken = () => {
         setIsSuccess(false);
+        resetState();
         navigate({ to: "/my-tokens" });
         // Navigate to token page or open in explorer
         if (txid) {
@@ -57,6 +58,7 @@ export const TokenContainer = () => {
 
     const handleReturnHome = () => {
         setIsSuccess(false);
+        resetState();
         router.navigate({ to: "/" });
     };
 
@@ -106,6 +108,7 @@ export const TokenContainer = () => {
                 tokenName={basicInfo.name || "Token"}
                 onViewToken={handleViewToken}
                 onReturnHome={handleReturnHome}
+                onClose={() => setIsSuccess(false)}
             />
         </div>
     );

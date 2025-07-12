@@ -24,7 +24,7 @@ export default function Header() {
 
     return (
         <header className="border-b border-gray-200 bg-white">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="xl:container mx-auto px-4 h-16 flex items-center justify-between">
                 <div className="flex items-center">
                     {/* Logo for both mobile and desktop */}
                     <Link to="/" className="flex items-center">
@@ -33,7 +33,7 @@ export default function Header() {
                     </Link>
                 </div>
                 <div className="flex items-center">
-                    <nav className="hidden md:flex items-center space-x-8 mr-10">
+                    <nav className="hidden lg:flex items-center space-x-8 mr-10">
                         <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Token Creator</span>
                         </Link>
