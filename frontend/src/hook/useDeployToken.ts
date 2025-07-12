@@ -27,6 +27,7 @@ import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
 import { useDeployStore } from "../stores/deployStores";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
+import { createToken } from "../lib/api";
 
 // Helper function to convert dates to Unix time
 const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
@@ -375,6 +376,7 @@ export const useDeployToken = () => {
     if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.launchDate) {
       // If launch date is provided, convert it to Unix time
       startTime = new BN(toUnixTime(saleSetup.scheduleLaunch.launchDate));
+      console.log('start time', startTime.toNumber())
     } else {
       // Default to current time + 1 minute
       startTime = new BN(currentTime + 60);
@@ -383,6 +385,7 @@ export const useDeployToken = () => {
     if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.endDate) {
       // If end date is provided, convert it to Unix time
       endTime = new BN(toUnixTime(saleSetup.scheduleLaunch.endDate));
+      console.log('end time', endTime.toNumber())
     } else {
       // Default to current time + 1 hour
       endTime = new BN(currentTime + 3600);
@@ -502,8 +505,6 @@ export const useDeployToken = () => {
       combinedTransaction1.feePayer = publicKey;
       combinedTransaction1.recentBlockhash = blockhash;
 
-      combinedTransaction1.partialSign(mintKeypair);
-
       const simulation1 = await connection.simulateTransaction(combinedTransaction1);
       console.log("✅ Simulation 1 successful!");
       console.log("Logs 1:", simulation1.value.logs);
@@ -524,44 +525,44 @@ export const useDeployToken = () => {
         throw new Error(`Transaction 1 failed: ${JSON.stringify(confirmation1.value.err)}`);
       }
 
-      // // Create token record in database
-      // try {
-      //   const tokenData = {
-      //     owner: publicKey.toBase58(),
-      //     mintAddress: mintKeypair.publicKey.toBase58(),
-      //     basicInfo,
-      //     socials,
-      //     allocation,
-      //     dexListing:{
-      //       launchLiquidityOn: dexListing.launchLiquidityOn.name,
-      //       liquiditySource: dexListing.liquiditySource,
-      //       liquidityData: dexListing.liquidityData,
-      //       liquidityType: dexListing.liquidityType,
-      //       liquidityPercentage: dexListing.liquidityPercentage,
-      //       liquidityLockupPeriod: dexListing.liquidityLockupPeriod,
-      //       walletLiquidityAmount: dexListing.walletLiquidityAmount,
-      //       externalSolContribution: dexListing.externalSolContribution,
-      //       isAutoBotProtectionEnabled: dexListing.isAutoBotProtectionEnabled,
-      //       isAutoListingEnabled: dexListing.isAutoListingEnabled,
-      //       isPriceProtectionEnabled: dexListing.isPriceProtectionEnabled,
-      //     },
-      //     fees,
-      //     saleSetup,
-      //     adminSetup,
-      //     pricingMechanism,
-      //     selectedTemplate,
-      //     selectedPricing,
-      //     selectedExchange,
-      //   };
+      // Create token record in database
+      try {
+        const tokenData = {
+          owner: publicKey.toBase58(),
+          mintAddress: mintKeypair.publicKey.toBase58(),
+          basicInfo,
+          socials,
+          allocation,
+          dexListing:{
+            launchLiquidityOn: dexListing.launchLiquidityOn.name,
+            liquiditySource: dexListing.liquiditySource,
+            liquidityData: dexListing.liquidityData,
+            liquidityType: dexListing.liquidityType,
+            liquidityPercentage: dexListing.liquidityPercentage,
+            liquidityLockupPeriod: dexListing.liquidityLockupPeriod,
+            walletLiquidityAmount: dexListing.walletLiquidityAmount,
+            externalSolContribution: dexListing.externalSolContribution,
+            isAutoBotProtectionEnabled: dexListing.isAutoBotProtectionEnabled,
+            isAutoListingEnabled: dexListing.isAutoListingEnabled,
+            isPriceProtectionEnabled: dexListing.isPriceProtectionEnabled,
+          },
+          fees,
+          saleSetup,
+          adminSetup,
+          pricingMechanism,
+          selectedTemplate,
+          selectedPricing,
+          selectedExchange,
+        };
 
-      //   await createToken(tokenData);
-      //   console.log("Token record created in database successfully");
-      // } catch (apiError) {
-      //   console.error("Failed to create token record in database:", apiError);
-      //   // Don't throw here as the token was deployed successfully on-chain
-      //   // Just log the error and show a warning toast
-      //   toast.error("Token deployed on-chain but failed to save to database");
-      // }
+        await createToken(tokenData);
+        console.log("Token record created in database successfully");
+      } catch (apiError) {
+        console.error("Failed to create token record in database:", apiError);
+        // Don't throw here as the token was deployed successfully on-chain
+        // Just log the error and show a warning toast
+        toast.error("Token deployed on-chain but failed to save to database");
+      }
 
       toast.success("Token deployed successfully! 🎉");
       return signature;

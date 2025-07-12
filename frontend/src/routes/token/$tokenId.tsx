@@ -72,7 +72,7 @@ function TokenDetail() {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const { publicKey } = useWallet();
-    const { buyToken } = useTokenTrading();
+    const { buyToken, sellToken } = useTokenTrading();
     const isLoggedIn = !!publicKey;
     const [isBuying, setIsBuying] = useState(false);
     
@@ -274,8 +274,8 @@ function TokenDetail() {
                 const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
                 console.log('Buy transaction:', tx);
             } else {
-                // TODO: Implement sell token functionality
-                console.log('Sell operation not yet implemented');
+                const tx = await sellToken(mint, amount, admin, tokenInfo?.name || '');
+                console.log('Sell transaction:', tx);
             }
         } catch (error) {
             console.error('Error in token operation:', error);
