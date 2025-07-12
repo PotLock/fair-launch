@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ChevronDown, ChevronUp, Loader2, CircleCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, CircleCheck, Lightbulb } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
@@ -21,6 +21,34 @@ export const BasicInformation = () => {
         updateBasicInfo({ [field]: value });
         validateBasicInfo();
     };
+
+    // Recommendation logic
+    const getRecommendations = () => {
+        const recommendations: { [key: string]: string } = {};
+
+        // Decimals recommendation
+        if (!decimals || decimals === '') {
+            recommendations.decimals = 'Recommended: 6 decimals for most tokens';
+        } else if (Number(decimals) !== 6) {
+            recommendations.decimals = 'Most tokens use 6 decimals for optimal compatibility';
+        }
+
+        // Total supply recommendation
+        if (!supply || supply === '') {
+            recommendations.supply = 'Recommended: 10,000,000 tokens for fair distribution';
+        } else if (Number(supply) !== 10000000) {
+            const currentSupply = Number(supply);
+            if (currentSupply < 1000000) {
+                recommendations.supply = 'Consider a larger supply (10M+) for better liquidity';
+            } else if (currentSupply > 100000000) {
+                recommendations.supply = 'Large supply may affect token price perception';
+            }
+        }
+
+        return recommendations;
+    };
+
+    const recommendations = getRecommendations();
 
     const uploadToPinata = async (file: File): Promise<string | null> => {
         const formData = new FormData();
@@ -142,7 +170,7 @@ export const BasicInformation = () => {
                             <div>
                                 <div className="text-sm font-medium mb-1">Token Name</div>
                                 <Input 
-                                    placeholder="Token Name" 
+                                    placeholder="POTLAUNCH" 
                                     value={name}
                                     onChange={(e) => handleInputChange('name', e.target.value)}
                                 />
@@ -151,7 +179,7 @@ export const BasicInformation = () => {
                             <div>
                                 <div className="text-sm font-medium mb-1">Token Symbol</div>
                                 <Input 
-                                    placeholder="Token Symbol" 
+                                    placeholder="PTL" 
                                     value={symbol}
                                     onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
                                 />
@@ -160,22 +188,34 @@ export const BasicInformation = () => {
                             <div>
                                 <div className="text-sm font-medium mb-1">Total Supply</div>
                                 <Input 
-                                    placeholder="Total Supply" 
+                                    placeholder="10000000" 
                                     type="number"
                                     value={supply}
                                     onChange={(e) => handleInputChange('supply', e.target.value)}
                                 />
                                 {validationErrors.supply && <p className="text-red-500 text-xs mt-1">{validationErrors.supply}</p>}
+                                {recommendations.supply && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                        <p className="text-yellow-600 text-xs">{recommendations.supply}</p>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Decimal</div>
                                 <Input 
-                                    placeholder="Decimal" 
+                                    placeholder="6" 
                                     type="number"
                                     value={decimals}
                                     onChange={(e) => handleInputChange('decimals', e.target.value)}
                                 />
                                 {validationErrors.decimals && <p className="text-red-500 text-xs mt-1">{validationErrors.decimals}</p>}
+                                {recommendations.decimals && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                        <p className="text-yellow-600 text-xs">{recommendations.decimals}</p>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <Textarea 
