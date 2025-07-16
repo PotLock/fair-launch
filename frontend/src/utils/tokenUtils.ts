@@ -1,5 +1,5 @@
-import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Connection, ParsedAccountData, PublicKey, Signer } from '@solana/web3.js';
+import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { HELIUS_API_KEY } from '../configs/env.config';
 import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
 import { 
@@ -9,6 +9,8 @@ import {
   deserializeCurveConfiguration,
   getBondingCurveConfig
 } from './sol';
+import { sendAndConfirmTransaction } from '@solana/web3.js';
+import { Transaction } from '@solana/web3.js';
 
 
 export interface MintAccount {
@@ -249,5 +251,23 @@ export async function getAllocationsAndVesting(wallets: PublicKey[]) {
   }
 }
 
+export async function getOrCreateAssociatedTokenAccount(payer: Signer, mint: PublicKey, owner: PublicKey) {
+  const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner);
+  try {
+      const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
+      if (accountInfo) {
+          return associatedTokenAddress;
+      }
+  } catch (error) {
+      console.log('Account does not exist. Creating a new one.');
+  }
 
+  const createAccountInstruction = createAssociatedTokenAccountInstruction(
+      payer.publicKey, associatedTokenAddress, owner, mint
+  );
 
+  const transaction = new Transaction().add(createAccountInstruction);
+  await sendAndConfirmTransaction(connection, transaction, [payer], { skipPreflight: false, preflightCommitment: 'confirmed' });
+
+  return associatedTokenAddress;
+}

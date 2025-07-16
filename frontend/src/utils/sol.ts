@@ -103,8 +103,8 @@ export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]) {
   let userTokenAccounts = []
   for (let i = 0; i < wallet.length; i++) {
       const [allocation] = PublicKey.findProgramAddressSync(
-          [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer()],
-          new PublicKey(idlBondingCurve.address)
+        [Buffer.from(ALLOCATION_SEED_PREFIX), wallet[i].toBuffer(), mint.toBuffer()],
+        new PublicKey(idlBondingCurve.address)
       );
       allocations.push(allocation)
 
@@ -126,9 +126,11 @@ export function getAllocationPDAs(mint: PublicKey, wallet: PublicKey[]) {
   };
 }
 
-export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey) {
+
+export function getFairLaunchPDAs(mint: PublicKey) {
+  
   const [fairLaunchData] = PublicKey.findProgramAddressSync(
-    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), authority.toBuffer()],
+    [Buffer.from(FAIR_LAUNCH_DATA_SEED_PREFIX), mint.toBuffer()],
     new PublicKey(idlBondingCurve.address)
   );
 
@@ -154,6 +156,7 @@ export function getFairLaunchPDAs(authority: PublicKey, mint: PublicKey) {
     contributionVault,
   };
 }
+
 
 export function deserializeBondingCurve(data: Buffer) {
 
@@ -484,7 +487,12 @@ export function linearBuyCost(amount: bigint, reserveRatio: number, totalSupply:
  * @returns The reward for selling the specified amount.
  */
 export function linearSellCost(amount: bigint, reserveRatio: number, totalSupply: bigint): bigint {
+  console.log("amount", amount)
+  console.log("reserveRatio", reserveRatio)
+  console.log("totalSupply", totalSupply)
   const newSupply = totalSupply - amount;
+
+  console.log("newSupply", newSupply)
 
   const totalSupplySquared = totalSupply * totalSupply;
   const newSupplySquared = newSupply * newSupply;

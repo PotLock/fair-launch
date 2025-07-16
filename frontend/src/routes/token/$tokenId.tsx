@@ -126,11 +126,11 @@ function TokenDetail() {
                     // Check if it's a buy operation (SOL -> Token)
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
                         const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                        setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
+                        setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
                     }
                     // Check if it's a sell operation (Token -> SOL)
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
                 }
@@ -215,7 +215,6 @@ function TokenDetail() {
         else if (option.name === tokenInfo?.symbol) {
             setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
         }
-        
         // Recalculate amounts when payment option changes
         if (payAmount && tokenInfo && bondingCurveInfo) {
             const numericVal = parseFloat(payAmount);
@@ -223,10 +222,12 @@ function TokenDetail() {
                 if (option.name === 'SOL' && tokenInfo) {
                     // Buy operation: SOL -> Token
                     const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    console.log('linearBuyAmount', linearBuyAmount)
                     setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
                 } else if (option.name === tokenInfo?.symbol) {
                     // Sell operation: Token -> SOL
                     const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    console.log("linearSellAmount", linearSellAmount)
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
             }
@@ -263,7 +264,7 @@ function TokenDetail() {
         try{
             if (!tokenInfo || !anchorWallet) return;
             setIsBuying(true);
-            const mint = new PublicKey(tokenInfo?.id);
+            const mint = new PublicKey(tokenId);
             const amount = Number(payAmount) * 10 ** 9;
             console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
@@ -548,8 +549,8 @@ function TokenDetail() {
                         <label className="text-sm text-gray-500">Contract Address</label>
                         <div className="flex flex-row gap-2 items-center">
                             <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
-                            <p className="text-sm text-gray-500">{truncateAddress(tokenInfo?.mintAuthority || '')}</p>
-                            <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenInfo?.mintAuthority || '')}>
+                            <p className="text-sm text-gray-500">{truncateAddress(tokenId || '')}</p>
+                            <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenId || '')}>
                                 <Copy className="w-4 h-4 text-black hover:text-gray-500" />
                             </button>
                         </div>

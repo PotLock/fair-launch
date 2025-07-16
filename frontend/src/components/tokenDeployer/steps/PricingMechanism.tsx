@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, CircleCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight, CircleCheck, Lightbulb } from "lucide-react";
 import { templatesPricingMechanism } from "../../../lib/pricingMechanism";
 import { PricingTemplate } from "../../../types";
 import { Input } from "../../ui/input";
@@ -34,6 +34,64 @@ export const PricingMechanism = () => {
         });
         validatePricingMechanism();
     };
+
+    // Recommendation logic
+    const getRecommendations = () => {
+        const recommendations: { [key: string]: string } = {};
+
+        // Initial Price recommendation
+        if (!pricingMechanism.initialPrice || pricingMechanism.initialPrice === '') {
+            recommendations.initialPrice = 'Recommended: 0.0000001 SOL for fair entry';
+        } else {
+            const initialPrice = parseFloat(pricingMechanism.initialPrice);
+            if (initialPrice < 0.0000001) {
+                recommendations.initialPrice = 'Recommended: 0.0000001 SOL for fair entry';
+            } else if (initialPrice > 0.01) {
+                recommendations.initialPrice = 'High initial price may discourage early investors';
+            }
+        }
+
+        // Final Price recommendation
+        if (!pricingMechanism.finalPrice || pricingMechanism.finalPrice === '') {
+            recommendations.finalPrice = 'Recommended: 10 SOL for significant growth potential';
+        } else {
+            const finalPrice = parseFloat(pricingMechanism.finalPrice);
+            const initialPrice = parseFloat(pricingMechanism.initialPrice || '0');
+            if (finalPrice <= initialPrice) {
+                recommendations.finalPrice = 'Recommended: 10 SOL for significant growth potential';
+            } else if (finalPrice > 100) {
+                recommendations.finalPrice = 'Very high final price may be unrealistic';
+            }
+        }
+
+        // Target Raise recommendation
+        if (!pricingMechanism.targetRaise || pricingMechanism.targetRaise === '') {
+            recommendations.targetRaise = 'Recommended: 10 SOL for balanced fundraising';
+        } else {
+            const targetRaise = parseFloat(pricingMechanism.targetRaise);
+            if (targetRaise < 10) {
+                recommendations.targetRaise = 'Recommended: 10 SOL for balanced fundraising';
+            } else if (targetRaise > 1000) {
+                recommendations.targetRaise = 'High target may be difficult to achieve';
+            }
+        }
+
+        // Reserve Ratio recommendation
+        if (!pricingMechanism.reserveRatio || pricingMechanism.reserveRatio === '') {
+            recommendations.reserveRatio = 'Recommended: 20% for optimal liquidity and growth';
+        } else {
+            const reserveRatio = parseFloat(pricingMechanism.reserveRatio);
+            if (reserveRatio < 10) {
+                recommendations.reserveRatio = 'Low reserve ratio may cause price volatility';
+            } else if (reserveRatio > 50) {
+                recommendations.reserveRatio = 'High reserve ratio may limit price growth';
+            }
+        }
+
+        return recommendations;
+    };
+
+    const recommendations = getRecommendations();
 
     // Check if all required fields are valid
     const isFormValid = () => {
@@ -178,10 +236,16 @@ export const PricingMechanism = () => {
                                         name="initialPrice"
                                         value={pricingMechanism.initialPrice}
                                         onChange={handleInputChange}
-                                        placeholder="0.005"
+                                        placeholder="0.0000001"
                                     />
                                     {validationErrors.initialPrice && (
                                         <p className="text-red-500 text-xs mt-1">{validationErrors.initialPrice}</p>
+                                    )}
+                                    {recommendations.initialPrice && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                            <p className="text-yellow-600 text-xs">{recommendations.initialPrice}</p>
+                                        </div>
                                     )}
                                 </div>
                                 <div>
@@ -192,10 +256,16 @@ export const PricingMechanism = () => {
                                         name="finalPrice"
                                         value={pricingMechanism.finalPrice}
                                         onChange={handleInputChange}
-                                        placeholder="0.02"
+                                        placeholder="10"
                                     />
                                     {validationErrors.finalPrice && (
                                         <p className="text-red-500 text-xs mt-1">{validationErrors.finalPrice}</p>
+                                    )}
+                                    {recommendations.finalPrice && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                            <p className="text-yellow-600 text-xs">{recommendations.finalPrice}</p>
+                                        </div>
                                     )}
                                 </div>
                                 <div>
@@ -206,10 +276,16 @@ export const PricingMechanism = () => {
                                         name="targetRaise"
                                         value={pricingMechanism.targetRaise}
                                         onChange={handleInputChange}
-                                        placeholder="1000"
+                                        placeholder="100"
                                     />
                                     {validationErrors.targetRaise && (
                                         <p className="text-red-500 text-xs mt-1">{validationErrors.targetRaise}</p>
+                                    )}
+                                    {recommendations.targetRaise && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                            <p className="text-yellow-600 text-xs">{recommendations.targetRaise}</p>
+                                        </div>
                                     )}
                                 </div>
                                 <div>
@@ -220,10 +296,16 @@ export const PricingMechanism = () => {
                                         name="reserveRatio"
                                         value={pricingMechanism.reserveRatio}
                                         onChange={handleInputChange}
-                                        placeholder="70"
+                                        placeholder="20"
                                     />
                                     {validationErrors.reserveRatio && (
                                         <p className="text-red-500 text-xs mt-1">{validationErrors.reserveRatio}</p>
+                                    )}
+                                    {recommendations.reserveRatio && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                            <p className="text-yellow-600 text-xs">{recommendations.reserveRatio}</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>

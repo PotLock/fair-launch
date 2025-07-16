@@ -1,5 +1,5 @@
 {
-  "address": "HAjLCcFHwqMb7XzoDsvmEBFBuwC2FuspByUux95DCfSs",
+  "address": "CB18NKSvKunD2xeuvEkKfBxuz4fJFJJ8GPy5w1dMzN1",
   "metadata": {
     "name": "bonding_curve",
     "version": "0.1.0",
@@ -346,7 +346,8 @@
               },
               {
                 "kind": "account",
-                "path": "authority"
+                "path": "whitelist_data.token_mint",
+                "account": "WhitelistLaunchData"
               }
             ]
           }
@@ -723,6 +724,10 @@
               {
                 "kind": "account",
                 "path": "wallet"
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
               }
             ]
           }
@@ -807,7 +812,7 @@
               },
               {
                 "kind": "account",
-                "path": "fair_launch_data.authority",
+                "path": "fair_launch_data.token_mint",
                 "account": "FairLaunchData"
               }
             ]
@@ -926,6 +931,10 @@
               {
                 "kind": "account",
                 "path": "wallet"
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
               }
             ]
           }
@@ -1076,7 +1085,7 @@
               },
               {
                 "kind": "account",
-                "path": "authority"
+                "path": "token_mint"
               }
             ]
           }
@@ -1588,7 +1597,7 @@
               },
               {
                 "kind": "account",
-                "path": "authority"
+                "path": "token_mint"
               }
             ]
           }
@@ -1879,7 +1888,7 @@
               },
               {
                 "kind": "account",
-                "path": "fair_launch_data.authority",
+                "path": "fair_launch_data.token_mint",
                 "account": "FairLaunchData"
               }
             ]
@@ -2533,7 +2542,7 @@
               },
               {
                 "kind": "account",
-                "path": "fair_launch_data.authority",
+                "path": "fair_launch_data.token_mint",
                 "account": "FairLaunchData"
               }
             ]
@@ -2907,7 +2916,8 @@
               },
               {
                 "kind": "account",
-                "path": "authority"
+                "path": "whitelist_data.token_mint",
+                "account": "WhitelistLaunchData"
               }
             ]
           }
