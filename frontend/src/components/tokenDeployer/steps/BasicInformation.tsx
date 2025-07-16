@@ -8,7 +8,8 @@ import { toast } from 'react-hot-toast';
 
 export const BasicInformation = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(true);
-    const [isUploading, setIsUploading] = useState<boolean>(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+    const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
     const { basicInfo, updateBasicInfo, validationErrors, validateBasicInfo } = useDeployStore();
     const { name, symbol, description, supply, decimals, avatarUrl, bannerUrl } = basicInfo;
     const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -50,12 +51,13 @@ export const BasicInformation = () => {
 
     const recommendations = getRecommendations();
 
-    const uploadToPinata = async (file: File): Promise<string | null> => {
+    const uploadToPinata = async (file: File, type: 'avatar' | 'banner'): Promise<string | null> => {
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            setIsUploading(true);
+            if (type === 'avatar') setIsUploadingAvatar(true);
+            else setIsUploadingBanner(true);
             const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
                 method: 'POST',
                 headers: {
@@ -82,14 +84,15 @@ export const BasicInformation = () => {
             toast.error('Failed to upload file');
             return null;
         } finally {
-            setIsUploading(false);
+            if (type === 'avatar') setIsUploadingAvatar(false);
+            else setIsUploadingBanner(false);
         }
     };
 
     const handleImageUpload = async (type: 'avatar' | 'banner', file: File) => {
         if (file) {
             try {
-                const pinataRes = await uploadToPinata(file);
+                const pinataRes = await uploadToPinata(file, type);
                 
                 if (pinataRes) {
                     if (type === 'avatar') {
@@ -249,7 +252,7 @@ export const BasicInformation = () => {
                                     onDrop={(e) => handleImageDrop('avatar', e)}
                                     onDragOver={handleDragOver}
                                 >
-                                    {isUploading && (
+                                    {isUploadingAvatar && (
                                         <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
                                             <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
                                         </div>
@@ -301,7 +304,7 @@ export const BasicInformation = () => {
                                 onDrop={(e) => handleImageDrop('banner', e)}
                                 onDragOver={handleDragOver}
                             >
-                                {isUploading && (
+                                {isUploadingBanner && (
                                     <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
                                         <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
                                     </div>

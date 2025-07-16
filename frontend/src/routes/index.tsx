@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TokenCard } from "../components/TokenCard";
 import { useEffect, useState } from "react";
-import { TokenInfo } from "../utils/tokenUtils";
+import { getBondingCurveAccounts, TokenInfo } from "../utils/tokenUtils";
 import { getTokens } from "../lib/api";
 import { formatDateToReadable, getTemplateDisplay } from "../utils";
+import { PublicKey } from "@solana/web3.js";
 
 export const Route = createFileRoute("/")({
     component: Home,
@@ -88,11 +89,12 @@ function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {tokens.map((token) => (
               <TokenCard
+                decimals={token.decimals}
                 avatar={token.avatarUrl || "/curate.png"}
                 banner={token.bannerUrl || token.avatarUrl || "/curate.png"}
                 key={token.id}
                 type={getTemplateDisplay(token.selectedTemplate || 'meme')}
-                progress={10}
+                progress={0}
                 name={token.name}
                 symbol={token.symbol}
                 description={token.description || "No description available"}

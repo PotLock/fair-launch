@@ -9,6 +9,8 @@ import { BN } from "bn.js";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
 import useAnchorProvider from "./useAnchorProvider";
 import { getPDAs } from "../utils/sol";
@@ -29,11 +31,24 @@ export const useTokenTrading = () => {
         throw new Error("Required dependencies not available");
       }
 
+      let tx = new Transaction()
+
       try {
         const { curveConfig, bondingCurve, poolSolVault, poolTokenAccount, userTokenAccount } = getPDAs(admin, mint)
 
-        const tx = new Transaction()        
-          .add(await provider.program.methods.buy(new BN(amount))
+        const associatedTokenAddress = await getAssociatedTokenAddress(mint, anchorWallet.publicKey);
+        try {
+            const accountInfo = await provider.connection.getAccountInfo(associatedTokenAddress);
+            if (!accountInfo) {
+              tx.add(createAssociatedTokenAccountInstruction(
+                anchorWallet.publicKey, associatedTokenAddress, anchorWallet.publicKey, mint
+              ));
+            }
+        } catch (error) {
+          console.log("error in getAssociatedTokenAddress")
+        }
+            
+        tx.add(await provider.program.methods.buy(new BN(amount))
             .accountsStrict({              
               bondingCurveConfiguration: curveConfig,
               bondingCurveAccount: bondingCurve,              

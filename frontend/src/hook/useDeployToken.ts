@@ -228,6 +228,8 @@ export const useDeployToken = () => {
 
     const { curveConfig, bondingCurve, poolTokenAccount, poolSolVault, userTokenAccount } = getPDAs(publicKey, provider.mintKeypair.publicKey)
 
+    console.log("curveConfig", curveConfig.toBase58())
+
     // Fee Percentage : 100 = 1%
     const feePercentage = new BN(100);
     const initialQuorum = new BN(500);
@@ -359,7 +361,7 @@ export const useDeployToken = () => {
       throw new Error("Required dependencies not available");
     }
 
-    const { fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(publicKey, provider.mintKeypair.publicKey);
+    const { fairLaunchData, launchpadTokenAccount, contributionVault } = getFairLaunchPDAs(provider.mintKeypair.publicKey);
 
     let softCap = new BN(Number(saleSetup.softCap) * 10 ** 9);
     let hardCap = new BN(Number(saleSetup.hardCap) * 10 ** 9);
