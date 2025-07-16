@@ -90,7 +90,7 @@ export const TokenSaleSetup = () => {
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Launch Type</label>
-                        <Input type="text" value={getExchangeDisplay(selectedExchange)} readOnly className="bg-muted-foreground/10" />
+                        <Input disabled type="text" value={getExchangeDisplay(selectedExchange)} readOnly className="bg-muted-foreground/10" />
                         <p className="text-xs text-muted-foreground mt-1">
                             In a fair launch, all participants have equal opportunity to acquire tokens at the same price.
                         </p>

@@ -4,10 +4,25 @@ import { useDeployStore } from '../../../stores/deployStores';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Input } from '../../ui/input';
 import type { Fees } from '../../../types';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useEffect, useRef } from 'react';
 
 export const FeesStep = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const { fees, updateFees, validationErrors, validateFees } = useDeployStore();
+    const { publicKey } = useWallet();
+    const prevPublicKey = useRef<string | null>(null);
+
+    useEffect(() => {
+        const pubkeyStr = publicKey?.toString() || '';
+        if (
+            pubkeyStr &&
+            (fees.feeRecipientAddress === '' || fees.feeRecipientAddress === prevPublicKey.current)
+        ) {
+            updateFees({ feeRecipientAddress: pubkeyStr });
+        }
+        prevPublicKey.current = pubkeyStr;
+    }, [publicKey]);
 
     const handleFeeChange = (field: keyof Fees, value: any) => {
         if (field === 'adminControls') {
@@ -18,7 +33,61 @@ export const FeesStep = () => {
         validateFees();
     };
 
-    // Check if all required fields are valid
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+    const handleFeeSliderChange = (field: keyof Fees, value: number) => {
+        let mint = Number(fees.mintFee) || 0;
+        let transfer = Number(fees.transferFee) || 0;
+        let burn = Number(fees.burnFee) || 0;
+        let newMint = mint, newTransfer = transfer, newBurn = burn;
+
+        if (field === 'mintFee') {
+            newMint = clamp(value, 0, 100 - transfer - burn);
+            if (newMint + transfer + burn > 100) {
+                const over = newMint + transfer + burn - 100;
+                if (burn >= over) {
+                    newBurn = burn - over;
+                } else if (transfer >= over - burn) {
+                    newBurn = 0;
+                    newTransfer = transfer - (over - burn);
+                } else {
+                    newBurn = 0;
+                    newTransfer = 0;
+                }
+            }
+        } else if (field === 'transferFee') {
+            newTransfer = clamp(value, 0, 100 - mint - burn);
+            if (mint + newTransfer + burn > 100) {
+                const over = mint + newTransfer + burn - 100;
+                if (burn >= over) {
+                    newBurn = burn - over;
+                } else if (mint >= over - burn) {
+                    newBurn = 0;
+                    newMint = mint - (over - burn);
+                } else {
+                    newBurn = 0;
+                    newMint = 0;
+                }
+            }
+        } else if (field === 'burnFee') {
+            newBurn = clamp(value, 0, 100 - mint - transfer);
+            if (mint + transfer + newBurn > 100) {
+                const over = mint + transfer + newBurn - 100;
+                if (transfer >= over) {
+                    newTransfer = transfer - over;
+                } else if (mint >= over - transfer) {
+                    newTransfer = 0;
+                    newMint = mint - (over - transfer);
+                } else {
+                    newTransfer = 0;
+                    newMint = 0;
+                }
+            }
+        }
+        updateFees({ mintFee: newMint, transferFee: newTransfer, burnFee: newBurn });
+        validateFees();
+    };
+
     const isFormValid = () => {
         const hasErrors = Object.keys(validationErrors).some(key => 
             key.includes('mintFee') || 
@@ -26,20 +95,17 @@ export const FeesStep = () => {
             key.includes('burnFee') || 
             key.includes('feeRecipientAddress') ||
             key.includes('adminWalletAddress') ||
-            key.includes('totalFee') // include totalFee error
+            key.includes('totalFee')
         );
         
-        // Allow zero, so check for undefined/null, not falsy
         const hasRequiredFields = (fees.mintFee !== undefined && fees.mintFee !== null)
                                  && (fees.transferFee !== undefined && fees.transferFee !== null)
                                  && (fees.burnFee !== undefined && fees.burnFee !== null)
                                  && fees.feeRecipientAddress && fees.feeRecipientAddress.trim() !== '';
         
-        // Check that the sum does not exceed 100
         const totalFee = Number(fees.mintFee) + Number(fees.transferFee) + Number(fees.burnFee);
         const isTotalFeeValid = !isNaN(totalFee) && totalFee <= 100;
         
-        // If admin controls are enabled, admin wallet address is required
         const hasValidAdminControls = !fees.adminControls.isEnabled || 
                                      (fees.adminControls.isEnabled && fees.adminControls.walletAddress && fees.adminControls.walletAddress.trim() !== '');
         
@@ -82,42 +148,51 @@ export const FeesStep = () => {
                                         <h1 className='text-sm font-medium'>Mint Fee ({fees.mintFee}%)</h1>
                                         <SliderCustom
                                             value={[Number(fees.mintFee) || 0]}
-                                            onValueChange={(value) => handleFeeChange('mintFee', value[0].toString())}
-                                            step={0.5}
                                             min={0}
-                                            max={100}
+                                            max={100 - Number(fees.transferFee) - Number(fees.burnFee)}
+                                            onValueChange={(value) => handleFeeSliderChange('mintFee', value[0])}
+                                            step={0.5}
                                         />
                                         <p className='text-xs text-gray-500'>The fee charged when a user mints new tokens.</p>
                                         {validationErrors.mintFee && (
                                             <p className="text-xs text-red-500 mt-1">{validationErrors.mintFee}</p>
+                                        )}
+                                        {Number(fees.mintFee) > 50 && (
+                                            <p className="text-xs text-yellow-500 mt-1 font-semibold">Mint fee is very high (&gt; 50%)</p>
                                         )}
                                     </div>
                                     <div className='space-y-2'>
                                         <h1 className='text-sm font-medium'>Transfer Fee ({fees.transferFee}%)</h1>
                                         <SliderCustom
                                             value={[Number(fees.transferFee) || 0]}
-                                            onValueChange={(value) => handleFeeChange('transferFee', value[0].toString())}
-                                            step={0.5}
                                             min={0}
-                                            max={100}
+                                            max={100 - Number(fees.mintFee) - Number(fees.burnFee)}
+                                            onValueChange={(value) => handleFeeSliderChange('transferFee', value[0])}
+                                            step={0.5}
                                         />
                                         <p className='text-xs text-gray-500'>Fee charged when tokens are transferred between wallets</p>
                                         {validationErrors.transferFee && (
                                             <p className="text-xs text-red-500 mt-1">{validationErrors.transferFee}</p>
+                                        )}
+                                        {Number(fees.transferFee) > 50 && (
+                                            <p className="text-xs text-yellow-500 mt-1 font-semibold">Transfer fee is very high (&gt; 50%)</p>
                                         )}
                                     </div>
                                     <div className='space-y-2'>
                                         <h1 className='text-sm font-medium'>Burn Fee ({fees.burnFee}%)</h1>
                                         <SliderCustom
                                             value={[Number(fees.burnFee) || 0]}
-                                            onValueChange={(value) => handleFeeChange('burnFee', value[0].toString())}
-                                            step={0.5}
                                             min={0}
-                                            max={100}
+                                            max={100 - Number(fees.mintFee) - Number(fees.transferFee)}
+                                            onValueChange={(value) => handleFeeSliderChange('burnFee', value[0])}
+                                            step={0.5}
                                         />
                                         <p className='text-xs text-gray-500'>Fee charged when tokens are burned.</p>
                                         {validationErrors.burnFee && (
                                             <p className="text-xs text-red-500 mt-1">{validationErrors.burnFee}</p>
+                                        )}
+                                        {Number(fees.burnFee) > 50 && (
+                                            <p className="text-xs text-yellow-500 mt-1 font-semibold">Burn fee is very high (&gt; 50%)</p>
                                         )}
                                     </div>
                                 </div>

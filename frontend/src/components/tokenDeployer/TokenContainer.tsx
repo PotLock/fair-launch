@@ -13,17 +13,55 @@ export const TokenContainer = () => {
     const { deployToken } = useDeployToken();
     const { publicKey } = useWallet();
     const router = useRouter();
-    const { basicInfo } = useDeployStore();
+    const { 
+        basicInfo,
+        socials, 
+        allocation, 
+        dexListing, 
+        saleSetup, 
+        adminSetup,
+        fees
+     } = useDeployStore();
     const navigate = useNavigate();
     const { resetState } = useDeployStore.getState();
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [txid, setTxid] = useState("");
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isSuccess, setIsSuccess] = useState<boolean>(false);
+    const [txid, setTxid] = useState<string>("");
 
     const handleDeployToken = async () => {
         if (!publicKey) {
             toast.error("Please connect your wallet first!");
             return;
+        }
+
+        if(!basicInfo.name && !basicInfo.symbol && !basicInfo.description && !basicInfo.decimals && !basicInfo.avatarUrl && !basicInfo.bannerUrl) {
+            toast.error("Please fill in all required fields in Basic Information");
+            return;
+        }
+
+        if(!socials.twitter || !socials.discord || !socials.website || !socials.farcaster || !socials.telegram) {
+            toast.error("Please fill in all the required fields in Social");
+            return;
+        }
+
+        if(!allocation[0].description && !allocation[0].lockupPeriod && !allocation[0].percentage && !allocation[0].vesting && !allocation[0].walletAddress){
+            toast.error("Please fill in all the required fields in Allocation")
+        }
+
+        if(!dexListing.walletLiquidityAmount && !dexListing.liquidityPercentage && !dexListing.liquidityLockupPeriod){
+            toast.error("Please fill in all the required fields in DEX Listing")
+        }
+        
+        if(!fees.feeRecipientAddress){
+            toast.error("Please fill in all the required fields in Fee Configuration")
+        }
+        
+        if(!saleSetup.softCap && !saleSetup.hardCap && !saleSetup.scheduleLaunch && !saleSetup.maximumContribution && !saleSetup.minimumContribution){
+            toast.error("Please fill in all the required fields in Token Sale Setup")
+        }
+
+        if(!adminSetup.adminWalletAddress){
+            toast.error("Please fill in all the required fields in Admin Setup")
         }
         
         setIsLoading(true);
@@ -35,7 +73,6 @@ export const TokenContainer = () => {
             }
         } catch (error) {
             console.error("Deploy token error:", error);
-            // toast.error("Failed to deploy token. Please try again.");
         } finally {
             setIsLoading(false);
         }
