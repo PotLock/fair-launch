@@ -7,7 +7,7 @@ import {
     XAxis, 
     YAxis, 
     CartesianGrid, 
-    Tooltip,
+    Tooltip as RechartsTooltip,
     PieChart,
     Pie,
     Cell,
@@ -32,6 +32,7 @@ import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost } from "../../utils/sol";
 import { TokenDistributionItem, Holders} from "../../types"
 import { Progress } from "../../components/ui/progress";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -562,7 +563,14 @@ function TokenDetail() {
                         <label className="text-sm text-gray-500">Contract Address</label>
                         <div className="flex flex-row gap-2 items-center">
                             <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
-                            <p className="text-sm text-gray-500">{truncateAddress(tokenId || '')}</p>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <p className="text-sm text-gray-500 cursor-pointer hover:underline">{truncateAddress(tokenId || '')}</p>
+                                </TooltipTrigger>
+                                <TooltipContent sideOffset={4} className="bg-white border border-gray-200">
+                                    <span className="font-mono">{tokenId}</span>
+                                </TooltipContent>
+                            </Tooltip>
                             <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenId || '')}>
                                 <Copy className="w-4 h-4 text-black hover:text-gray-500" />
                             </button>
@@ -589,7 +597,7 @@ function TokenDetail() {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <RechartsTooltip />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -637,7 +645,7 @@ function TokenDetail() {
                                     padding={{ left: 10, right: 10 }}
                                 />
                                 <YAxis tick={{ fontSize: 14 }} />
-                                <Tooltip contentStyle={{ fontSize: 14 }} />
+                                <RechartsTooltip contentStyle={{ fontSize: 14 }} />
                                 <Line
                                     type="monotone"
                                     dataKey="development"
@@ -673,7 +681,7 @@ function TokenDetail() {
                                             padding={{ left: 10, right: 10 }}
                                         />
                                         <YAxis tick={{ fontSize: 14 }} />
-                                        <Tooltip contentStyle={{ fontSize: 14 }} />
+                                        <RechartsTooltip contentStyle={{ fontSize: 14 }} />
                                         <Line
                                             type="monotone"
                                             dataKey="price"
