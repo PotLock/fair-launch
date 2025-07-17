@@ -7,7 +7,7 @@ import {
     XAxis, 
     YAxis, 
     CartesianGrid, 
-    Tooltip,
+    Tooltip as RechartsTooltip,
     PieChart,
     Pie,
     Cell,
@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, TokenInfo } from "../../utils/tokenUtils";
+import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
@@ -30,6 +30,9 @@ import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost } from "../../utils/sol";
+import { TokenDistributionItem, Holders} from "../../types"
+import { Progress } from "../../components/ui/progress";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -75,14 +78,20 @@ function TokenDetail() {
     const { buyToken, sellToken } = useTokenTrading();
     const isLoggedIn = !!publicKey;
     const [isBuying, setIsBuying] = useState(false);
-    
+    const [holders, setHolders] = useState<Holders[]>([]);
+
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
             const tokenInfo = await getTokenByMint(tokenId);
+            const holdersRes = await getTokenHoldersByMint(tokenId)
             const bondingCurveInfo = await getBondingCurveAccounts(new PublicKey(tokenId));
+            const walletAddresses = tokenInfo.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
+            const allocationsAndVesting = await getAllocationsAndVesting(walletAddresses)
+            console.log(allocationsAndVesting)
             setTokenInfo(tokenInfo.data);
             setBondingCurveInfo(bondingCurveInfo || null);
+            setHolders(holdersRes);
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -180,6 +189,9 @@ function TokenDetail() {
             </div>
         );
     }
+
+
+    const progress = (Number(bondingCurveInfo?.totalSupply) / (Number(tokenInfo?.supply) * 10 ** Number(tokenInfo?.decimals))) * 100
 
     const tokenOptions = [
         { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -377,8 +389,10 @@ function TokenDetail() {
 
                         <div className="text-3xl font-bold text-green-600 mb-3">-</div>
 
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
-                            <div className="bg-green-600 h-2 rounded-full w-[60%]"></div>
+                        <div className="w-full mb-8">
+                            <Progress value={progress} className="h-2 bg-gray-200">
+                                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${progress}%` }} />
+                            </Progress>
                         </div>
 
                         <div className="grid grid-cols-3">
@@ -387,7 +401,7 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Current Price</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">-</div>
+                                <div className="text-lg font-semibold">{holders.length}</div>
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
@@ -549,7 +563,14 @@ function TokenDetail() {
                         <label className="text-sm text-gray-500">Contract Address</label>
                         <div className="flex flex-row gap-2 items-center">
                             <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
-                            <p className="text-sm text-gray-500">{truncateAddress(tokenId || '')}</p>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <p className="text-sm text-gray-500 cursor-pointer hover:underline">{truncateAddress(tokenId || '')}</p>
+                                </TooltipTrigger>
+                                <TooltipContent sideOffset={4} className="bg-white border border-gray-200">
+                                    <span className="font-mono">{tokenId}</span>
+                                </TooltipContent>
+                            </Tooltip>
                             <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenId || '')}>
                                 <Copy className="w-4 h-4 text-black hover:text-gray-500" />
                             </button>
@@ -576,7 +597,7 @@ function TokenDetail() {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <RechartsTooltip />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -624,7 +645,7 @@ function TokenDetail() {
                                     padding={{ left: 10, right: 10 }}
                                 />
                                 <YAxis tick={{ fontSize: 14 }} />
-                                <Tooltip contentStyle={{ fontSize: 14 }} />
+                                <RechartsTooltip contentStyle={{ fontSize: 14 }} />
                                 <Line
                                     type="monotone"
                                     dataKey="development"
@@ -660,7 +681,7 @@ function TokenDetail() {
                                             padding={{ left: 10, right: 10 }}
                                         />
                                         <YAxis tick={{ fontSize: 14 }} />
-                                        <Tooltip contentStyle={{ fontSize: 14 }} />
+                                        <RechartsTooltip contentStyle={{ fontSize: 14 }} />
                                         <Line
                                             type="monotone"
                                             dataKey="price"
@@ -704,8 +725,8 @@ function TokenDetail() {
 
                     <div className="text-3xl font-bold text-green-600 mb-3">-</div>
 
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
-                        <div className="bg-green-600 h-2 rounded-full w-[60%]"></div>
+                    <div className="w-full mb-8">
+                        <Progress value={progress} bgProgress="bg-green-600" className="h-2 bg-gray-200"/>
                     </div>
 
                     <div className="grid grid-cols-3">
@@ -714,7 +735,7 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Current Price</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">-</div>
+                            <div className="text-lg font-semibold">{holders.length}</div>
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>

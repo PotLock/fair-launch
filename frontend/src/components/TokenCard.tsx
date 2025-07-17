@@ -63,7 +63,6 @@ export function TokenCard({
             if(!address) return;
             const bondingCurveAccounts = await getBondingCurveAccounts(new PublicKey(address));
             setBondingCurve(bondingCurveAccounts || null);
-            console.log('bondingCurveAccounts', bondingCurveAccounts)
         }
         fetchBondingCurveAccounts();
     },[address])
@@ -107,7 +106,7 @@ export function TokenCard({
                         )
                     }
                 </div>
-                <Progress value={progressValue} className="h-4 bg-gray-200 mb-4" />
+                <Progress value={progressValue} bgProgress="bg-black" className="h-4 bg-gray-200 mb-4" />
                 <div className="grid grid-cols-2 gap-2 text-xs mb-1">
                     <div>
                         <div className="text-gray-400">Token Address</div>
