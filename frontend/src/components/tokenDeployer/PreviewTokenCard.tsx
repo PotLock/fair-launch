@@ -56,7 +56,7 @@ export const PreviewTokenCard = () => {
                 <div className="space-y-2 mb-6">
                     <div className="flex items-center justify-between text-sm text-gray-400">
                         <span>Token Type</span>
-                        <span>{supply ? formatNumberWithCommas(supply) : '0'}/1,000,000,000</span>
+                        <span>{supply ? formatNumberWithCommas(supply) : '0'}</span>
                     </div>
                     <Progress value={progress} className="h-4 bg-gray-200" />
                 </div>

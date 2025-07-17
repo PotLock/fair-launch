@@ -2,7 +2,7 @@ import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { SOL_NETWORK } from "../configs/env.config";
 import { PublicKey } from "@solana/web3.js";
 import { PREFIX_TOKEN } from "./common";
-import { getAssociatedTokenAddress, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import * as anchor from "@coral-xyz/anchor";
 import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
 

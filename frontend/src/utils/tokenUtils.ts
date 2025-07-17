@@ -1,16 +1,12 @@
-import { Connection, ParsedAccountData, PublicKey, Signer } from '@solana/web3.js';
-import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { HELIUS_API_KEY } from '../configs/env.config';
 import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
 import { 
   ALLOCATION_SEED_PREFIX, 
   deserializeAllocationAndVesting, 
-  deserializeBondingCurve,
-  deserializeCurveConfiguration,
-  getBondingCurveConfig
+  deserializeBondingCurve
 } from './sol';
-import { sendAndConfirmTransaction } from '@solana/web3.js';
-import { Transaction } from '@solana/web3.js';
 
 
 export interface MintAccount {
@@ -251,23 +247,33 @@ export async function getAllocationsAndVesting(wallets: PublicKey[]) {
   }
 }
 
-export async function getOrCreateAssociatedTokenAccount(payer: Signer, mint: PublicKey, owner: PublicKey) {
-  const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner);
+// Get all holders of a token by mint address on Solana
+export async function getTokenHoldersByMint(mintAddress: string) {
+  const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
   try {
-      const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
-      if (accountInfo) {
-          return associatedTokenAddress;
-      }
+    // Get all token accounts owned by all owners for this mint
+    const accounts = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
+      commitment: 'confirmed',
+      filters: [
+        { dataSize: 165 }, // size of token account
+        { memcmp: { offset: 0, bytes: mintAddress } }, // mint address is at offset 0
+      ],
+    });
+    // Map to owner and amount
+    const holders = accounts
+      .map((account: any) => {
+        const data = account.account.data as Buffer;
+        const owner = new PublicKey(data.slice(32, 64)).toBase58();
+        const amount = Number(data.readBigUInt64LE(64));
+        return { owner, amount };
+      })
+      // Only include holders with a positive balance
+      .filter((holder: { owner: string; amount: number }) => holder.amount && holder.amount > 0);
+    return holders;
   } catch (error) {
-      console.log('Account does not exist. Creating a new one.');
+    console.error('Error fetching token holders:', error);
+    throw error;
   }
-
-  const createAccountInstruction = createAssociatedTokenAccountInstruction(
-      payer.publicKey, associatedTokenAddress, owner, mint
-  );
-
-  const transaction = new Transaction().add(createAccountInstruction);
-  await sendAndConfirmTransaction(connection, transaction, [payer], { skipPreflight: false, preflightCommitment: 'confirmed' });
-
-  return associatedTokenAddress;
 }
+
+
