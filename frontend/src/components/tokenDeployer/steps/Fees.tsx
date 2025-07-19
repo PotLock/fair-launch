@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleCheck, LucideMessageCircleQuestion } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Input } from '../../ui/input';
 import type { Fees } from '../../../types';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useEffect, useRef } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 
 export const FeesStep = () => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
@@ -145,7 +146,17 @@ export const FeesStep = () => {
                                 </div>
                                 <div className='space-y-6 pt-4'>
                                     <div className='space-y-2'>
-                                        <h1 className='text-sm font-medium'>Mint Fee ({fees.mintFee}%)</h1>
+                                        <div className='flex flex-row gap-2 items-center'>
+                                            <h1 className='text-sm font-medium'>Mint Fee ({fees.mintFee}%)</h1>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <img src="/icons/circle-question-mark.svg" alt="circle-question-mark" className='h-4 w-4 cursor-help' />
+                                                </TooltipTrigger>
+                                                <TooltipContent className='border border-gray-200'>
+                                                    <p className='md:max-w-[300px] text-wrap'>Fee charged when new tokens are minted. This fee is typically collected by the platform as a service fee.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                         <SliderCustom
                                             value={[Number(fees.mintFee) || 0]}
                                             min={0}
@@ -162,7 +173,17 @@ export const FeesStep = () => {
                                         )}
                                     </div>
                                     <div className='space-y-2'>
-                                        <h1 className='text-sm font-medium'>Transfer Fee ({fees.transferFee}%)</h1>
+                                        <div className='flex flex-row gap-2 items-center'>
+                                            <h1 className='text-sm font-medium'>Transfer Fee ({fees.transferFee}%)</h1>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <img src="/icons/circle-question-mark.svg" alt="circle-question-mark" className='h-4 w-4 cursor-help' />
+                                                </TooltipTrigger>
+                                                <TooltipContent className='border border-gray-200'>
+                                                    <p className='md:max-w-[300px] text-wrap'>Fee charged when tokens are transferred between wallets. This is the most common fee type and generates ongoing revenue.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                         <SliderCustom
                                             value={[Number(fees.transferFee) || 0]}
                                             min={0}
@@ -179,7 +200,17 @@ export const FeesStep = () => {
                                         )}
                                     </div>
                                     <div className='space-y-2'>
-                                        <h1 className='text-sm font-medium'>Burn Fee ({fees.burnFee}%)</h1>
+                                        <div className='flex flex-row gap-2 items-center'>
+                                            <h1 className='text-sm font-medium'>Burn Fee ({fees.burnFee}%)</h1>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <img src="/icons/circle-question-mark.svg" alt="circle-question-mark" className='h-4 w-4 cursor-help' />
+                                                </TooltipTrigger>
+                                                <TooltipContent className='border border-gray-200'>
+                                                    <p className='md:max-w-[300px] text-wrap'>Fee charged when tokens are burned. This fee is collected before the tokens are removed from circulation.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                         <SliderCustom
                                             value={[Number(fees.burnFee) || 0]}
                                             min={0}
@@ -200,11 +231,21 @@ export const FeesStep = () => {
                             <div className='space-y-4 flex flex-col gap-0.5'>
                                 <div className='space-y-4 border border-gray-200 rounded-lg p-3'>
                                     <div className='flex flex-col gap-1'>
-                                        <h1 className='text-sm font-medium'>Fee Recipient</h1>
+                                        <div className='flex flex-row gap-2 items-center'>
+                                            <h1 className='text-sm font-medium'>Fee Recipient</h1>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <img src="/icons/circle-question-mark.svg" alt="circle-question-mark" className='h-4 w-4 cursor-help' />
+                                                </TooltipTrigger>
+                                                <TooltipContent className='border border-gray-200'>
+                                                    <p className='md:max-w-[300px] text-wrap'>The wallet address that will receive the collected fees. Make sure this is a wallet you control.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                         <span className='text-xs text-gray-500'>Who receives the collected fees</span>
                                     </div>
                                     <div className='space-y-2'>
-                                        <h1 className='text-sm font-medium'>Fee Recipient Address</h1>
+                                        <h1 className='text-sm font-medium'>Fee Recipient Address <span className='text-red-500'>*</span></h1>
                                         <Input
                                             type="text"
                                             placeholder='Wallet address to receive fees'
@@ -220,7 +261,17 @@ export const FeesStep = () => {
                                 <div className='space-y-4 border border-gray-200 rounded-lg p-3'>
                                     <div className='flex flex-row justify-between items-center'>
                                         <div className='flex flex-col gap-1'>
-                                            <h1 className='text-sm font-medium'>Admin Controls</h1>
+                                            <div className='flex flex-row gap-2 items-center'>
+                                                <h1 className='text-sm font-medium'>Admin Controls</h1>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <img src="/icons/circle-question-mark.svg" alt="circle-question-mark" className='h-4 w-4 cursor-help' />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className='border border-gray-200'>
+                                                        <p className='md:max-w-[300px] text-wrap'>Allow changing fee settings after deployment.</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
                                             <span className='text-xs text-gray-500'>Allow changing fees after deployment</span>
                                         </div>
                                         <button
@@ -239,7 +290,7 @@ export const FeesStep = () => {
                                         </button>
                                     </div>
                                     <div className='space-y-2'>
-                                        <h1 className='text-sm font-medium'>Admin Address</h1>
+                                        <h1 className='text-sm font-medium'>Admin Address <span className='text-red-500'>*</span></h1>
                                         <Input
                                             type="text"
                                             placeholder='Wallet address to receive fees'

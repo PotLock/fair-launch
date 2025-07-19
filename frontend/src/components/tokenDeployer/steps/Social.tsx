@@ -52,60 +52,85 @@ export const Social = () => {
                         <div className="space-y-4">
                             <div>
                                 <div className="text-sm font-medium mb-1">X/Twitter</div>
-                                <Input 
-                                    className="text-sm" 
-                                    placeholder="x.com/" 
-                                    value={socials.twitter}
-                                    onChange={(e) => handleSocialChange('twitter', e.target.value)}
-                                />
+                                <div className="flex items-center">
+                                    <div className="bg-gray-100 text-gray-600 px-3 py-[7px] text-sm border border-r-0 border-gray-300 rounded-l-md">
+                                        x.com/
+                                    </div>
+                                    <Input 
+                                        className="text-sm rounded-l-none border-l-0" 
+                                        placeholder="username" 
+                                        value={socials.twitter}
+                                        onChange={(e) => handleSocialChange('twitter', e.target.value)}
+                                    />
+                                </div>
                                 {validationErrors.twitter && (
                                     <div className="text-red-500 text-xs mt-1">{validationErrors.twitter}</div>
                                 )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Telegram</div>
-                                <Input 
-                                    className="text-sm" 
-                                    placeholder="t.me/" 
-                                    value={socials.telegram}
-                                    onChange={(e) => handleSocialChange('telegram', e.target.value)}
-                                />
+                                <div className="flex items-center">
+                                    <div className="bg-gray-100 text-gray-600 px-3 py-[7px] text-sm border border-r-0 border-gray-300 rounded-l-md">
+                                        t.me/
+                                    </div>
+                                    <Input 
+                                        className="text-sm rounded-l-none border-l-0" 
+                                        placeholder="username" 
+                                        value={socials.telegram}
+                                        onChange={(e) => handleSocialChange('telegram', e.target.value)}
+                                    />
+                                </div>
                                 {validationErrors.telegram && (
                                     <div className="text-red-500 text-xs mt-1">{validationErrors.telegram}</div>
                                 )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Discord</div>
-                                <Input 
-                                    className="text-sm" 
-                                    placeholder="discord.gg/" 
-                                    value={socials.discord}
-                                    onChange={(e) => handleSocialChange('discord', e.target.value)}
-                                />
+                                <div className="flex items-center">
+                                    <div className="bg-gray-100 text-gray-600 px-3 py-[7px] text-sm border border-r-0 border-gray-300 rounded-l-md">
+                                        discord.gg/
+                                    </div>
+                                    <Input 
+                                        className="text-sm rounded-l-none border-l-0" 
+                                        placeholder="invite-code" 
+                                        value={socials.discord}
+                                        onChange={(e) => handleSocialChange('discord', e.target.value)}
+                                    />
+                                </div>
                                 {validationErrors.discord && (
                                     <div className="text-red-500 text-xs mt-1">{validationErrors.discord}</div>
                                 )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Farcaster</div>
-                                <Input 
-                                    className="text-sm" 
-                                    placeholder="warpcast.com/" 
-                                    value={socials.farcaster}
-                                    onChange={(e) => handleSocialChange('farcaster', e.target.value)}
-                                />
+                                <div className="flex items-center">
+                                    <div className="bg-gray-100 text-gray-600 px-3 py-[7px] text-sm border border-r-0 border-gray-300 rounded-l-md">
+                                        warpcast.com/
+                                    </div>
+                                    <Input 
+                                        className="text-sm rounded-l-none border-l-0" 
+                                        placeholder="username" 
+                                        value={socials.farcaster}
+                                        onChange={(e) => handleSocialChange('farcaster', e.target.value)}
+                                    />
+                                </div>
                                 {validationErrors.farcaster && (
                                     <div className="text-red-500 text-xs mt-1">{validationErrors.farcaster}</div>
                                 )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Website</div>
-                                <Input 
-                                    className="text-sm" 
-                                    placeholder="https://" 
-                                    value={socials.website}
-                                    onChange={(e) => handleSocialChange('website', e.target.value)}
-                                />
+                                <div className="flex items-center">
+                                    <div className="bg-gray-100 text-gray-600 px-3 py-[7px] text-sm border border-r-0 border-gray-300 rounded-l-md">
+                                        https://
+                                    </div>
+                                    <Input 
+                                        className="text-sm rounded-l-none border-l-0" 
+                                        placeholder="example.com" 
+                                        value={socials.website}
+                                        onChange={(e) => handleSocialChange('website', e.target.value)}
+                                    />
+                                </div>
                                 {validationErrors.website && (
                                     <div className="text-red-500 text-xs mt-1">{validationErrors.website}</div>
                                 )}

@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { ChevronDown, ChevronUp, Loader2, CircleCheck, Lightbulb } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { useDeployStore } from '../../../stores/deployStores';
@@ -171,30 +170,33 @@ export const BasicInformation = () => {
                         <div className="text-xs text-gray-500 mb-4">Token Name, Symbol & Supply</div>
                         <div className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium mb-1">Token Name</div>
+                                <div className="text-sm font-medium mb-1">Token Name <span className="text-red-500">*</span></div>
                                 <Input 
                                     placeholder="POTLAUNCH" 
                                     value={name}
                                     onChange={(e) => handleInputChange('name', e.target.value)}
+                                    className={validationErrors.name ? "border-red-500 focus:border-red-500" : ""}
                                 />
                                 {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
                             </div>
                             <div>
-                                <div className="text-sm font-medium mb-1">Token Symbol</div>
+                                <div className="text-sm font-medium mb-1">Token Symbol <span className="text-red-500">*</span></div>
                                 <Input 
                                     placeholder="PTL" 
                                     value={symbol}
                                     onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
+                                    className={validationErrors.symbol ? "border-red-500 focus:border-red-500" : ""}
                                 />
                                 {validationErrors.symbol && <p className="text-red-500 text-xs mt-1">{validationErrors.symbol}</p>}
                             </div>
                             <div>
-                                <div className="text-sm font-medium mb-1">Total Supply</div>
+                                <div className="text-sm font-medium mb-1">Total Supply <span className="text-red-500">*</span></div>
                                 <Input 
                                     placeholder="10000000" 
                                     type="number"
                                     value={supply}
                                     onChange={(e) => handleInputChange('supply', e.target.value)}
+                                    className={validationErrors.supply ? "border-red-500 focus:border-red-500" : ""}
                                 />
                                 {validationErrors.supply && <p className="text-red-500 text-xs mt-1">{validationErrors.supply}</p>}
                                 {recommendations.supply && (
@@ -205,12 +207,13 @@ export const BasicInformation = () => {
                                 )}
                             </div>
                             <div>
-                                <div className="text-sm font-medium mb-1">Decimal</div>
+                                <div className="text-sm font-medium mb-1">Decimal <span className="text-red-500">*</span></div>
                                 <Input 
                                     placeholder="6" 
                                     type="number"
                                     value={decimals}
                                     onChange={(e) => handleInputChange('decimals', e.target.value)}
+                                    className={validationErrors.decimals ? "border-red-500 focus:border-red-500" : ""}
                                 />
                                 {validationErrors.decimals && <p className="text-red-500 text-xs mt-1">{validationErrors.decimals}</p>}
                                 {recommendations.decimals && (
@@ -223,7 +226,7 @@ export const BasicInformation = () => {
                             <div>
                                 <Textarea 
                                     rows={3} 
-                                    placeholder="Describe your token's purpose"
+                                    placeholder="Description goes here"
                                     value={description}
                                     onChange={(e) => handleInputChange('description', e.target.value)}
                                 />
@@ -236,7 +239,10 @@ export const BasicInformation = () => {
             {
                 isExpanded && (
                     <div className="mb-6 space-y-2">
-                        <div className="text-sm font-semibold mt-3">Token Branding</div>
+                        <div className="text-sm font-semibold mt-3 flex flex-row gap-1">
+                            <span>Token Branding</span>
+                            <span className='text-red-500'>*</span>
+                        </div>
                         <div className="flex gap-4 mb-2 flex-col md:flex-row">
                             <div className='flex flex-col gap-1'>
                                 <input
@@ -247,7 +253,11 @@ export const BasicInformation = () => {
                                     onChange={(e) => e.target.files?.[0] && handleImageUpload('avatar', e.target.files[0])}
                                 />
                                 <div 
-                                    className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer hover:border-gray-300 transition-colors relative"
+                                    className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer transition-colors relative ${
+                                        validationErrors.avatarUrl 
+                                            ? 'border-red-500 hover:border-red-600' 
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
                                     onClick={() => handleImageClick('avatar')}
                                     onDrop={(e) => handleImageDrop('avatar', e)}
                                     onDragOver={handleDragOver}
@@ -278,18 +288,6 @@ export const BasicInformation = () => {
                                 {validationErrors.avatarUrl && (
                                     <p className="text-red-500 text-xs mt-1">{validationErrors.avatarUrl}</p>
                                 )}
-                                <Tabs defaultValue="upload" className="w-full">
-                                    <TabsList className="w-full">
-                                        <TabsTrigger value="upload" className="flex-1 data-[state=active]:bg-white">Upload</TabsTrigger>
-                                        <TabsTrigger value="ai" className="flex-1 data-[state=active]:bg-white opacity-50 cursor-not-allowed" disabled>AI Generate</TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="upload" className="mt-2">
-                                        <div className="text-sm text-gray-500">Upload your token logo</div>
-                                    </TabsContent>
-                                    <TabsContent value="ai" className="mt-2">
-                                        <div className="text-sm text-gray-500">Generate token logo using AI (Coming Soon)</div>
-                                    </TabsContent>
-                                </Tabs>
                             </div>
                             <input
                                 type="file"
@@ -299,7 +297,11 @@ export const BasicInformation = () => {
                                 onChange={(e) => e.target.files?.[0] && handleImageUpload('banner', e.target.files[0])}
                             />
                             <div 
-                                className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer hover:border-gray-300 transition-colors relative"
+                                className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer transition-colors relative ${
+                                    validationErrors.bannerUrl 
+                                        ? 'border-red-500 hover:border-red-600' 
+                                        : 'border-gray-200 hover:border-gray-300'
+                                }`}
                                 onClick={() => handleImageClick('banner')}
                                 onDrop={(e) => handleImageDrop('banner', e)}
                                 onDragOver={handleDragOver}
