@@ -35,7 +35,7 @@ export default function Header() {
                 <div className="flex items-center">
                     <nav className="hidden lg:flex items-center space-x-8 mr-10">
                         <Link to="/create" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>Token Creator</span>
+                            <span className='text-sm'>Create Token</span>
                         </Link>
                         <Link to="/" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
