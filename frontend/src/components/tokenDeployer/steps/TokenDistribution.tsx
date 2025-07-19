@@ -124,7 +124,7 @@ export const TokenDistribution = () => {
                                 <div>
                                     <div className="flex flex-col">
                                         <label htmlFor="percentage" className="text-sm text-black font-medium mt-1 block">
-                                            Percentage: {item.percentage}%
+                                            Percentage: {item.percentage}% <span className="text-red-500">*</span>
                                             <span className="text-xs text-gray-500 ml-2">
                                                 ({Math.round((item.percentage / 100) * Number(useDeployStore.getState().basicInfo.supply)).toLocaleString()} tokens)
                                             </span>
@@ -136,7 +136,7 @@ export const TokenDistribution = () => {
                                                 onChange={(e) => handleAllocationChange(index, 'percentage', Number(e.target.value))}
                                                 max={100}
                                                 step={1}
-                                                className="w-full h-3 bg-gray-200 rounded-lg cursor-pointer accent-black"
+                                                className={`w-full h-3 rounded-lg cursor-pointer accent-black ${getValidationError(index, 'percentage') ? 'bg-red-200' : 'bg-gray-200'}`}
                                             />
                                         </div>
                                         {getValidationError(index, 'percentage') && (
@@ -146,7 +146,7 @@ export const TokenDistribution = () => {
                                     <span className="text-xs text-gray-500 mt-1 block">Percentage of your token supply</span>
                                 </div>
                                 <div className='space-y-2'>
-                                    <label className="text-sm text-black font-medium mt-1 block">Wallet Address</label>
+                                    <label className="text-sm text-black font-medium mt-1 block">Wallet Address <span className="text-red-500">*</span></label>
                                     <Input
                                         type="text"
                                         placeholder="Solana Wallet address"
@@ -186,14 +186,14 @@ export const TokenDistribution = () => {
                                                     />
                                                 </div>
                                                 <div className="flex-1 space-y-1">
-                                                    <label className="text-xs text-black font-medium block">Percentage: {item.vesting.percentage || 0}%</label>
+                                                    <label className="text-xs text-black font-medium block">Percentage: {item.vesting.percentage || 0}% <span className="text-red-500">*</span></label>
                                                     <input
                                                         type="range"
                                                         value={item.vesting.percentage || 0}
                                                         onChange={(e) => handleVestingChange(index, 'percentage', Number(e.target.value))}
                                                         max={100}
                                                         step={1}
-                                                        className="w-full h-3 bg-gray-200 rounded-lg cursor-pointer accent-black"
+                                                        className={`w-full h-3 rounded-lg cursor-pointer accent-black ${getValidationError(index, 'vesting_percentage') ? 'bg-red-200' : 'bg-gray-200'}`}
                                                     />
                                                     {getValidationError(index, 'vesting_percentage') && (
                                                         <span className="text-red-500 text-xs">{getValidationError(index, 'vesting_percentage')}</span>
@@ -203,7 +203,7 @@ export const TokenDistribution = () => {
                                             </div>
                                             <div className="flex flex-col md:flex-row gap-4">
                                                 <div className="flex-1 space-y-1">
-                                                    <label className="text-xs text-black font-medium block">Cliff Period (days)</label>
+                                                    <label className="text-xs text-black font-medium block">Cliff Period (days) <span className="text-red-500">*</span></label>
                                                     <div className='flex flex-col items-center gap-1'>
                                                         <Input
                                                             type="number"
@@ -219,7 +219,7 @@ export const TokenDistribution = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex-1 space-y-1">
-                                                    <label className="text-xs text-black font-medium block">Vesting Duration (days)</label>
+                                                    <label className="text-xs text-black font-medium block">Vesting Duration (days) <span className="text-red-500">*</span></label>
                                                     <div className='flex flex-col items-center gap-1'>
                                                         <Input
                                                             type="number"
@@ -235,7 +235,7 @@ export const TokenDistribution = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex-1 space-y-1">
-                                                    <label className="text-xs text-black font-medium block">Vesting Interval (days)</label>
+                                                    <label className="text-xs text-black font-medium block">Vesting Interval (days) <span className="text-red-500">*</span></label>
                                                     <div className='flex flex-col items-center gap-1'>
                                                         <Input
                                                             type="number"

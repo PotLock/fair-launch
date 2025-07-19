@@ -152,10 +152,10 @@ export const AdminSetup = () => {
                                 <button
                                     type="button"
                                     onClick={() => handleRevokeMintChange(!adminSetup.revokeMintAuthority.isEnabled)}
-                                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors duration-200 ease-in-out ${adminSetup.revokeMintAuthority.isEnabled ? 'bg-black' : 'bg-gray-200'}`}
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${adminSetup.revokeMintAuthority.isEnabled ? 'bg-black' : 'bg-gray-200'}`}
                                 >
                                     <span
-                                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${adminSetup.revokeMintAuthority.isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${adminSetup.revokeMintAuthority.isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
                                     />
                                 </button>
                             </div>
@@ -214,10 +214,10 @@ export const AdminSetup = () => {
                                 <button
                                     type="button"
                                     onClick={() => handleRevokeFreezeChange(!adminSetup.revokeFreezeAuthority.isEnabled)}
-                                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors duration-200 ease-in-out ${adminSetup.revokeFreezeAuthority.isEnabled ? 'bg-black' : 'bg-gray-200'}`}
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-200 ease-in-out ${adminSetup.revokeFreezeAuthority.isEnabled ? 'bg-black' : 'bg-gray-200'}`}
                                 >
                                     <span
-                                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${adminSetup.revokeFreezeAuthority.isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${adminSetup.revokeFreezeAuthority.isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
                                     />
                                 </button>
                             </div>
@@ -269,12 +269,12 @@ export const AdminSetup = () => {
                         </div>
                     </div>
                     <div className='space-y-1'>
-                        <Label className="font-medium">Admin Wallet Address</Label>
+                        <Label className="font-medium">Admin Wallet Address <span className="text-red-500">*</span></Label>
                         <Input
                             placeholder="Your Wallet  address that will control the token"
                             value={adminSetup.adminWalletAddress}
                             onChange={e => handleAdminWalletChange(e.target.value)}
-                            className="mt-1"
+                            className={`${validationErrors.adminWalletAddress ? 'border-red-500' : 'border-gray-200'} mt-1`}
                         />
                         {validationErrors.adminWalletAddress && (
                             <p className="text-red-500 text-xs mt-1">{validationErrors.adminWalletAddress}</p>

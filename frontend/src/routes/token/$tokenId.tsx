@@ -379,7 +379,7 @@ function TokenDetail() {
                     </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-lg max-h-[780px] bg-gray-50 relative pb-5 block md:hidden">
+                <div className="border border-gray-200 rounded-lg bg-gray-50 relative block md:hidden">
                     <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -414,7 +414,11 @@ function TokenDetail() {
                     <div className="border border-gray-200 p-4 rounded-t-2xl bg-white">
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-xl font-semibold">Join Presale</span>
-                            <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">Fixed Price</span>
+                            <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">
+                                {tokenInfo?.selectedPricing === 'bonding-curve' ? 'Bonding Curve' : 
+                                 tokenInfo?.selectedPricing === 'fixed-price' ? 'Fixed Price' : 
+                                 tokenInfo?.selectedPricing}
+                            </span>
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -497,6 +501,7 @@ function TokenDetail() {
 
                         <Button
                             className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={handleBuyAndSell}
                             disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
                         >
                             {isBuying ? (
@@ -513,7 +518,7 @@ function TokenDetail() {
                             )}
                         </Button>
                     </div>
-                    <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mt-4">
+                    <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mb-4">
                         <p className="text-xs text-gray-500 text-center">
                             Tokens will be distributed to your wallet after the presale ends. Always do your own research.
                         </p>
@@ -565,7 +570,9 @@ function TokenDetail() {
                             <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <p className="text-sm text-gray-500 cursor-pointer hover:underline">{truncateAddress(tokenId || '')}</p>
+                                    <a href={`https://solscan.io/token/${tokenId}?cluster=devnet`} target="_blank" rel="noopener noreferrer">
+                                        <p className="text-sm text-gray-500 cursor-pointer hover:underline">{truncateAddress(tokenId || '')}</p>
+                                    </a>
                                 </TooltipTrigger>
                                 <TooltipContent sideOffset={4} className="bg-white border border-gray-200">
                                     <span className="font-mono">{tokenId}</span>
@@ -580,16 +587,16 @@ function TokenDetail() {
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
-                    <div className="flex justify-center bg-gray-100/60 rounded-lg py-2 md:py-4">
-                        <div className="w-full max-w-xs md:max-w-md" style={{ height: '250px' }}>
+                    <div className="flex justify-center bg-gray-100/60 rounded-lg py-4 md:py-6">
+                        <div className="w-full max-w-sm md:max-w-lg" style={{ height: '280px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={getEmptyAllocationData()}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={75}
-                                        outerRadius={105}
+                                        innerRadius={60}
+                                        outerRadius={100}
                                         paddingAngle={2}
                                         dataKey="value"
                                     >
@@ -635,23 +642,35 @@ function TokenDetail() {
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Vesting Schedule</h2>
-                    <div className="w-full h-[220px] md:h-[320px]">
+                    <div className="w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={getEmptyVestingData()}>
-                                <CartesianGrid strokeDasharray="3 3" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
                                     dataKey="month"
-                                    tick={{ fontSize: 14 }}
-                                    padding={{ left: 10, right: 10 }}
+                                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                                    padding={{ left: 20, right: 20 }}
+                                    axisLine={{ stroke: '#d1d5db' }}
                                 />
-                                <YAxis tick={{ fontSize: 14 }} />
-                                <RechartsTooltip contentStyle={{ fontSize: 14 }} />
+                                <YAxis 
+                                    tick={{ fontSize: 12, fill: '#6b7280' }} 
+                                    axisLine={{ stroke: '#d1d5db' }}
+                                />
+                                <RechartsTooltip 
+                                    contentStyle={{ 
+                                        fontSize: 14, 
+                                        backgroundColor: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                    }} 
+                                />
                                 <Line
                                     type="monotone"
                                     dataKey="development"
                                     stroke="#8884d8"
                                     strokeWidth={3}
-                                    dot={{ r: 4 }}
+                                    dot={{ r: 4, fill: '#8884d8' }}
                                     name="Development Fund"
                                 />
                                 <Line
@@ -659,49 +678,60 @@ function TokenDetail() {
                                     dataKey="marketing"
                                     stroke="#82ca9d"
                                     strokeWidth={3}
-                                    dot={{ r: 4 }}
+                                    dot={{ r: 4, fill: '#82ca9d' }}
                                     name="Marketing Pool"
                                 />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
-                                
                 {
                     tokenInfo.pricing === 'bonding-curve' && (
                         <Card className="p-4 md:p-6 shadow-none">
                             <h2 className="text-xl font-medium mb-4">Bonding Curve Price Chart</h2>
-                            <div className="mb-6 w-full h-[220px] md:h-[320px]">
+                            <div className="mb-6 w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={getEmptyBondingCurveData()}>
-                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis
                                             dataKey="raised"
-                                            tick={{ fontSize: 14 }}
-                                            padding={{ left: 10, right: 10 }}
+                                            tick={{ fontSize: 12, fill: '#6b7280' }}
+                                            padding={{ left: 20, right: 20 }}
+                                            axisLine={{ stroke: '#d1d5db' }}
                                         />
-                                        <YAxis tick={{ fontSize: 14 }} />
-                                        <RechartsTooltip contentStyle={{ fontSize: 14 }} />
+                                        <YAxis 
+                                            tick={{ fontSize: 12, fill: '#6b7280' }} 
+                                            axisLine={{ stroke: '#d1d5db' }}
+                                        />
+                                        <RechartsTooltip 
+                                            contentStyle={{ 
+                                                fontSize: 14, 
+                                                backgroundColor: 'white',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                            }} 
+                                        />
                                         <Line
                                             type="monotone"
                                             dataKey="price"
                                             stroke="#8884d8"
                                             strokeWidth={3}
-                                            dot={{ r: 4 }}
+                                            dot={{ r: 4, fill: '#8884d8' }}
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                                <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Initial Price</p>
                                     <p className="font-semibold">- SOL</p>
                                 </div>
-                                <div>
+                                <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Final Price</p>
                                     <p className="font-semibold">- SOL</p>
                                 </div>
-                                <div>
+                                <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Target Raise</p>
                                     <p className="font-semibold">- SOL</p>
                                 </div>
