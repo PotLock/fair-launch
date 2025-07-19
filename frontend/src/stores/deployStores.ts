@@ -148,10 +148,13 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
         }));
     },
     updateDexListing: (data: Partial<DexListing>) => {
-        set((state) => ({
-            ...state,
-            dexListing: { ...state.dexListing, ...data }
-        }));
+        set((state) => {
+            const newState = {
+                ...state,
+                dexListing: { ...state.dexListing, ...data }
+            };
+            return newState;
+        });
     },
     updateSaleSetup: (data: Partial<TokenSaleSetup>) => {
         set((state) => ({
@@ -249,24 +252,44 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             errors.socials = 'At least one social media or website is required';
         }
 
-        if (socials.website && !socials.website.startsWith('https://')) {
-            errors.website = 'Website must start with https://';
+        // Website validation - should be a valid domain
+        if (socials.website && socials.website.trim()) {
+            const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+            if (!domainRegex.test(socials.website)) {
+                errors.website = 'Please enter a valid domain name';
+            }
         }
 
-        if (socials.twitter && !socials.twitter.startsWith('https://x.com/')) {
-            errors.twitter = 'Please enter a valid Twitter/X username';
+        // Twitter validation - should be a valid username
+        if (socials.twitter && socials.twitter.trim()) {
+            const twitterRegex = /^[a-zA-Z0-9_]{1,15}$/;
+            if (!twitterRegex.test(socials.twitter)) {
+                errors.twitter = 'Please enter a valid Twitter/X username (1-15 characters, letters, numbers, and underscores only)';
+            }
         }
 
-        if (socials.telegram && !socials.telegram.startsWith('https://t.me/')) {
-            errors.telegram = 'Please enter a valid Telegram username';
+        // Telegram validation - should be a valid username
+        if (socials.telegram && socials.telegram.trim()) {
+            const telegramRegex = /^[a-zA-Z0-9_]{5,32}$/;
+            if (!telegramRegex.test(socials.telegram)) {
+                errors.telegram = 'Please enter a valid Telegram username (5-32 characters, letters, numbers, and underscores only)';
+            }
         }
 
-        if (socials.discord && !socials.discord.startsWith('http://discord.gg/')) {
-            errors.discord = 'Please enter a valid Discord invite code';
+        // Discord validation - should be a valid invite code
+        if (socials.discord && socials.discord.trim()) {
+            const discordRegex = /^[a-zA-Z0-9]{3,25}$/;
+            if (!discordRegex.test(socials.discord)) {
+                errors.discord = 'Please enter a valid Discord invite code (3-25 characters, letters and numbers only)';
+            }
         }
 
-        if (socials.farcaster && !socials.farcaster.startsWith('https://warpcast.com/')) {
-            errors.farcaster = 'Please enter a valid Farcaster username';
+        // Farcaster validation - should be a valid username
+        if (socials.farcaster && socials.farcaster.trim()) {
+            const farcasterRegex = /^[a-zA-Z0-9_]{1,16}$/;
+            if (!farcasterRegex.test(socials.farcaster)) {
+                errors.farcaster = 'Please enter a valid Farcaster username (1-16 characters, letters, numbers, and underscores only)';
+            }
         }
 
         set((state) => ({ ...state, validationErrors: errors }));
@@ -337,52 +360,125 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             errors.liquidityType = 'Liquidity type is required';
         }
 
-        if (!dexListing.liquidityLockupPeriod || dexListing.liquidityLockupPeriod < 30) {
+        if (dexListing.liquidityLockupPeriod === undefined || dexListing.liquidityLockupPeriod === null || dexListing.liquidityLockupPeriod < 30) {
             errors.liquidityLockupPeriod = 'Liquidity lockup period must be at least 30 days';
         }
 
-        if (!dexListing.liquidityPercentage || dexListing.liquidityPercentage < 0 || dexListing.liquidityPercentage > 100) {
+        if (dexListing.liquidityPercentage === undefined || dexListing.liquidityPercentage === null || dexListing.liquidityPercentage < 0 || dexListing.liquidityPercentage > 100) {
             errors.liquidityPercentage = 'Liquidity percentage must be between 0 and 100';
         }
 
         switch (dexListing.liquiditySource) {
             case 'wallet':
                 const walletData = dexListing.liquidityData as WalletLiquidity;
-                if (!walletData.solAmount || walletData.solAmount <= 0) {
+                if (walletData.solAmount === undefined || walletData.solAmount === null || walletData.solAmount < 0) {
                     errors.walletLiquidityAmount = 'Valid SOL amount is required for wallet liquidity';
                 }
                 break;
 
             case 'sale':
                 const saleData = dexListing.liquidityData as SaleLiquidity;
-                if (!saleData.percentage || saleData.percentage <= 0 || saleData.percentage > 100) {
+                if (saleData.percentage === undefined || saleData.percentage === null || saleData.percentage < 0 || saleData.percentage > 100) {
                     errors.salePercentage = 'Valid percentage (0-100) is required for sale liquidity';
                 }
                 break;
 
             case 'bonding':
                 const bondingData = dexListing.liquidityData as BondingLiquidity;
-                if (!bondingData.percentage || bondingData.percentage <= 0 || bondingData.percentage > 100) {
+                if (bondingData.percentage === undefined || bondingData.percentage === null || bondingData.percentage < 0 || bondingData.percentage > 100) {
                     errors.bondingPercentage = 'Valid percentage (0-100) is required for bonding liquidity';
                 }
                 break;
 
             case 'team':
                 const teamData = dexListing.liquidityData as TeamLiquidity;
-                if (!teamData.solContribution || teamData.solContribution <= 0) {
+                if (teamData.solContribution === undefined || teamData.solContribution === null || teamData.solContribution < 0) {
                     errors.teamSolContribution = 'Valid SOL amount is required for team liquidity';
                 }
-                if (!teamData.percentage || teamData.percentage <= 0 || teamData.percentage > 100) {
+                if (teamData.percentage === undefined || teamData.percentage === null || teamData.percentage < 0 || teamData.percentage > 100) {
                     errors.teamPercentage = 'Valid percentage (0-100) is required for team liquidity';
                 }
                 break;
 
             case 'external':
                 const externalData = dexListing.liquidityData as ExternalLiquidity;
-                if (!externalData.solContribution || externalData.solContribution <= 0) {
+                if (externalData.solContribution === undefined || externalData.solContribution === null || externalData.solContribution < 0) {
                     errors.externalSolContribution = 'Valid SOL amount is required for external liquidity';
                 }
-                if (!externalData.tokenAllocation || externalData.tokenAllocation <= 0 || externalData.tokenAllocation > 100) {
+                if (externalData.tokenAllocation === undefined || externalData.tokenAllocation === null || externalData.tokenAllocation < 0 || externalData.tokenAllocation > 100) {
+                    errors.tokenAllocation = 'Valid token allocation percentage (0-100) is required';
+                }
+                break;
+
+            case 'hybrid':
+                const hybridData = dexListing.liquidityData as HybridLiquidity;
+                if (!Object.values(hybridData.sources).some(value => value)) {
+                    errors.hybridSources = 'At least one liquidity source must be selected';
+                }
+                break;
+        }
+
+        set((state) => ({ ...state, validationErrors: errors }));
+        return Object.keys(errors).length === 0;
+    },
+    validateDexListingOnSubmit: () => {
+        const { dexListing } = get();
+        const errors: ValidationErrors = {};
+
+        if (!dexListing.liquiditySource) {
+            errors.liquiditySource = 'Liquidity source is required';
+        }
+
+        if (!dexListing.liquidityType) {
+            errors.liquidityType = 'Liquidity type is required';
+        }
+
+        if (dexListing.liquidityLockupPeriod === undefined || dexListing.liquidityLockupPeriod === null || dexListing.liquidityLockupPeriod < 30) {
+            errors.liquidityLockupPeriod = 'Liquidity lockup period must be at least 30 days';
+        }
+
+        if (dexListing.liquidityPercentage === undefined || dexListing.liquidityPercentage === null || dexListing.liquidityPercentage < 0 || dexListing.liquidityPercentage > 100) {
+            errors.liquidityPercentage = 'Liquidity percentage must be between 0 and 100';
+        }
+
+        switch (dexListing.liquiditySource) {
+            case 'wallet':
+                const walletData = dexListing.liquidityData as WalletLiquidity;
+                if (walletData.solAmount === undefined || walletData.solAmount === null || walletData.solAmount <= 0) {
+                    errors.walletLiquidityAmount = 'Valid SOL amount is required for wallet liquidity';
+                }
+                break;
+
+            case 'sale':
+                const saleData = dexListing.liquidityData as SaleLiquidity;
+                if (saleData.percentage === undefined || saleData.percentage === null || saleData.percentage <= 0 || saleData.percentage > 100) {
+                    errors.salePercentage = 'Valid percentage (0-100) is required for sale liquidity';
+                }
+                break;
+
+            case 'bonding':
+                const bondingData = dexListing.liquidityData as BondingLiquidity;
+                if (bondingData.percentage === undefined || bondingData.percentage === null || bondingData.percentage <= 0 || bondingData.percentage > 100) {
+                    errors.bondingPercentage = 'Valid percentage (0-100) is required for bonding liquidity';
+                }
+                break;
+
+            case 'team':
+                const teamData = dexListing.liquidityData as TeamLiquidity;
+                if (teamData.solContribution === undefined || teamData.solContribution === null || teamData.solContribution <= 0) {
+                    errors.teamSolContribution = 'Valid SOL amount is required for team liquidity';
+                }
+                if (teamData.percentage === undefined || teamData.percentage === null || teamData.percentage <= 0 || teamData.percentage > 100) {
+                    errors.teamPercentage = 'Valid percentage (0-100) is required for team liquidity';
+                }
+                break;
+
+            case 'external':
+                const externalData = dexListing.liquidityData as ExternalLiquidity;
+                if (externalData.solContribution === undefined || externalData.solContribution === null || externalData.solContribution <= 0) {
+                    errors.externalSolContribution = 'Valid SOL amount is required for external liquidity';
+                }
+                if (externalData.tokenAllocation === undefined || externalData.tokenAllocation === null || externalData.tokenAllocation <= 0 || externalData.tokenAllocation > 100) {
                     errors.tokenAllocation = 'Valid token allocation percentage (0-100) is required';
                 }
                 break;

@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MyTokenCard } from "../components/MyTokenCard";
+import { WalletButton } from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { TokenInfo } from "../utils/tokenUtils";
 import { getTokenByAddress } from "../lib/api";
+import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/my-tokens")({
     component: MyTokens,
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/my-tokens")({
 
 function MyTokens() {
     const { publicKey } = useWallet();
+    const navigate = useNavigate()
     const [listTokens, setListTokens] = useState<TokenInfo[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,10 +46,30 @@ function MyTokens() {
         return (
             <div className="min-h-screen bg-[#F8FAFC] py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                <p className="text-gray-500 mb-8 text-base">
-                    Please connect your wallet to view your tokens
-                </p>
+                    <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                        <div className="w-32 h-32 mb-6 flex items-center justify-center">
+                            <svg
+                                className="w-full h-full text-gray-300"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-700 mb-2">Wallet not connected</h3>
+                        <p className="text-gray-500 mb-6 max-w-md">
+                            Connect your wallet to view and manage your tokens
+                        </p>
+                        <WalletButton />
+                    </div>
                 </div>
             </div>
         );
@@ -78,8 +101,22 @@ function MyTokens() {
         return (
             <div className="min-h-screen bg-[#F8FAFC] py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                <p className="text-gray-500 mb-8 text-base">You don't have any tokens</p>
+                    <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                        <div className="w-32 h-32 mb-6 flex items-center justify-center">
+                            <Coins className="w-32 h-32 text-gray-400"/>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No tokens found</h3>
+                        <p className="text-gray-500 mb-6 max-w-md">
+                            You haven't created any tokens yet. Start by deploying your first token to get started.
+                        </p>
+                        <button
+                            onClick={()=>navigate({to: "/create"})}
+                            className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                        >
+                            Create Your First Token
+                        </button>
+                    </div>
                 </div>
             </div>
         );

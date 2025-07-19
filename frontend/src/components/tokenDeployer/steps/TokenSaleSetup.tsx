@@ -97,33 +97,33 @@ export const TokenSaleSetup = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Soft Cap</label>
-                            <Input 
-                                type="text" 
-                                placeholder="0.02" 
-                                value={saleSetup.softCap}
-                                onChange={(e) => handleInputChange('softCap', e.target.value)}
-                                className={validationErrors.softCap ? 'border-red-500' : ''}
-                            />
-                            {getError('softCap')}
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Minimum amount to raise for the launch to be considered successful
-                            </p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Hard Cap</label>
-                            <Input 
-                                placeholder="720" 
-                                value={saleSetup.hardCap}
-                                onChange={(e) => handleInputChange('hardCap', e.target.value)}
-                                className={validationErrors.hardCap ? 'border-red-500' : ''}
-                            />
-                            {getError('hardCap')}
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Maximum amount that can be raised in the public sale.
-                            </p>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Soft Cap <span className="text-red-500">*</span></label>
+                        <Input 
+                            type="text" 
+                            placeholder="0.02" 
+                            value={saleSetup.softCap}
+                            onChange={(e) => handleInputChange('softCap', e.target.value)}
+                            className={validationErrors.softCap ? 'border-red-500' : ''}
+                        />
+                        {getError('softCap')}
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Minimum amount to raise for the launch to be considered successful
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Hard Cap <span className="text-red-500">*</span></label>
+                        <Input 
+                            placeholder="720" 
+                            value={saleSetup.hardCap}
+                            onChange={(e) => handleInputChange('hardCap', e.target.value)}
+                            className={validationErrors.hardCap ? 'border-red-500' : ''}
+                        />
+                        {getError('hardCap')}
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Maximum amount that can be raised in the public sale.
+                        </p>
+                    </div>
                     </div>
 
                     <div className="border border-gray-200 rounded-lg">
@@ -147,7 +147,7 @@ export const TokenSaleSetup = () => {
                         {saleSetup.scheduleLaunch.isEnabled && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Launch Date & Time</label>
+                                    <label className="block text-sm font-medium mb-1">Launch Date & Time <span className="text-red-500">*</span></label>
                                     <Input 
                                         type="datetime-local" 
                                         value={saleSetup.scheduleLaunch.launchDate}
@@ -157,7 +157,7 @@ export const TokenSaleSetup = () => {
                                     {getError('launchDate')}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">End Date & Time</label>
+                                    <label className="block text-sm font-medium mb-1">End Date & Time <span className="text-red-500">*</span></label>
                                     <Input 
                                         type="datetime-local" 
                                         value={saleSetup.scheduleLaunch.endDate}
@@ -172,7 +172,7 @@ export const TokenSaleSetup = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Minimum Contribution</label>
+                            <label className="block text-sm font-medium mb-1">Minimum Contribution <span className="text-red-500">*</span></label>
                             <Input 
                                 placeholder="0.1" 
                                 value={saleSetup.minimumContribution}
@@ -185,7 +185,7 @@ export const TokenSaleSetup = () => {
                             </p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">Maximum Contribution</label>
+                            <label className="block text-sm font-medium mb-1">Maximum Contribution <span className="text-red-500">*</span></label>
                             <Input 
                                 placeholder="10" 
                                 value={saleSetup.maximumContribution}
@@ -208,7 +208,7 @@ export const TokenSaleSetup = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Token Price</label>
+                                <label className="block text-sm font-medium mb-1">Token Price <span className="text-red-500">*</span></label>
                                 <Input 
                                     placeholder="0.1" 
                                     value={saleSetup.tokenPrice}
@@ -221,7 +221,7 @@ export const TokenSaleSetup = () => {
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Max Tokens Per Wallet</label>
+                                <label className="block text-sm font-medium mb-1">Max Tokens Per Wallet <span className="text-red-500">*</span></label>
                                 <Input 
                                     placeholder="1000" 
                                     value={saleSetup.maxTokenPerWallet}
