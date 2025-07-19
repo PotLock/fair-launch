@@ -7,11 +7,11 @@ import { getExchangeDisplay } from '../../../utils';
 type SectionKey = keyof typeof defaultExpanded;
 const defaultExpanded = {
     tokenDetails: true,
-    tokenDistribution: false,
-    tokenReleaseSchedule: false,
-    priceMechanism: false,
-    dexListingSetup: false,
-    tokenSaleSetup: false,
+    tokenDistribution: true,
+    tokenReleaseSchedule: true,
+    priceMechanism: true,
+    dexListingSetup: true,
+    tokenSaleSetup: true,
 };
 
 const SectionHeader = ({ title, sectionKey, expanded, onClick }: { title: string, sectionKey: SectionKey, expanded: boolean, onClick: (section: SectionKey) => void }) => (
@@ -206,11 +206,11 @@ export const ReviewAndDeploy = () => {
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500">Fundraising Target</label>
-                                        <div className="font-medium text-sm">{state.saleSetup.softCap} - {state.saleSetup.hardCap} SOL</div>
+                                        <div className="font-medium text-sm">{state.saleSetup.softCap && state.saleSetup.hardCap ? `${state.saleSetup.softCap} - ${state.saleSetup.hardCap} SOL` : 'No Funding Target'}</div>
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500">Contribution Limits</label>
-                                        <div className="font-medium text-sm">{state.saleSetup.minimumContribution} - {state.saleSetup.maximumContribution} SOL</div>
+                                        <div className="font-medium text-sm">{state.saleSetup.minimumContribution && state.saleSetup.maximumContribution ? `${state.saleSetup.minimumContribution} - ${state.saleSetup.maximumContribution} SOL` : 'No limits'}</div>
                                     </div>
                                 </div>
                                 )}
