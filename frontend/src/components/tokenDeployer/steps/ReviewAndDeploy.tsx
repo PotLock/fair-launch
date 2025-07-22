@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getExchangeDisplay } from '../../../utils';
+import type { StepProps } from '../../../types';
 
 type SectionKey = keyof typeof defaultExpanded;
 const defaultExpanded = {
@@ -24,10 +25,10 @@ const SectionHeader = ({ title, sectionKey, expanded, onClick }: { title: string
     </div>
 );
 
-export const ReviewAndDeploy = () => {
+export const ReviewAndDeploy = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const state = useDeployStore();
     const [expanded, setExpanded] = useState<typeof defaultExpanded>(defaultExpanded);
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+    const [isExpandedState, setIsExpandedState] = useState<boolean>(false);
     const handleExpand = (section: SectionKey) => {
       setExpanded(prev => ({
         ...prev,
@@ -39,7 +40,7 @@ export const ReviewAndDeploy = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div
                 className="flex items-start justify-between cursor-pointer"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={() => onHeaderClick(stepKey)}
             >
                 <div className="flex flex-col">
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Review & Deploy</div>
@@ -55,8 +56,7 @@ export const ReviewAndDeploy = () => {
                 <ChevronDown className="w-5 h-5 text-gray-500" />
                 )}
             </div>
-            {
-                isExpanded && (
+            {isExpanded && (
                     <div className='space-y-2 mt-6'>
                         <div className="border rounded-lg">
                             <SectionHeader title="Token Details" sectionKey="tokenDetails" expanded={expanded.tokenDetails} onClick={handleExpand} />
@@ -217,8 +217,7 @@ export const ReviewAndDeploy = () => {
                             </div>
                         )}
                     </div>
-                )
-            }
+                )}
         </div>
     );
 }

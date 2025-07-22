@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck, LucideMessageCircleQuestion } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { SliderCustom } from '../../ui/slider-custom';
@@ -7,9 +6,9 @@ import type { Fees } from '../../../types';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
+import type { StepProps } from '../../../types';
 
-export const FeesStep = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+export const FeesStep = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { fees, updateFees, validationErrors, validateFees } = useDeployStore();
     const { publicKey } = useWallet();
     const prevPublicKey = useRef<string | null>(null);
@@ -118,7 +117,7 @@ export const FeesStep = () => {
             <div>
                 <div 
                     className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={() => onHeaderClick(stepKey)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Fee Configuration</div>
                     {isFormValid() ? (
