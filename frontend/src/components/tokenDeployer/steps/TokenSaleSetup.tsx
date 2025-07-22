@@ -4,9 +4,9 @@ import { ChevronDown, ChevronUp, CircleCheck } from "lucide-react";
 import { useDeployStore } from "../../../stores/deployStores";
 import { TokenSaleSetup as TokenSaleSetupType } from "../../../types";
 import { getExchangeDisplay } from "../../../utils";
+import type { StepProps } from '../../../types';
 
-export const TokenSaleSetup = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+export const TokenSaleSetup = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { selectedExchange, saleSetup, updateSaleSetup, validationErrors, validateSaleSetup } = useDeployStore();
 
     const handleInputChange = (field: keyof TokenSaleSetupType, value: string | number) => {
@@ -71,7 +71,7 @@ export const TokenSaleSetup = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div
                 className="flex items-center justify-between cursor-pointer"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={() => onHeaderClick(stepKey)}
             >
                 <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Token Sale Setup</div>
                 {isFormValid() ? (
@@ -98,7 +98,7 @@ export const TokenSaleSetup = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Soft Cap <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium mb-1">Soft Cap (SOL) <span className="text-red-500">*</span></label>
                         <Input 
                             type="text" 
                             placeholder="0.02" 
@@ -112,7 +112,7 @@ export const TokenSaleSetup = () => {
                         </p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1">Hard Cap <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-medium mb-1">Hard Cap (SOL) <span className="text-red-500">*</span></label>
                         <Input 
                             placeholder="720" 
                             value={saleSetup.hardCap}
@@ -172,7 +172,7 @@ export const TokenSaleSetup = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Minimum Contribution <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium mb-1">Minimum Contribution (SOL) <span className="text-red-500">*</span></label>
                             <Input 
                                 placeholder="0.1" 
                                 value={saleSetup.minimumContribution}
@@ -185,7 +185,7 @@ export const TokenSaleSetup = () => {
                             </p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">Maximum Contribution <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium mb-1">Maximum Contribution (SOL) <span className="text-red-500">*</span></label>
                             <Input 
                                 placeholder="10" 
                                 value={saleSetup.maximumContribution}
@@ -208,7 +208,7 @@ export const TokenSaleSetup = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Token Price <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-medium mb-1">Token Price (SOL) <span className="text-red-500">*</span></label>
                                 <Input 
                                     placeholder="0.1" 
                                     value={saleSetup.tokenPrice}

@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { useDeployStore } from '../../../stores/deployStores';
 import { Socials } from '../../../types';
+import type { StepProps } from '../../../types';
 
-export const Social = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+export const Social = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { socials, updateSocials, validationErrors, validateSocials } = useDeployStore();
 
     const handleSocialChange = (field: keyof Socials, value: string) => {
@@ -23,10 +22,8 @@ export const Social = () => {
             key.includes('website') ||
             key.includes('socials')
         );
-        
         // At least one social media link should be provided
         const hasAtLeastOneSocial = socials.twitter || socials.telegram || socials.discord || socials.farcaster || socials.website;
-        
         return !hasErrors && hasAtLeastOneSocial;
     };
 
@@ -35,7 +32,7 @@ export const Social = () => {
             <>
                 <div 
                     className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={() => onHeaderClick(stepKey)}
                 >
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Socials</div>
                     {isFormValid() ? (
@@ -48,6 +45,11 @@ export const Social = () => {
                 </div>
                 {isExpanded && (
                     <>
+                        {(!socials.twitter && !socials.telegram && !socials.discord && !socials.farcaster && !socials.website) && (
+                            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-xs mb-4 rounded">
+                                <span>At least one social media or website is required</span>
+                            </div>
+                        )}
                         <div className="text-sm text-gray-500 mb-6 mt-1">Token social media and website</div>
                         <div className="space-y-4">
                             <div>

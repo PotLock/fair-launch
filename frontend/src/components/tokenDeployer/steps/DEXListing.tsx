@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { IconInfoCircle } from '@tabler/icons-react';
+import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Wallet2, ExternalLink, SquareArrowOutUpRight, LockKeyhole, TrendingUp } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
@@ -10,11 +9,11 @@ import { CustomCheckbox } from '../../ui/custom-checkbox';
 import { Label } from '../../ui/label';
 import { DexOption, DexListing, LiquiditySourceData, WalletLiquidity, SaleLiquidity, BondingLiquidity, TeamLiquidity, ExternalLiquidity, HybridLiquidity } from '../../../types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
+import type { StepProps } from '../../../types';
 
-export const DEXListing = () => {
+export const DEXListing = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { dexListing, updateDexListing, validationErrors } = useDeployStore();
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
     // Memoize slider values to ensure they update correctly
     const salePercentage = useMemo(() => {
@@ -213,7 +212,7 @@ export const DEXListing = () => {
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
-            <div className="flex items-start justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className="flex items-start justify-between cursor-pointer" onClick={() => onHeaderClick(stepKey)}>
                 <div className='flex flex-col gap-1'>
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>DEX Listing Setup</div>
                     {
@@ -479,7 +478,7 @@ export const DEXListing = () => {
                                                     {validationErrors.externalSolContribution && (
                                                         <span className="text-xs text-red-500">{validationErrors.externalSolContribution}</span>
                                                     )}
-                                                    <span className='text-xs text-gray-500'>Amount of SOL the team will provide for the liquidity pool</span>
+                                                    <span className='text-sm text-gray-500'>Amount of SOL the team will provide for the liquidity pool</span>
                                                 </div>
                                                 <div className='space-y-1'>
                                                     <div className="flex items-center justify-between mb-2">
