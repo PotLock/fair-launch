@@ -5,6 +5,8 @@ import { Label } from '../../ui/label';
 import { useDeployStore } from '../../../stores/deployStores';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import { SliderCustom } from '../../ui/slider-custom';
+import { useWallet } from '@solana/wallet-adapter-react';
+import type { StepProps } from '../../../types';
 
 const adminStructures = [
     {label: 'Single Wallet', value: 'single'},
@@ -14,10 +16,10 @@ const adminStructures = [
 
 type AdminStructureType = typeof adminStructures[number]['value'];
 
-export const AdminSetup = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+export const AdminSetup = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
     const { adminSetup, updateAdminSetup, validationErrors, validateAdminSetup } = useDeployStore();
+    const { publicKey } = useWallet();
     const [mintAuthorityType, setMintAuthorityType] = useState<'primary' | 'custom'>('primary');
     const [freezeAuthorityType, setFreezeAuthorityType] = useState<'primary' | 'custom'>('primary');
 
@@ -123,7 +125,7 @@ export const AdminSetup = () => {
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
-            <div className="flex items-start justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className="flex items-start justify-between cursor-pointer" onClick={() => onHeaderClick(stepKey)}>
                 <div className="flex flex-col">
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Admin Setup</div>
                     {
@@ -270,12 +272,22 @@ export const AdminSetup = () => {
                     </div>
                     <div className='space-y-1'>
                         <Label className="font-medium">Admin Wallet Address <span className="text-red-500">*</span></Label>
-                        <Input
-                            placeholder="Your Wallet  address that will control the token"
-                            value={adminSetup.adminWalletAddress}
-                            onChange={e => handleAdminWalletChange(e.target.value)}
-                            className={`${validationErrors.adminWalletAddress ? 'border-red-500' : 'border-gray-200'} mt-1`}
-                        />
+                        <div className={`flex items-center gap-2 border border-gray-20 p-1 px-2 rounded-lg w-full ${validationErrors.adminWalletAddress ? 'border-red-500' : 'border-gray-200'}`}>
+                            <input
+                                placeholder="Your Wallet  address that will control the token"
+                                value={adminSetup.adminWalletAddress}
+                                onChange={e => handleAdminWalletChange(e.target.value)}
+                                className={`border-none focus:outline-none w-full placeholder:text-sm text-sm`}
+                            />
+                            <button
+                                type="button"
+                                className="px-2 py-1 w-48 bg-gray-100 border border-gray-200 rounded-md text-xs text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!publicKey}
+                                onClick={() => publicKey && handleAdminWalletChange(publicKey.toBase58())}
+                            >
+                                {publicKey ? 'Use Primary Address' : 'Connect Wallet'}
+                            </button>
+                        </div>
                         {validationErrors.adminWalletAddress && (
                             <p className="text-red-500 text-xs mt-1">{validationErrors.adminWalletAddress}</p>
                         )}
@@ -317,12 +329,22 @@ export const AdminSetup = () => {
                             <div className="text-sm text-gray-500 mb-6">Who controls your token</div>
                             <div className="mb-5">
                                 <Label className="font-medium">Token Owner Wallet Address</Label>
-                                <Input
-                                    placeholder="Public wallet address(e.g 4Zbc51.....0sErp)"
-                                    value={adminSetup.tokenOwnerWalletAddress}
-                                    onChange={e => handleTokenOwnerWalletChange(e.target.value)}
-                                    className="mt-1"
-                                />
+                                <div className={`flex items-center gap-2 border border-gray-20 p-1 px-2 rounded-lg w-full mt-1 ${validationErrors.tokenOwnerWalletAddress ? 'border-red-500' : 'border-gray-200'}`}>
+                                    <input
+                                        placeholder="Public wallet address(e.g 4Zbc51.....0sErp)"
+                                        value={adminSetup.tokenOwnerWalletAddress}
+                                        onChange={e => handleTokenOwnerWalletChange(e.target.value)}
+                                        className={`border-none focus:outline-none w-full placeholder:text-sm text-sm`}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="px-2 py-1 w-48 bg-gray-100 border border-gray-200 rounded-md text-xs text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={!publicKey}
+                                        onClick={() => publicKey && handleTokenOwnerWalletChange(publicKey.toBase58())}
+                                    >
+                                        {publicKey ? 'Use Primary Address' : 'Connect Wallet'}
+                                    </button>
+                                </div>
                                 {validationErrors.tokenOwnerWalletAddress && (
                                     <p className="text-red-500 text-xs mt-1">{validationErrors.tokenOwnerWalletAddress}</p>
                                 )}
