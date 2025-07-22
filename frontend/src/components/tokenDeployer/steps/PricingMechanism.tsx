@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, CircleCheck, Lightbulb } from "lucide-react";
 import { templatesPricingMechanism } from "../../../lib/pricingMechanism";
 import { PricingTemplate } from "../../../types";
 import { Input } from "../../ui/input";
 import { useDeployStore } from "../../../stores/deployStores";
+import type { StepProps } from '../../../types';
 
-export const PricingMechanism = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+export const PricingMechanism = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { 
         pricingMechanism, 
         updatePricingMechanism, 
@@ -119,11 +118,12 @@ export const PricingMechanism = () => {
 
     const selectedTemplate = templatesPricingMechanism.find(t => t.value === pricingMechanism.curveType);
 
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
             <div
                 className="flex items-center justify-between cursor-pointer"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={() => onHeaderClick(stepKey)}
             >
                 <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Price Mechanism</div>
                 {isFormValid() ? (

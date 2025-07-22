@@ -563,9 +563,27 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
             if (!saleSetup.scheduleLaunch.endDate) {
                 errors.endDate = 'End date is required when schedule is enabled';
             }
-            if (saleSetup.scheduleLaunch.launchDate && saleSetup.scheduleLaunch.endDate) {
+            if (saleSetup.scheduleLaunch.launchDate) {
                 const launchDate = new Date(saleSetup.scheduleLaunch.launchDate);
                 const endDate = new Date(saleSetup.scheduleLaunch.endDate);
+                const now = new Date();
+                if (launchDate < now) {
+                    errors.launchDate = 'Launch date cannot be in the past';
+                }
+                if (endDate < now) {
+                    errors.endDate = 'End date cannot be in the past';
+                }
+                if (endDate <= launchDate) {
+                    errors.endDate = 'End date must be after launch date';
+                }
+            }
+            if(saleSetup.scheduleLaunch.endDate){
+                const endDate = new Date(saleSetup.scheduleLaunch.endDate);
+                const launchDate = new Date(saleSetup.scheduleLaunch.launchDate);
+                const now = new Date()
+                if (endDate < now) {
+                    errors.endDate = 'End date cannot be in the past';
+                }
                 if (endDate <= launchDate) {
                     errors.endDate = 'End date must be after launch date';
                 }

@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import {  useEffect } from 'react';
 import { Plus, Trash2, CircleCheck, ChevronDown, ChevronUp  } from 'lucide-react';
 import { useDeployStore } from '../../../stores/deployStores';
 import { Input } from '../../ui/input';
 import { TokenDistributionItem } from '../../../types';
 import { ChartNoAxesCombined } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import type { StepProps } from '../../../types';
 
-export const TokenDistribution = () => {
+export const TokenDistribution = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const { allocation, addAllocation, removeAllocation, updateAllocationItem, updateVestingItem, validationErrors, validateTokenDistribution } = useDeployStore();
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
+    const { publicKey } = useWallet();
     
     useEffect(() => {
         validateTokenDistribution();
@@ -65,7 +67,7 @@ export const TokenDistribution = () => {
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full max-w-2xl mx-auto">
-            <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => onHeaderClick(stepKey)}>
                 <div className='flex flex-col gap-1'>
                     <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Token Distribution</div>
                     {
@@ -147,13 +149,23 @@ export const TokenDistribution = () => {
                                 </div>
                                 <div className='space-y-2'>
                                     <label className="text-sm text-black font-medium mt-1 block">Wallet Address <span className="text-red-500">*</span></label>
-                                    <Input
-                                        type="text"
-                                        placeholder="Solana Wallet address"
-                                        value={item.walletAddress}
-                                        onChange={(e) => handleAllocationChange(index, 'walletAddress', e.target.value)}
-                                        className={getValidationError(index, 'wallet') ? 'border-red-500' : ''}
-                                    />
+                                    <div className={`flex border border-gray-20 p-1 px-2 rounded-lg w-full ${getValidationError(index, 'wallet') ? 'border-red-500' : ''}`}>
+                                        <input
+                                            type="text"
+                                            placeholder="Solana Wallet address"
+                                            value={item.walletAddress}
+                                            onChange={(e) => handleAllocationChange(index, 'walletAddress', e.target.value)}
+                                            className='border-none focus:outline-none w-full placeholder:text-sm text-sm'
+                                        />
+                                        <button
+                                            type="button"
+                                            className="p-1 w-56 bg-gray-100 border text-xs border-gray-200 rounded-md text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={!publicKey}
+                                            onClick={() => publicKey && handleAllocationChange(index, 'walletAddress', publicKey.toBase58())}
+                                        >
+                                            {publicKey ? 'Use Primary Address' : 'Connect Wallet'}
+                                        </button>
+                                    </div>
                                     {getValidationError(index, 'wallet') && (
                                         <span className="text-red-500 text-xs">{getValidationError(index, 'wallet')}</span>
                                     )}

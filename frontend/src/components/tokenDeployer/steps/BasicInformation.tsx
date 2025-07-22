@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
+import type { StepProps } from '../../../types';
 import { ChevronDown, ChevronUp, Loader2, CircleCheck, Lightbulb } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { useDeployStore } from '../../../stores/deployStores';
 import { toast } from 'react-hot-toast';
 
-export const BasicInformation = () => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(true);
+export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
     const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
     const { basicInfo, updateBasicInfo, validationErrors, validateBasicInfo } = useDeployStore();
@@ -146,98 +146,91 @@ export const BasicInformation = () => {
         return !hasErrors && hasRequiredFields && hasImages;
     };
 
-    const avatarDisplay = avatarUrl || avatarPreview;
-    const bannerDisplay = bannerUrl || bannerPreview;
+    const avatarDisplay = avatarUrl || avatarPreview || undefined;
+    const bannerDisplay = bannerUrl || bannerPreview || undefined;
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 w-full">
-            <div>
-                <div 
-                    className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                >
-                    <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Basic Information</div>
-                    {isFormValid() ? (
-                        <CircleCheck className="w-5 h-5 text-green-500" />
-                    ) : isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-500" />
-                    ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-500" />
-                    )}
-                </div>
-                {isExpanded && (
-                    <>
-                        <div className="text-xs text-gray-500 mb-4">Token Name, Symbol & Supply</div>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="text-sm font-medium mb-1">Token Name <span className="text-red-500">*</span></div>
-                                <Input 
-                                    placeholder="POTLAUNCH" 
-                                    value={name}
-                                    onChange={(e) => handleInputChange('name', e.target.value)}
-                                    className={validationErrors.name ? "border-red-500 focus:border-red-500" : ""}
-                                />
-                                {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
-                            </div>
-                            <div>
-                                <div className="text-sm font-medium mb-1">Token Symbol <span className="text-red-500">*</span></div>
-                                <Input 
-                                    placeholder="PTL" 
-                                    value={symbol}
-                                    onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
-                                    className={validationErrors.symbol ? "border-red-500 focus:border-red-500" : ""}
-                                />
-                                {validationErrors.symbol && <p className="text-red-500 text-xs mt-1">{validationErrors.symbol}</p>}
-                            </div>
-                            <div>
-                                <div className="text-sm font-medium mb-1">Total Supply <span className="text-red-500">*</span></div>
-                                <Input 
-                                    placeholder="10000000" 
-                                    type="number"
-                                    value={supply}
-                                    onChange={(e) => handleInputChange('supply', e.target.value)}
-                                    className={validationErrors.supply ? "border-red-500 focus:border-red-500" : ""}
-                                />
-                                {validationErrors.supply && <p className="text-red-500 text-xs mt-1">{validationErrors.supply}</p>}
-                                {recommendations.supply && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <Lightbulb className="w-3 h-3 text-yellow-500" />
-                                        <p className="text-yellow-600 text-xs">{recommendations.supply}</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <div className="text-sm font-medium mb-1">Decimal <span className="text-red-500">*</span></div>
-                                <Input 
-                                    placeholder="6" 
-                                    type="number"
-                                    value={decimals}
-                                    onChange={(e) => handleInputChange('decimals', e.target.value)}
-                                    className={validationErrors.decimals ? "border-red-500 focus:border-red-500" : ""}
-                                />
-                                {validationErrors.decimals && <p className="text-red-500 text-xs mt-1">{validationErrors.decimals}</p>}
-                                {recommendations.decimals && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <Lightbulb className="w-3 h-3 text-yellow-500" />
-                                        <p className="text-yellow-600 text-xs">{recommendations.decimals}</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <Textarea 
-                                    rows={3} 
-                                    placeholder="Description goes here"
-                                    value={description}
-                                    onChange={(e) => handleInputChange('description', e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </>
+            <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => onHeaderClick(stepKey)}
+            >
+                <div className={`${isExpanded ? 'text-black text-base font-semibold' : 'text-sm text-gray-500'}`}>Basic Information</div>
+                {isFormValid() ? (
+                    <CircleCheck className="w-5 h-5 text-green-500" />
+                ) : isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
                 )}
             </div>
-
-            {
-                isExpanded && (
+            {isExpanded && (
+                <>
+                    <div className="text-xs text-gray-500 mb-4">Token Name, Symbol & Supply</div>
+                    <div className="space-y-4">
+                        <div>
+                            <div className="text-sm font-medium mb-1">Token Name <span className="text-red-500">*</span></div>
+                            <Input 
+                                placeholder="POTLAUNCH" 
+                                value={name}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
+                                className={validationErrors.name ? "border-red-500 focus:border-red-500" : ""}
+                            />
+                            {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium mb-1">Token Symbol <span className="text-red-500">*</span></div>
+                            <Input 
+                                placeholder="PTL" 
+                                value={symbol}
+                                onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
+                                className={validationErrors.symbol ? "border-red-500 focus:border-red-500" : ""}
+                            />
+                            {validationErrors.symbol && <p className="text-red-500 text-xs mt-1">{validationErrors.symbol}</p>}
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium mb-1">Total Supply <span className="text-red-500">*</span></div>
+                            <Input 
+                                placeholder="10000000" 
+                                type="number"
+                                value={supply}
+                                onChange={(e) => handleInputChange('supply', e.target.value)}
+                                className={validationErrors.supply ? "border-red-500 focus:border-red-500" : ""}
+                            />
+                            {validationErrors.supply && <p className="text-red-500 text-xs mt-1">{validationErrors.supply}</p>}
+                            {recommendations.supply && (
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                    <p className="text-yellow-600 text-xs">{recommendations.supply}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium mb-1">Decimal <span className="text-red-500">*</span></div>
+                            <Input 
+                                placeholder="6" 
+                                type="number"
+                                value={decimals}
+                                onChange={(e) => handleInputChange('decimals', e.target.value)}
+                                className={validationErrors.decimals ? "border-red-500 focus:border-red-500" : ""}
+                            />
+                            {validationErrors.decimals && <p className="text-red-500 text-xs mt-1">{validationErrors.decimals}</p>}
+                            {recommendations.decimals && (
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Lightbulb className="w-3 h-3 text-yellow-500" />
+                                    <p className="text-yellow-600 text-xs">{recommendations.decimals}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <Textarea 
+                                rows={3} 
+                                placeholder="Description goes here"
+                                value={description}
+                                onChange={(e) => handleInputChange('description', e.target.value)}
+                            />
+                        </div>
+                    </div>
                     <div className="mb-6 space-y-2">
                         <div className="text-sm font-semibold mt-3 flex flex-row gap-1">
                             <span>Token Branding</span>
@@ -334,8 +327,8 @@ export const BasicInformation = () => {
                             )}
                         </div>
                     </div>
-                )
-            }
+                </>
+            )}
         </div>
-    )
+    );
 }
