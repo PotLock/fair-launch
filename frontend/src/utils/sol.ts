@@ -208,14 +208,11 @@ export const deserializeAllocationAndVesting = (data: Buffer) => {
       throw new Error(`Invalid account data length: expected at least 8 bytes for discriminator, got ${data.length}`);
   }
 
-  let offset = 8; // Skip the 8-byte discriminator
+  // Expected minimum lengths
+  const minLengthWithoutVesting = 8 + 32 + 1 + 8 + 8 + 1 + 1; // 51 bytes
+  const minLengthWithVesting = minLengthWithoutVesting + 40; // 91 bytes
 
-  // category: String
-  // String is serialized as: 4 bytes (length) + string bytes
-  const categoryLength = data.readUInt32LE(offset);
-  offset += 4;
-  const category = data.slice(offset, offset + categoryLength).toString('utf8');
-  offset += categoryLength;
+  let offset = 8; // Skip the 8-byte discriminator
 
   // wallet: Pubkey (32 bytes)
   const wallet = new PublicKey(data.slice(offset, offset + 32));
@@ -234,9 +231,16 @@ export const deserializeAllocationAndVesting = (data: Buffer) => {
   offset += 8;
 
   // vesting: Option<Vesting>
-  // Option is serialized as: 1 byte (0 = None, 1 = Some) + data if Some
   const hasVesting = data.readUInt8(offset) !== 0;
   offset += 1;
+
+  // Validate data length
+  if (!hasVesting && data.length < minLengthWithoutVesting) {
+      throw new Error(`Invalid account data length: expected at least ${minLengthWithoutVesting} bytes, got ${data.length}`);
+  }
+  if (hasVesting && data.length < minLengthWithVesting) {
+      throw new Error(`Invalid account data length: expected at least ${minLengthWithVesting} bytes, got ${data.length}`);
+  }
 
   let vesting = null;
   if (hasVesting) {
@@ -261,12 +265,11 @@ export const deserializeAllocationAndVesting = (data: Buffer) => {
       offset += 8;
 
       vesting = {
-          cliffPeriod: cliffPeriod.toString(), // Convert to string to avoid precision loss
+          cliffPeriod: cliffPeriod.toString(),
           startTime: startTime.toString(),
           duration: duration.toString(),
           interval: interval.toString(),
-          released: Number(released), // Convert to number if safe, else keep as string
-          // Add human-readable timestamps
+          released: released.toString(),
           startTimeDate: new Date(Number(startTime) * 1000).toISOString(),
           cliffEndDate: new Date((Number(startTime) + Number(cliffPeriod)) * 1000).toISOString(),
           endDate: new Date((Number(startTime) + Number(duration)) * 1000).toISOString(),
@@ -278,19 +281,17 @@ export const deserializeAllocationAndVesting = (data: Buffer) => {
   offset += 1;
 
   return {
-      category,
       wallet: wallet.toBase58(),
       percentage,
-      totalTokens: Number(totalTokens), // Convert to number if safe
-      claimedTokens: Number(claimedTokens),
+      totalTokens: totalTokens.toString(),
+      claimedTokens: claimedTokens.toString(),
       vesting,
       bump,
-      // Add calculated fields for convenience
-      unclaimedTokens: Number(totalTokens) - Number(claimedTokens),
-      claimProgress: Number(claimedTokens) / Number(totalTokens) * 100, // Percentage claimed
-      isFullyClaimed: Number(claimedTokens) >= Number(totalTokens),
+      unclaimedTokens: (BigInt(totalTokens) - BigInt(claimedTokens)).toString(),
+      claimProgress: (Number(claimedTokens) / Number(totalTokens)) * 100, // Assumes safe range or adjust
+      isFullyClaimed: BigInt(claimedTokens) >= BigInt(totalTokens),
   };
-}
+};
 
 export function deserializeCurveConfiguration(data: Buffer) {
   // The data length will be variable due to the Vec<Recipient> field
