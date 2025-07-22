@@ -39,10 +39,6 @@ export const TokenContainer = () => {
             return;
         }
 
-        if(!socials.twitter || !socials.discord || !socials.website || !socials.farcaster || !socials.telegram) {
-            toast.error("Please fill in all the required fields in Social");
-            return;
-        }
 
         if(!allocation[0].description && !allocation[0].lockupPeriod && !allocation[0].percentage && !allocation[0].vesting && !allocation[0].walletAddress){
             toast.error("Please fill in all the required fields in Allocation")

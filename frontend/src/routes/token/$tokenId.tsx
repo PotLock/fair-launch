@@ -87,7 +87,7 @@ function TokenDetail() {
             const holdersRes = await getTokenHoldersByMint(tokenId)
             const bondingCurveInfo = await getBondingCurveAccounts(new PublicKey(tokenId));
             const walletAddresses = tokenInfo.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
-            const allocationsAndVesting = await getAllocationsAndVesting(walletAddresses)
+            const allocationsAndVesting = await getAllocationsAndVesting(walletAddresses, new PublicKey(tokenId))
             console.log(allocationsAndVesting)
             setTokenInfo(tokenInfo.data);
             setBondingCurveInfo(bondingCurveInfo || null);
