@@ -228,9 +228,10 @@ export async function getBondingCurveAccounts(mint: PublicKey) {
   return decodedData;
 }
 
-export async function getAllocationsAndVesting(wallets: PublicKey[]) {
+export async function getAllocationsAndVesting(wallets: PublicKey[], mint: PublicKey) {
+  console.log("wallets", wallets)
   for (const wallet of wallets) {
-    const seeds = [Buffer.from(ALLOCATION_SEED_PREFIX), wallet.toBuffer()];
+    const seeds = [Buffer.from(ALLOCATION_SEED_PREFIX), wallet.toBuffer(), mint.toBuffer()];
     const [allocation, bump] = PublicKey.findProgramAddressSync(seeds, programId);
 
     console.log("PDA Address:", allocation.toBase58());

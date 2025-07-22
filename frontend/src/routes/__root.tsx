@@ -4,6 +4,10 @@ import React from "react";
 import Header from "../components/layout/Header";
 import WalletContextProvider from "../context/WalletProviderContext";
 import { Toaster } from "react-hot-toast";
+import { InforWarning } from "../components/layout/InforWarning";
+import { Footer } from "../components/layout/Footer";
+import { HelpButton } from "../components/layout/HelpButton";
+
 const queryClient = new QueryClient();
 
 export const Route = createRootRoute({
@@ -25,7 +29,10 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <WalletContextProvider>
           <Header />
+          <InforWarning/>
           <Outlet />
+          <Footer/>
+          <HelpButton />
           <TanStackRouterDevtools position="bottom-right" />
           <Toaster position="top-right" />
         </WalletContextProvider>
