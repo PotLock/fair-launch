@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TokenCard } from "../components/TokenCard";
 import { useEffect, useState } from "react";
-import { getBondingCurveAccounts, TokenInfo } from "../utils/tokenUtils";
+import { TokenInfo } from "../utils/tokenUtils";
 import { getTokens } from "../lib/api";
 import { formatDateToReadable, getTemplateDisplay } from "../utils";
-import { PublicKey } from "@solana/web3.js";
 
 export const Route = createFileRoute("/")({
     component: Home,
@@ -35,7 +34,7 @@ function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] py-10">
+      <div className="min-h-screen py-10">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
           <p className="text-gray-500 mb-8 text-base">
@@ -51,7 +50,7 @@ function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] py-10">
+      <div className="min-h-screen py-10">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
           <p className="text-gray-500 mb-8 text-base">
@@ -74,7 +73,7 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-10">
+    <div className="min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
         <p className="text-gray-500 mb-8 text-base">
