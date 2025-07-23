@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router"
+import { useState } from "react";
+import { TermsPrivacyModal } from "../TermsPrivacyModal";
 
 export const Footer = () => {
+    const [openModal, setOpenModal] = useState<null | "privacy" | "terms">(null);
     return(
         <div className="w-full p-4 flex flex-col md:flex-row justify-between items-center gap-5 md:items-end lg:container mx-auto md:pt-20 pt-10">
             <div className="flex flex-col gap-4">
@@ -24,14 +27,29 @@ export const Footer = () => {
                 <span>built with ❤️ by</span>
                 <a href="https://www.potlock.org/" target="_blank" className="text-black underline">POTLOCK</a>
             </div>
-            <div className="flex flex-row gap-2">
-                <a href="#" target="_blank" className="hover:underline">
-                    <span>Privacy Policy</span>
+            <div className="flex flex-col gap-2 items-end">
+                <a href="https://docs.potlaunch.com/" target="_blank" className="hover:underline">
+                    <span>Documents</span>
                 </a>
-                <a href="#" target="_blank" className="hover:underline">
-                    <span>Terms of use</span>
-                </a>
+                <div className="flex flex-row gap-2">
+                    <a href="#" target="_blank" className="hover:underline" id="privacy-link" onClick={e => { e.preventDefault(); setOpenModal("privacy"); }}>
+                        <span>Privacy Policy</span>
+                    </a>
+                    <a href="#" target="_blank" className="hover:underline" id="terms-link" onClick={e => { e.preventDefault(); setOpenModal("terms"); }}>
+                        <span>Terms of use</span>
+                    </a>
+                </div>
             </div>
+            <TermsPrivacyModal
+                open={openModal === "privacy"}
+                onOpenChange={(open: boolean) => setOpenModal(open ? openModal : null)}
+                type="privacy"
+            />
+            <TermsPrivacyModal
+                open={openModal === "terms"}
+                onOpenChange={(open: boolean) => setOpenModal(open ? openModal : null)}
+                type="terms"
+            />
         </div>
     )
 }
