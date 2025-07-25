@@ -28,7 +28,6 @@ function MyTokens() {
         setError(null);
         try {
             const tokens = await getTokenByAddress(publicKey.toBase58());
-            console.log("tokens", tokens.data);
             setListTokens(tokens.data);
         } catch (err) {
             setError('Failed to fetch token balances');

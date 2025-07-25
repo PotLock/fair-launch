@@ -10,6 +10,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useDeployStore } from "../../stores/deployStores";
 import useAnchorProvider from "../../hook/useAnchorProvider";
 import { useEffect } from "react";
+import { calculateInitialReserveAmount } from "../../utils/sol";
 
 export const TokenContainer = () => {
     const { deployToken } = useDeployToken();
@@ -22,7 +23,8 @@ export const TokenContainer = () => {
         dexListing, 
         saleSetup, 
         adminSetup,
-        fees
+        fees,
+        pricingMechanism 
      } = useDeployStore();
     const navigate = useNavigate();
     const { resetState } = useDeployStore.getState();
@@ -57,11 +59,47 @@ export const TokenContainer = () => {
             return;
         }
 
-        // Check SOL balance before deploying
         if (provider && provider.connection && publicKey) {
             try {
                 const balanceLamports = await provider.connection.getBalance(publicKey);
                 const balanceSol = balanceLamports / 1e9;
+
+                const initialPrice = BigInt(Math.floor(Number(pricingMechanism.initialPrice) * 1e9));
+                const initialSupply = BigInt(Number(basicInfo.supply) * 10 ** Number(basicInfo.decimals));
+                const reserveRatio = Number(pricingMechanism.reserveRatio) * 100; // reserveRatio nhập % (VD: 20) => 2000
+                const tokenDecimals = Number(basicInfo.decimals);
+                let requiredLamports = 0n;
+                let requiredSol = 0;
+                let validParams = true;
+                if (
+                    !isNaN(Number(pricingMechanism.initialPrice)) &&
+                    !isNaN(Number(basicInfo.supply)) &&
+                    !isNaN(Number(pricingMechanism.reserveRatio)) &&
+                    !isNaN(Number(basicInfo.decimals)) &&
+                    Number(pricingMechanism.initialPrice) > 0 &&
+                    Number(basicInfo.supply) > 0 &&
+                    Number(pricingMechanism.reserveRatio) > 0 &&
+                    Number(basicInfo.decimals) >= 0
+                ) {
+                    try {
+                        requiredLamports = calculateInitialReserveAmount(
+                            initialPrice,
+                            initialSupply,
+                            reserveRatio,
+                            tokenDecimals
+                        );
+                        requiredSol = Number(requiredLamports) / 1e9;
+                    } catch (e) {
+                        validParams = false;
+                    }
+                } else {
+                    validParams = false;
+                }
+                if (validParams && balanceSol < requiredSol) {
+                    toast.error(`You need at least ${requiredSol.toFixed(0)} SOL to deploy this token. Please add more SOL to your wallet.`);
+                    return;
+                }
+
                 if (balanceSol < 0.001) {
                     toast.error("Insufficient SOL balance. You need at least 0.001 SOL to deploy a token.");
                     return;
@@ -125,7 +163,6 @@ export const TokenContainer = () => {
         setIsSuccess(false);
         resetState();
         navigate({ to: "/my-tokens" });
-        // Navigate to token page or open in explorer
         if (txid) {
             window.open(`https://solscan.io/tx/${txid}?cluster=devnet`, '_blank');
         }
