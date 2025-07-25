@@ -68,6 +68,29 @@ app.get('/mint/:address', async (c) => {
     
     const token = await tokenService.getTokenByAddress(address);
     
+    if (token) {
+      const {
+        website,
+        twitter,
+        telegram,
+        discord,
+        farcaster,
+        ...rest
+      } = token;
+      return c.json({
+        success: true,
+        data: {
+          ...rest,
+          social: {
+            website,
+            twitter,
+            telegram,
+            discord,
+            farcaster,
+          },
+        },
+      });
+    }
     return c.json({
       success: true,
       data: token
