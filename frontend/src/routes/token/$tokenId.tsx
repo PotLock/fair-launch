@@ -41,48 +41,6 @@ export const Route = createFileRoute("/token/$tokenId")({
 
 const COLORS = ['#00A478', '#8B5CF6', '#3B82F6', '#059669', '#DC2626', '#2563EB'];
 
-
-
-const getEmptyBondingCurveData = () => Array.from({ length: 20 }, (_, i) => ({
-    raised: '-',
-    price: '-'
-}));
-
-// Hàm sinh dữ liệu chart cho Linear Bonding Curve
-function generateLinearBondingCurveChartData(
-    tokenInfo: TokenInfo | null,
-    curveConfig: any,
-    bondingCurveInfo: BondingCurveTokenInfo | null
-) {
-    if (!tokenInfo || !curveConfig) return [];
-    const decimals = tokenInfo.decimals || 9;
-    const maxSupply = Number(curveConfig.maxTokenSupply) / 10 ** decimals;
-    const reserveRatio = Number(curveConfig.reserveRatio);
-    const initialPrice = Number(curveConfig.initialPrice) / 10 ** 9;
-    const points = 20;
-    const data = [];
-    for (let i = 0; i <= points; i++) {
-        const supply = (maxSupply / points) * i;
-        // Linear price: P = initialPrice + (supply * reserveRatio / maxSupply)
-        // Hoặc dùng công thức bonding curve thực tế nếu có
-        // Ở đây ví dụ dùng linearBuyCost nếu là linear
-        // Đơn vị supply là token, cần convert về smallest unit
-        const supplySmallest = BigInt(Math.floor(supply * 10 ** decimals));
-        const totalSupply = BigInt(0); // Giả sử bắt đầu từ 0
-        // Sử dụng linearBuyCost để tính tổng số SOL cần để mint supplySmallest token
-        // Giá tại điểm này là chi phí để mua 1 token tiếp theo
-        let price = 0;
-        try {
-            price = Number(linearBuyCost(1n * 10n ** BigInt(decimals), reserveRatio, supplySmallest)) / 10 ** 9;
-        } catch (e) {
-            price = 0;
-        }
-        const raised = supply * price;
-        data.push({ raised, price });
-    }
-    return data;
-}
-
 function TokenDetail() {
     const {tokenId} = useParams({from: "/token/$tokenId"})
     const anchorWallet = useAnchorWallet();
