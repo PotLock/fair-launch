@@ -80,8 +80,9 @@ export const TokenDistribution = ({ isExpanded, stepKey, onHeaderClick }: StepPr
                     {
                         isExpanded && (
                             <button
-                                className="px-4 py-2 border border-gray-300 rounded-xl flex text-sm items-center gap-2 hover:bg-gray-50"
+                                className="px-4 py-2 border border-gray-300 rounded-xl flex text-sm items-center gap-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={handleAddAllocation}
+                                disabled={allocation.length >= 2}
                             >
                                 <Plus className="w-4 h-4" /> Add Allocation
                             </button>
@@ -97,6 +98,9 @@ export const TokenDistribution = ({ isExpanded, stepKey, onHeaderClick }: StepPr
                 </div>
             </div>
             
+            {isExpanded && validationErrors.allocation_limit && (
+                <div className="text-red-500 text-sm mt-2">{validationErrors.allocation_limit}</div>
+            )}
             {isExpanded && (
                 <div className="space-y-6">
                     {validationErrors.total_percentage && (

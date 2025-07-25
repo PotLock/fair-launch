@@ -5,7 +5,9 @@ import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
 import { 
   ALLOCATION_SEED_PREFIX, 
   deserializeAllocationAndVesting, 
-  deserializeBondingCurve
+  deserializeBondingCurve,
+  deserializeCurveConfiguration,
+  getPDAs
 } from './sol';
 
 
@@ -49,12 +51,13 @@ export interface TokenInfo {
   launchLiquidityOnName?: string;
   reserveRatio?: string;
   initialPrice?: string;
+  allocations?: any[];
+  finalPrice?: string;
 }
 
 export interface BondingCurveTokenInfo {
   creator: string;
   totalSupply: number;
-  reserveRatio: number;
   reserveBalance: number;
   reserveToken: number;
   token: string;
@@ -229,12 +232,12 @@ export async function getBondingCurveAccounts(mint: PublicKey) {
 }
 
 export async function getAllocationsAndVesting(wallets: PublicKey[], mint: PublicKey) {
-  console.log("wallets", wallets)
+  // console.log("wallets", wallets)
   for (const wallet of wallets) {
     const seeds = [Buffer.from(ALLOCATION_SEED_PREFIX), wallet.toBuffer(), mint.toBuffer()];
     const [allocation, bump] = PublicKey.findProgramAddressSync(seeds, programId);
 
-    console.log("PDA Address:", allocation.toBase58());
+    // console.log("PDA Address:", allocation.toBase58());
 
     const accountInfo = await connection.getAccountInfo(allocation);
 
@@ -277,4 +280,15 @@ export async function getTokenHoldersByMint(mintAddress: string) {
   }
 }
 
-
+export async function getCurveConfig(admin: PublicKey, mint: PublicKey) {
+  const {curveConfig} = await getPDAs(admin, mint);
+  // console.log("Curve Config:", curveConfig.toBase58());
+  const accountInfo = await connection.getAccountInfo(curveConfig);
+  if (!accountInfo) {
+    console.log("PDA account does not exist or has no data.");
+    return;
+  }
+  const decodedData = deserializeCurveConfiguration(accountInfo.data);
+  // console.log("Decoded Curve Configuration Data:", decodedData);
+  return decodedData
+}
