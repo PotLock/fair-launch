@@ -169,23 +169,36 @@ export const useDeployStore = create<DeployStateWithValidation>((set, get) => ({
         }));
     },
     addAllocation: () => {
-        set((state) => ({
-            ...state,
-            allocation: [...state.allocation, {
-                description: '',
-                lockupPeriod: 0,
-                percentage: 0,
-                walletAddress: '',
-                vesting: {
-                    enabled: true,
-                    description: '',
-                    percentage: 0,
-                    cliff: 0,
-                    duration: 0,
-                    interval: 0,
-                }
-            }]
-        }));
+        set((state) => {
+            const errors = { ...state.validationErrors };
+            if (state.allocation.length >= 2) {
+                errors.allocation_limit = 'You can only create up to 2 allocations.';
+                return { ...state, validationErrors: errors };
+            }
+            
+            if (errors.allocation_limit) delete errors.allocation_limit;
+            return {
+                ...state,
+                allocation: [
+                    ...state.allocation,
+                    {
+                        description: '',
+                        lockupPeriod: 0,
+                        percentage: 0,
+                        walletAddress: '',
+                        vesting: {
+                            enabled: true,
+                            description: '',
+                            percentage: 0,
+                            cliff: 0,
+                            duration: 0,
+                            interval: 0,
+                        }
+                    }
+                ],
+                validationErrors: errors
+            };
+        });
     },
     removeAllocation: (index: number) => {
         set((state) => ({

@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
+import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
@@ -33,6 +33,7 @@ import { linearBuyCost, linearSellCost } from "../../utils/sol";
 import { TokenDistributionItem, Holders} from "../../types"
 import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
+import { formatVestingInfo, mergeVestingData } from "../../utils";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -40,28 +41,47 @@ export const Route = createFileRoute("/token/$tokenId")({
 
 const COLORS = ['#00A478', '#8B5CF6', '#3B82F6', '#059669', '#DC2626', '#2563EB'];
 
-const getEmptyAllocationData = () => [
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' },
-    { name: '-', value: 0, tokens: '-', usdValue: '-', details: '-' }
-];
 
-const getEmptyVestingData = () => [
-    { month: '-', development: 0, marketing: 0 },
-    { month: '-', development: 0, marketing: 0 },
-    { month: '-', development: 0, marketing: 0 },
-    { month: '-', development: 0, marketing: 0 },
-    { month: '-', development: 0, marketing: 0 },
-    { month: '-', development: 0, marketing: 0 }
-];
 
 const getEmptyBondingCurveData = () => Array.from({ length: 20 }, (_, i) => ({
     raised: '-',
     price: '-'
 }));
+
+// Hàm sinh dữ liệu chart cho Linear Bonding Curve
+function generateLinearBondingCurveChartData(
+    tokenInfo: TokenInfo | null,
+    curveConfig: any,
+    bondingCurveInfo: BondingCurveTokenInfo | null
+) {
+    if (!tokenInfo || !curveConfig) return [];
+    const decimals = tokenInfo.decimals || 9;
+    const maxSupply = Number(curveConfig.maxTokenSupply) / 10 ** decimals;
+    const reserveRatio = Number(curveConfig.reserveRatio);
+    const initialPrice = Number(curveConfig.initialPrice) / 10 ** 9;
+    const points = 20;
+    const data = [];
+    for (let i = 0; i <= points; i++) {
+        const supply = (maxSupply / points) * i;
+        // Linear price: P = initialPrice + (supply * reserveRatio / maxSupply)
+        // Hoặc dùng công thức bonding curve thực tế nếu có
+        // Ở đây ví dụ dùng linearBuyCost nếu là linear
+        // Đơn vị supply là token, cần convert về smallest unit
+        const supplySmallest = BigInt(Math.floor(supply * 10 ** decimals));
+        const totalSupply = BigInt(0); // Giả sử bắt đầu từ 0
+        // Sử dụng linearBuyCost để tính tổng số SOL cần để mint supplySmallest token
+        // Giá tại điểm này là chi phí để mua 1 token tiếp theo
+        let price = 0;
+        try {
+            price = Number(linearBuyCost(1n * 10n ** BigInt(decimals), reserveRatio, supplySmallest)) / 10 ** 9;
+        } catch (e) {
+            price = 0;
+        }
+        const raised = supply * price;
+        data.push({ raised, price });
+    }
+    return data;
+}
 
 function TokenDetail() {
     const {tokenId} = useParams({from: "/token/$tokenId"})
@@ -79,19 +99,28 @@ function TokenDetail() {
     const isLoggedIn = !!publicKey;
     const [isBuying, setIsBuying] = useState(false);
     const [holders, setHolders] = useState<Holders[]>([]);
+    const [curveConfig, setCurveConfig] = useState<any>(null)
+    const [allocationsAndVesting, setAllocationsAndVesting] = useState<any[]>([]);
 
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
-            const tokenInfo = await getTokenByMint(tokenId);
+            const tokenRes = await getTokenByMint(tokenId);
             const holdersRes = await getTokenHoldersByMint(tokenId)
-            const bondingCurveInfo = await getBondingCurveAccounts(new PublicKey(tokenId));
-            const walletAddresses = tokenInfo.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
-            const allocationsAndVesting = await getAllocationsAndVesting(walletAddresses, new PublicKey(tokenId))
-            console.log(allocationsAndVesting)
-            setTokenInfo(tokenInfo.data);
-            setBondingCurveInfo(bondingCurveInfo || null);
+            const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
+            const walletAddresses = tokenRes.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
+            const allocationsAndVestingArr = await Promise.all(walletAddresses.map(async (wallet: PublicKey) => {
+                const data = await getAllocationsAndVesting([wallet], new PublicKey(tokenId));
+                return data;
+            }));
+            const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveRes?.creator || ''), new PublicKey(tokenId));
+            
+            
+            setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
+            setTokenInfo(tokenRes.data);
+            setBondingCurveInfo(bondingCurveRes || null);
             setHolders(holdersRes);
+            setCurveConfig(curveConfigInfo)
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -134,12 +163,12 @@ function TokenDetail() {
                 if (!isNaN(numericVal)) {
                     // Check if it's a buy operation (SOL -> Token)
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
                     }
                     // Check if it's a sell operation (Token -> SOL)
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
                 }
@@ -162,12 +191,12 @@ function TokenDetail() {
                 if (!isNaN(numericVal)) {
                     // Check if it's a buy operation (SOL -> Token)
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
                     }
                     // Check if it's a sell operation (Token -> SOL)
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
                 }
@@ -233,12 +262,12 @@ function TokenDetail() {
             if (!isNaN(numericVal)) {
                 if (option.name === 'SOL' && tokenInfo) {
                     // Buy operation: SOL -> Token
-                    const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     console.log('linearBuyAmount', linearBuyAmount)
                     setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
                 } else if (option.name === tokenInfo?.symbol) {
                     // Sell operation: Token -> SOL
-                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     console.log("linearSellAmount", linearSellAmount)
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
@@ -261,11 +290,11 @@ function TokenDetail() {
             if (!isNaN(numericVal)) {
                 if (option.name === tokenInfo?.symbol) {
                     // Buy operation: SOL -> Token
-                    const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
                 } else if (option.name === 'SOL' && tokenInfo) {
                     // Sell operation: Token -> SOL
-                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(bondingCurveInfo?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
             }
@@ -286,9 +315,15 @@ function TokenDetail() {
             if (isBuyOperation) {
                 const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
                 console.log('Buy transaction:', tx);
+                // Clear input fields after successful buy
+                setPayAmount("");
+                setReceiveAmount("");
             } else {
                 const tx = await sellToken(mint, amount, admin, tokenInfo?.name || '');
                 console.log('Sell transaction:', tx);
+                // Clear input fields after successful sell
+                setPayAmount("");
+                setReceiveAmount("");
             }
         } catch (error) {
             console.error('Error in token operation:', error);
@@ -587,54 +622,75 @@ function TokenDetail() {
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
-                    <div className="flex justify-center bg-gray-100/60 rounded-lg py-4 md:py-6">
-                        <div className="w-full max-w-sm md:max-w-lg" style={{ height: '280px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={getEmptyAllocationData()}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={100}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                    >
-                                        {getEmptyAllocationData().map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
+                    <div className="flex flex-col md:flex-row md:items-center md:gap-8 bg-gray-50 rounded-lg py-6 px-4">
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-center">
+                            <div className="w-full md:w-[320px] h-[220px] md:h-[220px] flex-shrink-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={allocationsAndVesting.map((item, idx) => ({
+                                                name: tokenInfo?.allocations?.[idx]?.description || '-',
+                                                value: item?.percentage || 0
+                                            }))}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={70}
+                                            outerRadius={100}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                        >
+                                            {allocationsAndVesting.map((_, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip formatter={(value, name, props) => [`${value}%`, props.payload.name]} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex flex-col gap-3 justify-center">
+                                {allocationsAndVesting.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                        <span className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
+                                        <span className="font-semibold text-base" style={{ color: COLORS[idx % COLORS.length] }}>{tokenInfo?.allocations?.[idx]?.description || '-'}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                    <div className="w-full overflow-x-auto mt-6">
-                        <table className="w-full min-w-[800px]">
+                    <div className="w-full overflow-x-auto mt-8">
+                        <table className="table-fixed w-full">
                             <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 text-gray-600 font-medium">Allocation</th>
-                                    <th className="text-left py-3 text-gray-600 font-medium">Percentage</th>
-                                    <th className="text-left py-3 text-gray-600 font-medium">Tokens</th>
-                                    <th className="text-left py-3 text-gray-600 font-medium">USD value</th>
-                                    <th className="text-left py-3 text-gray-600 font-medium">Vesting</th>
+                                <tr className="border-b border-gray-200 bg-white">
+                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Allocation</th>
+                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Percentage</th>
+                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Tokens</th>
+                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">USD value</th>
+                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Vesting</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {getEmptyAllocationData().map((item, index) => (
-                                    <tr key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                        <td className="py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                                <span className="font-medium">{item.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4">{item.value}%</td>
-                                        <td className="py-4">{item.tokens}</td>
-                                        <td className="py-4">{item.usdValue}</td>
-                                        <td className="py-4 text-gray-600">{item.details}</td>
-                                    </tr>
-                                ))}
+                                {allocationsAndVesting.map((item, index) => {
+                                    const allocation = tokenInfo?.allocations?.[index];
+                                    const tokens = item?.totalTokens ? (Number(item.totalTokens) / Math.pow(10, Number(tokenInfo?.decimals || 0))).toLocaleString() : '-';
+                                    // USD value calculation placeholder (replace with real price if available)
+                                    const usdValue = '-';
+                                    // Vesting info formatting
+                                    const vestingInfo = formatVestingInfo(item?.vesting, item?.percentage || 0);
+                                    return (
+                                        <tr key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                                            <td className="py-4 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                                                    <span className="font-bold text-gray-900">{allocation?.description || '-'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4 font-medium text-gray-700">{item?.percentage || 0}%</td>
+                                            <td className="py-4 px-4 font-medium text-gray-700">{tokens}</td>
+                                            <td className="py-4 px-4 font-medium text-gray-700">{usdValue}</td>
+                                            <td className="py-4 px-4 text-gray-600 text-sm max-w-[180px] break-all whitespace-pre-line">{vestingInfo}</td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -644,54 +700,51 @@ function TokenDetail() {
                     <h2 className="text-xl font-medium mb-4">Vesting Schedule</h2>
                     <div className="w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={getEmptyVestingData()}>
+                            <LineChart data={mergeVestingData(allocationsAndVesting)}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
-                                    dataKey="month"
+                                    dataKey="time"
                                     tick={{ fontSize: 12, fill: '#6b7280' }}
                                     padding={{ left: 20, right: 20 }}
                                     axisLine={{ stroke: '#d1d5db' }}
                                 />
-                                <YAxis 
-                                    tick={{ fontSize: 12, fill: '#6b7280' }} 
+                                <YAxis
+                                    tick={{ fontSize: 12, fill: '#6b7280' }}
                                     axisLine={{ stroke: '#d1d5db' }}
                                 />
-                                <RechartsTooltip 
-                                    contentStyle={{ 
-                                        fontSize: 14, 
+                                <RechartsTooltip
+                                    contentStyle={{
+                                        fontSize: 14,
                                         backgroundColor: 'white',
                                         border: '1px solid #e5e7eb',
                                         borderRadius: '8px',
                                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                    }} 
+                                    }}
                                 />
-                                <Line
-                                    type="monotone"
-                                    dataKey="development"
-                                    stroke="#8884d8"
-                                    strokeWidth={3}
-                                    dot={{ r: 4, fill: '#8884d8' }}
-                                    name="Development Fund"
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="marketing"
-                                    stroke="#82ca9d"
-                                    strokeWidth={3}
-                                    dot={{ r: 4, fill: '#82ca9d' }}
-                                    name="Marketing Pool"
-                                />
+                                {allocationsAndVesting.map((item, idx) => (
+                                    <Line
+                                        key={item.wallet}
+                                        type="monotone"
+                                        dataKey={item.wallet}
+                                        stroke={COLORS[idx % COLORS.length]}
+                                        strokeWidth={3}
+                                        dot={{ r: 4, fill: COLORS[idx % COLORS.length] }}
+                                        name={tokenInfo?.allocations?.[idx]?.description || item.wallet}
+                                    />
+                                ))}
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
-                {
-                    tokenInfo.pricing === 'bonding-curve' && (
+
+                {/* TODO: add current price */}
+                {/* {
+                    tokenInfo.selectedPricing === 'bonding-curve' && (
                         <Card className="p-4 md:p-6 shadow-none">
                             <h2 className="text-xl font-medium mb-4">Bonding Curve Price Chart</h2>
                             <div className="mb-6 w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={getEmptyBondingCurveData()}>
+                                    <LineChart data={generateLinearBondingCurveChartData(tokenInfo, curveConfig, bondingCurveInfo)}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis
                                             dataKey="raised"
@@ -725,15 +778,15 @@ function TokenDetail() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                                 <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Initial Price</p>
-                                    <p className="font-semibold">- SOL</p>
+                                    <p className="font-semibold">{curveConfig ? (Number(curveConfig.initialPrice) / 10 ** 9).toLocaleString() : '-'} SOL</p>
                                 </div>
                                 <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Final Price</p>
-                                    <p className="font-semibold">- SOL</p>
+                                    <p className="font-semibold">{tokenInfo?.finalPrice || '-'} SOL</p>
                                 </div>
                                 <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                                    <p className="font-semibold">- SOL</p>
+                                    <p className="font-semibold">{tokenInfo?.targetRaise || '-'} SOL</p>
                                 </div>
                             </div>
                             <p className="text-sm text-gray-500 mt-4">
@@ -742,7 +795,7 @@ function TokenDetail() {
                             </p>
                         </Card>
                     )
-                }
+                } */}
             </div>
             
             <div className="border border-gray-200 rounded-lg max-h-[730px] bg-gray-50 relative hidden md:block">

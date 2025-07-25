@@ -183,11 +183,6 @@ export function deserializeBondingCurve(data: Buffer) {
   // token: Pubkey (32 bytes)
   const token = new PublicKey(data.slice(currentOffset, currentOffset + 32));
   currentOffset += 32;
-
-  // reserve_ratio: u16 (2 bytes, little-endian)
-  const reserveRatio = data.readUInt16LE(currentOffset);
-  currentOffset += 2;
-
   // bump: u8 (1 byte)
   const bump = data.readUInt8(currentOffset);
   currentOffset += 1;
@@ -198,10 +193,148 @@ export function deserializeBondingCurve(data: Buffer) {
       reserveBalance: Number(reserveBalance),
       reserveToken: Number(reserveToken),
       token: token.toBase58(),
-      reserveRatio,
       bump,
   };
 }
+
+
+export function deserializeCurveConfiguration(data: Buffer) {
+  let offset = 8; // Skip the 8-byte discriminator
+
+  // Read global_admin: Pubkey (32 bytes)
+  const globalAdmin = new PublicKey(data.slice(offset, offset + 32)).toBase58();
+  offset += 32;
+
+  // Read fee_admin: Pubkey (32 bytes)
+  const feeAdmin = new PublicKey(data.slice(offset, offset + 32)).toBase58();
+  offset += 32;
+
+  // Read initial_quorum: u64 (8 bytes)
+  const initialQuorum = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read use_dao: bool (1 byte)
+  const useDao = data.readUInt8(offset) !== 0;
+  offset += 1;
+
+  // Read governance: Pubkey (32 bytes)
+  const governance = new PublicKey(data.slice(offset, offset + 32)).toBase58();
+  offset += 32;
+
+  // Read dao_quorum: u16 (2 bytes)
+  const daoQuorum = data.readUInt16LE(offset);
+  offset += 2;
+
+  // Read locked_liquidity: bool (1 byte)
+  const lockedLiquidity = data.readUInt8(offset) !== 0;
+  offset += 1;
+
+  // Read target_liquidity: u64 (8 bytes)
+  const targetLiquidity = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read fee_percentage: u16 (2 bytes)
+  const feePercentage = data.readUInt16LE(offset);
+  offset += 2;
+
+  // Read fees_enabled: bool (1 byte)
+  const feesEnabled = data.readUInt8(offset) !== 0;
+  offset += 1;
+
+  // Read bonding_curve_type: u8 (1 byte), mapped to string
+  const bondingCurveTypeRaw = data.readUInt8(offset);
+  offset += 1;
+  let bondingCurveType;
+  if (bondingCurveTypeRaw === 0) {
+      bondingCurveType = "Linear";
+  } else if (bondingCurveTypeRaw === 1) {
+      bondingCurveType = "Quadratic";
+  } else {
+      throw new Error("Invalid bonding curve type");
+  }
+
+  // Read max_token_supply: u64 (8 bytes)
+  const maxTokenSupply = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read liquidity_lock_period: i64 (8 bytes)
+  const liquidityLockPeriod = data.readBigInt64LE(offset);
+  offset += 8;
+
+  // Read liquidity_pool_percentage: u16 (2 bytes)
+  const liquidityPoolPercentage = data.readUInt16LE(offset);
+  offset += 2;
+
+  // Read initial_price: u64 (8 bytes)
+  const initialPrice = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read initial_supply: u64 (8 bytes)
+  const initialSupply = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read fee_recipients: Vec<Recipient>
+  const feeRecipientsLength = data.readUInt32LE(offset); // Length of the vector (4 bytes)
+  offset += 4;
+
+  const feeRecipients = [];
+  for (let i = 0; i < feeRecipientsLength; i++) {
+      // Read address: Pubkey (32 bytes)
+      const address = new PublicKey(data.slice(offset, offset + 32)).toBase58();
+      offset += 32;
+
+      // Read share: u16 (2 bytes)
+      const share = data.readUInt16LE(offset);
+      offset += 2;
+
+      // Read amount: u64 (8 bytes)
+      const amount = data.readBigUInt64LE(offset);
+      offset += 8;
+
+      // Read locking_period: i64 (8 bytes)
+      const lockingPeriod = data.readBigInt64LE(offset);
+      offset += 8;
+
+      feeRecipients.push({
+          address,
+          share,
+          amount: amount.toString(),
+          lockingPeriod: lockingPeriod.toString()
+      });
+  }
+
+  // Read total_fees_collected: u64 (8 bytes)
+  const totalFeesCollected = data.readBigUInt64LE(offset);
+  offset += 8;
+
+  // Read reserve_ratio: u16 (2 bytes)
+  const reserveRatio = data.readUInt16LE(offset);
+  offset += 2;
+
+  // Return the deserialized object
+  return {
+      globalAdmin,
+      feeAdmin,
+      initialQuorum: initialQuorum.toString(),
+      useDao,
+      governance,
+      daoQuorum,
+      lockedLiquidity,
+      targetLiquidity: targetLiquidity.toString(),
+      feePercentage,
+      feesEnabled,
+      bondingCurveType,
+      maxTokenSupply: maxTokenSupply.toString(),
+      liquidityLockPeriod: liquidityLockPeriod.toString(),
+      liquidityPoolPercentage,
+      initialPrice: initialPrice.toString(),
+      initialSupply: initialSupply.toString(),
+      feeRecipients,
+      totalFeesCollected: totalFeesCollected.toString(),
+      reserveRatio,
+  };
+}
+
 
 export const deserializeAllocationAndVesting = (data: Buffer) => {
   if (data.length < 8) {
@@ -293,169 +426,6 @@ export const deserializeAllocationAndVesting = (data: Buffer) => {
   };
 };
 
-export function deserializeCurveConfiguration(data: Buffer) {
-  // The data length will be variable due to the Vec<Recipient> field
-  let offset = 8; // Skip the 8-byte discriminator
-
-  // global_admin: Pubkey (32 bytes)
-  const globalAdmin = new PublicKey(data.slice(offset, offset + 32)).toBase58();
-  offset += 32;
-
-  // fee_admin: Pubkey (32 bytes)
-  const feeAdmin = new PublicKey(data.slice(offset, offset + 32)).toBase58();
-  offset += 32;
-
-  // initial_quorum: u64
-  const initialQuorum = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // use_dao: bool
-  const useDao = data.readUInt8(offset) !== 0;
-  offset += 1;
-
-  // governance: Pubkey (32 bytes)
-  const governance = new PublicKey(data.slice(offset, offset + 32)).toBase58();
-  offset += 32;
-
-  // dao_quorum: u16
-  const daoQuorum = data.readUInt16LE(offset);
-  offset += 2;
-
-  // locked_liquidity: bool
-  const lockedLiquidity = data.readUInt8(offset) !== 0;
-  offset += 1;
-
-  // target_liquidity: u64
-  const targetLiquidity = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // fee_percentage: u16
-  const feePercentage = data.readUInt16LE(offset);
-  offset += 2;
-
-  // fees_enabled: bool
-  const feesEnabled = data.readUInt8(offset) !== 0;
-  offset += 1;
-
-  // bonding_curve_type: BondingCurveType (u8 enum)
-  const bondingCurveType = data.readUInt8(offset);
-  offset += 1;
-
-  // max_token_supply: u64
-  const maxTokenSupply = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // liquidity_lock_period: i64
-  const liquidityLockPeriod = data.readBigInt64LE(offset);
-  offset += 8;
-
-  // liquidity_pool_percentage: u16
-  const liquidityPoolPercentage = data.readUInt16LE(offset);
-  offset += 2;
-
-  // initial_price: u64
-  const initialPrice = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // initial_supply: u64
-  const initialSupply = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // fee_recipients: Vec<Recipient>
-  // Vec is serialized as: 4 bytes (length) + data
-  const feeRecipientsLength = data.readUInt32LE(offset);
-  offset += 4;
-  
-  const feeRecipients = [];
-  for (let i = 0; i < feeRecipientsLength; i++) {
-      // Each Recipient contains: Pubkey (32 bytes) + percentage: u16 (2 bytes)
-      const recipientPubkey = new PublicKey(data.slice(offset, offset + 32)).toBase58();
-      offset += 32;
-      const percentage = data.readUInt16LE(offset);
-      offset += 2;
-      
-      feeRecipients.push({
-          pubkey: recipientPubkey,
-          percentage: percentage
-      });
-  }
-
-  // total_fees_collected: u64
-  const totalFeesCollected = data.readBigUInt64LE(offset);
-  offset += 8;
-
-  // reserve_ratio: u16
-  const reserveRatio = data.readUInt16LE(offset);
-  offset += 2;
-
-  return {
-      globalAdmin,
-      feeAdmin,
-      initialQuorum: initialQuorum.toString(),
-      useDao,
-      governance,
-      daoQuorum,
-      lockedLiquidity,
-      targetLiquidity: targetLiquidity.toString(),
-      feePercentage,
-      feesEnabled,
-      bondingCurveType,
-      maxTokenSupply: maxTokenSupply.toString(),
-      liquidityLockPeriod: liquidityLockPeriod.toString(),
-      liquidityPoolPercentage,
-      initialPrice: initialPrice.toString(),
-      initialSupply: initialSupply.toString(),
-      feeRecipients,
-      totalFeesCollected: totalFeesCollected.toString(),
-      reserveRatio,
-  };
-}
-
-export function calculateInitialReserveAmount(
-  initialPrice: number,
-  initialSupply: number,
-  reserveRatio: number,
-  tokenDecimals: number
-): number {
-  // Validate inputs
-  if (reserveRatio <= 0) {
-    throw new Error("InvalidAmount: reserve_ratio must be greater than 0");
-  }
-  if (initialSupply <= 0) {
-    throw new Error("InvalidAmount: initial_supply must be greater than 0");
-  }
-  if (initialPrice <= 0) {
-    throw new Error("InvalidAmount: initial_price must be greater than 0");
-  }
-
-  // Convert initial supply to base units (e.g., 1000_000_000 -> 1000)
-  const initialSupplyBase = Math.floor(initialSupply / Math.pow(10, tokenDecimals));
-  if (isNaN(initialSupplyBase) || !isFinite(initialSupplyBase)) {
-    throw new Error("OverFlowUnderFlowOccured: Division overflow");
-  }
-
-  // Calculate initial market cap
-  // Formula: initial_market_cap = initial_price * initial_supply_base
-  const initialMarketCap = initialPrice * initialSupplyBase;
-  if (isNaN(initialMarketCap) || !isFinite(initialMarketCap)) {
-    throw new Error("OverFlowUnderFlowOccured: Multiplication overflow");
-  }
-
-  // Calculate initial reserve amount
-  // Formula: initial_reserve = (initial_market_cap * reserve_ratio) / 10000
-  const initialReserve = (initialMarketCap * reserveRatio) / 10000;
-  if (isNaN(initialReserve) || !isFinite(initialReserve)) {
-    throw new Error("OverFlowUnderFlowOccured: Division overflow");
-  }
-
-  // Validate the result is within safe bounds (using Number.MAX_SAFE_INTEGER as approximation for u64)
-  if (initialReserve > Number.MAX_SAFE_INTEGER) {
-    throw new Error("OverFlowUnderFlowOccured: Result exceeds safe integer bounds");
-  }
-
-  return Math.floor(initialReserve);
-}
-
 /**
  * Calculates the cost to buy a certain amount of tokens based on a linear bonding curve.
  *
@@ -505,4 +475,33 @@ export function linearSellCost(amount: bigint, reserveRatio: number, totalSupply
   const reward = numerator / denominator;
 
   return reward;
+}
+
+export function calculateInitialReserveAmount(
+  initialPrice: bigint,
+  initialSupply: bigint,
+  reserveRatio: number,
+  tokenDecimals: number
+): bigint {
+  // Validate inputs
+  if (initialPrice <= 0n || initialSupply <= 0n) {
+      throw new Error("Initial price and supply must be positive");
+  }
+  if (!Number.isInteger(reserveRatio) || reserveRatio <= 0 || reserveRatio > 65535) {
+      throw new Error("Invalid reserve ratio");
+  }
+  if (!Number.isInteger(tokenDecimals) || tokenDecimals < 0 || tokenDecimals > 255) {
+      throw new Error("Invalid token decimals");
+  }
+
+  // Calculate initial supply base (whole tokens)
+  const divisor = 10n ** BigInt(tokenDecimals);
+  const initialSupplyBase = initialSupply / divisor;
+
+  // Calculate initial market cap
+  const initialMarketCap = initialPrice * initialSupplyBase;
+
+  // Calculate initial reserve
+  const initialReserve = (initialMarketCap * BigInt(reserveRatio)) / 10000n;
+  return initialReserve;
 }
