@@ -1,25 +1,12 @@
 import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { ExternalLink } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { SOL_NETWORK } from "../configs/env.config";
 import { formatNumberWithCommas } from "../utils";
 import { useEffect, useState } from "react";
-import { getBondingCurveAccounts } from "../utils/tokenUtils";
+import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/tokenUtils";
 import { PublicKey } from "@solana/web3.js";
-
-
-interface BondingCurve {
-    creator: string;
-    totalSupply: number;
-    reserveBalance: number;
-    reserveToken: number;
-    token: string;
-    reserveRatio: number;
-    bump: number;
-} 
 
 interface TokenCardProps {
     banner?: string;
@@ -57,7 +44,7 @@ export function TokenCard({
     decimals,
 }: TokenCardProps) {
     const navigate = useNavigate();
-    const [bondingCurve, setBondingCurve] = useState<BondingCurve|null>(null);
+    const [bondingCurve, setBondingCurve] = useState<BondingCurveTokenInfo|null>(null);
     useEffect(()=>{
         const fetchBondingCurveAccounts = async () => {
             if(!address) return;
@@ -130,10 +117,15 @@ export function TokenCard({
                     </div>
                 </div>
                 <div className="flex gap-2 mt-2">
-                    <Button onClick={(e) => {
-                        e.stopPropagation();
-                        navigate({ to: `/token/${value}` })
-                    }} variant="outline" className="flex-1 rounded-md text-sm border-gray-300 py-2">View Details</Button>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate({ to: `/token/${value}` })
+                        }} 
+                        className="flex-1 rounded-md text-sm border-gray-300 py-2 hover:bg-gray-100 px-4 py-2 border font-semibold"
+                    >
+                        View Details
+                    </button>
                     {/* <Button onClick={(e) => {
                         e.stopPropagation();
                         
