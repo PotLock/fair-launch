@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MyTokenCard } from "../components/MyTokenCard";
-import { WalletButton } from "../components/WalletButton";
+import WalletButton from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { TokenInfo } from "../utils/tokenUtils";

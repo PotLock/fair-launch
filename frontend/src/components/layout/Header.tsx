@@ -1,26 +1,36 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { IconChevronDown } from '@tabler/icons-react';
-import { WalletButton } from '../WalletButton';
+import WalletButton from '../WalletButton';
 import { PlusIcon } from 'lucide-react';
+import { useWalletContext } from '../../context/WalletProviderContext';
 
 interface NetworkOption {
     id: string;
     name: string;
     icon: string;
+    chainType: 'solana' | 'near' | 'evm';
 }
 
-
 export default function Header() {
-    const [selectedNetwork, setSelectedNetwork] = useState('Solana');
+    const { currentChain, setCurrentChain, chains } = useWalletContext();
     const [isNetworkDropdownOpen, setIsNetworkDropdownOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    const networks: NetworkOption[] = [
-        { id: 'solana', name: 'Solana', icon: '/chains/solana.svg' }
-    ];
+    // Map chains from context to network options
+    const networks: NetworkOption[] = chains.map(chain => ({
+        id: chain.id,
+        name: chain.name,
+        icon: chain.icon,
+        chainType: chain.id as 'solana' | 'near' | 'evm'
+    }));
 
-    const selectedNetworkData = networks.find(n => n.name === selectedNetwork) || networks[0];
+    const selectedNetworkData = networks.find(n => n.chainType === currentChain) || networks[0];
+
+    const handleNetworkChange = (network: NetworkOption) => {
+        setCurrentChain(network.chainType);
+        setIsNetworkDropdownOpen(false);
+    };
 
     return (
         <header className="border-b border-gray-200 bg-white">
@@ -62,12 +72,9 @@ export default function Header() {
                                         <button
                                             key={network.id}
                                             className={`w-full flex items-center justify-start space-x-2 px-3 py-2 hover:bg-gray-50 ${
-                                                network.name === selectedNetwork ? 'bg-gray-50' : ''
+                                                network.chainType === currentChain ? 'bg-gray-50' : ''
                                             }`}
-                                            onClick={() => {
-                                                setSelectedNetwork(network.name);
-                                                setIsNetworkDropdownOpen(false);
-                                            }}
+                                            onClick={() => handleNetworkChange(network)}
                                         >
                                             <img src={network.icon} alt={network.name} className='w-4 h-4' />
                                             <span className="text-sm">{network.name}</span>

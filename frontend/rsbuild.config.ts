@@ -25,6 +25,13 @@ export default defineConfig({
       stream: "stream-browserify",
       buffer: "buffer",
       process: "process/browser",
+      // Add fallbacks for Node.js modules that might be required by dependencies
+      crypto: "crypto-browserify",
+      fs: false,
+      path: false,
+      os: false,
+      // Handle algosdk specifically
+      algosdk: false,
     },
   },
   html: {
