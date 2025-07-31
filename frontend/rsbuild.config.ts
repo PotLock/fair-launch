@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   source: {
     define: {
+      'process.env.PUBLIC_SOL_PRIVATE_KEY': JSON.stringify(process.env.PUBLIC_SOL_PRIVATE_KEY),
       'process.env.PUBLIC_HELIUS_API_KEY': JSON.stringify(process.env.PUBLIC_HELIUS_API_KEY),
       'process.env.PUBLIC_API_URL': JSON.stringify(process.env.PUBLIC_API_URL),
       'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),

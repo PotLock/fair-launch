@@ -1,3 +1,4 @@
+import { OmniAddress } from 'omni-bridge-sdk';
 import React from 'react';
 
 export interface TokenTemplate {
@@ -293,4 +294,13 @@ export interface StepProps {
     isExpanded: boolean;
     stepKey: string;
     onHeaderClick: (stepKey: string) => void;
+}
+
+export interface OmniTransferMessage {
+    tokenAddress: OmniAddress
+    amount: bigint
+    fee: bigint
+    nativeFee: bigint
+    recipient: OmniAddress
+    message?: string
 }

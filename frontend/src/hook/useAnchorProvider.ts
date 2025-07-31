@@ -7,7 +7,6 @@ import { Keypair } from "@solana/web3.js";
 export default function useAnchorProvider() {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
-  
   // Return null if wallet or connection is not available
   if (!connection || !anchorWallet) {
     return null;
@@ -35,6 +34,6 @@ export default function useAnchorProvider() {
     providerProgram,
     program,
     governanceKeypair,
-    mintKeypair,
+    mintKeypair
   };
 }
