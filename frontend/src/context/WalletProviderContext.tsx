@@ -2,8 +2,9 @@ import React, { ReactNode, useMemo, createContext, useContext, useState } from "
 import {
   ConnectionProvider,
   WalletProvider,
+  useWallet,
 } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import * as walletAdapterWallets from "@solana/wallet-adapter-wallets";
 import { solNetwork } from "../utils/sol";
 import { clusterApiUrl } from "@solana/web3.js";
@@ -13,6 +14,8 @@ import { mainnet, sepolia, polygon, arbitrum, base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { WalletSelectorProvider } from "../components/NearWalletProvider";
+import { nearWalletConfig } from "../configs/nearWalletConfig";
 
 export type ChainType = 'solana' | 'near' | 'evm';
 
@@ -27,6 +30,12 @@ interface WalletContextType {
   currentChain: ChainType;
   setCurrentChain: (chain: ChainType) => void;
   chains: ChainInfo[];
+  // Solana wallet functions
+  connectSolana: () => void;
+  disconnectSolana: () => void;
+  isSolanaConnected: boolean;
+  solanaPublicKey: string | null;
+  solanaWalletName: string | null;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -37,6 +46,28 @@ export const useWalletContext = () => {
     throw new Error('useWalletContext must be used within a WalletContextProvider');
   }
   return context;
+};
+
+// Custom hook for Solana wallet operations
+const useSolanaWallet = () => {
+  const { connected, publicKey, wallet, disconnect } = useWallet();
+  const { setVisible } = useWalletModal();
+
+  const connectSolana = () => {
+    setVisible(true);
+  };
+
+  const disconnectSolana = () => {
+    disconnect();
+  };
+
+  return {
+    connectSolana,
+    disconnectSolana,
+    isSolanaConnected: connected,
+    solanaPublicKey: publicKey?.toString() || null,
+    solanaWalletName: wallet?.adapter?.name || null,
+  };
 };
 
 interface IWalletContextProvider {
@@ -93,11 +124,16 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
 
   const endpoint = useMemo(() => clusterApiUrl(solNetwork()), [solNetwork()]);
 
-
   const contextValue = useMemo(() => ({
     currentChain,
     setCurrentChain,
-    chains
+    chains,
+    // Placeholder values for Solana wallet functions
+    connectSolana: () => {},
+    disconnectSolana: () => {},
+    isSolanaConnected: false,
+    solanaPublicKey: null,
+    solanaWalletName: null,
   }), [currentChain, chains]);
 
   return (
@@ -108,13 +144,38 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
             <ConnectionProvider endpoint={endpoint}>
               <WalletProvider wallets={wallets} autoConnect={true}>
                 <WalletModalProvider>
-                  {children}
+                  <WalletSelectorProvider config={nearWalletConfig}>
+                    <SolanaWalletWrapper>
+                      {children}
+                    </SolanaWalletWrapper>
+                  </WalletSelectorProvider>
                 </WalletModalProvider>
               </WalletProvider>
             </ConnectionProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
+    </WalletContext.Provider>
+  );
+};
+
+// Wrapper component to provide Solana wallet functions
+const SolanaWalletWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const solanaWallet = useSolanaWallet();
+  const context = useContext(WalletContext);
+  
+  if (!context) {
+    throw new Error('SolanaWalletWrapper must be used within WalletContextProvider');
+  }
+
+  const enhancedContextValue = {
+    ...context,
+    ...solanaWallet,
+  };
+
+  return (
+    <WalletContext.Provider value={enhancedContextValue}>
+      {children}
     </WalletContext.Provider>
   );
 };

@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey, Transaction, TransactionSignature, Keypair, Commitment, sendAndConfirmTransaction } from '@solana/web3.js';
-import { 
-  getClient, 
+import { Connection, PublicKey } from '@solana/web3.js';
+import {  
   ChainKind, 
   omniAddress,
   OmniBridgeAPI,
@@ -14,8 +13,7 @@ import {
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
 import { SOL_NETWORK } from '../configs/env.config';
-import { initTransfer } from '../utils/sol';
-import { logMetadata,isBridgedToken } from '../utils/sol';
+import { initTransfer, logMetadata, isBridgedToken, deployToken } from '../utils/omniBrigde';
 import useAnchorProvider from './useAnchorProvider';
 
 // Interface for token info including balance
@@ -249,15 +247,14 @@ export const useBridge = () => {
       const transfer = {
         tokenAddress,
         amount,
+        fee: BigInt(1000),
+        nativeFee: BigInt(1000),
         recipient,
-        fee: BigInt(0),
-        nativeFee: BigInt(0),
-        message: "test",
       };
 
 
       // 8. Send tokens using omniTransfer
-      const result = await initTransfer(transfer, anchorProvider?.program as any)
+      const result = await omniTransfer(anchorProvider?.program as any,transfer)
       console.log('[transferEvent]', result);
 
       if (!result) {
@@ -356,7 +353,12 @@ export const useBridge = () => {
       const api = new OmniBridgeAPI({
         baseUrl: 'https://testnet.api.bridge.nearone.org',
       });
-      const fee = await api.getFee(sender as any, recipient as any, tokenAddress as any);
+
+      const senderAddress = omniAddress(ChainKind.Sol, sender)
+      const recipientAddress = omniAddress(ChainKind.Near, recipient)
+      const tokenAddressSol = omniAddress(ChainKind.Sol, tokenAddress)
+
+      const fee = await api.getFee(senderAddress, recipientAddress, tokenAddressSol);
       return fee;
     } catch (error) {
       console.error('Error getting fee estimation:', error);

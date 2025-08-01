@@ -1,36 +1,10 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { IconChevronDown } from '@tabler/icons-react';
 import WalletButton from '../WalletButton';
 import { PlusIcon } from 'lucide-react';
-import { useWalletContext } from '../../context/WalletProviderContext';
-
-interface NetworkOption {
-    id: string;
-    name: string;
-    icon: string;
-    chainType: 'solana' | 'near' | 'evm';
-}
 
 export default function Header() {
-    const { currentChain, setCurrentChain, chains } = useWalletContext();
-    const [isNetworkDropdownOpen, setIsNetworkDropdownOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    // Map chains from context to network options
-    const networks: NetworkOption[] = chains.map(chain => ({
-        id: chain.id,
-        name: chain.name,
-        icon: chain.icon,
-        chainType: chain.id as 'solana' | 'near' | 'evm'
-    }));
-
-    const selectedNetworkData = networks.find(n => n.chainType === currentChain) || networks[0];
-
-    const handleNetworkChange = (network: NetworkOption) => {
-        setCurrentChain(network.chainType);
-        setIsNetworkDropdownOpen(false);
-    };
 
     return (
         <header className="border-b border-gray-200 bg-white">
@@ -56,33 +30,6 @@ export default function Header() {
                     </nav>
 
                     <div className="hidden md:flex items-center space-x-4">
-                        <div className="relative">
-                            <button 
-                                className="flex items-center space-x-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-                                onClick={() => setIsNetworkDropdownOpen(!isNetworkDropdownOpen)}
-                            >
-                                <img src={selectedNetworkData.icon} alt={selectedNetworkData.name} className='w-4 h-4' />
-                                <span className='text-sm'>{selectedNetworkData.name}</span>
-                                <IconChevronDown className={`w-4 h-4 transition-transform duration-200 ${isNetworkDropdownOpen ? 'transform rotate-180' : ''}`} />
-                            </button>
-                            
-                            {isNetworkDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
-                                    {networks.map((network) => (
-                                        <button
-                                            key={network.id}
-                                            className={`w-full flex items-center justify-start space-x-2 px-3 py-2 hover:bg-gray-50 ${
-                                                network.chainType === currentChain ? 'bg-gray-50' : ''
-                                            }`}
-                                            onClick={() => handleNetworkChange(network)}
-                                        >
-                                            <img src={network.icon} alt={network.name} className='w-4 h-4' />
-                                            <span className="text-sm">{network.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
                         <WalletButton />
                     </div>
                     

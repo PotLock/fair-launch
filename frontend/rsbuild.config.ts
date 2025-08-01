@@ -14,7 +14,6 @@ export default defineConfig({
       'process.env.PUBLIC_API_URL': JSON.stringify(process.env.PUBLIC_API_URL),
       'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),
       'process.env.PUBLIC_JWT_PINATA_SECRET': JSON.stringify(process.env.PUBLIC_JWT_PINATA_SECRET),
-      'process.browser': true,
       'global':{}
     },
     entry: {
@@ -26,13 +25,11 @@ export default defineConfig({
       stream: "stream-browserify",
       buffer: "buffer",
       process: "process/browser",
-      // Add fallbacks for Node.js modules that might be required by dependencies
       crypto: "crypto-browserify",
       fs: false,
       path: false,
       os: false,
-      // Handle algosdk specifically
-      algosdk: false,
+      algosdk: false
     },
   },
   html: {

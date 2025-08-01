@@ -1,103 +1,216 @@
 import { useState } from 'react';
-import { useWalletContext } from '../context/WalletProviderContext';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useNearWallet } from './NearWalletProvider';
 import WalletProfileModal from './WalletProfileModal';
+import SignInModal from './SignInModal';
+import { ChevronDown, User, LogOut } from 'lucide-react';
+import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+
+interface ConnectedWallet {
+  type: 'solana' | 'near' | 'evm';
+  address: string;
+  displayName: string;
+}
 
 const WalletButton: React.FC = () => {
-  const { 
-    currentChain
-  } = useWalletContext();
   const { address, isConnected: evmConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { connected: solanaConnected } = useWallet();
+  const { disconnect: disconnectEVM } = useDisconnect();
+  const { connected: solanaConnected, disconnect: disconnectSolana, publicKey } = useWallet();
   
   // Get NEAR wallet from NearWalletProvider
   const nearWallet = useNearWallet();
   
-  // State for profile modal
+  // State for modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
-  const handleConnect = async () => {
-    switch (currentChain) {
-      case 'evm':
-        if (!evmConnected) {
-          connect({ connector: connectors[0] });
-        }
-        break;
-      case 'solana':
-        // Solana wallet connection is handled by WalletMultiButton
-        break;
-      case 'near':
-        if (!nearWallet?.signedAccountId && nearWallet) {
-          try {
-            nearWallet.signIn();
-          } catch (error) {
-            console.error('Failed to connect NEAR wallet:', error);
-          }
-        }
-        break;
-    }
+  const isAnyWalletConnected = () => {
+    return evmConnected || solanaConnected || !!nearWallet?.signedAccountId;
   };
 
-  const isWalletConnected = () => {
-    switch (currentChain) {
-      case 'evm':
-        return evmConnected;
-      case 'solana':
-        return solanaConnected;
-      case 'near':
-        return !!nearWallet?.signedAccountId;
-      default:
-        return false;
+  const getConnectedWallets = (): ConnectedWallet[] => {
+    const wallets: ConnectedWallet[] = [];
+    
+    if (solanaConnected && publicKey) {
+      wallets.push({
+        type: 'solana',
+        address: publicKey.toString(),
+        displayName: 'Solana Wallet'
+      });
     }
+    
+    if (nearWallet?.signedAccountId) {
+      wallets.push({
+        type: 'near',
+        address: nearWallet.signedAccountId,
+        displayName: 'NEAR Wallet'
+      });
+    }
+    
+    if (evmConnected && address) {
+      wallets.push({
+        type: 'evm',
+        address: address,
+        displayName: 'MetaMask'
+      });
+    }
+    
+    return wallets;
   };
 
-  const getAccountInfo = () => {
-    switch (currentChain) {
-      case 'evm':
-        return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
-      case 'solana':
-        return 'Solana Wallet';
-      case 'near':
-        return nearWallet?.signedAccountId && nearWallet.signedAccountId.length > 60 ? `${nearWallet.signedAccountId.slice(0, 6)}...${nearWallet.signedAccountId.slice(-4)}` : nearWallet?.signedAccountId || '';
-      default:
-        return '';
-    }
+  const getConnectedWalletsCount = () => {
+    let count = 0;
+    if (evmConnected) count++;
+    if (solanaConnected) count++;
+    if (nearWallet?.signedAccountId) count++;
+    return count;
   };
 
   const getButtonText = () => {
-    if (isWalletConnected()) {
-      const accountInfo = getAccountInfo();
-      return accountInfo;
+    if (isAnyWalletConnected()) {
+      const count = getConnectedWalletsCount();
+      if (count === 1) {
+        // Show the connected wallet address
+        if (evmConnected && address) {
+          return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+        if (solanaConnected) {
+          return 'Solana Wallet';
+        }
+        if (nearWallet?.signedAccountId) {
+          return nearWallet.signedAccountId.length > 60 
+            ? `${nearWallet.signedAccountId.slice(0, 6)}...${nearWallet.signedAccountId.slice(-4)}` 
+            : nearWallet.signedAccountId;
+        }
+      } else {
+        // Show count of connected wallets
+        return `${count} Wallets Connected`;
+      }
     }
     
-    return 'Connect Wallet';
+    return 'Sign In';
   };
 
   const handleWalletButtonClick = () => {
-    if (isWalletConnected()) {
+    if (isAnyWalletConnected()) {
       setIsProfileModalOpen(true);
     } else {
-      handleConnect();
+      setIsSignInModalOpen(true);
     }
   };
+
+  const handleDisconnectWallet = async (walletType: 'solana' | 'near' | 'evm') => {
+    switch (walletType) {
+      case 'solana':
+        disconnectSolana();
+        break;
+      case 'near':
+        if (nearWallet) {
+          try {
+            await nearWallet.signOut();
+          } catch (error) {
+            console.error('Failed to disconnect NEAR wallet:', error);
+          }
+        }
+        break;
+      case 'evm':
+        disconnectEVM();
+        break;
+    }
+  };
+
+  const connectedWallets = getConnectedWallets();
+
+  if (isAnyWalletConnected()) {
+    return (
+      <div className="flex flex-col gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center space-x-2">
+              <User className="w-4 h-4" />
+              <span>{getButtonText()}</span>
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 bg-white">
+            {connectedWallets.map((wallet, index) => (
+              <DropdownMenuItem key={index} className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <img 
+                    src={wallet.type === 'solana' ? '/chains/solana.svg' : 
+                         wallet.type === 'near' ? '/chains/near.png' : 
+                         '/icons/metamask.svg'} 
+                    alt={wallet.displayName} 
+                    className="w-4 h-4" 
+                  />
+                  {/* <span className="text-sm">{wallet.displayName}</span> */}
+                </div>
+                <span className="text-xs text-gray-500 font-mono">
+                  {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                </span>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className='cursor-pointer' onClick={() => setIsProfileModalOpen(true)}>
+              <User className="w-4 h-4" />
+              Manage Wallets
+            </DropdownMenuItem>
+            <DropdownMenuItem className='cursor-pointer' onClick={() => setIsSignInModalOpen(true)}>
+              <User className="w-4 h-4" />
+              Add More Wallets
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {connectedWallets.map((wallet, index) => (
+              <DropdownMenuItem 
+                key={`disconnect-${index}`} 
+                onClick={() => handleDisconnectWallet(wallet.type)}
+                className="text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Disconnect {wallet.displayName}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        {/* Sign In Modal */}
+        <SignInModal
+          isOpen={isSignInModalOpen}
+          onClose={() => setIsSignInModalOpen(false)}
+        />
+        
+        {/* Profile Modal for all chains */}
+        <WalletProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
       {/* Wallet Connection */}
-      {currentChain === 'solana' ? (
-        <WalletMultiButton />
-      ) : (
-        <button
-          onClick={handleWalletButtonClick}
-          className="w-full bg-white border border-gray-200 px-4 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-        >
-          {getButtonText()}
-        </button>
-      )}
+      <button
+        onClick={handleWalletButtonClick}
+        className="w-full bg-white border border-gray-200 px-4 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+      >
+        {getButtonText()}
+      </button>
+      
+      {/* Sign In Modal */}
+      <SignInModal
+        isOpen={isSignInModalOpen}
+        onClose={() => setIsSignInModalOpen(false)}
+      />
       
       {/* Profile Modal for all chains */}
       <WalletProfileModal

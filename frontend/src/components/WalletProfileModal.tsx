@@ -17,92 +17,69 @@ interface WalletProfileModalProps {
   onClose: () => void;
 }
 
+interface ConnectedWallet {
+  type: 'solana' | 'near' | 'evm';
+  address: string;
+  displayName: string;
+}
+
 const WalletProfileModal: React.FC<WalletProfileModalProps> = ({ 
   isOpen, 
   onClose 
 }) => {
-  const { currentChain } = useWalletContext();
   const { address, isConnected: evmConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { publicKey, connected: solanaConnected, disconnect: disconnectSolana } = useWallet();
   const nearWallet = useNearWallet();
   const [copied, setCopied] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string>('');
 
-  const isWalletConnected = () => {
-    switch (currentChain) {
-      case 'evm':
-        return evmConnected;
-      case 'solana':
-        return solanaConnected;
-      case 'near':
-        return !!nearWallet?.signedAccountId;
-      default:
-        return false;
+  const getConnectedWallets = (): ConnectedWallet[] => {
+    const wallets: ConnectedWallet[] = [];
+    
+    if (solanaConnected && publicKey) {
+      wallets.push({
+        type: 'solana',
+        address: publicKey.toString(),
+        displayName: 'Solana Wallet'
+      });
+    }
+    
+    if (nearWallet?.signedAccountId) {
+      wallets.push({
+        type: 'near',
+        address: nearWallet.signedAccountId,
+        displayName: 'NEAR Wallet'
+      });
+    }
+    
+    if (evmConnected && address) {
+      wallets.push({
+        type: 'evm',
+        address: address,
+        displayName: 'MetaMask'
+      });
+    }
+    
+    return wallets;
+  };
+
+  const handleCopyAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setCopiedAddress('');
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy address:', error);
     }
   };
 
-  const getAccountInfo = () => {
-    switch (currentChain) {
-      case 'evm':
-        return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
-      case 'solana':
-        return publicKey ? `${publicKey.toString().slice(0, 6)}...${publicKey.toString().slice(-4)}` : '';
-      case 'near':
-        return nearWallet?.signedAccountId && nearWallet.signedAccountId.length > 60 ? `${nearWallet.signedAccountId.slice(0, 6)}...${nearWallet.signedAccountId.slice(-4)}` : nearWallet?.signedAccountId || '';
-      default:
-        return '';
-    }
-  };
-
-  const getFullAddress = () => {
-    switch (currentChain) {
-      case 'evm':
-        return address || '';
-      case 'solana':
-        return publicKey ? publicKey.toString() : '';
-      case 'near':
-        return nearWallet?.signedAccountId || '';
-      default:
-        return '';
-    }
-  };
-
-  const handleCopyAddress = async () => {
-    const address = getFullAddress();
-    if (address) {
-      try {
-        await navigator.clipboard.writeText(address);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        console.error('Failed to copy address:', error);
-      }
-    }
-  };
-
-  const handleChangeWallet = () => {
-    switch (currentChain) {
-      case 'evm':
-        onClose();
-        break;
-      case 'solana':
-        // Solana wallet change is handled by the wallet adapter
-        onClose();
-        break;
-      case 'near':
-        if (nearWallet) {
-          nearWallet.signIn();
-        }
-        onClose();
-        break;
-    }
-  };
-
-  const handleDisconnect = async () => {
-    switch (currentChain) {
-      case 'evm':
-        disconnect();
-        break;
+  const handleDisconnectWallet = async (walletType: 'solana' | 'near' | 'evm') => {
+    switch (walletType) {
       case 'solana':
         disconnectSolana();
         break;
@@ -115,11 +92,15 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
           }
         }
         break;
+      case 'evm':
+        disconnect();
+        break;
     }
-    onClose();
   };
 
-  if (!isWalletConnected()) {
+  const connectedWallets = getConnectedWallets();
+
+  if (connectedWallets.length === 0) {
     return null;
   }
 
@@ -128,48 +109,68 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">
-            Wallet Profile
+            Connected Wallets ({connectedWallets.length})
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Account Info */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Connected Account</p>
-            <p className="font-mono text-sm bg-gray-100 px-3 py-2 rounded">
-              {getAccountInfo()}
-            </p>
+          {/* Connected Wallets List */}
+          <div className="space-y-3">
+            {connectedWallets.map((wallet, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <img 
+                      src={wallet.type === 'solana' ? '/chains/solana.svg' : 
+                           wallet.type === 'near' ? '/chains/near.png' : 
+                           '/icons/metamask.svg'} 
+                      alt={wallet.displayName} 
+                      className="w-5 h-5" 
+                    />
+                    <span className="font-medium text-sm">{wallet.displayName}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDisconnectWallet(wallet.type)}
+                    className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Address</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopyAddress(wallet.address)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      {copied && copiedAddress === wallet.address ? 'Copied!' : 'Copy'}
+                    </Button>
+                  </div>
+                  <p className="font-mono text-xs bg-gray-100 px-2 py-1 rounded break-all">
+                    {wallet.address.length > 40 
+                      ? `${wallet.address.slice(0, 20)}...${wallet.address.slice(-20)}` 
+                      : wallet.address}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-4 border-t border-gray-200">
             <Button
               variant="ghost"
               className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-gray-50"
-              onClick={handleCopyAddress}
-            >
-              <Copy className="w-4 h-4 mr-3" />
-              <span className="font-medium">
-                {copied ? 'Address copied!' : 'Copy address'}
-              </span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-gray-50"
-              onClick={handleChangeWallet}
+              onClick={onClose}
             >
               <RefreshCw className="w-4 h-4 mr-3" />
-              <span className="font-medium">Change wallet</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-left h-auto py-3 px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={handleDisconnect}
-            >
-              <LogOut className="w-4 h-4 mr-3" />
-              <span className="font-medium">Disconnect</span>
+              <span className="font-medium">Close</span>
             </Button>
           </div>
         </div>
