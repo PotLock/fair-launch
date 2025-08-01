@@ -13,7 +13,7 @@ import {
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
 import { SOL_NETWORK } from '../configs/env.config';
-import { initTransfer, logMetadata, isBridgedToken, deployToken } from '../utils/omniBrigde';
+import { logMetadata, isBridgedToken } from '../utils/omniBrigde';
 import useAnchorProvider from './useAnchorProvider';
 
 // Interface for token info including balance
