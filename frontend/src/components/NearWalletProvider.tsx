@@ -60,6 +60,7 @@ export interface WalletSelectorProviderValue {
   walletSelector: Promise<WalletSelector> | null;
   signedAccountId: string | null;
   wallet: Wallet | null;
+  isInitialized: boolean;
   signIn: () => void;
   signOut: () => Promise<void>;
   viewFunction: (params: ViewMethodParams) => Promise<unknown>;
@@ -95,9 +96,10 @@ export function WalletSelectorProvider({
   children: React.ReactNode;
   config: SetupParams;
 }) {
-  const walletSelector = setupWalletSelector(config);
+  const [walletSelector, setWalletSelector] = useState<Promise<WalletSelector> | null>(null);
   const [signedAccountId, setSignedAccountId] = useState<string | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const networkURL =
     typeof config.network === "string"
@@ -113,32 +115,65 @@ export function WalletSelectorProvider({
     rpcProviderUrls.map((url) => new providers.JsonRpcProvider({ url })) as any
   );
 
+  // Initialize wallet selector
   useEffect(() => {
-    walletSelector.then(async (selector) => {
-      selector.subscribeOnAccountChange(async (signedAccount) => {
-        setSignedAccountId(signedAccount || null);
-        if (signedAccount) {
-          const walletInstance = await selector.wallet();
-          setWallet(walletInstance);
-        } else {
-          setWallet(null);
-        }
-      });
-    });
+    try {
+      const selector = setupWalletSelector(config);
+      setWalletSelector(selector);
+      setIsInitialized(true);
+    } catch (error) {
+      console.error("Failed to setup wallet selector:", error);
+      setIsInitialized(false);
+    }
   }, [config]);
+
+  useEffect(() => {
+    walletSelector?.then(async (selector) => {
+      try {
+        // Subscribe to account changes
+        selector.subscribeOnAccountChange(async (signedAccount) => {
+          setSignedAccountId(signedAccount || null);
+          if (signedAccount) {
+            try {
+              const walletInstance = await selector.wallet();
+              setWallet(walletInstance);
+            } catch (error) {
+              console.error("Failed to get wallet instance:", error);
+              setWallet(null);
+            }
+          } else {
+            setWallet(null);
+          }
+        });
+      } catch (error) {
+        console.error("Failed to initialize wallet selector:", error);
+      }
+    }).catch((error) => {
+      console.error("Failed to setup wallet selector:", error);
+    });
+  }, [walletSelector]);
 
   /**
    * Displays a modal for the user to sign in
    * @returns {Promise<void>} - a promise that resolves when the modal is opened
    */
   const signIn = async () => {
-    const ws = await walletSelector;
-    const modalInstance = setupModal(ws!, {
-      contractId: config.createAccessKeyFor?.contractId || undefined,
-      methodNames: config.createAccessKeyFor?.methodNames || [],
-      theme: "light"
-    });
-    modalInstance.show();
+    try {
+      if (!walletSelector) {
+        throw new WalletError("Wallet selector not initialized");
+      }
+      
+      const ws = await walletSelector;
+      const modalInstance = setupModal(ws, {
+        contractId: config.createAccessKeyFor?.contractId || undefined,
+        methodNames: config.createAccessKeyFor?.methodNames || [],
+        theme: "light"
+      });
+      modalInstance.show();
+    } catch (error) {
+      console.error("Failed to initialize NEAR wallet sign in:", error);
+      throw new WalletError(`Failed to sign in: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   /**
@@ -371,6 +406,7 @@ export function WalletSelectorProvider({
     walletSelector,
     signedAccountId,
     wallet,
+    isInitialized,
     signIn,
     signOut,
     viewFunction,

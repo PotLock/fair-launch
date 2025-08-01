@@ -31,6 +31,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
   const { connectSolana, disconnectSolana, isSolanaConnected, solanaPublicKey } = useWalletContext();
   const [connectedWallets, setConnectedWallets] = useState<ConnectedWallet[]>([]);
+  const [isConnectingNEAR, setIsConnectingNEAR] = useState(false);
 
   // Update connected wallets when wallet states change
   React.useEffect(() => {
@@ -77,12 +78,27 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const handleConnectNEAR = async () => {
     if (nearWallet) {
       try {
+        setIsConnectingNEAR(true);
+        
+        // Check if wallet is initialized
+        if (!nearWallet.isInitialized) {
+          alert('NEAR wallet is still initializing. Please wait a moment and try again.');
+          return;
+        }
+        
         await nearWallet.signIn();
         // Close modal after successful connection
         onClose();
       } catch (error) {
         console.error('Failed to connect NEAR wallet:', error);
+        // You might want to show a toast or alert here
+        alert(`Failed to connect NEAR wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsConnectingNEAR(false);
       }
+    } else {
+      console.error('NEAR wallet not available');
+      alert('NEAR wallet is not available. Please try refreshing the page.');
     }
   };
 
@@ -216,8 +232,9 @@ const SignInModal: React.FC<SignInModalProps> = ({
                     size="sm"
                     onClick={handleConnectNEAR}
                     className="h-8 px-3"
+                    disabled={isConnectingNEAR || !nearWallet?.isInitialized}
                   >
-                    Connect
+                    {isConnectingNEAR ? 'Connecting...' : nearWallet?.isInitialized ? 'Connect' : 'Initializing...'}
                   </Button>
                 )}
               </div>

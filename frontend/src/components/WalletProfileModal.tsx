@@ -161,18 +161,6 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
               </div>
             ))}
           </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-2 pt-4 border-t border-gray-200">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-gray-50"
-              onClick={onClose}
-            >
-              <RefreshCw className="w-4 h-4 mr-3" />
-              <span className="font-medium">Close</span>
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

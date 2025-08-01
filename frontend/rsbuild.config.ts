@@ -14,7 +14,7 @@ export default defineConfig({
       'process.env.PUBLIC_API_URL': JSON.stringify(process.env.PUBLIC_API_URL),
       'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),
       'process.env.PUBLIC_JWT_PINATA_SECRET': JSON.stringify(process.env.PUBLIC_JWT_PINATA_SECRET),
-      'global':{}
+      'global': 'globalThis'
     },
     entry: {
       index: "./src/main.tsx"

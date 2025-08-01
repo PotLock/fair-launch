@@ -19,6 +19,8 @@
     "@near-wallet-selector/core": "^9.2.0",
     "@near-wallet-selector/here-wallet": "^9.2.0",
     "@near-wallet-selector/meteor-wallet": "^9.2.0",
+    "@near-wallet-selector/meteor-wallet-app": "^9.2.0",
+    "@near-wallet-selector/my-near-wallet": "^9.2.0",
     "@near-wallet-selector/nightly": "^9.2.0",
     "@near-wallet-selector/react-hook": "^9.2.0",
     "@near-wallet-selector/sender": "^9.2.0",
