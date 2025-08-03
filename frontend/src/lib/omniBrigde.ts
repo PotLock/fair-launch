@@ -24,8 +24,8 @@ import { WalletSelectorProviderValue } from "../components/NearWalletProvider";
 // ============= Bridge =============
 
 const MPL_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
-const wormholeProgramId = new PublicKey("3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5")
-const lockerAddress = "omni.n-bridge.testnet"
+export const wormholeProgramId = new PublicKey("3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5")
+export const lockerAddress = "omni.n-bridge.testnet"
 
 const GAS = {
     LOG_METADATA: BigInt(3e14), // 3 TGas
@@ -122,35 +122,33 @@ export async function getTokenProgramForMint(mint: PublicKey, connection: Connec
 export async function logMetadata(token: OmniAddress, program: anchor.Program, payer?: Keypair): Promise<string> {
   const tokenPublicKey = new PublicKey(token.split(":")[1])
 
-  const programBridge = new Program(
-    BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
-    program.provider as any
-  );
-
   const tokenProgram = await getTokenProgramForMint(tokenPublicKey, program.provider.connection)
   
   const wormholeMessage = Keypair.generate()
+
   const [metadata] = PublicKey.findProgramAddressSync(
     [Buffer.from("metadata", "utf-8"), MPL_PROGRAM_ID.toBuffer(), tokenPublicKey.toBuffer()],
     MPL_PROGRAM_ID,
   )
 
-  const [vault] = vaultId(programBridge.programId, tokenPublicKey)
+  console.log("metadata", metadata.toBase58())
+
+  const [vault] = vaultId(program.programId, tokenPublicKey)
 
   try {
-    const tx = await programBridge.methods
+    const tx = await program.methods
       .logMetadata()
       .accountsStrict({
-        authority: authority(programBridge.programId)[0],
+        authority: authority(program.programId)[0],
         mint: tokenPublicKey,
         metadata,
         vault,
         common: {
           payer: payer?.publicKey || program.provider.publicKey!,
-          config: config(programBridge.programId)[0],
+          config: config(program.programId)[0],
           bridge: wormholeBridgeId(wormholeProgramId)[0],
           feeCollector: wormholeFeeCollectorId(wormholeProgramId)[0],
-          sequence: wormholeSequenceId(wormholeProgramId, programBridge.programId)[0],
+          sequence: wormholeSequenceId(wormholeProgramId, program.programId)[0],
           clock: SYSVAR_CLOCK_PUBKEY,
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
@@ -171,10 +169,6 @@ export async function logMetadata(token: OmniAddress, program: anchor.Program, p
 }
 
 export async function isBridgedToken(token: PublicKey, program: anchor.Program): Promise<boolean> {
-  const programBridge = new Program(
-    BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
-    program.provider as any
-  );
   const mintInfo = await program.provider.connection.getParsedAccountInfo(token)
 
   console.log('mintInfo', mintInfo)
@@ -194,7 +188,7 @@ export async function isBridgedToken(token: PublicKey, program: anchor.Program):
 
   return (
     data.parsed.info.mintAuthority &&
-    data.parsed.info.mintAuthority.toString() === authority(programBridge.programId)[0].toString()
+    data.parsed.info.mintAuthority.toString() === authority(program.programId)[0].toString()
   )
 }
 
@@ -292,43 +286,4 @@ export async function initTransfer(transfer: OmniTransferMessage, program: ancho
   } catch (e) {
     throw new Error(`Failed to init transfer: ${e}`)
   }
-}
-
-export async function deployToken(destinationChain: ChainKind, vaa: string, wallet: WalletSelectorProviderValue): Promise<string> {
-  const proverArgs: WormholeVerifyProofArgs = {
-    proof_kind: ProofKind.DeployToken,
-    vaa: vaa,
-  }
-  const proverArgsSerialized = WormholeVerifyProofArgsSchema.serialize(proverArgs)
-
-  // Construct deploy token arguments
-  const args: DeployTokenArgs = {
-    chain_kind: destinationChain,
-    prover_args: proverArgsSerialized,
-  }
-  const serializedArgs = DeployTokenArgsSchema.serialize(args)
-
-  // Retrieve required deposit dynamically for deploy_token
-  const deployDepositStr = (await wallet.provider.callFunction(
-    lockerAddress,
-    "required_balance_for_deploy_token",
-    {},
-  )) as string
-
-
-  const tx = await wallet.signAndSendTransactions({
-    receiverId: lockerAddress,
-    actions: [
-      {
-        type: "FunctionCall",
-        params: {
-          methodName: "deploy_token",
-          args: serializedArgs,
-          gas: GAS.DEPLOY_TOKEN.toString(),
-          deposit: deployDepositStr,
-        },
-      },
-    ],
-  })
-  return tx.transaction.hash
 }

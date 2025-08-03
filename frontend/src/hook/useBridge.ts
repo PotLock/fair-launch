@@ -9,16 +9,15 @@ import {
   getVaa,
   setNetwork,
   type Transfer,
-  type Chain,
-  SolanaBridgeClient,
-  NearBridgeClient
+  type Chain
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
 import { SOL_NETWORK, SOL_PRIVATE_KEY } from '../configs/env.config';
-import { logMetadata, isBridgedToken, deployToken } from '../lib/omniBrigde';
+import { logMetadata, isBridgedToken, lockerAddress } from '../lib/omniBrigde';
 import useAnchorProvider from './useAnchorProvider';
 import { useNearWallet } from '../components/NearWalletProvider';
 import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
+import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 // Interface for token info including balance
 interface TokenInfo {
   mint: string;
@@ -353,7 +352,7 @@ export const useBridge = () => {
     token: string
   ): Promise<boolean> => {
     try {
-      const isBridged = await isBridgedToken(new PublicKey(token), anchorProvider?.program as any)
+      const isBridged = await isBridgedToken(new PublicKey(token), anchorProvider?.programBridgeTokenFactory as any)
       return isBridged
     } catch (error) {
       console.error('Error checking token registration:', error);
@@ -388,14 +387,17 @@ export const useBridge = () => {
     tokenMint: string
   ) => {
     try{
+      setNetwork("testnet");
+      const secretKey = bs58.decode(SOL_PRIVATE_KEY || "");
+      const payer = Keypair.fromSecretKey(secretKey);
       const mintAddress = omniAddress(ChainKind.Sol, tokenMint)
-
-      console.log("Starting logMetadata...")
-      const txHash = await logMetadata(mintAddress, anchorProvider?.program as any)
+      // console.log("Starting logMetadata...")
+      
+      const txHash = await logMetadata(mintAddress, anchorProvider?.programBridgeTokenFactory as any, payer)
       console.log("logMetadata txHash:", txHash)
 
       console.log("Waiting 60 seconds for logMetadata to complete on chain...")
-      await new Promise(resolve => setTimeout(resolve, 60000))
+      await new Promise(resolve => setTimeout(resolve, 80000))
 
       console.log("Getting VAA after logMetadata completion...")
       const vaa = await getVaa(txHash, "Testnet");
@@ -405,12 +407,12 @@ export const useBridge = () => {
       if (!walletSelector) {
         throw new Error('Wallet selector not initialized');
       }
-      const nearClient = new NearWalletSelectorBridgeClient(walletSelector as any,"omni.n-bridge.testnet")
+      const nearClient = new NearWalletSelectorBridgeClient(walletSelector as any, lockerAddress)
 
-      const result = await nearClient.deployToken(ChainKind.Near, vaa)
+      const result = await nearClient.deployToken(ChainKind.Near, "010000000001008ead117ecf23d382aa59ea1519b27f2040407d159e1ffec0592b57f9524779e51d613a86b5a0ade0c5683d5355185a401fcd48f4569f52037fcdf8733e36756d01688f8f63000000000001e2b66c508898e29e1439a7c9c3a30178c2eb64f6150deed59314b426aa0479310000000000000146200302574f62fc0e2284c65d948fde37933fc31470fa8e7cf41303f21f9117294db631040000004765656e040000004745454e06")
       console.log("Token deployed to NEAR:", result)
       
-      return { txHash, vaa, result }
+      return { result }
     } catch (error) {
       console.error('Error deploying token:', error);
       throw error;
