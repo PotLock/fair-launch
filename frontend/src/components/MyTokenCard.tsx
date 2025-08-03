@@ -3,18 +3,34 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { formatNumberWithCommas } from "../utils";
 import { useNavigate } from "@tanstack/react-router";
+import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/tokenUtils";
+import { useCallback, useState, useEffect } from "react";
+import { PublicKey } from "@solana/web3.js";
 
 interface MyTokenCardProps {
     avatar?: string;
     name: string;
     symbol: string;
     supply: string;
-    progress?: number;
     mintAddress: string;
+    decimals: number;
 }
 
-export function MyTokenCard({ avatar, name, symbol, supply, progress = 0, mintAddress }: MyTokenCardProps) {
+export function MyTokenCard({ avatar, name, symbol, supply, mintAddress, decimals }: MyTokenCardProps) {
     const navigate = useNavigate();
+    const [bondingCurveInfo, setBondingCurveInfo] = useState<BondingCurveTokenInfo | null>(null);
+    
+    const loadBondingCurveInfo = useCallback(async () => {
+        const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(mintAddress));
+        setBondingCurveInfo(bondingCurveRes || null)
+    }, [mintAddress])
+
+    useEffect(() => {
+        loadBondingCurveInfo()
+    }, [loadBondingCurveInfo])
+
+    const progress = (Number(bondingCurveInfo?.totalSupply) / (Number(supply) * 10 ** Number(decimals))) * 100
+
     return (
         <Card className="w-full max-w-lg" onClick={() => navigate({to: `/token/${mintAddress}`})}>
             <CardHeader className="flex flex-row items-start justify-between pb-4">
@@ -54,10 +70,11 @@ export function MyTokenCard({ avatar, name, symbol, supply, progress = 0, mintAd
                     </Button>
                 </div>
             </CardContent>
-            <CardFooter className="flex-col items-start pt-0">
-                <Progress value={progress} className="w-full my-2 bg-gray-200" />
+            <CardFooter className="flex-col items-start pt-0 gap-1">
+                <div className="w-full">
+                    <Progress value={progress} bgProgress="bg-green-600" className="h-2 bg-gray-200"/>
+                </div>
                 <div className="flex justify-between w-full text-xs text-gray-400">
-                    <span>Vested N/A</span>
                     <span>{progress}%</span>
                 </div>
             </CardFooter>

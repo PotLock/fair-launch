@@ -9,7 +9,7 @@ import {
 const LINKS = [
   {
     label: "Issue Report",
-    href: "https://github.com/potlock/fair-launch/issues/new",
+    href: "https://github.com/potlock/potlaunch/issues/new",
     target: "_blank",
   },
   {

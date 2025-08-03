@@ -29,7 +29,7 @@ import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
-import { linearBuyCost, linearSellCost } from "../../utils/sol";
+import { linearBuyCost, linearSellCost, calculateLinearCurrentPrice } from "../../utils/sol";
 import { TokenDistributionItem, Holders} from "../../types"
 import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
@@ -59,6 +59,7 @@ function TokenDetail() {
     const [holders, setHolders] = useState<Holders[]>([]);
     const [curveConfig, setCurveConfig] = useState<any>(null)
     const [allocationsAndVesting, setAllocationsAndVesting] = useState<any[]>([]);
+    const [currentPrice, setCurrentPrice] = useState<number>(0);
 
     const loadInfoToken = useCallback(async () => {
         try {
@@ -79,6 +80,7 @@ function TokenDetail() {
             setBondingCurveInfo(bondingCurveRes || null);
             setHolders(holdersRes);
             setCurveConfig(curveConfigInfo)
+            setCurrentPrice(Number(calculateLinearCurrentPrice(BigInt(bondingCurveRes?.totalSupply || 0), Number(curveConfigInfo?.reserveRatio || 0))));
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -86,10 +88,19 @@ function TokenDetail() {
         }
     }, [tokenId]);
 
+    const loadCurveConfig = useCallback(async () => {
+        const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveInfo?.creator || ''), new PublicKey(tokenId));
+        setCurveConfig(curveConfigInfo)
+    }, [bondingCurveInfo, tokenId])
+
+    const loadBondingCurveInfo = useCallback(async () => {
+        const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
+        setBondingCurveInfo(bondingCurveRes || null)
+    }, [tokenId])
+
     useEffect(() => {
         loadInfoToken();
     }, [loadInfoToken]);
-
 
     useEffect(() => {
         if (tokenInfo) {
@@ -221,12 +232,12 @@ function TokenDetail() {
                 if (option.name === 'SOL' && tokenInfo) {
                     // Buy operation: SOL -> Token
                     const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                    console.log('linearBuyAmount', linearBuyAmount)
+                    // console.log('linearBuyAmount', linearBuyAmount)
                     setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
                 } else if (option.name === tokenInfo?.symbol) {
                     // Sell operation: Token -> SOL
                     const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                    console.log("linearSellAmount", linearSellAmount)
+                    // console.log("linearSellAmount", linearSellAmount)
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
             }
@@ -265,23 +276,30 @@ function TokenDetail() {
             setIsBuying(true);
             const mint = new PublicKey(tokenId);
             const amount = Number(payAmount) * 10 ** 9;
-            console.log("amount", amount);
+            // console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
             
             const isBuyOperation = selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol;
             
             if (isBuyOperation) {
-                const tx = await buyToken(mint, amount, admin, tokenInfo?.name || '');
-                console.log('Buy transaction:', tx);
+                await buyToken(mint, amount, admin, tokenInfo?.name || '');
+                // console.log('Buy transaction:', tx);
                 // Clear input fields after successful buy
                 setPayAmount("");
                 setReceiveAmount("");
+                // Refetch data after successful buy
+                await loadBondingCurveInfo()
+                await loadCurveConfig()
             } else {
-                const tx = await sellToken(mint, amount, admin, tokenInfo?.name || '');
-                console.log('Sell transaction:', tx);
+                await sellToken(mint, amount, admin, tokenInfo?.name || '');
+                // console.log('Sell transaction:', tx);
                 // Clear input fields after successful sell
                 setPayAmount("");
                 setReceiveAmount("");
+
+                // Refetch data
+                await loadBondingCurveInfo()
+                await loadCurveConfig()
             }
         } catch (error) {
             console.error('Error in token operation:', error);
@@ -313,59 +331,94 @@ function TokenDetail() {
                         {hasSocialLinks && (
                             <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
                                 {tokenInfo?.social?.website && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('website', tokenInfo.social.website);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <Globe className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('website', tokenInfo.social.website);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <Globe className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Visit Website</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.farcaster && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/book.svg" alt="Farcaster" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/book.svg" alt="Farcaster" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>View on Farcaster</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.discord && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('discord', tokenInfo.social.discord);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/discord.svg" alt="Discord" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('discord', tokenInfo.social.discord);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/discord.svg" alt="Discord" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Join Discord Server</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.twitter && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('twitter', tokenInfo.social.twitter);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('twitter', tokenInfo.social.twitter);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Follow on Twitter</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.telegram && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('telegram', tokenInfo.social.telegram);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/telegram.svg" alt="Telegram" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('telegram', tokenInfo.social.telegram);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/telegram.svg" alt="Telegram" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Join Telegram Channel</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                             </div>
                         )}
@@ -383,9 +436,7 @@ function TokenDetail() {
                         <div className="text-3xl font-bold text-green-600 mb-3">-</div>
 
                         <div className="w-full mb-8">
-                            <Progress value={progress} className="h-2 bg-gray-200">
-                                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${progress}%` }} />
-                            </Progress>
+                            <Progress value={progress} bgProgress="bg-green-600" className="h-2 bg-gray-200"/>
                         </div>
 
                         <div className="grid grid-cols-3">
@@ -601,12 +652,12 @@ function TokenDetail() {
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
-                                        <RechartsTooltip formatter={(value, name, props) => [`${value}%`, props.payload.name]} />
+                                        <RechartsTooltip formatter={(value, _, props) => [`${value}%`, props.payload.name]} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
                             <div className="flex flex-col gap-3 justify-center">
-                                {allocationsAndVesting.map((item, idx) => (
+                                {allocationsAndVesting.map((_, idx) => (
                                     <div key={idx} className="flex items-center gap-2">
                                         <span className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                         <span className="font-semibold text-base" style={{ color: COLORS[idx % COLORS.length] }}>{tokenInfo?.allocations?.[idx]?.description || '-'}</span>
