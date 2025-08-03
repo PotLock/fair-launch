@@ -1,4 +1,4 @@
-const SOL_NETWORK = process.env.PUBLIC_SOL_NETWORK || 'devnet';
+const SOL_NETWORK = process.env.PUBLIC_SOL_NETWORK || 'testnet';
 const JWT_SECRET = process.env.PUBLIC_JWT_SECRET;
 const HELIUS_API_KEY = process.env.PUBLIC_HELIUS_API_KEY;
 const WALLET_CONNECT_PROJECT_ID = process.env.PUBLIC_WALLET_CONNECT_PROJECT_ID;

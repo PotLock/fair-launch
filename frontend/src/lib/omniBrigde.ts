@@ -19,7 +19,7 @@ import BRIDGE_TOKEN_FACTORY_IDL from "../contracts/IDLs/bridge_token_factory.jso
 import { Program } from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import { OmniTransferMessage } from "../types";
-import { actionCreators } from "@near-js/transactions"
+import { WalletSelectorProviderValue } from "../components/NearWalletProvider";
 
 // ============= Bridge =============
 
@@ -121,17 +121,19 @@ export async function getTokenProgramForMint(mint: PublicKey, connection: Connec
 
 export async function logMetadata(token: OmniAddress, program: anchor.Program, payer?: Keypair): Promise<string> {
   const tokenPublicKey = new PublicKey(token.split(":")[1])
-  const tokenProgram = await getTokenProgramForMint(tokenPublicKey, program.provider.connection)
 
+  const programBridge = new Program(
+    BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
+    program.provider as any
+  );
+
+  const tokenProgram = await getTokenProgramForMint(tokenPublicKey, program.provider.connection)
+  
   const wormholeMessage = Keypair.generate()
   const [metadata] = PublicKey.findProgramAddressSync(
     [Buffer.from("metadata", "utf-8"), MPL_PROGRAM_ID.toBuffer(), tokenPublicKey.toBuffer()],
     MPL_PROGRAM_ID,
   )
-  const programBridge = new Program(
-    BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
-    program.provider as any
-  );
 
   const [vault] = vaultId(programBridge.programId, tokenPublicKey)
 
@@ -292,7 +294,7 @@ export async function initTransfer(transfer: OmniTransferMessage, program: ancho
   }
 }
 
-export async function deployToken(destinationChain: ChainKind, vaa: string, wallet: any): Promise<string> {
+export async function deployToken(destinationChain: ChainKind, vaa: string, wallet: WalletSelectorProviderValue): Promise<string> {
   const proverArgs: WormholeVerifyProofArgs = {
     proof_kind: ProofKind.DeployToken,
     vaa: vaa,
@@ -313,15 +315,19 @@ export async function deployToken(destinationChain: ChainKind, vaa: string, wall
     {},
   )) as string
 
-  const tx = await wallet.signAndSendTransaction({
+
+  const tx = await wallet.signAndSendTransactions({
     receiverId: lockerAddress,
     actions: [
-      actionCreators.functionCall(
-        "deploy_token",
-        serializedArgs,
-        BigInt(GAS.DEPLOY_TOKEN),
-        BigInt(deployDepositStr),
-      ),
+      {
+        type: "FunctionCall",
+        params: {
+          methodName: "deploy_token",
+          args: serializedArgs,
+          gas: GAS.DEPLOY_TOKEN.toString(),
+          deposit: deployDepositStr,
+        },
+      },
     ],
   })
   return tx.transaction.hash

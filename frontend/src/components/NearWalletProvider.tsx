@@ -61,6 +61,7 @@ export interface WalletSelectorProviderValue {
   signedAccountId: string | null;
   wallet: Wallet | null;
   isInitialized: boolean;
+  provider: any; // Using any for now to avoid type issues with providers
   signIn: () => void;
   signOut: () => Promise<void>;
   viewFunction: (params: ViewMethodParams) => Promise<unknown>;
@@ -68,8 +69,9 @@ export interface WalletSelectorProviderValue {
   getBalance: (accountId: string) => Promise<bigint>;
   getAccessKeys: (accountId: string) => Promise<Array<unknown>>;
   signAndSendTransactions: (params: {
-    transactions: Array<Transaction>;
-  }) => Promise<Array<object | string | number | null>>;
+    receiverId: string;
+    actions: Array<Action>;
+  }) => Promise<{ transaction: { hash: string } }>;
   signMessage: (params: SignMessageParams) => Promise<void | SignedMessage>;
   getAccount: (accountId: string) => Promise<QueryResponseKindWithAmount>;
   verifyMessage: (
@@ -163,7 +165,15 @@ export function WalletSelectorProvider({
         throw new WalletError("Wallet selector not initialized");
       }
       
+      if (!isInitialized) {
+        throw new WalletError("Wallet is still initializing. Please wait a moment and try again.");
+      }
+      
       const ws = await walletSelector;
+      if (!ws) {
+        throw new WalletError("Wallet selector failed to initialize");
+      }
+      
       const modalInstance = setupModal(ws, {
         contractId: config.createAccessKeyFor?.contractId || undefined,
         methodNames: config.createAccessKeyFor?.methodNames || [],
@@ -312,22 +322,27 @@ export function WalletSelectorProvider({
 
   /**
    * Signs transactions and broadcasts them to the network
-   * @param {Object[]} transactions - the transactions to sign and send
-   * @returns {Promise<Transaction[]>} - the resulting transactions
+   * @param {Object} params - the parameters for the transaction
+   * @param {string} params.receiverId - the receiver account id
+   * @param {Array} params.actions - the actions to perform
+   * @returns {Promise<Object>} - the transaction result with hash
    */
   const signAndSendTransactions = useCallback(
-    async ({ transactions }: { transactions: Array<Transaction> }) => {
+    async ({ receiverId, actions }: { receiverId: string; actions: Array<Action> }) => {
       if (!wallet) {
         throw new WalletError("No wallet connected");
       }
 
-      const sentTxs = (await wallet.signAndSendTransactions({
-        transactions,
-      })) as Array<FinalExecutionOutcome>;
+      const outcome = await wallet.signAndSendTransaction({
+        receiverId,
+        actions,
+      });
 
-      return sentTxs.map((tx: FinalExecutionOutcome) =>
-        providers.getTransactionLastResult(tx)
-      );
+      return {
+        transaction: {
+          hash: (outcome as FinalExecutionOutcome).transaction.hash
+        }
+      };
     },
     [wallet]
   );
@@ -407,6 +422,11 @@ export function WalletSelectorProvider({
     signedAccountId,
     wallet,
     isInitialized,
+    provider: {
+      ...provider,
+      callFunction: callFunction,
+      functionCall: callFunction // Add this for backward compatibility
+    },
     signIn,
     signOut,
     viewFunction,

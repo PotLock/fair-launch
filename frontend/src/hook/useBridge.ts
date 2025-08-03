@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import {  
   ChainKind, 
   omniAddress,
@@ -9,13 +9,16 @@ import {
   getVaa,
   setNetwork,
   type Transfer,
-  type Chain
+  type Chain,
+  SolanaBridgeClient,
+  NearBridgeClient
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
-import { SOL_NETWORK } from '../configs/env.config';
-import { logMetadata, isBridgedToken } from '../lib/omniBrigde';
+import { SOL_NETWORK, SOL_PRIVATE_KEY } from '../configs/env.config';
+import { logMetadata, isBridgedToken, deployToken } from '../lib/omniBrigde';
 import useAnchorProvider from './useAnchorProvider';
-
+import { useNearWallet } from '../components/NearWalletProvider';
+import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 // Interface for token info including balance
 interface TokenInfo {
   mint: string;
@@ -58,6 +61,7 @@ export const useBridge = () => {
   const { publicKey, sendTransaction, connected, wallet, signTransaction } = useWallet();
   const [isBridging, setIsBridging] = useState(false);
   const anchorProvider = useAnchorProvider()
+  const nearWallet = useNearWallet()
 
   // Helper function to check wallet network and provide debugging info
   const checkWalletNetwork = useCallback(async () => {
@@ -73,7 +77,7 @@ export const useBridge = () => {
       );
       
       const balance = await connection.getBalance(publicKey);
-      const expectedNetwork = SOL_NETWORK || 'devnet';
+      const expectedNetwork = SOL_NETWORK || 'testnet';
       
       return {
         isValid: true,
@@ -92,8 +96,9 @@ export const useBridge = () => {
 
   // Log token metadata using Omni Bridge SDK
   const handleLogMetadata = useCallback(async (
-    tokenMint: string
-  ): Promise<string | null> => {
+    tokenMint: string,
+    waitForCompletion: boolean = false
+  ): Promise<string | { txHash: string; vaa?: string } | null> => {
     if (!publicKey || !sendTransaction || !connected) {
       toast.error('Please connect your Solana wallet first');
       return null;
@@ -102,11 +107,24 @@ export const useBridge = () => {
     try {
       const formattedTokenAddress = omniAddress(ChainKind.Sol, tokenMint);
       try {        
-        const txHash = await logMetadata(formattedTokenAddress, anchorProvider?.program as any);
-        console.log(`✅ Metadata logged with tx: ${txHash}`);
-        
-        toast.success(`Token metadata logged successfully! Transaction: ${txHash}`);
-        return txHash;
+        console.log("Starting logMetadata...")
+        const logTxHash = await logMetadata(formattedTokenAddress, anchorProvider?.program as any)
+        console.log("logMetadata txHash:", logTxHash)
+
+        if (waitForCompletion) {
+          // Wait for 1 minute (60 seconds) for logMetadata to complete on chain
+          console.log("Waiting 60 seconds for logMetadata to complete on chain...")
+          await new Promise(resolve => setTimeout(resolve, 60000)) // 60 seconds = 1 minute
+
+          console.log("Getting VAA after logMetadata completion...")
+          const vaa = await getVaa(logTxHash, "Testnet");
+          console.log("VAA retrieved:", vaa)
+          
+          return { txHash: logTxHash, vaa }
+        }
+
+        return logTxHash
+
       } catch (sdkError) {
         console.error('❌ SDK error in logMetadata:', sdkError);
         
@@ -366,6 +384,59 @@ export const useBridge = () => {
     }
   }, []);
 
+  const deployTokenNear = useCallback(async (
+    tokenMint: string
+  ) => {
+    try{
+      const mintAddress = omniAddress(ChainKind.Sol, tokenMint)
+
+      console.log("Starting logMetadata...")
+      const txHash = await logMetadata(mintAddress, anchorProvider?.program as any)
+      console.log("logMetadata txHash:", txHash)
+
+      console.log("Waiting 60 seconds for logMetadata to complete on chain...")
+      await new Promise(resolve => setTimeout(resolve, 60000))
+
+      console.log("Getting VAA after logMetadata completion...")
+      const vaa = await getVaa(txHash, "Testnet");
+      console.log("VAA retrieved:", vaa)
+
+      const walletSelector = await nearWallet.walletSelector;
+      if (!walletSelector) {
+        throw new Error('Wallet selector not initialized');
+      }
+      const nearClient = new NearWalletSelectorBridgeClient(walletSelector as any,"omni.n-bridge.testnet")
+
+      const result = await nearClient.deployToken(ChainKind.Near, vaa)
+      console.log("Token deployed to NEAR:", result)
+      
+      return { txHash, vaa, result }
+    } catch (error) {
+      console.error('Error deploying token:', error);
+      throw error;
+    }
+  }, [])
+
+  // Get VAA (Validators Approval Authority) from transaction hash
+  const handleGetVaa = useCallback(async (
+    transactionHash: string
+  ): Promise<string | null> => {
+    if (!transactionHash) {
+      toast.error('Please enter a transaction hash');
+      return null;
+    }
+
+    try {
+      const vaa = await getVaa(transactionHash, "Testnet");
+      console.log('VAA retrieved:', vaa);
+      return vaa;
+    } catch (error) {
+      console.error('Error getting VAA:', error);
+      toast.error(`Failed to get VAA: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }, []);
+
   return {
     bridgeSolanaToNear,
     handleLogMetadata,
@@ -375,5 +446,7 @@ export const useBridge = () => {
     isBridging,
     checkWalletNetwork,
     SUPPORTED_TOKENS,
+    deployTokenNear,
+    handleGetVaa
   };
 }; 

@@ -25,6 +25,8 @@ export default function useAnchorProvider() {
     providerProgram as any
   );
 
+  // console.log("program", program.idl.address)
+
   const governanceKeypair = Keypair.generate();
   const mintKeypair = Keypair.generate();
   

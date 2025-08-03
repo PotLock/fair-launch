@@ -11,7 +11,9 @@ const BridgeExample: React.FC = () => {
     isTokenRegistered,
     SUPPORTED_TOKENS,
     handleLogMetadata,
-    checkWalletNetwork
+    checkWalletNetwork,
+    deployTokenNear,
+    handleGetVaa
   } = useBridge();
   
   const { publicKey, connected } = useWallet();
@@ -20,6 +22,7 @@ const BridgeExample: React.FC = () => {
   const [tokenMint, setTokenMint] = useState('');
   const [recipientNearAccount, setRecipientNearAccount] = useState('');
   const [amount, setAmount] = useState('');
+  const [transactionHash, setTransactionHash] = useState('');
   const [checkResult, setCheckResult] = useState<string>('');
   const [walletStatus, setWalletStatus] = useState<string>('');
 
@@ -81,8 +84,16 @@ const BridgeExample: React.FC = () => {
         return;
       }
 
+      setCheckResult('🔄 Starting logMetadata... Please wait.');
       const result = await handleLogMetadata(tokenMint);
-      setCheckResult(result ? '✅ Token metadata logged successfully' : '❌ Failed to log token metadata');
+      
+      if (typeof result === 'string') {
+        setCheckResult(`✅ Token metadata logged successfully!\nTransaction Hash: ${result}`);
+      } else if (result && typeof result === 'object' && 'txHash' in result) {
+        setCheckResult(`✅ Token metadata logged successfully!\nTransaction Hash: ${result.txHash}\nVAA: ${result.vaa || 'Not retrieved'}`);
+      } else {
+        setCheckResult('❌ Failed to log token metadata');
+      }
     } catch (error) {
       setCheckResult(`❌ Error logging metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -138,6 +149,68 @@ const BridgeExample: React.FC = () => {
       setCheckResult(`Bridge initiated successfully! Transaction: ${JSON.stringify(result, null, 2)}`);
     } catch (error) {
       setCheckResult(`Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeployToken = async () => {
+    if (!tokenMint) {
+      toast.error('Please enter a token mint address');
+      return;
+    }
+
+    if (!connected || !publicKey) {
+      toast.error('Please connect your Solana wallet first');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // First check wallet network
+      const networkInfo = await checkWalletNetwork();
+      if (!networkInfo.isValid) {
+        setCheckResult(`❌ ${networkInfo.message}`);
+        return;
+      }
+      
+      if (!networkInfo.hasFunds) {
+        setCheckResult('❌ Insufficient SOL balance for transaction fees. Please add some SOL to your wallet.');
+        return;
+      }
+
+      setCheckResult('🔄 Starting token deployment process...\n1. Logging metadata...\n2. Waiting 60 seconds for completion...\n3. Getting VAA...\n4. Deploying to NEAR...');
+      
+      const result = await deployTokenNear(tokenMint);
+      
+      if (result) {
+        setCheckResult(`✅ Token deployed to NEAR successfully!\n\nDetails:\n- Transaction Hash: ${result.txHash}\n- VAA: ${result.vaa}\n- NEAR Result: ${JSON.stringify(result.result, null, 2)}`);
+      } else {
+        setCheckResult('❌ Failed to deploy token to NEAR');
+      }
+    } catch (error) {
+      setCheckResult(`❌ Error deploying token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGetVaaClick = async () => {
+    if (!transactionHash) {
+      toast.error('Please enter a transaction hash');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const vaa = await handleGetVaa(transactionHash);
+      if (vaa) {
+        setCheckResult(`✅ VAA retrieved successfully!\nVAA: ${vaa}`);
+      } else {
+        setCheckResult('❌ Failed to retrieve VAA');
+      }
+    } catch (error) {
+      setCheckResult(`❌ Error getting VAA: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -204,6 +277,19 @@ const BridgeExample: React.FC = () => {
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Transaction Hash (for VAA)
+          </label>
+          <input
+            type="text"
+            value={transactionHash}
+            onChange={(e) => setTransactionHash(e.target.value)}
+            placeholder="Enter transaction hash to get VAA"
+            className="w-full p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+
         <div className="flex flex-wrap gap-4">
           <button
             onClick={handleCheckWalletNetwork}
@@ -230,6 +316,51 @@ const BridgeExample: React.FC = () => {
           </button>
 
           <button
+            onClick={async () => {
+              if (!tokenMint) {
+                toast.error('Please enter a token mint address');
+                return;
+              }
+
+              if (!connected || !publicKey) {
+                toast.error('Please connect your Solana wallet first');
+                return;
+              }
+
+              setIsLoading(true);
+              try {
+                const networkInfo = await checkWalletNetwork();
+                if (!networkInfo.isValid) {
+                  setCheckResult(`❌ ${networkInfo.message}`);
+                  return;
+                }
+                
+                if (!networkInfo.hasFunds) {
+                  setCheckResult('❌ Insufficient SOL balance for transaction fees. Please add some SOL to your wallet.');
+                  return;
+                }
+
+                setCheckResult('🔄 Logging metadata and waiting for completion...\nThis will take about 1 minute.');
+                const result = await handleLogMetadata(tokenMint, true); // true = wait for completion
+                
+                if (result && typeof result === 'object' && 'txHash' in result) {
+                  setCheckResult(`✅ Token metadata logged and VAA retrieved!\n\nTransaction Hash: ${result.txHash}\nVAA: ${result.vaa}`);
+                } else {
+                  setCheckResult('❌ Failed to log token metadata');
+                }
+              } catch (error) {
+                setCheckResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading || !connected}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {isLoading ? 'Processing...' : 'Log Metadata + Get VAA'}
+          </button>
+
+          <button
             onClick={handleGetFee}
             disabled={isLoading || !connected}
             className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
@@ -243,6 +374,22 @@ const BridgeExample: React.FC = () => {
             className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
           >
             {isLoading ? 'Bridging...' : 'Bridge to NEAR'}
+          </button>
+
+          <button
+            onClick={handleDeployToken}
+            disabled={isLoading || !connected}
+            className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50"
+          >
+            {isLoading ? 'Deploying...' : 'Deploy Token to NEAR'}
+          </button>
+
+          <button
+            onClick={handleGetVaaClick}
+            disabled={isLoading}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 disabled:opacity-50"
+          >
+            {isLoading ? 'Getting VAA...' : 'Get VAA'}
           </button>
         </div>
 
@@ -283,8 +430,10 @@ const BridgeExample: React.FC = () => {
             <li>Enter the recipient NEAR account (e.g., account.testnet)</li>
             <li>Check if the token is registered with Omni Bridge</li>
             <li>If not registered, try to log metadata (may require bridge admin)</li>
+            <li>Deploy token to NEAR (creates wrapped token on NEAR side)</li>
             <li>Get fee estimation before bridging</li>
             <li>Bridge tokens from Solana devnet to NEAR testnet</li>
+            <li>Use the VAA feature to retrieve Validators Approval Authority from a transaction hash</li>
           </ul>
         </div>
 
@@ -296,6 +445,9 @@ const BridgeExample: React.FC = () => {
             <li>Only supported tokens are guaranteed to work</li>
             <li>If you get "token not registered" error, try using Wrapped SOL (So11111111111111111111111111111111111111112)</li>
             <li>Bridge transfers may take several minutes to complete</li>
+            <li><strong>LogMetadata takes ~1 minute to complete on chain</strong></li>
+            <li>Use "Log Metadata + Get VAA" button to automatically wait and get VAA</li>
+            <li>Use "Deploy Token to NEAR" for complete deployment process</li>
           </ul>
         </div>
       </div>
