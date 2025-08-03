@@ -29,14 +29,14 @@ export const Footer = () => {
             </div>
             <div className="flex flex-col gap-2 items-end">
                 <a href="https://docs.potlaunch.com/" target="_blank" className="hover:underline">
-                    <span>Documents</span>
+                    <span>Docs</span>
                 </a>
                 <div className="flex flex-row gap-2">
                     <a href="#" target="_blank" className="hover:underline" id="privacy-link" onClick={e => { e.preventDefault(); setOpenModal("privacy"); }}>
-                        <span>Privacy Policy</span>
+                        <span>Privs</span>
                     </a>
                     <a href="#" target="_blank" className="hover:underline" id="terms-link" onClick={e => { e.preventDefault(); setOpenModal("terms"); }}>
-                        <span>Terms of use</span>
+                        <span>Terms</span>
                     </a>
                 </div>
             </div>
