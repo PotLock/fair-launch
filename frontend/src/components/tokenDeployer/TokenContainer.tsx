@@ -180,7 +180,7 @@ export const TokenContainer = () => {
                 <h1 className="text-2xl md:text-3xl font-bold">Token Creation</h1>
                 <p className="text-sm md:text-base text-gray-500">Easily create and mint your own SPL Token without coding</p>
             </div>
-            {steps.map((step, idx) => {
+            {steps.map((step, _) => {
                 const StepComponent = step.component;
                 return (
                     <StepComponent
@@ -209,12 +209,12 @@ export const TokenContainer = () => {
                     {isLoading ? "Deploying..." : "Deploy Token"}
                 </button>
             </div>
-            {/* Loading Modal */}
+
             <LoadingModal 
                 isOpen={isLoading} 
                 onCancel={handleCancelDeployment} 
             />
-            {/* Success Modal */}
+
             <SuccessModal 
                 isOpen={isSuccess}
                 tokenName={basicInfo.name || "Token"}
