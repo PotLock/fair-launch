@@ -131,9 +131,9 @@ function MyTokens() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {listTokens.map((token) => (
                         <MyTokenCard
+                            decimals={token.decimals}
                             avatar={token.avatarUrl || ''}
                             key={token.id}
-                            progress={10}
                             name={token.name}
                             symbol={token.symbol}
                             supply={token.supply.toString()}

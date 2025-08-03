@@ -15,7 +15,7 @@ export const Footer = () => {
                     <a href="https://potlock.org/community" target="_blank" className="h-6 w-6 bg-neutral-950 rounded-full flex justify-center items-center mt-0.5">
                         <img src="/icons/telegram.svg" alt="telegram" className="w-4 h-4" />
                     </a>
-                    <a href="https://github.com/PotLock/fair-launch" target="_blank">
+                    <a href="https://github.com/PotLock/potlaunch" target="_blank">
                         <img src="/icons/github.svg" alt="github" className="h-6 w-6"/>
                     </a>
                     <a href="https://x.com/potlock_" target="_blank">
