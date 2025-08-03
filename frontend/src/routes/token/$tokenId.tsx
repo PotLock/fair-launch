@@ -331,59 +331,94 @@ function TokenDetail() {
                         {hasSocialLinks && (
                             <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
                                 {tokenInfo?.social?.website && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('website', tokenInfo.social.website);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <Globe className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('website', tokenInfo.social.website);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <Globe className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Visit Website</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.farcaster && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/book.svg" alt="Farcaster" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/book.svg" alt="Farcaster" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>View on Farcaster</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.discord && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('discord', tokenInfo.social.discord);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/discord.svg" alt="Discord" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('discord', tokenInfo.social.discord);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/discord.svg" alt="Discord" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Join Discord Server</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.twitter && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('twitter', tokenInfo.social.twitter);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('twitter', tokenInfo.social.twitter);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/twitter.svg" alt="Twitter" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Follow on Twitter</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                                 {tokenInfo?.social?.telegram && (
-                                    <button 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                                        onClick={() => {
-                                            const url = getSocialUrl('telegram', tokenInfo.social.telegram);
-                                            if (url) window.open(url, '_blank');
-                                        }}
-                                    >
-                                        <img src="/icons/telegram.svg" alt="Telegram" className="w-6 h-6 text-white hover:text-gray-200" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                                onClick={() => {
+                                                    const url = getSocialUrl('telegram', tokenInfo.social.telegram);
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <img src="/icons/telegram.svg" alt="Telegram" className="w-6 h-6 text-white hover:text-gray-200" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Join Telegram Channel</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                             </div>
                         )}
