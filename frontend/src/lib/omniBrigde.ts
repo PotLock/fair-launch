@@ -6,12 +6,7 @@ import { ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { 
   ChainKind, 
   getChain, 
-  ProofKind, 
   type OmniAddress,
-  type WormholeVerifyProofArgs,
-  type DeployTokenArgs,
-  DeployTokenArgsSchema,
-  WormholeVerifyProofArgsSchema
   } from "omni-bridge-sdk";
 import BRIDGE_TOKEN_FACTORY_IDL from "../contracts/IDLs/bridge_token_factory.json" with {
   type: "json",
@@ -19,7 +14,6 @@ import BRIDGE_TOKEN_FACTORY_IDL from "../contracts/IDLs/bridge_token_factory.jso
 import { Program } from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import { OmniTransferMessage } from "../types";
-import { WalletSelectorProviderValue } from "../components/NearWalletProvider";
 
 // ============= Bridge =============
 
@@ -27,16 +21,6 @@ const MPL_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1
 export const wormholeProgramId = new PublicKey("3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5")
 export const lockerAddress = "omni.n-bridge.testnet"
 
-const GAS = {
-    LOG_METADATA: BigInt(3e14), // 3 TGas
-    DEPLOY_TOKEN: BigInt(1.2e14), // 1.2 TGas
-    BIND_TOKEN: BigInt(3e14), // 3 TGas
-    INIT_TRANSFER: BigInt(3e14), // 3 TGas
-    FIN_TRANSFER: BigInt(3e14), // 3 TGas
-    SIGN_TRANSFER: BigInt(3e14), // 3 TGas
-    STORAGE_DEPOSIT: BigInt(1e14), // 1 TGas
-    FAST_FIN_TRANSFER: BigInt(3e14), // 3 TGas
-} as const
 
 function getConstant(name: string) {
   const value = (BRIDGE_TOKEN_FACTORY_IDL as any).constants.find(
@@ -121,7 +105,7 @@ export async function getTokenProgramForMint(mint: PublicKey, connection: Connec
 
 export async function logMetadata(token: OmniAddress, program: anchor.Program, payer?: Keypair): Promise<string> {
   const tokenPublicKey = new PublicKey(token.split(":")[1])
-
+  console.log(program.provider.connection)
   const tokenProgram = await getTokenProgramForMint(tokenPublicKey, program.provider.connection)
   
   const wormholeMessage = Keypair.generate()

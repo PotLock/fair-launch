@@ -138,7 +138,7 @@ const BridgeExample: React.FC = () => {
     setIsLoading(true);
     try {
       // Convert amount to token units (assuming 9 decimals for most Solana tokens)
-      const amountBigInt = BigInt(parseFloat(amount) * Math.pow(10, 9));
+      const amountBigInt = BigInt(parseFloat(amount) * Math.pow(10, 6));
       
       const result = await bridgeSolanaToNear(
         tokenMint,
@@ -182,12 +182,7 @@ const BridgeExample: React.FC = () => {
       setCheckResult('🔄 Starting token deployment process...\n1. Logging metadata...\n2. Waiting 60 seconds for completion...\n3. Getting VAA...\n4. Deploying to NEAR...');
       
       const result = await deployTokenNear(tokenMint);
-      
-      if (result) {
-        setCheckResult(`✅ Token deployed to NEAR successfully!\n\nDetails:\n- Transaction Hash: ${result.txHash}\n- VAA: ${result.vaa}\n- NEAR Result: ${JSON.stringify(result.result, null, 2)}`);
-      } else {
-        setCheckResult('❌ Failed to deploy token to NEAR');
-      }
+      console.log(result);
     } catch (error) {
       setCheckResult(`❌ Error deploying token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

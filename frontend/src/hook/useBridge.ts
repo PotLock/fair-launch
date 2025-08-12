@@ -9,7 +9,9 @@ import {
   getVaa,
   setNetwork,
   type Transfer,
-  type Chain
+  type Chain,
+  NearBridgeClient,
+  SolanaBridgeClient
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
 import { SOL_NETWORK, SOL_PRIVATE_KEY } from '../configs/env.config';
@@ -249,6 +251,7 @@ export const useBridge = () => {
       });
 
       // 4. Create addresses
+      const senderAddress = omniAddress(ChainKind.Sol, publicKey.toString()) as any;
       const recipient = omniAddress(ChainKind.Near, recipientNearAccount) as any;
       const tokenAddress = omniAddress(ChainKind.Sol, tokenMint) as any;
 
@@ -260,23 +263,29 @@ export const useBridge = () => {
       // recipient: OmniAddress
       // message?: string
 
+      const fee = await api.getFee(senderAddress, recipient, tokenAddress);
+
       console.log("amount", amount)
       const transfer = {
         tokenAddress,
-        amount,
-        fee: BigInt(1000),
-        nativeFee: BigInt(1000),
+        amount: BigInt(1000000),
+        fee: fee.transferred_token_fee || BigInt(0),
+        nativeFee: fee.native_token_fee || BigInt(0),
         recipient,
       };
 
 
       // 8. Send tokens using omniTransfer
-      const result = await omniTransfer(anchorProvider?.program as any,transfer)
-      console.log('[transferEvent]', result);
+      const result = await omniTransfer(anchorProvider?.providerProgram as any,transfer)
+      console.log('result', result);
 
       if (!result) {
         throw new Error('Failed to initiate transfer');
       }
+
+      console.log("Waiting 60 seconds for logMetadata to complete on chain...")
+      await new Promise(resolve => setTimeout(resolve, 80000))
+
 
       // 9. Get Wormhole VAA (returns hex-encoded string) for Solana->NEAR
       let vaa: string | undefined;
@@ -329,6 +338,8 @@ export const useBridge = () => {
         transferData.id.origin_chain as Chain,
         transferData.id.origin_nonce
       );
+
+      console.log('transferData', transferData)
       console.log(`Transfer status: ${status}`);
 
       toast.success(`Bridge initiated successfully! Transaction: ${typeof result === 'string' ? result : 'Completed'}`);
@@ -376,6 +387,7 @@ export const useBridge = () => {
       const tokenAddressSol = omniAddress(ChainKind.Sol, tokenAddress)
 
       const fee = await api.getFee(senderAddress, recipientAddress, tokenAddressSol);
+      console.log(fee)
       return fee;
     } catch (error) {
       console.error('Error getting fee estimation:', error);
@@ -391,9 +403,10 @@ export const useBridge = () => {
       const secretKey = bs58.decode(SOL_PRIVATE_KEY || "");
       const payer = Keypair.fromSecretKey(secretKey);
       const mintAddress = omniAddress(ChainKind.Sol, tokenMint)
-      // console.log("Starting logMetadata...")
-      
-      const txHash = await logMetadata(mintAddress, anchorProvider?.programBridgeTokenFactory as any, payer)
+      console.log("Starting logMetadata...")
+      console.log(anchorProvider?.providerProgram)
+      const solClient = new SolanaBridgeClient(anchorProvider?.providerProgram as any)
+      const txHash = await solClient.logMetadata(mintAddress, payer)
       console.log("logMetadata txHash:", txHash)
 
       console.log("Waiting 60 seconds for logMetadata to complete on chain...")
@@ -409,10 +422,10 @@ export const useBridge = () => {
       }
       const nearClient = new NearWalletSelectorBridgeClient(walletSelector as any, lockerAddress)
 
-      const result = await nearClient.deployToken(ChainKind.Near, "010000000001008ead117ecf23d382aa59ea1519b27f2040407d159e1ffec0592b57f9524779e51d613a86b5a0ade0c5683d5355185a401fcd48f4569f52037fcdf8733e36756d01688f8f63000000000001e2b66c508898e29e1439a7c9c3a30178c2eb64f6150deed59314b426aa0479310000000000000146200302574f62fc0e2284c65d948fde37933fc31470fa8e7cf41303f21f9117294db631040000004765656e040000004745454e06")
+      const result = await nearClient.deployToken(ChainKind.Sol, vaa)
       console.log("Token deployed to NEAR:", result)
       
-      return { result }
+      return { txHash, result }
     } catch (error) {
       console.error('Error deploying token:', error);
       throw error;
