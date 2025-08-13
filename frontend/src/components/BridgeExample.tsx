@@ -1,65 +1,30 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBridge } from '../hook/useBridge';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { ChainKind } from 'omni-bridge-sdk';
+import { useNearWallet } from './NearWalletProvider';
 import toast from 'react-hot-toast';
 
 const BridgeExample: React.FC = () => {
   const { 
-    bridgeSolanaToNear,
-    getFeeEstimation,
-    isTokenRegistered,
-    SUPPORTED_TOKENS,
-    handleLogMetadata,
-    checkWalletNetwork,
     deployTokenNear,
-    handleGetVaa
+    transferTokenSolanaToNear,
+    getTokenInfo
   } = useBridge();
   
   const { publicKey, connected } = useWallet();
+  const { signedAccountId, signIn } = useNearWallet();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
   const [tokenMint, setTokenMint] = useState('');
   const [recipientNearAccount, setRecipientNearAccount] = useState('');
   const [amount, setAmount] = useState('');
-  const [transactionHash, setTransactionHash] = useState('');
   const [checkResult, setCheckResult] = useState<string>('');
-  const [walletStatus, setWalletStatus] = useState<string>('');
+  const [tokenInfo, setTokenInfo] = useState<any>(null);
 
-  const handleCheckWalletNetwork = async () => {
-    setIsLoading(true);
-    try {
-      const networkInfo = await checkWalletNetwork();
-      if (networkInfo.isValid) {
-        setWalletStatus(`✅ Wallet connected to ${networkInfo.network}\nSOL Balance: ${networkInfo.balance} SOL\nHas funds for fees: ${networkInfo.hasFunds ? 'Yes' : 'No'}`);
-      } else {
-        setWalletStatus(`❌ ${networkInfo.message}`);
-      }
-    } catch (error) {
-      setWalletStatus(`❌ Error checking wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCheckTokenRegistration = async () => {
-    if (!tokenMint) {
-      toast.error('Please enter a token mint address');
-      return;
-    }
-
-    setIsLoading(true);
-    try { 
-      const isRegistered = await isTokenRegistered(tokenMint);
-      setCheckResult(isRegistered ? 'Token is registered with Omni Bridge' : 'Token is NOT registered with Omni Bridge');
-    } catch (error) {
-      setCheckResult(`Error checking token: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogTokenMetadata = async () => {
+  // Function to check token balance and ownership
+  const handleCheckTokenBalance = async () => {
     if (!tokenMint) {
       toast.error('Please enter a token mint address');
       return;
@@ -70,89 +35,71 @@ const BridgeExample: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsCheckingBalance(true);
     try {
-      // First check wallet network
-      const networkInfo = await checkWalletNetwork();
-      if (!networkInfo.isValid) {
-        setCheckResult(`❌ ${networkInfo.message}`);
-        return;
-      }
+      const info = await getTokenInfo(tokenMint);
       
-      if (!networkInfo.hasFunds) {
-        setCheckResult('❌ Insufficient SOL balance for transaction fees. Please add some SOL to your wallet.');
-        return;
-      }
+      if (info) {
+        setTokenInfo(info);
+        const balance = info.balance || BigInt(0);
+        const balanceInTokens = Number(balance) / Math.pow(10, info.decimals);
 
-      setCheckResult('🔄 Starting logMetadata... Please wait.');
-      const result = await handleLogMetadata(tokenMint);
-      
-      if (typeof result === 'string') {
-        setCheckResult(`✅ Token metadata logged successfully!\nTransaction Hash: ${result}`);
-      } else if (result && typeof result === 'object' && 'txHash' in result) {
-        setCheckResult(`✅ Token metadata logged successfully!\nTransaction Hash: ${result.txHash}\nVAA: ${result.vaa || 'Not retrieved'}`);
+        const resultText = `✅ Token Information Found!\n\n` +
+          `📋 Token Details:\n` +
+          `• Name: ${info.name}\n` +
+          `• Symbol: ${info.symbol}\n` +
+          `• Mint Address: ${info.mint}\n` +
+          `• Decimals: ${info.decimals}\n` +
+          `💰 Your Balance:\n` +
+          `• Formatted Balance: ${balanceInTokens.toLocaleString()} ${info.symbol}\n\n` +
+          `${balance > 0 ? '✅ You own this token!' : '❌ You do not own this token'}`;
+        
+        setCheckResult(resultText);
+        
+        if (balance > 0) {
+          toast.success(`You own ${balanceInTokens.toLocaleString()} ${info.symbol}`);
+        } else {
+          toast.error('You do not own this token');
+        }
       } else {
-        setCheckResult('❌ Failed to log token metadata');
+        setTokenInfo(null);
+        setCheckResult('❌ Token not found or invalid mint address');
+        toast.error('Token not found or invalid mint address');
       }
     } catch (error) {
-      setCheckResult(`❌ Error logging metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTokenInfo(null);
+      setCheckResult(`❌ Error checking token balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Error checking token balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setIsCheckingBalance(false);
     }
   };
 
-  const handleGetFee = async () => {
-    if (!tokenMint || !recipientNearAccount) {
-      toast.error('Please enter both token mint and recipient NEAR account');
+  // Auto-check balance when token mint changes (with debounce)
+  const handleTokenMintChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTokenMint(value);
+    setTokenInfo(null); // Clear previous token info
+    
+    // Clear result if mint address is cleared
+    if (!value) {
+      setCheckResult('');
       return;
-    }
-
-    if (!connected || !publicKey) {
-      toast.error('Please connect your Solana wallet first');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const sender = publicKey.toBase58();
-      const fee = await getFeeEstimation(sender, recipientNearAccount, tokenMint);
-      setCheckResult(`Fee estimation: ${JSON.stringify(fee, null, 2)}`);
-    } catch (error) {
-      setCheckResult(`Error getting fee: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleBridgeToNear = async () => {
-    if (!connected || !publicKey) {
-      toast.error('Please connect your Solana wallet first');
+  // Use useEffect for debounced auto-check
+  useEffect(() => {
+    if (!tokenMint || !connected || !publicKey) {
       return;
     }
 
-    if (!tokenMint || !recipientNearAccount || !amount) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    const timeoutId = setTimeout(() => {
+      handleCheckTokenBalance();
+    }, 1000);
 
-    setIsLoading(true);
-    try {
-      // Convert amount to token units (assuming 9 decimals for most Solana tokens)
-      const amountBigInt = BigInt(parseFloat(amount) * Math.pow(10, 6));
-      
-      const result = await bridgeSolanaToNear(
-        tokenMint,
-        amountBigInt,
-        recipientNearAccount
-      );
-
-      setCheckResult(`Bridge initiated successfully! Transaction: ${JSON.stringify(result, null, 2)}`);
-    } catch (error) {
-      setCheckResult(`Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return () => clearTimeout(timeoutId);
+  }, [tokenMint, connected, publicKey]);
 
   const handleDeployToken = async () => {
     if (!tokenMint) {
@@ -164,25 +111,24 @@ const BridgeExample: React.FC = () => {
       toast.error('Please connect your Solana wallet first');
       return;
     }
-
     setIsLoading(true);
     try {
-      // First check wallet network
-      const networkInfo = await checkWalletNetwork();
-      if (!networkInfo.isValid) {
-        setCheckResult(`❌ ${networkInfo.message}`);
-        return;
-      }
-      
-      if (!networkInfo.hasFunds) {
-        setCheckResult('❌ Insufficient SOL balance for transaction fees. Please add some SOL to your wallet.');
-        return;
-      }
-
+      const toastId = toast.loading("Starting token deployment process...");
       setCheckResult('🔄 Starting token deployment process...\n1. Logging metadata...\n2. Waiting 60 seconds for completion...\n3. Getting VAA...\n4. Deploying to NEAR...');
-      
+      const toastWatting = toast.loading("Waiting 60 seconds for logMetadata", {id: toastId});
       const result = await deployTokenNear(tokenMint);
-      console.log(result);
+      const nearExplorerUrl = result 
+        ? `https://testnet.nearblocks.io/en/txns/${result}`
+        : null;
+      
+      const resultText = `✅ Token deployed to NEAR successfully!\nTransaction: ${JSON.stringify(result, null, 2)}`;
+      
+      if (nearExplorerUrl) {
+        setCheckResult(`${resultText}\n\n🔗 View on NEAR Explorer: ${nearExplorerUrl}`);
+      } else {
+        setCheckResult(resultText);
+      }
+      toast.success("Token deployed to NEAR successfully!", { id: toastWatting });
     } catch (error) {
       setCheckResult(`❌ Error deploying token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -190,24 +136,51 @@ const BridgeExample: React.FC = () => {
     }
   };
 
-  const handleGetVaaClick = async () => {
-    if (!transactionHash) {
-      toast.error('Please enter a transaction hash');
+  const handleTransferToken = async () => {
+    if (!tokenMint) {
+      toast.error('Please enter a token mint address');
       return;
     }
 
-    setIsLoading(true);
+    if (!recipientNearAccount) {
+      toast.error('Please enter a recipient NEAR account');
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (!connected || !publicKey) {
+      toast.error('Please connect your Solana wallet first');
+      return;
+    }
+
+    setIsTransferring(true);
     try {
-      const vaa = await handleGetVaa(transactionHash);
-      if (vaa) {
-        setCheckResult(`✅ VAA retrieved successfully!\nVAA: ${vaa}`);
+      const toastId = toast.loading("Starting token transfer process...");
+      setCheckResult('🔄 Starting token transfer process...\n1. Initiating bridge transfer...\n2. Waiting for confirmation...\n3. Processing on NEAR...');
+      
+      // Convert amount to bigint (assuming 6 decimals for most tokens)
+      const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1000000));
+      
+      const result = await transferTokenSolanaToNear(tokenMint, amountBigInt, recipientNearAccount);
+      
+      const resultText = `✅ Token transfer initiated successfully!\nTransaction: ${result?.transactionHash || 'Completed'}\nStatus: ${result?.status || 'Processing'}`;
+      
+      if (result?.transactionHash) {
+        const solanaExplorerUrl = `https://explorer.solana.com/tx/${result.transactionHash}?cluster=devnet`;
+        setCheckResult(`${resultText}\n\n🔗 View on Solana Explorer: ${solanaExplorerUrl}`);
       } else {
-        setCheckResult('❌ Failed to retrieve VAA');
+        setCheckResult(resultText);
       }
+      
+      toast.success("Token transfer initiated successfully!", { id: toastId });
     } catch (error) {
-      setCheckResult(`❌ Error getting VAA: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setCheckResult(`❌ Error transferring token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setIsTransferring(false);
     }
   };
 
@@ -215,31 +188,58 @@ const BridgeExample: React.FC = () => {
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Solana → NEAR Bridge Test</h2>
       
-      {/* Solana Wallet Connection */}
-      <div className="mb-6 p-4 bg-blue-50 rounded-md">
-        <h3 className="text-lg font-semibold mb-2">Solana Wallet Status</h3>
-        {connected ? (
-          <div className="space-y-2">
-            <p><strong>Connected Address:</strong> {publicKey?.toBase58()}</p>
-            <p className="text-sm text-gray-600">Network: Solana Devnet</p>
-          </div>
-        ) : (
-          <div>
-            <p className="text-gray-600 mb-2">No Solana wallet connected</p>
-            <p className="text-sm text-gray-500">Please connect your Solana wallet to continue</p>
-          </div>
-        )}
+      {/* Wallet Status Section */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Solana Wallet Connection */}
+        <div className="p-4 bg-blue-50 rounded-md">
+          <h3 className="text-lg font-semibold mb-2">Solana Wallet Status</h3>
+          {connected ? (
+            <div className="space-y-2">
+              <p><strong>Connected Address:</strong> {publicKey?.toBase58().slice(0,20)}...</p>
+              <p className="text-sm text-gray-600">Network: Solana Devnet</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-600 mb-2">No Solana wallet connected</p>
+              <p className="text-sm text-gray-500">Please connect your Solana wallet to continue</p>
+            </div>
+          )}
+        </div>
+
+        {/* NEAR Wallet Connection */}
+        <div className="p-4 bg-green-50 rounded-md">
+          <h3 className="text-lg font-semibold mb-2">NEAR Wallet Status</h3>
+          {signedAccountId ? (
+            <div className="space-y-2">
+              <p><strong>Connected Account:</strong> {signedAccountId}</p>
+              <p className="text-sm text-gray-600">Network: NEAR Testnet</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-600 mb-2">No NEAR wallet connected</p>
+              <button
+                onClick={signIn}
+                className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+              >
+                Connect NEAR Wallet
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Solana Token Mint Address
+            {isCheckingBalance && (
+              <span className="ml-2 text-blue-500 text-xs">🔄 Checking balance...</span>
+            )}
           </label>
           <input
             type="text"
             value={tokenMint}
-            onChange={(e) => setTokenMint(e.target.value)}
+            onChange={handleTokenMintChange}
             placeholder="e.g., So11111111111111111111111111111111111111112"
             className="w-full p-2 border border-gray-300 rounded-md"
           />
@@ -272,105 +272,7 @@ const BridgeExample: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Transaction Hash (for VAA)
-          </label>
-          <input
-            type="text"
-            value={transactionHash}
-            onChange={(e) => setTransactionHash(e.target.value)}
-            placeholder="Enter transaction hash to get VAA"
-            className="w-full p-2 border border-gray-300 rounded-md"
-          />
-        </div>
-
         <div className="flex flex-wrap gap-4">
-          <button
-            onClick={handleCheckWalletNetwork}
-            disabled={isLoading}
-            className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Checking Network...' : 'Check Wallet Network'}
-          </button>
-
-          <button
-            onClick={handleCheckTokenRegistration}
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Checking...' : 'Check Token Registration'}
-          </button>
-
-          <button
-            onClick={handleLogTokenMetadata}
-            disabled={isLoading || !connected}
-            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Logging...' : 'Log Token Metadata'}
-          </button>
-
-          <button
-            onClick={async () => {
-              if (!tokenMint) {
-                toast.error('Please enter a token mint address');
-                return;
-              }
-
-              if (!connected || !publicKey) {
-                toast.error('Please connect your Solana wallet first');
-                return;
-              }
-
-              setIsLoading(true);
-              try {
-                const networkInfo = await checkWalletNetwork();
-                if (!networkInfo.isValid) {
-                  setCheckResult(`❌ ${networkInfo.message}`);
-                  return;
-                }
-                
-                if (!networkInfo.hasFunds) {
-                  setCheckResult('❌ Insufficient SOL balance for transaction fees. Please add some SOL to your wallet.');
-                  return;
-                }
-
-                setCheckResult('🔄 Logging metadata and waiting for completion...\nThis will take about 1 minute.');
-                const result = await handleLogMetadata(tokenMint, true); // true = wait for completion
-                
-                if (result && typeof result === 'object' && 'txHash' in result) {
-                  setCheckResult(`✅ Token metadata logged and VAA retrieved!\n\nTransaction Hash: ${result.txHash}\nVAA: ${result.vaa}`);
-                } else {
-                  setCheckResult('❌ Failed to log token metadata');
-                }
-              } catch (error) {
-                setCheckResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            disabled={isLoading || !connected}
-            className="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Processing...' : 'Log Metadata + Get VAA'}
-          </button>
-
-          <button
-            onClick={handleGetFee}
-            disabled={isLoading || !connected}
-            className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Getting Fee...' : 'Get Fee Estimation'}
-          </button>
-
-          <button
-            onClick={handleBridgeToNear}
-            disabled={isLoading || !connected}
-            className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
-          >
-            {isLoading ? 'Bridging...' : 'Bridge to NEAR'}
-          </button>
-
           <button
             onClick={handleDeployToken}
             disabled={isLoading || !connected}
@@ -380,12 +282,14 @@ const BridgeExample: React.FC = () => {
           </button>
 
           <button
-            onClick={handleGetVaaClick}
-            disabled={isLoading}
-            className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 disabled:opacity-50"
+            onClick={handleTransferToken}
+            disabled={isTransferring || !connected || !signedAccountId}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
           >
-            {isLoading ? 'Getting VAA...' : 'Get VAA'}
+            {isTransferring ? 'Transferring...' : 'Transfer Token to NEAR'}
           </button>
+
+
         </div>
 
         {checkResult && (
@@ -395,56 +299,6 @@ const BridgeExample: React.FC = () => {
           </div>
         )}
 
-        {walletStatus && (
-          <div className="mt-4 p-4 bg-gray-100 rounded-md">
-            <h3 className="font-semibold mb-2">Wallet Status:</h3>
-            <pre className="text-sm whitespace-pre-wrap">{walletStatus}</pre>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">Supported Solana Tokens:</h3>
-          <div className="space-y-2">
-            {Object.entries(SUPPORTED_TOKENS).map(([symbol, token]) => (
-              <div key={symbol} className="p-3 bg-gray-50 rounded-md">
-                <h4 className="font-medium">{symbol}</h4>
-                <div className="text-sm text-gray-600">
-                  <div>Solana: {token.addresses.solana}</div>
-                  <div>Decimals: {token.decimals.solana}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-600">
-          <h4 className="font-semibold mb-2">Instructions:</h4>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Connect your Solana wallet (make sure it's on devnet)</li>
-            <li>Enter a Solana token mint address (e.g., So11111111111111111111111111111111111111112 for Wrapped SOL)</li>
-            <li>Enter the recipient NEAR account (e.g., account.testnet)</li>
-            <li>Check if the token is registered with Omni Bridge</li>
-            <li>If not registered, try to log metadata (may require bridge admin)</li>
-            <li>Deploy token to NEAR (creates wrapped token on NEAR side)</li>
-            <li>Get fee estimation before bridging</li>
-            <li>Bridge tokens from Solana devnet to NEAR testnet</li>
-            <li>Use the VAA feature to retrieve Validators Approval Authority from a transaction hash</li>
-          </ul>
-        </div>
-
-        <div className="mt-4 p-4 bg-yellow-50 rounded-md">
-          <h4 className="font-semibold mb-2 text-yellow-800">Important Notes:</h4>
-          <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
-            <li>This test uses Solana devnet and NEAR testnet</li>
-            <li>Make sure your Solana wallet is connected to devnet</li>
-            <li>Only supported tokens are guaranteed to work</li>
-            <li>If you get "token not registered" error, try using Wrapped SOL (So11111111111111111111111111111111111111112)</li>
-            <li>Bridge transfers may take several minutes to complete</li>
-            <li><strong>LogMetadata takes ~1 minute to complete on chain</strong></li>
-            <li>Use "Log Metadata + Get VAA" button to automatically wait and get VAA</li>
-            <li>Use "Deploy Token to NEAR" for complete deployment process</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

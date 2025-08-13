@@ -2,7 +2,7 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import idlBondingCurve from "../contracts/IDLs/bonding_curve.json";
-import { Keypair, Transaction, Connection } from "@solana/web3.js";
+import { Keypair, Transaction } from "@solana/web3.js";
 import BRIDGE_TOKEN_FACTORY_IDL from "../contracts/IDLs/bridge_token_factory.json" with {
   type: "json",
 }
@@ -18,39 +18,59 @@ class CustomAnchorProvider extends anchor.AnchorProvider {
 export default function useAnchorProvider() {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
+  
   // Return null if wallet or connection is not available
   if (!connection || !anchorWallet) {
     return null;
   }
 
-  const providerProgram = new CustomAnchorProvider(
-    connection,
-    anchorWallet as any,
-    {
-      preflightCommitment: "confirmed",
+  try {
+    // Set the default provider to avoid "Provider local is not available on browser" error
+    if (typeof window !== 'undefined') {
+      // Browser environment - set default provider
+      anchor.setProvider(new anchor.AnchorProvider(
+        connection,
+        anchorWallet as any,
+        {
+          preflightCommitment: "confirmed",
+          commitment: "confirmed",
+        }
+      ));
     }
-  );
-  
-  const program = new Program(
-    idlBondingCurve as anchor.Idl,
-    providerProgram as any
-  );
 
-  const programBridgeTokenFactory = new Program(
-    BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
-    providerProgram as any
-  );
+    const providerProgram = new CustomAnchorProvider(
+      connection,
+      anchorWallet as any,
+      {
+        preflightCommitment: "confirmed",
+        commitment: "confirmed",
+      }
+    );
+    
+    const program = new Program(
+      idlBondingCurve as anchor.Idl,
+      providerProgram as any
+    );
 
-  const governanceKeypair = Keypair.generate();
-  const mintKeypair = Keypair.generate();
-  
-  return {
-    connection,
-    anchorWallet,
-    providerProgram,
-    program,
-    governanceKeypair,
-    mintKeypair,
-    programBridgeTokenFactory
-  };
+    const programBridgeTokenFactory = new Program(
+      BRIDGE_TOKEN_FACTORY_IDL as anchor.Idl,
+      providerProgram as any
+    );
+
+    const governanceKeypair = Keypair.generate();
+    const mintKeypair = Keypair.generate();
+    
+    return {
+      connection,
+      anchorWallet,
+      providerProgram,
+      program,
+      governanceKeypair,
+      mintKeypair,
+      programBridgeTokenFactory
+    };
+  } catch (error) {
+    console.error('Error creating Anchor provider:', error);
+    return null;
+  }
 }

@@ -30,70 +30,11 @@ interface TokenInfo {
   totalSupply?: bigint;
 }
 
-// Supported tokens configuration
-const SUPPORTED_TOKENS = {
-  NEAR: {
-    symbol: 'NEAR',
-    addresses: {
-      near: 'wrap.testnet', // Wrapped NEAR on testnet
-      solana: 'So11111111111111111111111111111111111111112', // Wrapped SOL
-    },
-    decimals: {
-      near: 24,
-      solana: 9,
-    },
-    icon: '/near-logo.webp',
-  },
-  USDC: {
-    symbol: 'USDC',
-    addresses: {
-      near: 'usdc.fakes.testnet', // USDC on NEAR testnet
-      solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC on Solana devnet
-    },
-    decimals: {
-      near: 6,
-      solana: 6,
-    },
-    icon: '/usdc-icon.png',
-  },
-};
-
 export const useBridge = () => {
-  const { publicKey, sendTransaction, connected, wallet, signTransaction } = useWallet();
+  const { publicKey, sendTransaction, connected, wallet } = useWallet();
   const [isBridging, setIsBridging] = useState(false);
   const anchorProvider = useAnchorProvider()
   const nearWallet = useNearWallet()
-
-  // Helper function to check wallet network and provide debugging info
-  const checkWalletNetwork = useCallback(async () => {
-    if (!publicKey || !connected) {
-      return { isValid: false, message: 'Wallet not connected' };
-    }
-
-    try {
-      const connection = new Connection(
-        SOL_NETWORK === 'mainnet-beta' 
-          ? 'https://api.mainnet-beta.solana.com'
-          : 'https://api.devnet.solana.com'
-      );
-      
-      const balance = await connection.getBalance(publicKey);
-      const expectedNetwork = SOL_NETWORK || 'testnet';
-      
-      return {
-        isValid: true,
-        balance: balance / 1e9,
-        network: expectedNetwork,
-        hasFunds: balance > 0.001 * 1e9
-      };
-    } catch (error) {
-      console.error('Error checking wallet network:', error);
-      return { 
-        isValid: false, 
-        message: 'Could not verify wallet network. Please ensure your wallet is connected to the correct network.' 
-      };
-    }
-  }, [publicKey, connected, wallet]);
 
   // Log token metadata using Omni Bridge SDK
   const handleLogMetadata = useCallback(async (
@@ -105,11 +46,16 @@ export const useBridge = () => {
       return null;
     }
 
+    if (!anchorProvider?.program) {
+      toast.error('Anchor provider not available. Please ensure your wallet is connected.');
+      return null;
+    }
+
     try {
       const formattedTokenAddress = omniAddress(ChainKind.Sol, tokenMint);
       try {        
         console.log("Starting logMetadata...")
-        const logTxHash = await logMetadata(formattedTokenAddress, anchorProvider?.program as any)
+        const logTxHash = await logMetadata(formattedTokenAddress, anchorProvider.program as any)
         console.log("logMetadata txHash:", logTxHash)
 
         if (waitForCompletion) {
@@ -188,11 +134,53 @@ export const useBridge = () => {
         )[0];
 
         const metadataAccount = await connection.getAccountInfo(metadataAddress);
-        
-        if (metadataAccount) {
-          // Parse metadata (simplified - you might want to use a proper metadata parser)
-          name = `Token ${tokenMint.slice(0, 8)}`;
-          symbol = 'TKN';
+
+        if (metadataAccount && metadataAccount.data) {
+          try {
+            // Parse the metadata buffer
+            const buffer = Buffer.from(metadataAccount.data);
+            
+            // Check if buffer is large enough for basic metadata
+            if (buffer.length < 10) {
+              throw new Error('Buffer too small for metadata');
+            }
+            
+            // Try to find name and symbol by looking for readable strings
+            const bufferString = buffer.toString('utf8');
+
+            const parts = bufferString.split('\0').filter(part => {
+
+            return part.length > 0 && 
+                     part.length < 50 && 
+                     /^[a-zA-Z0-9\s]+$/.test(part.trim()) &&
+                     part.trim().length > 0;
+            });
+
+            
+            if (parts.length >= 2) {
+              // First readable string is likely the name
+              name = parts[0].trim();
+              // Second readable string is likely the symbol
+              symbol = parts[1].trim();
+              
+              console.log("Parsed metadata:", { name, symbol });
+            } else if (parts.length === 1) {
+              // Only one readable string found, use it as name
+              name = parts[0].trim();
+              symbol = name.slice(0, 10).toUpperCase();
+              console.log("Parsed metadata (single part):", { name, symbol });
+            } else {
+              // Fallback to default values
+              name = `Token ${tokenMint.slice(0, 8)}`;
+              symbol = 'TKN';
+              console.log("Using fallback metadata:", { name, symbol });
+            }
+          } catch (error) {
+            console.error('Error parsing metadata:', error);
+            // Fallback to default values
+            name = `Token ${tokenMint.slice(0, 8)}`;
+            symbol = 'TKN';
+          }
         }
       } catch (error) {
         console.error('Failed to get metadata:', error);
@@ -229,7 +217,7 @@ export const useBridge = () => {
   }, [publicKey]);
 
   // Bridge from Solana to NEAR
-  const bridgeSolanaToNear = useCallback(async (
+  const transferTokenSolanaToNear = useCallback(async (
     tokenMint: string,
     amount: bigint,
     recipientNearAccount: string
@@ -255,20 +243,12 @@ export const useBridge = () => {
       const recipient = omniAddress(ChainKind.Near, recipientNearAccount) as any;
       const tokenAddress = omniAddress(ChainKind.Sol, tokenMint) as any;
 
-      // 7. Create transfer object
-      // tokenAddress: OmniAddress
-      // amount: bigint
-      // fee: bigint
-      // nativeFee: bigint
-      // recipient: OmniAddress
-      // message?: string
-
       const fee = await api.getFee(senderAddress, recipient, tokenAddress);
 
       console.log("amount", amount)
       const transfer = {
         tokenAddress,
-        amount: BigInt(1000000),
+        amount,
         fee: fee.transferred_token_fee || BigInt(0),
         nativeFee: fee.native_token_fee || BigInt(0),
         recipient,
@@ -276,7 +256,10 @@ export const useBridge = () => {
 
 
       // 8. Send tokens using omniTransfer
-      const result = await omniTransfer(anchorProvider?.providerProgram as any,transfer)
+      if (!anchorProvider?.providerProgram) {
+        throw new Error('Anchor provider not available. Please ensure your wallet is connected.');
+      }
+      const result = await omniTransfer(anchorProvider.providerProgram as any,transfer)
       console.log('result', result);
 
       if (!result) {
@@ -362,8 +345,13 @@ export const useBridge = () => {
   const isTokenRegistered = useCallback(async (
     token: string
   ): Promise<boolean> => {
+    if (!anchorProvider?.programBridgeTokenFactory) {
+      console.error('Anchor provider not available for token registration check');
+      return false;
+    }
+    
     try {
-      const isBridged = await isBridgedToken(new PublicKey(token), anchorProvider?.programBridgeTokenFactory as any)
+      const isBridged = await isBridgedToken(new PublicKey(token), anchorProvider.programBridgeTokenFactory as any)
       return isBridged
     } catch (error) {
       console.error('Error checking token registration:', error);
@@ -398,14 +386,18 @@ export const useBridge = () => {
   const deployTokenNear = useCallback(async (
     tokenMint: string
   ) => {
+    if (!anchorProvider?.providerProgram) {
+      throw new Error('Anchor provider not available. Please ensure your wallet is connected.');
+    }
+
     try{
       setNetwork("testnet");
       const secretKey = bs58.decode(SOL_PRIVATE_KEY || "");
       const payer = Keypair.fromSecretKey(secretKey);
       const mintAddress = omniAddress(ChainKind.Sol, tokenMint)
       console.log("Starting logMetadata...")
-      console.log(anchorProvider?.providerProgram)
-      const solClient = new SolanaBridgeClient(anchorProvider?.providerProgram as any)
+      console.log(anchorProvider.providerProgram)
+      const solClient = new SolanaBridgeClient(anchorProvider.providerProgram as any)
       const txHash = await solClient.logMetadata(mintAddress, payer)
       console.log("logMetadata txHash:", txHash)
 
@@ -430,7 +422,7 @@ export const useBridge = () => {
       console.error('Error deploying token:', error);
       throw error;
     }
-  }, [])
+  }, [anchorProvider, nearWallet])
 
   // Get VAA (Validators Approval Authority) from transaction hash
   const handleGetVaa = useCallback(async (
@@ -453,14 +445,12 @@ export const useBridge = () => {
   }, []);
 
   return {
-    bridgeSolanaToNear,
+    transferTokenSolanaToNear,
     handleLogMetadata,
     getTokenInfo,
     getFeeEstimation,
     isTokenRegistered,
     isBridging,
-    checkWalletNetwork,
-    SUPPORTED_TOKENS,
     deployTokenNear,
     handleGetVaa
   };
