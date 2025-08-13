@@ -10,7 +10,8 @@
     "preview": "rsbuild preview",
     "lint": "eslint .",
     "test": "echo 'No tests yet'",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo",
+    "generate": "tsr generate"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
