@@ -1,5 +1,4 @@
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
-import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupSender } from "@near-wallet-selector/sender";
 import { setupNightly } from "@near-wallet-selector/nightly";
@@ -9,7 +8,6 @@ export const nearWalletConfig = {
   network: (NEAR_NETWORK || 'testnet') as 'mainnet' | 'testnet',
   modules: [
     setupHereWallet(),
-    setupMyNearWallet(),
     setupMeteorWallet(),
     setupSender(),
     setupNightly()
