@@ -5,7 +5,6 @@ import { PlusIcon } from 'lucide-react';
 
 export default function Header() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
     return (
         <header className="border-b border-gray-200 bg-white">
             <div className="xl:container mx-auto px-4 h-16 flex items-center justify-between">

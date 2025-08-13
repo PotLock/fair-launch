@@ -9,7 +9,6 @@ import {
   DialogTitle 
 } from './ui/dialog';
 import { Button } from './ui/button';
-
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +19,7 @@ interface ConnectedWallet {
   address: string;
   displayName: string;
 }
+
 
 const SignInModal: React.FC<SignInModalProps> = ({ 
   isOpen, 

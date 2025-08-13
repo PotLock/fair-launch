@@ -1,6 +1,8 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginNodePolyfill } from '@rsbuild/plugin-node-polyfill';
+import path from "path";
+
 
 export default defineConfig({
   plugins: [
@@ -8,6 +10,10 @@ export default defineConfig({
     pluginNodePolyfill()
   ],
   source: {
+    alias: {
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+    },
     define: {
       'process.env.PUBLIC_SOL_PRIVATE_KEY': JSON.stringify(process.env.PUBLIC_SOL_PRIVATE_KEY),
       'process.env.PUBLIC_HELIUS_API_KEY': JSON.stringify(process.env.PUBLIC_HELIUS_API_KEY),

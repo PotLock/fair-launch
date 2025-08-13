@@ -9,6 +9,8 @@ import { Toaster } from "react-hot-toast";
 import { InforWarning } from "../components/layout/InforWarning";
 import { Footer } from "../components/layout/Footer";
 import { HelpButton } from "../components/layout/HelpButton";
+import { WalletSelectorProvider } from "@near-wallet-selector/react-hook";
+import { nearWalletConfig } from "../configs/nearWalletConfig";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ function RootComponent() {
     <>
       <QueryClientProvider client={queryClient}>
         <WalletContextProvider>
+          <WalletSelectorProvider config={nearWalletConfig}>
           <Header />
           <InforWarning/>
           <Outlet />
@@ -37,6 +40,7 @@ function RootComponent() {
           <HelpButton />
           <TanStackRouterDevtools position="bottom-right" />
           <Toaster position="top-right" />
+          </WalletSelectorProvider>
         </WalletContextProvider>
       </QueryClientProvider>
     </>
