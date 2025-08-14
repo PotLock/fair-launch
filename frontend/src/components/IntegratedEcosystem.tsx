@@ -8,7 +8,8 @@ export default function IntegratedEcosystem(){
             <div className="relative w-full overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-4 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-4 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://near-intents.org", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
                             <img src={'/logos/near-intents.svg'} alt={'NEAR Intents'} className="w-24 h-full bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-3"/>
@@ -21,7 +22,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://solana.com", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
                             <div className="w-9 h-9 bg-black rounded-full flex items-center justify-center text-2xl">
@@ -36,7 +38,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://docs.near.org/chain-abstraction/omnibridge/overview", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
                             <img src={'/logos/near.svg'} alt={'NEAR Intents'} className="w-8 h-full rounded-lg flex items-center justify-center"/>
@@ -49,7 +52,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://raydium.io", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
                             <img src={'/logos/raydium.png'} alt={'Raydium'} className="w-10 h-full rounded-lg flex items-center justify-center"/>
@@ -62,7 +66,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://pump.fun/board", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
                             <img src={'/logos/pumpfun.png'} alt={'PumpSwap'} className="w-12 h-12 flex items-center justify-center"/>
@@ -75,7 +80,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://jup.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
                             <img src={'/logos/jupiter.png'} alt={'Jupiter'} className="w-12 h-12 flex items-center justify-center"/>
@@ -88,7 +94,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://aerodrome.finance", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
                             <img src={'/logos/aerodrome.png'} alt={'Aerodrome'} className="w-12 h-12 flex items-center justify-center"/>
@@ -101,7 +108,8 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        onClick={() => window.open("https://www.meteora.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
                             <img src={'/logos/meteora.png'} alt={'Meteora'} className="w-12 h-12 flex items-center justify-center"/>

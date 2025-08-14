@@ -1,7 +1,9 @@
 import { ArrowRight,BookA } from "lucide-react";
 import { Button } from "../ui/button";
+import { useNavigate } from "@tanstack/react-router";
 
 export default function Hero() {
+  const navigate = useNavigate();
   return (
     <div className="bg-white">
       <div className="container px-6 mx-auto -mt-10 font-sora">
@@ -50,11 +52,11 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button className="bg-[#DD3345] hover:bg-red-700 text-white px-8 py-5 text-sm rounded-md transition-colors">
+              <Button onClick={() => navigate({to: "/create"})} className="bg-[#DD3345] hover:bg-red-700 text-white px-8 py-5 text-sm rounded-md transition-colors">
                 <span className="font-light">Launch Your Token</span> 
                 <ArrowRight className="w-4 h-4"/>
               </Button>
-              <Button variant="outline" className="border-none bg-[#eaf0f6] text-black px-8 py-5 text-sm font-normal rounded-md hover:bg-[#f2f6f9] transition-colors">
+              <Button onClick={() => window.open("https://docs.potlaunch.com", "_blank")} variant="outline" className="border-none bg-[#eaf0f6] text-black px-8 py-5 text-sm font-normal rounded-md hover:bg-[#f2f6f9] transition-colors">
                 <span className="font-light">View Documentation</span>
                 <BookA className="w-6 h-6"/>
               </Button>
