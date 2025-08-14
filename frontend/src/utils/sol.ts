@@ -37,22 +37,6 @@ export const solNetwork = () => {
   }
 };
 
-export const formatNumberToK = (x: number) => {
-  switch (true) {
-    case x >= 1000:
-      const kValue = x / 1000;
-      return `${kValue}K`;
-    case x >= 1000000:
-      const mValue = x / 1000;
-      return `${mValue}M`;
-    case x >= 1000000000:
-      const bValue = x / 1000;
-      return `${bValue}B`;
-    default:
-      return x;
-  }
-};
-
 export async function getBondingCurveConfig(admin: PublicKey, configIndex: number) {
   const configIndexBuffer = new anchor.BN(configIndex).toArrayLike(Buffer, "le", 8);
   const [curveConfig] = PublicKey.findProgramAddressSync(
