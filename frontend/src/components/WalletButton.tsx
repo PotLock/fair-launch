@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useNearWallet } from './NearWalletProvider';
+import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import WalletProfileModal from './WalletProfileModal';
 import SignInModal from './SignInModal';
 import { ChevronDown, User, LogOut } from 'lucide-react';
@@ -25,15 +25,14 @@ const WalletButton: React.FC = () => {
   const { disconnect: disconnectEVM } = useDisconnect();
   const { connected: solanaConnected, disconnect: disconnectSolana, publicKey } = useWallet();
   
-  // Get NEAR wallet from NearWalletProvider
-  const nearWallet = useNearWallet();
-  
+  const {signedAccountId, signOut} = useWalletSelector()
+
   // State for modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   const isAnyWalletConnected = () => {
-    return evmConnected || solanaConnected || !!nearWallet?.signedAccountId;
+    return evmConnected || solanaConnected || !!signedAccountId;
   };
 
   const getConnectedWallets = (): ConnectedWallet[] => {
@@ -47,10 +46,10 @@ const WalletButton: React.FC = () => {
       });
     }
     
-    if (nearWallet?.signedAccountId) {
+    if (signedAccountId) {
       wallets.push({
         type: 'near',
-        address: nearWallet.signedAccountId,
+        address: signedAccountId,
         displayName: 'NEAR Wallet'
       });
     }
@@ -70,7 +69,7 @@ const WalletButton: React.FC = () => {
     let count = 0;
     if (evmConnected) count++;
     if (solanaConnected) count++;
-    if (nearWallet?.signedAccountId) count++;
+    if (signedAccountId) count++;
     return count;
   };
 
@@ -85,10 +84,10 @@ const WalletButton: React.FC = () => {
         if (solanaConnected) {
           return 'Solana Wallet';
         }
-        if (nearWallet?.signedAccountId) {
-          return nearWallet.signedAccountId.length > 60 
-            ? `${nearWallet.signedAccountId.slice(0, 6)}...${nearWallet.signedAccountId.slice(-4)}` 
-            : nearWallet.signedAccountId;
+        if (signedAccountId) {
+          return signedAccountId.length > 60 
+            ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}` 
+            : signedAccountId;
         }
       } else {
         // Show count of connected wallets
@@ -113,9 +112,9 @@ const WalletButton: React.FC = () => {
         disconnectSolana();
         break;
       case 'near':
-        if (nearWallet) {
+        if (signedAccountId) {
           try {
-            await nearWallet.signOut();
+            await signOut();
           } catch (error) {
             console.error('Failed to disconnect NEAR wallet:', error);
           }

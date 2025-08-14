@@ -14,7 +14,6 @@ import { mainnet, sepolia, polygon, arbitrum, base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
-import { WalletSelectorProvider } from "../components/NearWalletProvider";
 import { nearWalletConfig } from "../configs/nearWalletConfig";
 
 export type ChainType = 'solana' | 'near' | 'evm';
@@ -144,11 +143,9 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
             <ConnectionProvider endpoint={endpoint}>
               <WalletProvider wallets={wallets} autoConnect={true}>
                 <WalletModalProvider>
-                  <WalletSelectorProvider config={nearWalletConfig}>
-                    <SolanaWalletWrapper>
-                      {children}
-                    </SolanaWalletWrapper>
-                  </WalletSelectorProvider>
+                  <SolanaWalletWrapper>
+                    {children}
+                  </SolanaWalletWrapper>
                 </WalletModalProvider>
               </WalletProvider>
             </ConnectionProvider>

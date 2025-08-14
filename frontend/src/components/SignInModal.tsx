@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useWalletContext } from '../context/WalletProviderContext';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { useNearWallet } from './NearWalletProvider';
 import { 
   Dialog, 
   DialogContent, 
@@ -9,6 +8,7 @@ import {
   DialogTitle 
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { useWalletSelector } from '@near-wallet-selector/react-hook';
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +27,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
 }) => {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const nearWallet = useNearWallet();
+  const {wallet: nearWalletSelector, signIn, signOut, signedAccountId} = useWalletSelector()
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
   const { connectSolana, disconnectSolana, isSolanaConnected, solanaPublicKey } = useWalletContext();
   const [connectedWallets, setConnectedWallets] = useState<ConnectedWallet[]>([]);
@@ -45,10 +45,10 @@ const SignInModal: React.FC<SignInModalProps> = ({
       });
     }
     
-    if (nearWallet?.signedAccountId) {
+    if (signedAccountId) {
       wallets.push({
         type: 'near',
-        address: nearWallet.signedAccountId,
+        address: signedAccountId,
         displayName: 'NEAR Wallet'
       });
     }
@@ -62,7 +62,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
     }
     
     setConnectedWallets(wallets);
-  }, [isSolanaConnected, solanaPublicKey, nearWallet?.signedAccountId, evmConnected, evmAddress]);
+  }, [isSolanaConnected, solanaPublicKey, signedAccountId, evmConnected, evmAddress]);
 
   const handleConnectSolana = async () => {
     // Use the Solana wallet connection function from context
@@ -76,17 +76,11 @@ const SignInModal: React.FC<SignInModalProps> = ({
   };
 
   const handleConnectNEAR = async () => {
-    if (nearWallet) {
+    if (nearWalletSelector) {
       try {
         setIsConnectingNEAR(true);
         
-        // Check if wallet is initialized
-        if (!nearWallet.isInitialized) {
-          alert('NEAR wallet is still initializing. Please wait a moment and try again.');
-          return;
-        }
-        
-        await nearWallet.signIn();
+        signIn();
         // Close modal after successful connection
         onClose();
       } catch (error) {
@@ -120,8 +114,8 @@ const SignInModal: React.FC<SignInModalProps> = ({
         disconnectSolana();
         break;
       case 'near':
-        if (nearWallet) {
-          nearWallet.signOut();
+        if (signedAccountId) {
+          signOut();
         }
         break;
       case 'evm':
@@ -135,7 +129,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
       case 'solana':
         return isSolanaConnected;
       case 'near':
-        return !!nearWallet?.signedAccountId;
+        return !!signedAccountId;
       case 'evm':
         return evmConnected;
       default:
@@ -148,9 +142,9 @@ const SignInModal: React.FC<SignInModalProps> = ({
       case 'solana':
         return solanaPublicKey ? `${solanaPublicKey.slice(0, 6)}...${solanaPublicKey.slice(-4)}` : '';
       case 'near':
-        return nearWallet?.signedAccountId && nearWallet.signedAccountId.length > 60 
-          ? `${nearWallet.signedAccountId.slice(0, 6)}...${nearWallet.signedAccountId.slice(-4)}` 
-          : nearWallet?.signedAccountId || '';
+        return signedAccountId && signedAccountId.length > 60 
+          ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}` 
+          : signedAccountId || '';
       case 'evm':
         return evmAddress ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}` : '';
       default:
@@ -232,9 +226,9 @@ const SignInModal: React.FC<SignInModalProps> = ({
                     size="sm"
                     onClick={handleConnectNEAR}
                     className="h-8 px-3"
-                    disabled={isConnectingNEAR || !nearWallet?.isInitialized}
+                    disabled={isConnectingNEAR}
                   >
-                    {isConnectingNEAR ? 'Connecting...' : nearWallet?.isInitialized ? 'Connect' : 'Initializing...'}
+                    {isConnectingNEAR ? 'Connecting...' : 'Connect'}
                   </Button>
                 )}
               </div>

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { useWalletContext } from '../context/WalletProviderContext';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useNearWallet } from './NearWalletProvider';
 import { 
   Dialog, 
   DialogContent, 
@@ -10,7 +8,8 @@ import {
   DialogTitle 
 } from './ui/dialog';
 import { Button } from './ui/button';
-import { Copy, LogOut, RefreshCw } from 'lucide-react';
+import { Copy } from 'lucide-react';
+import { useWalletSelector } from '@near-wallet-selector/react-hook';
 
 interface WalletProfileModalProps {
   isOpen: boolean;
@@ -30,7 +29,7 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
   const { address, isConnected: evmConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { publicKey, connected: solanaConnected, disconnect: disconnectSolana } = useWallet();
-  const nearWallet = useNearWallet();
+  const { signOut, signedAccountId} = useWalletSelector()
   const [copied, setCopied] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string>('');
 
@@ -45,10 +44,10 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
       });
     }
     
-    if (nearWallet?.signedAccountId) {
+    if (signedAccountId) {
       wallets.push({
         type: 'near',
-        address: nearWallet.signedAccountId,
+        address: signedAccountId,
         displayName: 'NEAR Wallet'
       });
     }
@@ -84,9 +83,9 @@ const WalletProfileModal: React.FC<WalletProfileModalProps> = ({
         disconnectSolana();
         break;
       case 'near':
-        if (nearWallet) {
+        if (signedAccountId) {
           try {
-            await nearWallet.signOut();
+            await signOut();
           } catch (error) {
             console.error('Failed to disconnect NEAR wallet:', error);
           }

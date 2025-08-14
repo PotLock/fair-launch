@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useBridge } from '../hook/useBridge';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useNearWallet } from './NearWalletProvider';
 import toast from 'react-hot-toast';
 import { useWalletSelector } from "@near-wallet-selector/react-hook";
 
@@ -14,8 +13,6 @@ const BridgeExample: React.FC = () => {
   } = useBridge();
   
   const { publicKey, connected } = useWallet();
-  const { signedAccountId, signIn } = useNearWallet();
-  
   const [isLoading, setIsLoading] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
@@ -25,7 +22,7 @@ const BridgeExample: React.FC = () => {
   const [checkResult, setCheckResult] = useState<string>('');
   const [tokenInfo, setTokenInfo] = useState<any>(null);
 
-  const {signIn:signInNear} = useWalletSelector()
+  const {signIn, signedAccountId} = useWalletSelector()
 
   // Function to check token balance and ownership
   const handleCheckTokenBalance = async () => {
@@ -222,7 +219,7 @@ const BridgeExample: React.FC = () => {
             <div>
               <p className="text-gray-600 mb-2">No NEAR wallet connected</p>
               <button
-                onClick={signInNear}
+                onClick={signIn}
                 className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
               >
                 Connect NEAR Wallet

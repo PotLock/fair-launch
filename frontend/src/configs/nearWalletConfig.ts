@@ -17,5 +17,9 @@ export const nearWalletConfig: SetupParams = {
     setupIntearWallet()
   ],
   languageCode: "en",
-  debug: true
+  debug: true,
+  createAccessKeyFor: {
+    contractId: "v1.social08.testnet",
+    methodNames: []
+  }
 }; 

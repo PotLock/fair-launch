@@ -10,16 +10,16 @@ import {
   setNetwork,
   type Transfer,
   type Chain,
-  NearBridgeClient,
   SolanaBridgeClient
 } from 'omni-bridge-sdk';
 import toast from 'react-hot-toast';
 import { SOL_NETWORK, SOL_PRIVATE_KEY } from '../configs/env.config';
 import { logMetadata, isBridgedToken, lockerAddress } from '../lib/omniBrigde';
 import useAnchorProvider from './useAnchorProvider';
-import { useNearWallet } from '../components/NearWalletProvider';
 import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
+import { useWalletSelector } from '@near-wallet-selector/react-hook';
+
 // Interface for token info including balance
 interface TokenInfo {
   mint: string;
@@ -34,7 +34,7 @@ export const useBridge = () => {
   const { publicKey, sendTransaction, connected, wallet } = useWallet();
   const [isBridging, setIsBridging] = useState(false);
   const anchorProvider = useAnchorProvider()
-  const nearWallet = useNearWallet()
+  const { wallet: nearWalletSelector } = useWalletSelector()
 
   // Log token metadata using Omni Bridge SDK
   const handleLogMetadata = useCallback(async (
@@ -407,12 +407,7 @@ export const useBridge = () => {
       console.log("Getting VAA after logMetadata completion...")
       const vaa = await getVaa(txHash, "Testnet");
       console.log("VAA retrieved:", vaa)
-
-      const walletSelector = await nearWallet.walletSelector;
-      if (!walletSelector) {
-        throw new Error('Wallet selector not initialized');
-      }
-      const nearClient = new NearWalletSelectorBridgeClient(walletSelector as any, lockerAddress)
+      const nearClient = new NearWalletSelectorBridgeClient(nearWalletSelector as any, lockerAddress)
 
       const result = await nearClient.deployToken(ChainKind.Sol, vaa)
       console.log("Token deployed to NEAR:", result)
@@ -422,7 +417,7 @@ export const useBridge = () => {
       console.error('Error deploying token:', error);
       throw error;
     }
-  }, [anchorProvider, nearWallet])
+  }, [anchorProvider, nearWalletSelector])
 
   // Get VAA (Validators Approval Authority) from transaction hash
   const handleGetVaa = useCallback(async (

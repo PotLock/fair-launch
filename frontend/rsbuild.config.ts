@@ -10,10 +10,6 @@ export default defineConfig({
     pluginNodePolyfill()
   ],
   source: {
-    alias: {
-      react: path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-    },
     define: {
       'process.env.PUBLIC_SOL_PRIVATE_KEY': JSON.stringify(process.env.PUBLIC_SOL_PRIVATE_KEY),
       'process.env.PUBLIC_HELIUS_API_KEY': JSON.stringify(process.env.PUBLIC_HELIUS_API_KEY),
@@ -35,7 +31,9 @@ export default defineConfig({
       fs: false,
       path: false,
       os: false,
-      algosdk: false
+      algosdk: false,
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
   },
   html: {
