@@ -34,7 +34,7 @@ export const useBridge = () => {
   const { publicKey, sendTransaction, connected, wallet } = useWallet();
   const [isBridging, setIsBridging] = useState(false);
   const anchorProvider = useAnchorProvider()
-  const { wallet: nearWalletSelector } = useWalletSelector()
+  const { walletSelector: nearWalletSelector } = useWalletSelector()
 
   // Log token metadata using Omni Bridge SDK
   const handleLogMetadata = useCallback(async (
@@ -407,12 +407,14 @@ export const useBridge = () => {
       console.log("Getting VAA after logMetadata completion...")
       const vaa = await getVaa(txHash, "Testnet");
       console.log("VAA retrieved:", vaa)
-      const nearClient = new NearWalletSelectorBridgeClient(nearWalletSelector as any, lockerAddress)
+      const selector = await nearWalletSelector
+
+      const nearClient = new NearWalletSelectorBridgeClient(selector as any, lockerAddress)
 
       const result = await nearClient.deployToken(ChainKind.Sol, vaa)
       console.log("Token deployed to NEAR:", result)
       
-      return { txHash, result }
+      return { vaa,result }
     } catch (error) {
       console.error('Error deploying token:', error);
       throw error;
