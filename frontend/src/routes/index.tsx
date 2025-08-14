@@ -4,6 +4,7 @@ import CoreCapabilities from "../components/CoreCapabilities";
 import ExploreTokens from "../components/ExploreTokens";
 import Comprehensive from "../components/Comprehensive";
 import IntegratedEcosystem from "../components/IntegratedEcosystem";
+import ConsultUs from "../components/ConsultUs";
 
 export const Route = createFileRoute("/")({
     component: Home,
@@ -53,6 +54,7 @@ function Home() {
         <ExploreTokens/>
         <Comprehensive/>
         <IntegratedEcosystem/>
+        <ConsultUs/>
       </div>
     </div>
   );
