@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import Hero from "../components/layout/Hero";
 import CoreCapabilities from "../components/CoreCapabilities";
+import ExploreTokens from "../components/ExploreTokens";
+import Comprehensive from "../components/Comprehensive";
+import IntegratedEcosystem from "../components/IntegratedEcosystem";
 
 export const Route = createFileRoute("/")({
     component: Home,
@@ -47,6 +50,9 @@ function Home() {
           </div>
         </div>
         <CoreCapabilities/>
+        <ExploreTokens/>
+        <Comprehensive/>
+        <IntegratedEcosystem/>
       </div>
     </div>
   );

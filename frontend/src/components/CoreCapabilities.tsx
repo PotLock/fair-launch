@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight} from 'lucide-react';
 
 export default function CoreCapabilities() {
-    const [currentSlide, setCurrentSlide] = useState(0);
+    const [currentSlide, setCurrentSlide] = useState<number>(0);
 
     const capabilities = [
         {
@@ -51,7 +51,7 @@ export default function CoreCapabilities() {
         <div className="pt-[68px] px-10">
             <div className="w-full flex justify-between items-center mb-12">
                 <h1 className="font-bold text-3xl">Core Capabilities</h1>
-                <span className="max-w-[20rem]">Comprehensive tools for the complete token lifecycle</span>
+                <span className="max-w-[26rem] text-xl">Comprehensive tools for the complete token lifecycle</span>
             </div>
             
             <div className="relative w-full overflow-hidden">
