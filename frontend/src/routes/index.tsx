@@ -37,15 +37,15 @@ function Home() {
       </section>
       <div className="container px-6 mx-auto pt-20">
         <div className="flex items-center justify-between px-10">
-          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-100 shadow-sm flex flex-col justify-center gap-3 items-center">
+          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
             <span className="font-bold text-4xl">X</span>
             <span className="font-thin text-lg">TOTAL VALUE LAUNCHED</span>
           </div>
-          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-100 shadow-sm flex flex-col justify-center gap-3 items-center">
+          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
             <span className="font-bold text-4xl">X</span>
             <span className="font-thin text-lg">TOKENS CREATED</span>
           </div>
-          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-100 shadow-sm flex flex-col justify-center gap-3 items-center">
+          <div className="h-[130px] w-[300px] p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
             <span className="font-bold text-4xl">4+</span>
             <span className="font-thin text-lg">CHAINS SUPPORTED</span>
           </div>

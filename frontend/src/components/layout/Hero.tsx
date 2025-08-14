@@ -19,34 +19,34 @@ export default function Hero() {
             
             <p className="text-sm text-black font-light leading-relaxed md:max-w-[550px]">
               Create, bridge, and launch tokens across{" "}
-              <span className="inline-flex items-center space-x-2">
+              <span className="inline-flex items-center space-x-1 border p-1 rounded-full border-dashed border-gray-400">
                 <span className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">S</span>
+                  <img src="/logos/solana_light.svg" alt="SOLANA" className="w-4 h-4" />
                 </span>
                 <span>Solana</span>
               </span>
               ,{" "}
-              <span className="inline-flex items-center space-x-2">
+              <span className="inline-flex items-center space-x-1 border p-1 rounded-full border-dashed border-gray-400">
                 <span className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                  <span className="text-green-500 text-xs font-bold">N</span>
+                  <img src="/chains/near_light.svg" alt="NEAR" className="w-4 h-4" />
                 </span>
                 <span>NEAR</span>
               </span>
               ,{" "}
-              <span className="inline-flex items-center space-x-2">
+              <span className="inline-flex items-center space-x-1 border p-1 rounded-full border-dashed border-gray-400">
                 <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">—</span>
+                  <img src="/chains/base.svg" alt="BASE" className="w-4 h-4" />
                 </span>
                 <span>BASE</span>
               </span>
               {" "}and{" "}
-              <span className="inline-flex items-center space-x-2">
-                <span className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">◆</span>
+              <span className="inline-flex items-center space-x-1 border p-1 rounded-full border-dashed border-gray-400">
+                <span className="w-6 h-6 border border-gray-700 rounded-full flex items-center justify-center">
+                  <img src="/chains/ethereum.svg" alt="ETH" className="w-6 h-6" />
                 </span>
                 <span>Ethereum</span>
               </span>
-              {" "}networks with our comprehensive no-code platform. <span className="text-gray-500 font-light">Launch in minutes, not months.</span>
+              {"  "}networks with our comprehensive no-code platform. <span className="text-gray-500 font-light">Launch in minutes, not months.</span>
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
