@@ -49,7 +49,7 @@ export default function ExploreTokenCard({banner,
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md cursor-pointer transition-shadow p-4 max-w-[365px]">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md cursor-pointer transition-shadow p-4 md:max-w-[365px]">
             <div className="relative">
                 <img src={banner} alt={name} className="w-full h-48 object-cover rounded-xl" />
                 
@@ -78,7 +78,7 @@ export default function ExploreTokenCard({banner,
                     {description}
                 </p>
 
-                <div className="grid grid-cols-4 gap-4 mt-6">
+                <div className="grid grid-cols-4 md:gap-4 mt-6">
                     <div className="text-center flex flex-col">
                         <span className="font-bold text-gray-900">{price}</span>
                         <span className="text-gray-500 text-xs">Price</span>

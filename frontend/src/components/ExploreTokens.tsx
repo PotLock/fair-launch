@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ExploreTokenCard from "./ExploreTokenCard";
 
@@ -97,7 +97,25 @@ const sampleTokens = [
 
 export default function ExploreTokens() {
     const [currentIndex, setCurrentIndex] = useState<number>(0);
-    const cardsPerView = 3;
+    const [cardsPerView, setCardsPerView] = useState<number>(3);
+
+    // Responsive cards per view
+    useEffect(() => {
+        const updateCardsPerView = () => {
+            if (window.innerWidth < 640) { // sm
+                setCardsPerView(1);
+            } else if (window.innerWidth < 1024) { // lg
+                setCardsPerView(2);
+            } else {
+                setCardsPerView(3);
+            }
+        };
+
+        updateCardsPerView();
+        window.addEventListener('resize', updateCardsPerView);
+        return () => window.removeEventListener('resize', updateCardsPerView);
+    }, []);
+
     const maxIndex = Math.max(0, sampleTokens.length - cardsPerView);
 
     const nextSlide = () => {
@@ -109,44 +127,44 @@ export default function ExploreTokens() {
     };
 
     return (
-        <div className="pt-[68px] px-10">
-            <div className="w-full flex justify-between items-center mb-12">
+        <div className="pt-[68px] md:px-10">
+            <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
                 <h1 className="font-bold text-3xl">Explore Tokens</h1>
-                <span className="max-w-[20rem] text-xl">Participate in all the latest token launches.</span>
+                <span className="md:max-w-[26rem] text-xl">Participate in all the latest token launches.</span>
             </div>
             
             <div className="relative w-full overflow-hidden">
                 <div 
                     className="flex gap-3 transition-transform duration-500 ease-in-out"
                     style={{
-                        transform: `translateX(-${currentIndex * (100 / 3)}%)`
+                        transform: `translateX(-${currentIndex * (100 / cardsPerView)}%)`
                     }}
                 >
                     {sampleTokens.map((token) => (
-                        <div key={token.id} className="flex-shrink-0" style={{ width: `calc((100% - 1rem) / 3)` }}>
+                        <div key={token.id} className="flex-shrink-0" style={{ width: `calc((100% - ${(cardsPerView - 0.2) * 0.75}rem) / ${cardsPerView})` }}>
                             <ExploreTokenCard {...token} />
                         </div>
                     ))}
                 </div>
 
-                <div className="flex justify-between items-center mt-8">
-                    <button className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">
+                <div className="flex flex-row justify-between items-center mt-8 gap-4">
+                    <button className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors">
                         <span className="text-sm">Explore All</span>
                     </button>
                     
-                    <div className='flex justify-center mt-8'>
+                    <div className='flex justify-center'>
                         <div className="border border-black max-w-[200px] flex rounded-full">
                             <button
                                 onClick={prevSlide}
                                 disabled={currentIndex === 0}
-                                className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="h-8 md:h-10 w-8 md:w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <ChevronLeft className="w-4 h-4 text-gray-600" />
                             </button>
                             <button
                                 onClick={nextSlide}
                                 disabled={currentIndex >= maxIndex}
-                                className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="h-8 md:h-10 w-8 md:w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <ChevronRight className="w-4 h-4 text-gray-600" />
                             </button>

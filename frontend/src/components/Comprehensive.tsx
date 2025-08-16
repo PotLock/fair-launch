@@ -1,14 +1,160 @@
+import { useState, useRef } from 'react';
+
 export default function Comprehensive(){
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
+    const carouselRef = useRef<HTMLDivElement>(null);
+
+    // Data for carousel slides
+    const slides = [
+        {
+            title: "Multi-Chain Deployment",
+            description: "Deploy your token across Solana, Ethereum, NEAR, and Base with a single click. Seamless cross-chain functionality.",
+            image: "/icons/multi-chain.png",
+            bgColor: "bg-gray-50",
+            textColor: "text-gray-700",
+            imageBg: "bg-neutral-200"
+        },
+        {
+            title: "Vesting Schedules",
+            description: "Flexible vesting schedules with cliff periods, custom intervals, and automated distribution for team and investor allocations.",
+            image: "/icons/vesting.png",
+            bgColor: "bg-[#EFF3DB]",
+            textColor: "text-[#4D5E0E]",
+            imageBg: "bg-[#607316]"
+        },
+        {
+            title: "Bonding Curves",
+            description: "Advanced bonding curve mechanisms with linear, exponential, logarithmic, and sigmoid curve options for optimal price discovery.",
+            image: "/icons/bonding-curve.png",
+            bgColor: "bg-[#FAE2DF]",
+            textColor: "text-gray-700",
+            imageBg: "bg-[#6B0036]"
+        },
+        {
+            title: "Launch Mechanism",
+            description: "Built-in governance, voting mechanisms, and community management tools to engage your token holders effectively.",
+            image: "/icons/launch-mechanism.png",
+            bgColor: "bg-[#DFF2F1]",
+            textColor: "text-[#43696B]",
+            imageBg: "bg-[#43696B]"
+        },
+        {
+            title: "Cross-Chain DEX Support",
+            description: "Cross chain balance top up and dex support. Swap through intents and access your assets through native dex.",
+            image: "/icons/cross-chain-dex.png",
+            bgColor: "bg-[#EEF2FF]",
+            textColor: "text-slate-700",
+            imageBg: "bg-indigo-800"
+        }
+    ];
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+
+        if (isLeftSwipe && currentSlide < slides.length - 1) {
+            setCurrentSlide(currentSlide + 1);
+        }
+        if (isRightSwipe && currentSlide > 0) {
+            setCurrentSlide(currentSlide - 1);
+        }
+
+        setTouchStart(0);
+        setTouchEnd(0);
+    };
+
+
     return(
-        <div className="pt-[68px] px-10">
-            <div className="w-full flex justify-between items-center mb-12">
-                <div className="max-w-[20rem]">
+        <div className="pt-[68px] md:px-10">
+            <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
+                <div className="md:max-w-[20rem]">
                     <h1 className="font-bold text-3xl">Comprehensive</h1>
                     <h1 className="font-bold text-3xl">Token Launch Suite</h1>
                 </div>
-                <span className="max-w-[24rem] text-lg">Everything you need to launch, manage, and scale your token across multiple chains.</span>
+                <span className="md:max-w-[24rem] text-lg font-normal">Everything you need to launch, manage, and scale your token across multiple chains.</span>
             </div>
-            <div className="relative w-full overflow-hidden">
+
+            <div className="md:hidden relative w-full overflow-hidden pt-5">
+                <div 
+                    ref={carouselRef}
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {slides.map((slide, index) => (
+                        <div key={index} className="w-full flex-shrink-0">
+                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex flex-col mx-4">
+                                <div className={`flex-1 p-6 ${slide.bgColor}`}>
+                                    <h3 className="font-normal text-4xl text-black mb-4">{slide.title}</h3>
+                                    <p className={`text-base leading-relaxed ${slide.textColor}`}>
+                                        {slide.description}
+                                    </p>
+                                </div>
+                                <div className={`${slide.imageBg} flex items-center justify-center h-64`}>
+                                    <img 
+                                        src={slide.image} 
+                                        alt={slide.title} 
+                                        className="w-full h-full object-contain" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex justify-center items-center mt-6 space-x-2">
+                    {slides.map((slide, index) => {
+                        const getDotColor = (bgColor: string) => {
+                            switch (bgColor) {
+                                case 'bg-gray-50':
+                                    return 'bg-gray-400';
+                                case 'bg-[#EFF3DB]':
+                                    return 'bg-[#607316]';
+                                case 'bg-[#FAE2DF]':
+                                    return 'bg-[#6B0036]';
+                                case 'bg-[#DFF2F1]':
+                                    return 'bg-[#43696B]';
+                                case 'bg-[#EEF2FF]':
+                                    return 'bg-indigo-800';
+                                default:
+                                    return 'bg-gray-400';
+                            }
+                        };
+
+                        const dotColor = getDotColor(slide.bgColor);
+                        
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentSlide(index)}
+                                className={`transition-all duration-300 rounded-full ${
+                                    index === currentSlide 
+                                        ? `${dotColor} w-8 h-3` 
+                                        : `${dotColor} w-3 h-3 opacity-50`
+                                }`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="hidden md:block relative w-full overflow-hidden">
                 <div className="grid grid-cols-3 gap-4">
                     <div className="flex flex-col gap-4 col-span-2">
                         <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex max-h-[280px]">

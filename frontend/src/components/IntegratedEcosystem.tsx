@@ -1,18 +1,18 @@
 export default function IntegratedEcosystem(){
     return(
-        <div className="pt-[68px] px-10">
-            <div className="w-full flex justify-between items-center mb-12">
+        <div className="pt-[68px] md:px-10">
+            <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
                 <h1 className="font-bold text-3xl">Integrated Ecosystem</h1>
-                <span className="max-w-[22rem] text-xl">Connected with leading blockchains and DeFi protocols</span>
+                <span className="md:max-w-[22rem] text-xl">Connected with leading blockchains and DeFi protocols</span>
             </div>
             <div className="relative w-full overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-4 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-4 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
                         onClick={() => window.open("https://near-intents.org", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
-                            <img src={'/logos/near-intents.svg'} alt={'NEAR Intents'} className="w-24 h-full bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-3"/>
+                            <img src={'/logos/near-intents.svg'} alt={'NEAR Intents'} className="w-28 md:w-24 h-full bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-3"/>
                             <h3 className="font-bold text-xl text-gray-900">
                                 NEAR Intents
                             </h3>
@@ -22,12 +22,12 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
                         onClick={() => window.open("https://solana.com", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
-                            <div className="w-9 h-9 bg-black rounded-full flex items-center justify-center text-2xl">
-                                <img src={'/logos/solana_light.svg'} alt={'Solana'} className="w-7 h-full object-contain"/>
+                            <div className="md:w-9 md:h-9 w-12 h-12 bg-black rounded-full flex items-center justify-center text-2xl">
+                                <img src={'/logos/solana_light.svg'} alt={'Solana'} className="w-9 md:w-7 h-full object-contain"/>
                             </div>
                             <h3 className="font-bold text-xl text-gray-900">
                                 Solana
@@ -42,7 +42,7 @@ export default function IntegratedEcosystem(){
                         onClick={() => window.open("https://docs.near.org/chain-abstraction/omnibridge/overview", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
-                            <img src={'/logos/near.svg'} alt={'NEAR Intents'} className="w-8 h-full rounded-lg flex items-center justify-center"/>
+                            <img src={'/logos/near.svg'} alt={'NEAR Intents'} className="w-12 md:w-8 h-full rounded-lg flex items-center justify-center"/>
                             <h3 className="font-bold text-xl text-gray-900">
                                 NEAR Omnibridge
                             </h3>
@@ -52,11 +52,11 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 py-5 md:py-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
                         onClick={() => window.open("https://raydium.io", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
-                            <img src={'/logos/raydium.png'} alt={'Raydium'} className="w-10 h-full rounded-lg flex items-center justify-center"/>
+                            <img src={'/logos/raydium.png'} alt={'Raydium'} className="w-12 md:w-10 h-full rounded-lg flex items-center justify-center"/>
                             <h3 className="font-bold text-xl text-gray-900">
                                 Raydium
                             </h3>
@@ -66,7 +66,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow-sm cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-300"
                         onClick={() => window.open("https://pump.fun/board", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -112,7 +112,7 @@ export default function IntegratedEcosystem(){
                         onClick={() => window.open("https://www.meteora.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
-                            <img src={'/logos/meteora.png'} alt={'Meteora'} className="w-12 h-12 flex items-center justify-center"/>
+                            <img src={'/logos/meteora.png'} alt={'Meteora'} className="md:w-12 md:h-12 w-14 h-14 flex items-center justify-center"/>
                             <h3 className="font-bold text-xl text-gray-900">
                                 Meteora
                             </h3>
