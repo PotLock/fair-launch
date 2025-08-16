@@ -1,111 +1,64 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TokenCard } from "../components/TokenCard";
-import { useEffect, useState } from "react";
-import { TokenInfo } from "../utils/tokenUtils";
-import { getTokens } from "../lib/api";
-import { formatDateToReadable, getTemplateDisplay } from "../utils";
+import Hero from "../components/layout/Hero";
+import CoreCapabilities from "../components/CoreCapabilities";
+import ExploreTokens from "../components/ExploreTokens";
+import Comprehensive from "../components/Comprehensive";
+import IntegratedEcosystem from "../components/IntegratedEcosystem";
+import ConsultUs from "../components/ConsultUs";
 
 export const Route = createFileRoute("/")({
     component: Home,
 });
 
 function Home() {
-  const [tokens, setTokens] = useState<TokenInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTokens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const tokens = await getTokens();
-        setTokens(tokens.data);
-      } catch (error) {
-        console.error('Error fetching tokens:', error);
-        setError('Failed to load tokens. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTokens();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen py-10">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
-          <p className="text-gray-500 mb-8 text-base">
-            Discover and participate in token launches. Support projects you believe in.
-          </p>
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen py-10">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
-          <p className="text-gray-500 mb-8 text-base">
-            Discover and participate in token launches. Support projects you believe in.
-          </p>
-          <div className="flex justify-center items-center py-20">
-            <div className="text-center">
-              <p className="text-red-500 mb-4">{error}</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="bg-black text-white px-4 py-2 rounded-md hover:bg-opacity-80 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen py-10">
-      <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-black mb-2">Token Launchpad</h1>
-        <p className="text-gray-500 mb-8 text-base">
-          Discover and participate in token launches. Support projects you believe in.
-        </p>
-        {tokens.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-500 text-lg">No tokens found</p>
-            <p className="text-gray-400 text-sm mt-2">Tokens created through bonding curves will appear here</p>
+      <Hero/>
+      <section className="w-full bg-neutral-100 h-28 flex items-center justify-center">
+        <div className="w-full container px-6 md:px-28 mx-auto flex items-center justify-start md:justify-between gap-8 overflow-x-auto">
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/relydotcash.png" alt="RelaydotCash" className="w-10 h-10" />
+            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">reply.cash</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {tokens.map((token) => (
-              <TokenCard
-                decimals={token.decimals}
-                avatar={token.avatarUrl || "/curate.png"}
-                banner={token.bannerUrl || token.avatarUrl || "/curate.png"}
-                key={token.id}
-                type={getTemplateDisplay(token.selectedTemplate || 'meme')}
-                progress={0}
-                name={token.name}
-                symbol={token.symbol}
-                description={token.description || "No description available"}
-                supply={token.supply.toString()}
-                address={token.mintAddress || ''}
-                createdOn={formatDateToReadable(token.createdAt || '')}
-                externalLabel={token.launchLiquidityOnName || ''}
-                value={token.mintAddress || ''}
-              />
-            ))}
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/POTLOCK.svg" alt="Potlock" className="w-8 h-8" />
+            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">POTLOCK</span>
           </div>
-        )}
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/usersdotfun.png" alt="Usersdotfun" className="w-10 h-10" />
+            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Users.fun</span>
+          </div>
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/curatedotfun.svg" alt="Curatedotfun" className="w-7 h-7" />
+            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Curate.fun</span>
+          </div>
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/arrestdotfun.png" alt="Arrestdotfun" className="w-7 h-7" />
+            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Arrest.fun</span>
+          </div>
+        </div>
+      </section>
+      <div className="container px-6 mx-auto pt-10 md:pt-20">
+        <div className="grid grid-cols-2 gap-3 md:flex items-center md:justify-between md:px-10">
+          <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
+            <span className="font-bold text-4xl">X</span>
+            <span className="font-thin text-base md:text-lg">TOTAL VALUE LAUNCHED</span>
+          </div>
+          <div className="h-[130px] md:w-[300px] p-2 md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
+            <span className="font-bold text-4xl">X</span>
+            <span className="font-thin text-base md:text-lg">TOKENS CREATED</span>
+          </div>
+          <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
+            <span className="font-bold text-4xl">4+</span>
+            <span className="font-thin text-base md:text-lg">CHAINS SUPPORTED</span>
+          </div>
+        </div>
+        <CoreCapabilities/>
+        <ExploreTokens/>
+        <Comprehensive/>
+        <IntegratedEcosystem/>
+        <ConsultUs/>
       </div>
     </div>
   );
