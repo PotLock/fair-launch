@@ -97,7 +97,7 @@ export default function Comprehensive(){
                     onTouchEnd={handleTouchEnd}
                 >
                     {slides.map((slide, index) => (
-                        <div key={index} className="w-full flex-shrink-0">
+                        <div key={index} className="w-full flex-shrink-0 min-h-[530px] max-h-[530px]">
                             <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex flex-col mx-4">
                                 <div className={`flex-1 p-6 ${slide.bgColor}`}>
                                     <h3 className="font-normal text-4xl text-black mb-4">{slide.title}</h3>

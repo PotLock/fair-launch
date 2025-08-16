@@ -76,9 +76,9 @@ export default function CoreCapabilities() {
 
         if (Math.abs(diff) > threshold) {
             if (diff > 0 && currentSlide < capabilities.length - 1) {
-                nextSlide();
+                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
             } else if (diff < 0 && currentSlide > 0) {
-                prevSlide();
+                setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
         }
 
@@ -104,10 +104,10 @@ export default function CoreCapabilities() {
         const threshold = 50;
 
         if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < maxDesktopSlide) {
-                nextSlide();
+            if (diff > 0 && currentSlide < capabilities.length - 1) {
+                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
             } else if (diff < 0 && currentSlide > 0) {
-                prevSlide();
+                setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
         }
 
@@ -151,9 +151,9 @@ export default function CoreCapabilities() {
                             <div key={capability.id} className="w-full flex-shrink-0 px-4">
                                 <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col`}>
                                     <div className="relative z-10 h-full flex flex-col">
-                                        <h3 className="text-lg font-semibold mb-4">{capability.title}</h3>
-                                        <div className="relative">
-                                            <img src={capability.icon as string} alt={capability.title} className='w-56 h-56'/>
+                                        <h3 className="text-xl font-semibold">{capability.title}</h3>
+                                        <div className="relative flex items-center justify-center">
+                                            <img src={capability.icon as string} alt={capability.title} className='w-60 h-60'/>
                                         </div>
                                         <div className='absolute bottom-12'>
                                             <h4 className="text-xl font-semibold mb-5 flex items-end">{capability.headline}</h4>
