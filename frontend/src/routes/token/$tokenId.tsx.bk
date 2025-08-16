@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, Copy, ChevronDown, Download, Plus, ExternalLink } from "lucide-react";
+import { Globe, Copy, ChevronDown } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,7 +23,7 @@ import {
 import { useCallback, useState,useEffect } from "react";
 import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
-import { copyToClipboard, formatNumberWithCommas, truncateAddress,formatNumberToCurrency } from "../../utils";
+import { copyToClipboard, formatNumberWithCommas, truncateAddress, calculateTimeSinceCreation } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
@@ -34,7 +34,6 @@ import { TokenDistributionItem, Holders} from "../../types"
 import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -131,13 +130,12 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    // Always calculate based on current token being received
+                    // Check if it's a buy operation (SOL -> Token)
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        // Buy operation: SOL -> Token
                         const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                        setReceiveAmount((Number(linearBuyAmount) / 10 ** Number(tokenInfo?.decimals || 0)).toFixed(5).toString());
+                        setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
                     }
-                    // Sell operation: Token -> SOL
+                    // Check if it's a sell operation (Token -> SOL)
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
                         const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
@@ -160,14 +158,13 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    // Always calculate based on current token being received
+                    // Check if it's a buy operation (SOL -> Token)
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        // Buy operation: SOL -> Token
-                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
                     }
+                    // Check if it's a sell operation (Token -> SOL)
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        // Sell operation: Token -> SOL
                         const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
@@ -222,9 +219,11 @@ function TokenDetail() {
 
     const handlePaymentChange = (option: { name: string; icon: string }) => {
         setSelectedPayment(option);
-        // Always set receive to the current token
-        if (tokenInfo) {
+        if (option.name === 'SOL' && tokenInfo) {
             setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        } 
+        else if (option.name === tokenInfo?.symbol) {
+            setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
         }
         // Recalculate amounts when payment option changes
         if (payAmount && tokenInfo && bondingCurveInfo) {
@@ -233,17 +232,43 @@ function TokenDetail() {
                 if (option.name === 'SOL' && tokenInfo) {
                     // Buy operation: SOL -> Token
                     const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                    setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
+                    // console.log('linearBuyAmount', linearBuyAmount)
+                    setReceiveAmount((Number(linearBuyAmount) / 10 ** 9).toFixed(5).toString());
                 } else if (option.name === tokenInfo?.symbol) {
                     // Sell operation: Token -> SOL
-                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    // console.log("linearSellAmount", linearSellAmount)
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
             }
         }
     };
 
-
+    const handleReceiveChange = (option: { name: string; icon: string }) => {
+        setSelectedReceive(option);
+        if (option.name === tokenInfo?.symbol) {
+            setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
+        } 
+        else if (option.name === 'SOL' && tokenInfo) {
+            setSelectedPayment({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+        }
+        
+        // Recalculate amounts when receive option changes
+        if (receiveAmount && tokenInfo && bondingCurveInfo) {
+            const numericVal = parseFloat(receiveAmount);
+            if (!isNaN(numericVal)) {
+                if (option.name === tokenInfo?.symbol) {
+                    // Buy operation: SOL -> Token
+                    const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
+                } else if (option.name === 'SOL' && tokenInfo) {
+                    // Sell operation: Token -> SOL
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
+                }
+            }
+        }
+    };
 
     const handleBuyAndSell = async () => {
         try{
@@ -259,17 +284,20 @@ function TokenDetail() {
             if (isBuyOperation) {
                 await buyToken(mint, amount, admin, tokenInfo?.name || '');
                 // console.log('Buy transaction:', tx);
+                // Clear input fields after successful buy
                 setPayAmount("");
                 setReceiveAmount("");
-
+                // Refetch data after successful buy
                 await loadBondingCurveInfo()
                 await loadCurveConfig()
             } else {
                 await sellToken(mint, amount, admin, tokenInfo?.name || '');
                 // console.log('Sell transaction:', tx);
+                // Clear input fields after successful sell
                 setPayAmount("");
                 setReceiveAmount("");
 
+                // Refetch data
                 await loadBondingCurveInfo()
                 await loadCurveConfig()
             }
@@ -400,8 +428,9 @@ function TokenDetail() {
                 <div className="border border-gray-200 rounded-lg bg-gray-50 relative block md:hidden">
                     <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            <span className="font-medium">LIVE TRADING</span>
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span className="font-medium">ACTIVE</span>
+                            <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdOn ? calculateTimeSinceCreation(tokenInfo.createdOn, currentTime) : "-"}</span>
                         </div>
 
                         <div className="text-3xl font-bold text-green-600 mb-3">-</div>
@@ -485,10 +514,31 @@ function TokenDetail() {
                                     value={receiveAmount} 
                                     onChange={handleReceiveAmountChange} 
                                 />
-                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                    <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-5 h-5 rounded-full" />
-                                    <span>{tokenInfo?.symbol}</span>
-                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                            <img src={selectedReceive?.icon} alt={selectedReceive?.name} className="w-5 h-5 rounded-full" />
+                                            <span>{selectedReceive?.name}</span>
+                                            <div className="relative w-4 h-4 mr-5">
+                                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                                            </div>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                        {tokenOptions.map((option) => (
+                                            <DropdownMenuItem
+                                                key={option.name}
+                                                onSelect={() => handleReceiveChange(option)}
+                                                className="cursor-pointer hover:bg-gray-100"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                    <span>{option.name}</span>
+                                                </div>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                             <div className="text-sm text-gray-500 mt-1">-</div>
                         </div>
@@ -757,16 +807,18 @@ function TokenDetail() {
                 } */}
             </div>
             
-            <div className="border border-gray-200 rounded-lg max-h-[880px] bg-gray-50 relative hidden md:block">
+            <div className="border border-gray-200 rounded-lg max-h-[730px] bg-gray-50 relative hidden md:block">
                 <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
-                        <span className="font-medium text-blue-700">LIVE TRADING</span>
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span className="font-medium">ACTIVE</span>
+                        <span className="ml-auto text-sm text-green-600 border border-green-600 rounded-md bg-green-50 px-2 py-1">{tokenInfo?.createdAt ? calculateTimeSinceCreation(tokenInfo.createdAt, currentTime) : "-"}</span>
                     </div>
 
-                    <div className="flex flex-col">
-                        <div className="text-3xl font-bold text-blue-600">$2.3M</div>
-                        <div className="text-xs text-gray-500">Market Cap</div>
+                    <div className="text-3xl font-bold text-green-600 mb-3">-</div>
+
+                    <div className="w-full mb-8">
+                        <Progress value={progress} bgProgress="bg-green-600" className="h-2 bg-gray-200"/>
                     </div>
 
                     <div className="grid grid-cols-3">
@@ -779,134 +831,123 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * 202.67)}</div>
+                            <div className="text-lg font-semibold">{tokenInfo?.targetRaise} SOL</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>
                 </div>
 
-                <div className="border border-gray-200 p-4 rounded-t-2xl bg-white w-full">
-                    <Tabs className="w-full rounded-lg" defaultValue="trade">
-                        <TabsList className="w-full">
-                            <TabsTrigger value="trade" className="w-full rounded-lg flex gap-2 items-center">
-                                <img src="/icons/trade-up.svg" alt="Trade" className="w-5 h-5" />
-                                <span>Trade</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="deposit" className="w-full rounded-lg flex gap-2 items-center">
-                                <Download className="w-4 h-4" />
-                                <span>Deposit</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="trade">
-                            <div className="relative">
-                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                    <div className="text-sm text-gray-500 mb-2">You Pay</div>
-                                    <div className="flex items-center justify-between">
-                                        <input
-                                            type="text"
-                                            className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
-                                            placeholder="0.00"
-                                            value={payAmount}
-                                            onChange={handlePayAmountChange}
-                                        />
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                                    <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
-                                                    <span>{selectedPayment?.name}</span>
-                                                    <div className="relative w-4 h-4 mr-5">
-                                                        <ChevronDown className="h-4 w-4 text-gray-500" />
-                                                    </div>
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                                                {tokenOptions.map((option) => (
-                                                    <DropdownMenuItem
-                                                        key={option.name}
-                                                        onSelect={() => handlePaymentChange(option)}
-                                                        className="cursor-pointer hover:bg-gray-100"
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
-                                                            <span>{option.name}</span>
-                                                        </div>
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                    <div className="text-sm text-gray-500 mt-1">-</div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                                    <div className="text-sm text-gray-500 mb-2">You Receive</div>
-                                    <div className="flex items-center justify-between">
-                                        <input 
-                                            type="text" 
-                                            className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
-                                            placeholder="0.00"
-                                            disabled
-                                            value={receiveAmount} 
-                                            onChange={handleReceiveAmountChange} 
-                                        />
-                                        <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
-                                            <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-6 h-6 rounded-full" />
-                                            <span className="text-lg mr-7">{tokenInfo?.symbol}</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-sm text-gray-500 mt-1">-</div>
-                                </div>
-
-                                <Button
-                                    className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-6 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    onClick={handleBuyAndSell}
-                                    disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
-                                >
-                                    {isBuying ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
-                                            Processing...
-                                        </span>
-                                    ) : (
-                                        isLoggedIn ? (
-                                            selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
-                                                ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
-                                                : `Sell $${tokenInfo?.symbol || 'CURATE'}`
-                                        ) : 'Connect Wallet to Trade'
-                                    )}
-                                </Button>
-                                <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
-                                    <Plus className="h-5 w-5"/>
-                                    <span className="disabled:text-gray-400">Add Liquidity</span>
-                                </Button>
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="deposit">
-                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                <div className="text-sm text-gray-500 mb-2">You Pay</div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                    
-                </div>
-                <div className="p-4 flex flex-col gap-2">
-                    <h1 className="text-lg font-bold">Trade on DEX</h1>
-                    <div className="flex flex-col gap-4">
-                        <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="relative w-9 h-9">
-                                    <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
-                                    <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
-                                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2.5 h-2.5" />
-                                    </div>
-                                </div>
-                                <span>Trade on Raydium</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <ExternalLink className="w-5 h-5" />
-                            </div>
-                        </div>
+                <div className="border border-gray-200 p-4 rounded-t-2xl bg-white">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-xl font-semibold">Join Presale</span>
+                        <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">
+                            {tokenInfo?.selectedPricing === 'bonding-curve' ? 'Bonding Curve' : 
+                             tokenInfo?.selectedPricing === 'fixed-price' ? 'Fixed Price' : 
+                             tokenInfo?.selectedPricing}
+                        </span>
                     </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                        <div className="flex items-center justify-between">
+                            <input
+                                type="text"
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                placeholder="0.00"
+                                value={payAmount}
+                                onChange={handlePayAmountChange}
+                            />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                        <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                        <span>{selectedPayment?.name}</span>
+                                        <div className="relative w-4 h-4 mr-5">
+                                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                                        </div>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                    {tokenOptions.map((option) => (
+                                        <DropdownMenuItem
+                                            key={option.name}
+                                            onSelect={() => handlePaymentChange(option)}
+                                            className="cursor-pointer hover:bg-gray-100"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                <span>{option.name}</span>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">-</div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div className="text-sm text-gray-500 mb-2">You Receive</div>
+                        <div className="flex items-center justify-between">
+                            <input 
+                                type="text" 
+                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                placeholder="0.00"
+                                value={receiveAmount} 
+                                onChange={handleReceiveAmountChange} 
+                            />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                        <img src={selectedReceive?.icon} alt={selectedReceive?.name} className="w-5 h-5 rounded-full" />
+                                        <span>{selectedReceive?.name}</span>
+                                        <div className="relative w-4 h-4 mr-5">
+                                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                                        </div>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                    {tokenOptions.map((option) => (
+                                        <DropdownMenuItem
+                                            key={option.name}
+                                            onSelect={() => handleReceiveChange(option)}
+                                            className="cursor-pointer hover:bg-gray-100"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                <span>{option.name}</span>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">-</div>
+                    </div>
+
+                    <Button
+                        className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={handleBuyAndSell}
+                        disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
+                    >
+                        {isBuying ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                Processing...
+                            </span>
+                        ) : (
+                            isLoggedIn ? (
+                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                    ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                    : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                            ) : 'Connect Wallet to Trade'
+                        )}
+                    </Button>
+                </div>
+                <div className="absolute bottom-5 left-0 right-0 p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg">
+                    <p className="text-xs text-gray-500 text-center">
+                        Tokens will be distributed to your wallet after the presale ends. Always do your own research.
+                    </p>
                 </div>
             </div>
         </div>

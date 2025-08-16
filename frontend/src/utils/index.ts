@@ -150,3 +150,19 @@ export function formatVestingInfo(vesting: any, percentage: number) {
     }
     return result;
 }
+
+export const formatNumberToCurrency = (x: number) => {
+  switch (true) {
+    case x >= 1000:
+      const kValue = x / 1000;
+      return `${kValue}K`;
+    case x >= 1000000:
+      const mValue = x / 1000;
+      return `${mValue}M`;
+    case x >= 1000000000:
+      const bValue = x / 1000;
+      return `${bValue}B`;
+    default:
+      return x;
+  }
+};
