@@ -80,7 +80,7 @@ export default function Header() {
                     </div>
                     
                     <div className='flex flex-row items-center space-x-4'>
-                        <a href='/create' className='flex items-center space-x-2 px-3 py-2 rounded-lg border border-gray-200 bg-black text-white hover:bg-gray-700 hover:text-black transition-all duration-300 md:hidden'>
+                        <a href='/create' className='flex items-center space-x-2 px-3 py-2 rounded-lg border border-gray-200 bg-[#DD3345] text-white hover:bg-[#DD3345]/85 hover:text-white transition-all duration-300 md:hidden'>
                             <PlusIcon className='w-4 h-4' />
                             <span className='text-sm'>Create</span>
                         </a>
