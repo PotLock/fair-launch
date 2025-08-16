@@ -28,7 +28,7 @@ export const Footer = () => {
                     <span>built with ❤️ by</span>
                     <a href="https://www.potlock.org/" target="_blank" className="text-black underline">POTLOCK</a>
                 </div>
-                <div className="flex flex-col gap-2 items-end">
+                <div className="flex flex-row md:flex-col gap-2 items-end">
                     <a href="https://docs.potlaunch.com/" target="_blank" className="hover:underline">
                         <span>Docs</span>
                     </a>
