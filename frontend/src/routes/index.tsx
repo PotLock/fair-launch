@@ -22,7 +22,7 @@ function Home() {
             <span className="text-neutral-500 text-base font-bold whitespace-nowrap">reply.cash</span>
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/potlock.svg" alt="Potlock" className="w-8 h-8" />
+            <img src="/logos/POTLOCK.svg" alt="Potlock" className="w-8 h-8" />
             <span className="text-neutral-500 text-base font-bold whitespace-nowrap">POTLOCK</span>
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
