@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, ChevronDown, Download, Plus, ExternalLink } from "lucide-react";
+import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -188,9 +188,6 @@ function TokenDetail() {
             </div>
         );
     }
-
-
-    const progress = (Number(bondingCurveInfo?.totalSupply) / (Number(tokenInfo?.supply) * 10 ** Number(tokenInfo?.decimals))) * 100
 
     const tokenOptions = [
         { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -770,7 +767,7 @@ function TokenDetail() {
                         <TabsContent value="trade">
                             <div className="relative">
                                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                    <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                                    <label className="text-sm text-gray-500 mb-2">You Pay</label>
                                     <div className="flex items-center justify-between">
                                         <input
                                             type="text"
@@ -809,7 +806,7 @@ function TokenDetail() {
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                                    <div className="text-sm text-gray-500 mb-2">You Receive</div>
+                                    <label className="text-sm text-gray-500 mb-2">You Receive</label>
                                     <div className="flex items-center justify-between">
                                         <input 
                                             type="text" 
@@ -826,39 +823,111 @@ function TokenDetail() {
                                     </div>
                                     <div className="text-sm text-gray-500 mt-1">-</div>
                                 </div>
-
-                                <Button
-                                    className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-6 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    onClick={handleBuyAndSell}
-                                    disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
-                                >
-                                    {isBuying ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
-                                            Processing...
-                                        </span>
-                                    ) : (
-                                        isLoggedIn ? (
-                                            selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
-                                                ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
-                                                : `Sell $${tokenInfo?.symbol || 'CURATE'}`
-                                        ) : 'Connect Wallet to Trade'
-                                    )}
-                                </Button>
-                                <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
-                                    <Plus className="h-5 w-5"/>
-                                    <span className="disabled:text-gray-400">Add Liquidity</span>
-                                </Button>
                             </div>
                         </TabsContent>
                         <TabsContent value="deposit">
-                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                            <div className="flex flex-col space-y-2 mb-5">
+                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                    <label className="text-sm text-gray-500 mb-2">You Pay</label>
+                                    <div className="flex items-center justify-between">
+                                        <input
+                                            type="text"
+                                            className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                            placeholder="0.00"
+                                            value={payAmount}
+                                            onChange={handlePayAmountChange}
+                                        />
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                                    <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                                    <span>{selectedPayment?.name}</span>
+                                                    <div className="relative w-4 h-4 mr-5">
+                                                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                                                    </div>
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                                {tokenOptions.map((option) => (
+                                                    <DropdownMenuItem
+                                                        key={option.name}
+                                                        onSelect={() => handlePaymentChange(option)}
+                                                        className="cursor-pointer hover:bg-gray-100"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                            <span>{option.name}</span>
+                                                        </div>
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                    <span className="text-sm text-gray-500 mt-1">-</span>
+                                </div>
+                                <Card className="shadow-none p-3 py-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <h3 className="text-sm font-semibold">Use this depsoit address</h3>
+                                        <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
+                                    </div>
+                                    <div className="h-[1px] w-full bg-gray-300 mt-2 mb-2"/>
+                                    <div className="flex flex-col space-y-5 justify-center items-center">
+                                        <div className="border border-gray-200 p-1 rounded-lg">
+                                            <img src="/icons/qrcode.svg" alt="QRcode" className="w-40 h-40"/>
+                                        </div>
+                                        <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
+                                            <span className="text-sm">qAHMEAU4..........8jiETcaSL5u5sAnZN</span>
+                                            <Button className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2">
+                                                <Copy className="w-3 h-3 text-gray-600" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="pt-3">
+                                        <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
+                                            <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the Near network</h3>
+                                            <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                                <Card className="shadow-none p-3 space-y-4 w-full">
+                                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                                        <span>Minimum Deposit</span>
+                                        <span>0.001 SOL</span>
+                                    </div>
+                                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                                        <span>Processing Time</span>
+                                        <span>~5 mins</span>
+                                    </div>
+                                </Card>
                             </div>
                         </TabsContent>
                     </Tabs>
-                    
+                    <div className="flex flex-col gap-2">
+                        <Button
+                            className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-6 rounded-lg ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={handleBuyAndSell}
+                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
+                        >
+                            {isBuying ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                    Processing...
+                                </span>
+                            ) : (
+                                isLoggedIn ? (
+                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                        ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                        : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                ) : 'Connect Wallet to Trade'
+                            )}
+                        </Button>
+                        <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                            <Plus className="h-5 w-5"/>
+                            <span className="disabled:text-gray-400">Add Liquidity</span>
+                        </Button>
+                    </div>
                 </div>
+
                 <div className="p-4 flex flex-col gap-2">
                     <h1 className="text-lg font-bold">Trade on DEX</h1>
                     <div className="flex flex-col gap-2">
