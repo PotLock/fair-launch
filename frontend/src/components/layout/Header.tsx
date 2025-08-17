@@ -37,7 +37,7 @@ export default function Header() {
                         <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Create Token</span>
                         </Link>
-                        <Link to="/" className="text-gray-600 hover:text-gray-900">
+                        <Link to="/tokens" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
                         </Link>
                         <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900">
