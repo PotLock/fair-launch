@@ -13,12 +13,13 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, Copy, ChevronDown, Download, Plus, ExternalLink } from "lucide-react";
+import { Globe, ChevronDown, Download, Plus, ExternalLink } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuGroup,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
 import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
@@ -35,6 +36,10 @@ import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { LaunchStatus } from "../../components/LaunchStatus";
+import { TokenomicsDetails } from "../../components/TokenomicsDetails";
+import { LiquidityPools } from "../../components/LiquidityPools";
+import { BondingCurveChart } from "../../components/BondingCurveChart";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -131,13 +136,10 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    // Always calculate based on current token being received
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        // Buy operation: SOL -> Token
                         const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearBuyAmount) / 10 ** Number(tokenInfo?.decimals || 0)).toFixed(5).toString());
                     }
-                    // Sell operation: Token -> SOL
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
                         const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
@@ -151,7 +153,6 @@ function TokenDetail() {
         const val = e.target.value;
         if (/^\d*\.?\d*$/.test(val)) {
             setReceiveAmount(val);
-            // Clear pay amount if receive amount is empty
             if (!val) {
                 setPayAmount("");
                 return;
@@ -160,14 +161,11 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    // Always calculate based on current token being received
                     if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        // Buy operation: SOL -> Token
                         const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
                     }
                     else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        // Sell operation: Token -> SOL
                         const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
@@ -222,20 +220,16 @@ function TokenDetail() {
 
     const handlePaymentChange = (option: { name: string; icon: string }) => {
         setSelectedPayment(option);
-        // Always set receive to the current token
         if (tokenInfo) {
             setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
         }
-        // Recalculate amounts when payment option changes
         if (payAmount && tokenInfo && bondingCurveInfo) {
             const numericVal = parseFloat(payAmount);
             if (!isNaN(numericVal)) {
                 if (option.name === 'SOL' && tokenInfo) {
-                    // Buy operation: SOL -> Token
                     const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
                 } else if (option.name === tokenInfo?.symbol) {
-                    // Sell operation: Token -> SOL
                     const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
@@ -397,17 +391,17 @@ function TokenDetail() {
                     </div>
                 </div>
 
+                {/* Mobile View */}
                 <div className="border border-gray-200 rounded-lg bg-gray-50 relative block md:hidden">
                     <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            <span className="font-medium">LIVE TRADING</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
+                            <span className="font-medium text-blue-700">LIVE TRADING</span>
                         </div>
 
-                        <div className="text-3xl font-bold text-green-600 mb-3">-</div>
-
-                        <div className="w-full mb-8">
-                            <Progress value={progress} bgProgress="bg-green-600" className="h-2 bg-gray-200"/>
+                        <div className="flex flex-col">
+                            <div className="text-3xl font-bold text-blue-600">$2.3M</div>
+                            <div className="text-xs text-gray-500">Market Cap</div>
                         </div>
 
                         <div className="grid grid-cols-3">
@@ -420,102 +414,180 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">{tokenInfo?.targetRaise}</div>
+                                <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * 202.67)}</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="border border-gray-200 p-4 rounded-t-2xl bg-white">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="text-xl font-semibold">Join Presale</span>
-                            <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full">
-                                {tokenInfo?.selectedPricing === 'bonding-curve' ? 'Bonding Curve' : 
-                                 tokenInfo?.selectedPricing === 'fixed-price' ? 'Fixed Price' : 
-                                 tokenInfo?.selectedPricing}
-                            </span>
-                        </div>
+                    <div className="border border-gray-200 p-4 rounded-t-2xl bg-white w-full">
+                        <Tabs className="w-full rounded-lg" defaultValue="trade">
+                            <TabsList className="w-full">
+                                <TabsTrigger value="trade" className="w-full rounded-lg flex gap-2 items-center">
+                                    <img src="/icons/trade-up.svg" alt="Trade" className="w-5 h-5" />
+                                    <span>Trade</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="deposit" className="w-full rounded-lg flex gap-2 items-center">
+                                    <Download className="w-4 h-4" />
+                                    <span>Deposit</span>
+                                </TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="trade">
+                                <div className="relative">
+                                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                        <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                                        <div className="flex items-center justify-between">
+                                            <input
+                                                type="text"
+                                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                                placeholder="0.00"
+                                                value={payAmount}
+                                                onChange={handlePayAmountChange}
+                                            />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                                        <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                                        <span>{selectedPayment?.name}</span>
+                                                        <div className="relative w-4 h-4 mr-5">
+                                                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                                                        </div>
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                                                    {tokenOptions.map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option.name}
+                                                            onSelect={() => handlePaymentChange(option)}
+                                                            className="cursor-pointer hover:bg-gray-100"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                                <span>{option.name}</span>
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-1">-</div>
+                                    </div>
 
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                            <div className="text-sm text-gray-500 mb-2">You Pay</div>
-                            <div className="flex items-center justify-between">
-                                <input
-                                    type="text"
-                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
-                                    placeholder="0.00"
-                                    value={payAmount}
-                                    onChange={handlePayAmountChange}
-                                />
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                            <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
-                                            <span>{selectedPayment?.name}</span>
-                                            <div className="relative w-4 h-4 mr-5">
-                                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                                        <div className="text-sm text-gray-500 mb-2">You Receive</div>
+                                        <div className="flex items-center justify-between">
+                                            <input 
+                                                type="text" 
+                                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
+                                                placeholder="0.00"
+                                                disabled
+                                                value={receiveAmount} 
+                                                onChange={handleReceiveAmountChange} 
+                                            />
+                                            <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
+                                                <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-6 h-6 rounded-full" />
+                                                <span className="text-lg mr-7">{tokenInfo?.symbol}</span>
                                             </div>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                                        {tokenOptions.map((option) => (
-                                            <DropdownMenuItem
-                                                key={option.name}
-                                                onSelect={() => handlePaymentChange(option)}
-                                                className="cursor-pointer hover:bg-gray-100"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
-                                                    <span>{option.name}</span>
-                                                </div>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                            <div className="text-sm text-gray-500 mt-1">-</div>
-                        </div>
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-1">-</div>
+                                    </div>
 
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                            <div className="text-sm text-gray-500 mb-2">You Receive</div>
-                            <div className="flex items-center justify-between">
-                                <input 
-                                    type="text" 
-                                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
-                                    placeholder="0.00"
-                                    value={receiveAmount} 
-                                    onChange={handleReceiveAmountChange} 
-                                />
-                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                    <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-5 h-5 rounded-full" />
-                                    <span>{tokenInfo?.symbol}</span>
+                                    <Button
+                                        className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-6 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={handleBuyAndSell}
+                                        disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
+                                    >
+                                        {isBuying ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                                Processing...
+                                            </span>
+                                        ) : (
+                                            isLoggedIn ? (
+                                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
+                                                    ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
+                                                    : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                            ) : 'Connect Wallet to Trade'
+                                        )}
+                                    </Button>
+                                    <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                                        <Plus className="h-5 w-5"/>
+                                        <span className="disabled:text-gray-400">Add Liquidity</span>
+                                    </Button>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="deposit">
+                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                    <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+
+                    {/* Mobile DEX Trading Section */}
+                    <div className="p-4 flex flex-col gap-2">
+                        <h1 className="text-lg font-bold">Trade on DEX</h1>
+                        <div className="flex flex-col gap-2">
+                            <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="relative w-9 h-9">
+                                        <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
+                                        <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
+                                            <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+                                        </div>
+                                    </div>
+                                    <span>Trade on Raydium</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ExternalLink className="w-5 h-5" />
                                 </div>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">-</div>
+                            
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center gap-2">
+                                            <span>Trade on other DEX</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <ChevronDown className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-full bg-white">
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative w-8 h-8">
+                                                    <img src="/logos/jupiter.png" alt="Jupiter" className="w-8 h-8 rounded-full" />
+                                                    <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                                                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                                                    </div>
+                                                </div>
+                                                <span>Jupiter</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <ExternalLink className="w-6 h-6" />
+                                            </div>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative w-8 h-8">
+                                                    <img src="/logos/meteora.png" alt="Meteora" className="w-8 h-8 rounded-full" />
+                                                    <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                                                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                                                    </div>
+                                                </div>
+                                                <span>Meteora</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <ExternalLink className="w-6 h-6" />
+                                            </div>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
-
-                        <Button
-                            className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-lg mb-4 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onClick={handleBuyAndSell}
-                            disabled={!isLoggedIn || !payAmount || Number(payAmount) <= 0 || isBuying}
-                        >
-                            {isBuying ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
-                                    Processing...
-                                </span>
-                            ) : (
-                                isLoggedIn ? (
-                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
-                                        ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
-                                        : `Sell $${tokenInfo?.symbol || 'CURATE'}`
-                                ) : 'Connect Wallet to Trade'
-                            )}
-                        </Button>
-                    </div>
-                    <div className="p-2 border border-gray-200 bg-[#F1F5F9] w-[80%] mx-auto rounded-lg mb-4">
-                        <p className="text-xs text-gray-500 text-center">
-                            Tokens will be distributed to your wallet after the presale ends. Always do your own research.
-                        </p>
                     </div>
                 </div>
 
@@ -525,59 +597,10 @@ function TokenDetail() {
                         {tokenInfo?.description}
                     </p>
                 </Card>
-
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
-                    <h2 className="text-xl font-medium mb-4">Tokenomics & Details</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-20 gap-3 mt-5 border-b border-gray-200 pb-4">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Initial Market Cap</p>
-                                <p className="text-sm font-semibold">-</p>
-                            </div>
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Total supply</p>
-                                <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.supply || 0)}</p>
-                            </div>
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Min. Contribution</p>
-                                <p className="text-sm font-semibold">{tokenInfo?.minimumContribution} SOL</p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Current price</p>
-                                <p className="text-sm font-semibold">-</p>
-                            </div>
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                                <p className="text-sm font-semibold">{tokenInfo?.hardCap} SOL</p>
-                            </div>
-                            <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                                <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
-                                <p className="text-sm font-semibold">{tokenInfo?.maximumContribution} SOL</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 mt-2">
-                        <label className="text-sm text-gray-500">Contract Address</label>
-                        <div className="flex flex-row gap-2 items-center">
-                            <img src="/icons/solana.svg" alt="SOL" className="w-6 h-6" />
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <a href={`https://solscan.io/token/${tokenId}?cluster=devnet`} target="_blank" rel="noopener noreferrer">
-                                        <p className="text-sm text-gray-500 cursor-pointer hover:underline">{truncateAddress(tokenId || '')}</p>
-                                    </a>
-                                </TooltipTrigger>
-                                <TooltipContent sideOffset={4} className="bg-white border border-gray-200">
-                                    <span className="font-mono">{tokenId}</span>
-                                </TooltipContent>
-                            </Tooltip>
-                            <button className="w-4 h-4 rounded-full flex items-center justify-center" onClick={() => copyToClipboard(tokenId || '')}>
-                                <Copy className="w-4 h-4 text-black hover:text-gray-500" />
-                            </button>
-                        </div>
-                    </div>
-                </Card>
+                
+                <LaunchStatus/>
+                <TokenomicsDetails tokenInfo={tokenInfo} />
+                <LiquidityPools/>
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
@@ -696,68 +719,16 @@ function TokenDetail() {
                     </div>
                 </Card>
 
-                {/* TODO: add current price */}
-                {/* {
+                {
                     tokenInfo.selectedPricing === 'bonding-curve' && (
-                        <Card className="p-4 md:p-6 shadow-none">
-                            <h2 className="text-xl font-medium mb-4">Bonding Curve Price Chart</h2>
-                            <div className="mb-6 w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={generateLinearBondingCurveChartData(tokenInfo, curveConfig, bondingCurveInfo)}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                        <XAxis
-                                            dataKey="raised"
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            padding={{ left: 20, right: 20 }}
-                                            axisLine={{ stroke: '#d1d5db' }}
-                                        />
-                                        <YAxis 
-                                            tick={{ fontSize: 12, fill: '#6b7280' }} 
-                                            axisLine={{ stroke: '#d1d5db' }}
-                                        />
-                                        <RechartsTooltip 
-                                            contentStyle={{ 
-                                                fontSize: 14, 
-                                                backgroundColor: 'white',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                            }} 
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="price"
-                                            stroke="#8884d8"
-                                            strokeWidth={3}
-                                            dot={{ r: 4, fill: '#8884d8' }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-500 mb-1">Initial Price</p>
-                                    <p className="font-semibold">{curveConfig ? (Number(curveConfig.initialPrice) / 10 ** 9).toLocaleString() : '-'} SOL</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-500 mb-1">Final Price</p>
-                                    <p className="font-semibold">{tokenInfo?.finalPrice || '-'} SOL</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                                    <p className="font-semibold">{tokenInfo?.targetRaise || '-'} SOL</p>
-                                </div>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-4">
-                                This token uses a bonding curve, meaning its price changes dynamically based on demand and supply.
-                                The price increases as more tokens are minted and purchased.
-                            </p>
-                        </Card>
+                        //@ts-ignore
+                        <BondingCurveChart tokenInfo={tokenInfo} curveConfig={curveConfig} bondingCurveInfo={bondingCurveInfo}/>
                     )
-                } */}
+                }
             </div>
             
-            <div className="border border-gray-200 rounded-lg max-h-[880px] bg-gray-50 relative hidden md:block">
+            {/* Desktop View */}
+            <div className="border border-gray-200 rounded-lg max-h-[900px] bg-gray-50 relative hidden md:block">
                 <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
@@ -784,7 +755,6 @@ function TokenDetail() {
                         </div>
                     </div>
                 </div>
-
                 <div className="border border-gray-200 p-4 rounded-t-2xl bg-white w-full">
                     <Tabs className="w-full rounded-lg" defaultValue="trade">
                         <TabsList className="w-full">
@@ -891,13 +861,13 @@ function TokenDetail() {
                 </div>
                 <div className="p-4 flex flex-col gap-2">
                     <h1 className="text-lg font-bold">Trade on DEX</h1>
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
                         <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="relative w-9 h-9">
                                     <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                     <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
-                                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2.5 h-2.5" />
+                                        <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
                                     </div>
                                 </div>
                                 <span>Trade on Raydium</span>
@@ -906,6 +876,51 @@ function TokenDetail() {
                                 <ExternalLink className="w-5 h-5" />
                             </div>
                         </div>
+                        
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <span>Trade on other DEX</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <ChevronDown className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[370px] bg-white">
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-8 h-8">
+                                                <img src="/logos/jupiter.png" alt="Jupiter" className="w-8 h-8 rounded-full" />
+                                                <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                                                    <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                                                </div>
+                                            </div>
+                                            <span>Jupiter</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <ExternalLink className="w-6 h-6" />
+                                        </div>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                                        <div className="flex items-center gap03">
+                                            <div className="relative w-8 h-8">
+                                                <img src="/logos/meteora.png" alt="Meteora" className="w-8 h-8 rounded-full" />
+                                                <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                                                    <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                                                </div>
+                                            </div>
+                                            <span>Meteora</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <ExternalLink className="w-6 h-6" />
+                                        </div>
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>
