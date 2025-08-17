@@ -1,15 +1,20 @@
+import { useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import { Holders } from "../types";
+import { BondingCurveTokenInfo, getBondingCurveAccounts, getTokenHoldersByMint } from "../utils/tokenUtils";
+import { PublicKey } from "@solana/web3.js";
+import { formatNumberToCurrency } from "../utils";
+
 interface ExploreTokenCardProps {
     id: string;
+    mint: string,
+    decimals: number,
     banner: string;
     avatar: string;
     name: string;
     symbol: string;
     type: string;
     description: string;
-    price: string;
-    supply: string;
-    holders: string;
-    marketCap: string;
     status: string;
     actionButton: {
         text: string;
@@ -17,19 +22,40 @@ interface ExploreTokenCardProps {
     };
 }
 
-export default function ExploreTokenCard({banner,
+export default function ExploreTokenCard({
+    mint,
+    decimals,
+    banner,
     avatar,
     name,
     symbol,
     type,
     description,
-    price,
-    supply,
-    holders,
-    marketCap,
     status,
     actionButton
 }: ExploreTokenCardProps){
+
+    const [holders, setHolders] = useState<Holders[]>([])
+    const [bondingCurve, setBondingCurve] = useState<BondingCurveTokenInfo|null>(null);
+
+    const loadHolders = useCallback(async () => {
+        const holders = await getTokenHoldersByMint(mint)
+        setHolders(holders)
+    },[mint])
+
+    const fetchBondingCurveAccounts = useCallback(async () => {
+        if(!mint) return;
+        const bondingCurveAccounts = await getBondingCurveAccounts(new PublicKey(mint));
+        setBondingCurve(bondingCurveAccounts || null);
+    },[mint])
+
+    useEffect(() => {
+        loadHolders()
+        fetchBondingCurveAccounts()
+    }, [loadHolders,fetchBondingCurveAccounts])
+
+    const navigate = useNavigate()
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Presale': return 'bg-orange-50 text-orange-500';
@@ -47,6 +73,8 @@ export default function ExploreTokenCard({banner,
             default: return 'bg-red-500 hover:bg-red-600';
         }
     };
+
+    const supply = Number(bondingCurve?.totalSupply) / (10 ** decimals)
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md cursor-pointer transition-shadow p-4 md:max-w-[365px]">
@@ -80,30 +108,30 @@ export default function ExploreTokenCard({banner,
 
                 <div className="grid grid-cols-4 md:gap-4 mt-6">
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">{price}</span>
+                        <span className="font-bold text-gray-900">-</span>
                         <span className="text-gray-500 text-xs">Price</span>
                     </div>
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">{supply}</span>
+                        <span className="font-bold text-gray-900">{formatNumberToCurrency(supply)}</span>
                         <span className="text-gray-500 text-xs">Supply</span>
                     </div>
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">{holders}</span>
+                        <span className="font-bold text-gray-900">{holders.length}</span>
                         <span className="text-gray-500 text-xs">Holders</span>
                     </div>
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">{marketCap}</span>
+                        <span className="font-bold text-gray-900">0</span>
                         <span className="text-gray-500 text-xs">
-                            {type === 'Bonding Curve' ? 'Curve' : 'Market Cap'}
+                            {type === 'bonding-curve' ? 'Curve' : 'Market Cap'}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex gap-10 mt-8">
-                    <button className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors">
+                    <button onClick={()=>navigate({to: `/token/${mint}`})} className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors">
                         <span className="text-sm">View Details</span>
                     </button>
-                    <button className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors`}>
+                    <button onClick={()=>navigate({to: `/token/${mint}`})} className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors`}>
                         <span className="text-sm">{actionButton.text}</span>
                     </button>
                 </div>

@@ -33,10 +33,6 @@ function Home() {
             <img src="/logos/curatedotfun.svg" alt="Curatedotfun" className="w-7 h-7" />
             <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Curate.fun</span>
           </div>
-          <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/arrestdotfun.png" alt="Arrestdotfun" className="w-7 h-7" />
-            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Arrest.fun</span>
-          </div>
         </div>
       </section>
       <div className="container px-6 mx-auto pt-10 md:pt-20">
