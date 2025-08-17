@@ -155,7 +155,7 @@ export const formatNumberToCurrency = (x: number) => {
   switch (true) {
     case x >= 1000:
       const kValue = x / 1000;
-      return `${kValue}K`;
+      return `${kValue.toFixed(3)}K`;
     case x >= 1000000:
       const mValue = x / 1000;
       return `${mValue}M`;
@@ -163,6 +163,6 @@ export const formatNumberToCurrency = (x: number) => {
       const bValue = x / 1000;
       return `${bValue}B`;
     default:
-      return x;
+      return x.toFixed(3);
   }
 };
