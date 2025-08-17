@@ -43,7 +43,34 @@ export default function CoreCapabilities() {
         }
     ];
 
-    const maxDesktopSlide = Math.max(0, capabilities.length - 3); 
+    const getCardsPerView = () => {
+        if (typeof window !== 'undefined') {
+            const width = window.innerWidth;
+            if (width >= 1536) return 4; // 2xl screens
+            if (width >= 1280) return 3; // xl screens
+            if (width >= 1024) return 2; // lg screens
+        }
+        return 1; 
+    };
+
+    const [cardsPerView, setCardsPerView] = useState(getCardsPerView());
+    const maxDesktopSlide = Math.max(0, capabilities.length - cardsPerView);
+
+    // Update cards per view on window resize
+    useEffect(() => {
+        const handleResize = () => {
+            const newCardsPerView = getCardsPerView();
+            setCardsPerView(newCardsPerView);
+            // Adjust current slide if it exceeds the new maximum
+            const newMaxSlide = Math.max(0, capabilities.length - newCardsPerView);
+            if (currentSlide > newMaxSlide) {
+                setCurrentSlide(newMaxSlide);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [currentSlide, capabilities.length]);
 
     const nextSlide = () => {
         setCurrentSlide((prev) => Math.min(prev + 1, maxDesktopSlide));
@@ -126,6 +153,14 @@ export default function CoreCapabilities() {
         };
     }, [isDragging]);
 
+    // Calculate the transform value for desktop
+    const getDesktopTransform = () => {
+        const cardWidth = 320; // Width of each card
+        const gap = 24; // Gap between cards (6 * 4px = 24px)
+        const totalCardWidth = cardWidth + gap;
+        return currentSlide * totalCardWidth;
+    };
+
     return (
         <div className="pt-[68px] md:px-10">
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
@@ -168,10 +203,10 @@ export default function CoreCapabilities() {
                     </div>
                 </div>
 
-                <div className="hidden md:block">
-                    <div className="flex">
-                        <div className="flex transition-transform duration-500 ease-in-out gap-6 " 
-                            style={{ transform: `translateX(-${currentSlide * (200)}px)` }}
+                <div className="hidden md:block px-4">
+                    <div className="relative overflow-hidden">
+                        <div className="flex transition-transform duration-500 ease-in-out gap-6" 
+                            style={{ transform: `translateX(-${getDesktopTransform()}px)` }}
                         >
                             {capabilities.map((capability) => (
                                 <div key={capability.id} className="w-[320px] flex-shrink-0">
@@ -225,13 +260,15 @@ export default function CoreCapabilities() {
                     <div className="border border-black max-w-[200px] flex rounded-full">
                         <button
                             onClick={prevSlide}
-                            className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm"
+                            disabled={currentSlide === 0}
+                            className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <ChevronLeft className="w-4 h-4 text-gray-600" />
                         </button>
                         <button
                             onClick={nextSlide}
-                            className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full"
+                            disabled={currentSlide >= maxDesktopSlide}
+                            className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <ChevronRight className="w-4 h-4 text-gray-600" />
                         </button>
