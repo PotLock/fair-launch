@@ -37,7 +37,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/too
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { LaunchStatus } from "../../components/LaunchStatus";
-import { TokenomicsDetails } from "../../components/TokenomicsDetails";
+import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
 
@@ -79,7 +79,6 @@ function TokenDetail() {
                 return data;
             }));
             const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveRes?.creator || ''), new PublicKey(tokenId));
-            
             
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
@@ -596,7 +595,7 @@ function TokenDetail() {
                 </Card>
                 
                 <LaunchStatus/>
-                <TokenomicsDetails tokenInfo={tokenInfo} />
+                <LaunchConditions tokenInfo={tokenInfo} />
                 <LiquidityPools/>
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">

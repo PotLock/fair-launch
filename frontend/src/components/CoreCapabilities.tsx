@@ -162,7 +162,7 @@ export default function CoreCapabilities() {
     };
 
     return (
-        <div className="pt-[68px] md:px-10">
+        <div className="pt-[68px] md:px-6">
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
                 <h1 className="font-bold text-3xl">Core Capabilities</h1>
                 <span className="md:max-w-[26rem] text-xl">Comprehensive tools for the complete token lifecycle</span>
@@ -203,7 +203,7 @@ export default function CoreCapabilities() {
                     </div>
                 </div>
 
-                <div className="hidden md:block px-4">
+                <div className="hidden md:block lg:px-4">
                     <div className="relative overflow-hidden">
                         <div className="flex transition-transform duration-500 ease-in-out gap-6" 
                             style={{ transform: `translateX(-${getDesktopTransform()}px)` }}

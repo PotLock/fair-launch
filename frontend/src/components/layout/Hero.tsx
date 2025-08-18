@@ -6,14 +6,14 @@ export default function Hero() {
   const navigate = useNavigate();
   return (
     <div className="bg-white">
-      <div className="container px-6 mx-auto -mt-10 font-sora mb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
+      <div className="lg:container px-6 mx-auto -mt-10 font-sora mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="space-y-2 mt-4 md:space-y-4">
             <div className="text-black text-sm md:text-lg font-light flex gap-1">
               The <img src="/icons/world.svg" alt="world" className="w-6 h-6" /> Internet Capital Markets toolkit
             </div>
             
-            <div className="text-3xl md:text-5xl flex flex-col gap-1 lg:text-6xl font-bold text-black leading-tight">
+            <div className="text-3xl md:text-4xl flex flex-col gap-1 lg:text-5xl xl:text-6xl font-bold text-black leading-tight">
               <span>Launch Tokens</span>
               <span className="inline md:hidden">Across Multiple Chain</span>
               <span className="hidden md:inline">Across Multiple</span>
@@ -64,11 +64,11 @@ export default function Hero() {
             </div>
           </div>
           
-          <div className="flex justify-center lg:justify-end">
+          <div className="flex justify-center md:justify-end">
             <img 
               src="/hero.png" 
               alt="Token Launch Illustration" 
-              className="w-full max-w-lg h-auto object-contain"
+              className="lg:w-full w-[26rem] h-[26rem] lg:max-w-lg lg:h-auto object-contain"
             />
           </div>
         </div>

@@ -5,8 +5,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Copy, ChevronDown, ChevronUp, ExternalLink, ArrowLeftRight, Plus } from "lucide-react";
 import { truncateAddress,copyToClipboard } from "../utils";
 import { useState } from "react";
+import { BridgeDeployModal } from "./BridgeDeployModal";
 
-interface TokenomicsDetailsProps {
+interface LaunchConditionsProps {
     tokenInfo: TokenInfo;
 }
 
@@ -30,8 +31,9 @@ const deployedChains = [
 ];
 
 
-export function TokenomicsDetails({ tokenInfo }: TokenomicsDetailsProps) {
+export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
     const [isContractExpanded, setIsContractExpanded] = useState(false);
+    const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
 
     return (
         <Card className="p-4 md:p-6 mb-6 shadow-none">
@@ -117,7 +119,10 @@ export function TokenomicsDetails({ tokenInfo }: TokenomicsDetailsProps) {
                             )
                         }
                     </div>
-                    <button className="flex items-center text-xs gap-2 px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                    <button 
+                        onClick={() => setIsBridgeModalOpen(true)}
+                        className="flex items-center text-xs gap-2 px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
                         <Plus className="w-3 h-3" />
                         Bridge / Deploy
                     </button>
@@ -166,6 +171,12 @@ export function TokenomicsDetails({ tokenInfo }: TokenomicsDetailsProps) {
                     </div>
                 )}
             </div>
+            
+            {/* Bridge Deploy Modal */}
+            <BridgeDeployModal 
+                isOpen={isBridgeModalOpen}
+                onClose={() => setIsBridgeModalOpen(false)}
+            />
         </Card>
     );
 }
