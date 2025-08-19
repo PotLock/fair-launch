@@ -4,7 +4,9 @@ ignoredBuiltDependencies:
   - bufferutil
   - core-js
   - esbuild
+  - keccak
   - protobufjs
+  - secp256k1
   - tiny-secp256k1
   - usb
   - utf-8-validate

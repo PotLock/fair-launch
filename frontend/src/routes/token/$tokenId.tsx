@@ -741,7 +741,7 @@ function TokenDetail() {
                         <div className="text-xs text-gray-500">Market Cap</div>
                     </div>
 
-                    <div className="grid grid-cols-3">
+                    <div className="flex justify-between items-center w-full">
                         <div>
                             <div className="text-lg font-semibold">{formatSolPrice(currentPrice)}</div>
                             <div className="text-sm text-gray-500">Current Price</div>
