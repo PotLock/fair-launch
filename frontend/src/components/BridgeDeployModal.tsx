@@ -3,20 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Card } from "./ui/card";
-import { BadgeCheck, Check } from "lucide-react";
+import { BadgeCheck, Check, RefreshCcw } from "lucide-react";
+import { DeploymentOption } from "../types";
 
 interface BridgeDeployModalProps {
     isOpen: boolean;
     onClose: () => void;
-}
-
-interface DeploymentOption {
-    name: string;
-    logo: string;
-    description: string;
-    availableDexes: string;
-    cost: string;
-    estimatedTime: string;
 }
 
 const deploymentOptions: DeploymentOption[] = [
@@ -70,6 +62,13 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
     const [showProcessingModal, setShowProcessingModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [deploymentProgress, setDeploymentProgress] = useState(0);
+
+    // Bridge UI state (visual only for now)
+    const [fromAmount, setFromAmount] = useState<string>("1");
+    const [toAmount, setToAmount] = useState<string>("0.014512661");
+    const userBalance = 4500;
+    const handleMax = () => setFromAmount(String(userBalance));
+    const handleHalf = () => setFromAmount(String(Math.floor(userBalance / 2)));
 
     const handleOptionSelect = (option: DeploymentOption) => {
         setSelectedOption(option);
@@ -127,9 +126,8 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
 
     return (
         <>
-            {/* Main Modal */}
             <Dialog open={isOpen && !showReviewModal && !showConfirmModal && !showProcessingModal && !showSuccessModal} onOpenChange={onClose}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[81vh] overflow-y-hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[95vh] overflow-y-hidden">
                     <DialogHeader className="flex flex-row items-center justify-between">
                         <DialogTitle className="text-xl font-semibold">
                             Deploy Bridge Contract
@@ -142,49 +140,111 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
                             <TabsTrigger value="create">Create on New Chain</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="bridge" className="mt-6 overflow-y-auto max-h-[50vh]">
-                            <div className="space-y-3">
-                                {deploymentOptions.map((option, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center justify-between p-2 px-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => handleOptionSelect(option)}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="rounded-full flex items-center justify-center">
-                                                <img
-                                                    src={option.logo}
-                                                    alt={option.name}
-                                                    className="w-10 h-10"
-                                                    onError={(e) => {
-                                                        e.currentTarget.style.display = 'none';
-                                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                                    }}
-                                                />
+                        <TabsContent value="bridge" className="mt-6 overflow-y-auto max-h-[55vh]">
+                            <div className="space-y-4">
+                                <div className="flex flex-col space-y-1">
+                                    <h3 className="text-gray-600">From</h3>
+                                    <Card className="p-3 border-gray-200 shadow-none">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
+                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
+                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">CURATE</span>
+                                                </div>
                                             </div>
-                                            <div className="space-y-0.5">
-                                                <h3 className="font-semibold text-sm text-gray-900">
-                                                    {option.name}
-                                                </h3>
-                                                <p className="text-xs text-gray-600">
-                                                    {option.description}
-                                                </p>
-                                                <p className="text-xs text-gray-500 font-extralight">
-                                                    Available DEXes: {option.availableDexes}
-                                                </p>
+                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <span>Hosz...4sFU</span>
                                             </div>
                                         </div>
 
-                                        <div className="text-right space-y-1">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {option.cost}
-                                            </div>
-                                            <div className="text-xs text-gray-600">
-                                                {option.estimatedTime}
+                                        <div className="flex items-center justify-between w-full">
+                                            <input
+                                                type="text"
+                                                value={fromAmount}
+                                                onChange={(e) => setFromAmount(e.target.value)}
+                                                className="h-auto text-2xl font-semibold border-0 focus:outline-none px-1 focus-visible:ring-0 text-left"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
+                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
+                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">CURATE</span>
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="flex justify-between items-center w-full">
+                                            <span className="text-xs text-gray-600">200$</span>
+                                            <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-600">
+                                                <span>{userBalance.toLocaleString()}</span>
+                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleMax}>Max</Button>
+                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleHalf}>50%</Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                <div className="flex flex-col space-y-1">
+                                    <h3 className="text-gray-600">To</h3>
+                                    <Card className="p-3 border-gray-200 shadow-none">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
+                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
+                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">CURATE</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <span>Hosz...4sFU</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between w-full">
+                                            <input
+                                                type="text"
+                                                value={toAmount}
+                                                onChange={(e) => setToAmount(e.target.value)}
+                                                className="h-auto text-2xl font-semibold border-0 focus:outline-none px-1 focus-visible:ring-0 text-left"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
+                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
+                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">CURATE</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center w-full">
+                                            <span className="text-xs text-gray-600">200$</span>
+                                            <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-600">
+                                                <span>{userBalance.toLocaleString()}</span>
+                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleMax}>Max</Button>
+                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleHalf}>50%</Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                <Card className="p-3 border-gray-200 w-full bg-[#475569]/10">
+                                    <div className="flex flex-col w-full gap-2 text-sm">
+                                        <div className="w-full flex items-center justify-between md:gap-3">
+                                            <span className="text-gray-600">Rate</span>
+                                            <div className="flex items-center gap-2 text-gray-800">
+                                                <RefreshCcw className="w-4 h-4" />
+                                                <span>1 NEAR = 0.0145 SOL</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between md:gap-3 text-sm">
+                                            <span className="text-gray-600">Estimated Processing Time</span>
+                                            <span className="text-gray-800">~17s</span>
+                                        </div>
+                                        <div className="flex items-center justify-between md:gap-3 text-sm">
+                                            <span className="text-gray-600">Platform Fee</span>
+                                            <span className="text-gray-800">0.25%</span>
+                                        </div>
                                     </div>
-                                ))}
+                                </Card>
                             </div>
                         </TabsContent>
 
@@ -243,11 +303,19 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
                         >
                             Cancel
                         </Button>
+                        {
+                            activeTab === "bridge" && (
+                                <Button
+                                    onClick={()=>{}}
+                                    className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                    Bridge Tokens
+                                </Button>
+                            ) 
+                        }
                     </div>
                 </DialogContent>
             </Dialog>
-
-            {/* Review Details Modal */}
             <Dialog open={showReviewModal} onOpenChange={handleCancel}>
                 <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg">
                     <DialogHeader>

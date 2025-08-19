@@ -24,13 +24,13 @@ import {
 import { useCallback, useState,useEffect } from "react";
 import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
-import { copyToClipboard, formatNumberWithCommas, truncateAddress,formatNumberToCurrency } from "../../utils";
+import { copyToClipboard, formatNumberWithCommas, truncateAddress,formatNumberToCurrency, formatSolPrice } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
-import { linearBuyCost, linearSellCost, calculateLinearCurrentPrice } from "../../utils/sol";
+import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
 import { TokenDistributionItem, Holders} from "../../types"
 import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
@@ -80,12 +80,17 @@ function TokenDetail() {
             }));
             const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveRes?.creator || ''), new PublicKey(tokenId));
             
+            const priceSol = getCurrentPriceSOL(
+                BigInt(bondingCurveRes?.reserveBalance || 0),
+                BigInt(bondingCurveRes?.reserveToken || 0)
+            );
+            setCurrentPrice(Number(priceSol));
+
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
             setBondingCurveInfo(bondingCurveRes || null);
             setHolders(holdersRes);
             setCurveConfig(curveConfigInfo)
-            setCurrentPrice(Number(calculateLinearCurrentPrice(BigInt(bondingCurveRes?.totalSupply || 0), Number(curveConfigInfo?.reserveRatio || 0))));
         } catch (error) {
             console.error('Error loading token info:', error);
         } finally {
@@ -402,7 +407,7 @@ function TokenDetail() {
 
                         <div className="grid grid-cols-3">
                             <div>
-                                <div className="text-lg font-semibold">-</div>
+                                <div className="text-lg font-semibold">{formatSolPrice(currentPrice)}</div>
                                 <div className="text-sm text-gray-500">Current Price</div>
                             </div>
                             <div>
@@ -738,7 +743,7 @@ function TokenDetail() {
 
                     <div className="grid grid-cols-3">
                         <div>
-                            <div className="text-lg font-semibold">-</div>
+                            <div className="text-lg font-semibold">{formatSolPrice(currentPrice)}</div>
                             <div className="text-sm text-gray-500">Current Price</div>
                         </div>
                         <div>

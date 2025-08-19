@@ -1,0 +1,10 @@
+ignoredBuiltDependencies:
+  - bigint-buffer
+  - blake-hash
+  - bufferutil
+  - core-js
+  - esbuild
+  - protobufjs
+  - tiny-secp256k1
+  - usb
+  - utf-8-validate
