@@ -8,7 +8,7 @@ export default function IntegratedEcosystem(){
             <div className="relative w-full overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-4 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-4 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://near-intents.org", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -22,7 +22,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://solana.com", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -38,7 +38,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://docs.near.org/chain-abstraction/omnibridge/overview", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -52,7 +52,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 py-5 md:py-2 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 py-5 md:py-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://raydium.io", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -66,7 +66,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://pump.fun/board", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -80,7 +80,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://jup.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -94,7 +94,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://aerodrome.finance", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -108,7 +108,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow-md cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
                         onClick={() => window.open("https://www.meteora.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">

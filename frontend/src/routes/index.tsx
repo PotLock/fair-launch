@@ -39,20 +39,21 @@ function Home() {
       <section className="w-full bg-neutral-100 h-28 flex items-center justify-center">
         <div className="w-full lg:container px-6 lg:px-28 mx-auto flex items-center justify-start md:justify-between gap-8 overflow-x-auto">
           <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/relydotcash.png" alt="RelaydotCash" className="w-10 h-10" />
-            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">reply.cash</span>
+            <img src="/logos/near-intents.svg" alt="near-intents" className="w-28 h-auto" />
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/POTLOCK.svg" alt="Potlock" className="w-8 h-8" />
-            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">POTLOCK</span>
+            <img src="/logos/aerodrome.png" alt="Aerodrome" className="w-8 h-auto" />
+            <span className="text-lg font-bold">AERODROME</span>
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/usersdotfun.png" alt="Usersdotfun" className="w-10 h-10" />
-            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Users.fun</span>
+            <img src="/logos/raydium-text.svg" alt="Raydium" className="w-36 h-auto" />
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
-            <img src="/logos/curatedotfun.svg" alt="Curatedotfun" className="w-7 h-7" />
-            <span className="text-neutral-500 text-base font-bold whitespace-nowrap">Curate.fun</span>
+            <img src="/logos/pumpfun.png" alt="PumpSwap" className="w-9 h-auto" />
+            <span className="font-bold">PumpSwap</span>
+          </div>
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <img src="/logos/rhea.svg" alt="RHEA" className="w-[6rem] h-auto" />
           </div>
         </div>
       </section>
@@ -60,7 +61,7 @@ function Home() {
         <div className="grid grid-cols-2 gap-3 md:flex items-center md:justify-between md:px-6">
           <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
             <span className="font-bold text-4xl">10+</span>
-            <span className="font-thin text-base md:text-lg">PLANNED PROFJECT LAUNCHES</span>
+            <span className="font-thin text-base md:text-lg">PLANNED PROJECT LAUNCHES</span>
           </div>
           <div className="h-[130px] md:w-[300px] p-2 md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center">
             <span className="font-bold text-4xl">{loading ? "X" : tokens.length}</span>
