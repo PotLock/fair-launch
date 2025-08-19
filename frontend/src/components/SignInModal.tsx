@@ -63,10 +63,8 @@ const SignInModal: React.FC<SignInModalProps> = ({
   }, [isSolanaConnected, solanaPublicKey, signedAccountId, evmConnected, evmAddress]);
 
   const handleConnectSolana = async () => {
-    // Use the Solana wallet connection function from context
     try {
       await connectSolana();
-      // Close modal after successful connection
       onClose();
     } catch (error) {
       console.error('Failed to connect Solana wallet:', error);
@@ -153,11 +151,9 @@ const SignInModal: React.FC<SignInModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Popular options */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Popular options</h3>
             <div className="space-y-2">
-              {/* Solana Wallet */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <img src="/chains/solana.svg" alt="Solana" className="w-6 h-6" />
