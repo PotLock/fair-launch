@@ -1,8 +1,8 @@
 export default function ConsultUs() {
     return (
-        <div className="pt-[68px] md:px-10">
+        <div className="pt-[68px] md:px-6">
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
-                <h1 className="font-bold text-3xl">Launching a Token, Consult us</h1>
+                <h1 className="font-bold text-3xl md:max-w-[20rem]">Launching a Token, Consult us</h1>
                 <span className="md:max-w-[22rem] text-xl">Fast track your product via internet capital markets</span>
             </div>
             <div className="relative w-full overflow-hidden">

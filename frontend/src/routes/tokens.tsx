@@ -20,7 +20,6 @@ function Tokens() {
             setLoading(true);
             setError(null);
             const tokens = await getTokens();
-            console.log(tokens.data)
             setTokens(tokens.data);
           } catch (error) {
             console.error('Error fetching tokens:', error);

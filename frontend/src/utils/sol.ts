@@ -490,34 +490,13 @@ export function calculateInitialReserveAmount(
   return initialReserve;
 }
 
-export function calculateLinearCurrentPrice(
-  totalSupply: bigint,
-  reserveRatio: number
-): bigint {
-  console.log("totalsupply", totalSupply)
-  console.log("reserveRatio", reserveRatio)
-  // Ensure reserveRatio is a valid u16 value greater than 0
-  if (!Number.isInteger(reserveRatio) || reserveRatio < 1 || reserveRatio > 65535) {
-    throw new Error("Invalid amount");
-  }
-  // Ensure totalSupply is non-negative
-  if (totalSupply < 0n) {
-    throw new Error("Invalid total supply");
-  }
-  // Calculate numerator: totalSupply * 2
-  const numerator = totalSupply * 2n;
-  console.log("numerator", numerator)
-  // Calculate denominator: reserveRatio / 10000 using integer division
-  const denominator = BigInt(reserveRatio) / 10000n;
-  console.log("denominator", denominator)
-  // Check for division by zero
-  if (denominator === 0n) {
-    throw new Error("Overflow or underflow occurred");
-  }
-  // Calculate price: numerator / denominator
-  const price = numerator / denominator;
-  const priceSol = price / 10n ** 9n;
-  console.log("price", priceSol)
+// Constants for scaling
+const LAMPORTS_PER_SOL = 1e9;
+const TOKEN_DECIMALS = 1e6;
 
-  return priceSol;
+
+export function getCurrentPriceSOL(virtualSolReserves: bigint, virtualTokenReserves: bigint): number {
+  const solReserve = Number(virtualSolReserves) / LAMPORTS_PER_SOL;
+  const tokenReserve = Number(virtualTokenReserves) / TOKEN_DECIMALS;
+  return solReserve / tokenReserve;
 }

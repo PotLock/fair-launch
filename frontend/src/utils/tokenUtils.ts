@@ -251,19 +251,21 @@ export async function getAllocationsAndVesting(wallets: PublicKey[], mint: Publi
   }
 }
 
-// Get all holders of a token by mint address on Solana
+/**
+ * Get all holders of a token by mint address on Solana
+ * @param mintAddress Mint address of the token
+ */
 export async function getTokenHoldersByMint(mintAddress: string) {
-  const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+  const connection = new Connection(`https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, 'confirmed');
   try {
-    // Get all token accounts owned by all owners for this mint
     const accounts = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
       commitment: 'confirmed',
       filters: [
-        { dataSize: 165 }, // size of token account
-        { memcmp: { offset: 0, bytes: mintAddress } }, // mint address is at offset 0
+        { dataSize: 165 }, 
+        { memcmp: { offset: 0, bytes: mintAddress } },
       ],
     });
-    // Map to owner and amount
+
     const holders = accounts
       .map((account: any) => {
         const data = account.account.data as Buffer;
@@ -271,7 +273,6 @@ export async function getTokenHoldersByMint(mintAddress: string) {
         const amount = Number(data.readBigUInt64LE(64));
         return { owner, amount };
       })
-      // Only include holders with a positive balance
       .filter((holder: { owner: string; amount: number }) => holder.amount && holder.amount > 0);
     return holders;
   } catch (error) {

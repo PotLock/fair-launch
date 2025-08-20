@@ -78,7 +78,7 @@ export default function Comprehensive(){
 
 
     return(
-        <div className="pt-[68px] md:px-10">
+        <div className="pt-[68px] md:px-6">
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
                 <div className="md:max-w-[20rem]">
                     <h1 className="font-bold text-3xl">Comprehensive</h1>
@@ -183,14 +183,14 @@ export default function Comprehensive(){
                     </div>
 
                     <div className="bg-white rounded-2xl overflow-hidden flex flex-col w-full">
-                        <div className="p-10 bg-[#FAE2DF] h-[295px] flex justify-center flex-col">
+                        <div className="p-10 bg-[#FAE2DF] lg:h-[295px] flex justify-center flex-col">
                             <h3 className="font-base text-3xl text-black mb-4">Bonding Curves</h3>
                             <p className="text-gray-700 text-sm leading-relaxed">
                                 Advanced bonding curve mechanisms with linear, exponential, logarithmic, and sigmoid curve options for optimal price discovery.
                             </p>
                         </div>
                         <div className="bg-[#6B0036] py-6 flex items-center justify-center rounded-b-2xl">
-                            <img src="/icons/bonding-curve.png" alt="Bonding Curves" className="w-full h-full max-w-[215px] object-contain" />
+                            <img src="/icons/bonding-curve.png" alt="Bonding Curves" className="w-full h-full md:max-w-[168px] lg:max-w-[215px] object-contain" />
                         </div>
                     </div>
                 </div>

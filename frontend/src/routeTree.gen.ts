@@ -13,7 +13,6 @@ import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as MyTokensRouteImport } from './routes/my-tokens'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TokenIndexRouteImport } from './routes/token/index'
 import { Route as TokenTokenIdRouteImport } from './routes/token/$tokenId'
 
 const TokensRoute = TokensRouteImport.update({
@@ -36,11 +35,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TokenIndexRoute = TokenIndexRouteImport.update({
-  id: '/token/',
-  path: '/token/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TokenTokenIdRoute = TokenTokenIdRouteImport.update({
   id: '/token/$tokenId',
   path: '/token/$tokenId',
@@ -53,7 +47,6 @@ export interface FileRoutesByFullPath {
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
   '/token/$tokenId': typeof TokenTokenIdRoute
-  '/token': typeof TokenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +54,6 @@ export interface FileRoutesByTo {
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
   '/token/$tokenId': typeof TokenTokenIdRoute
-  '/token': typeof TokenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,19 +62,12 @@ export interface FileRoutesById {
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
   '/token/$tokenId': typeof TokenTokenIdRoute
-  '/token/': typeof TokenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/create'
-    | '/my-tokens'
-    | '/tokens'
-    | '/token/$tokenId'
-    | '/token'
+  fullPaths: '/' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId' | '/token'
+  to: '/' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId'
   id:
     | '__root__'
     | '/'
@@ -90,7 +75,6 @@ export interface FileRouteTypes {
     | '/my-tokens'
     | '/tokens'
     | '/token/$tokenId'
-    | '/token/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -99,7 +83,6 @@ export interface RootRouteChildren {
   MyTokensRoute: typeof MyTokensRoute
   TokensRoute: typeof TokensRoute
   TokenTokenIdRoute: typeof TokenTokenIdRoute
-  TokenIndexRoute: typeof TokenIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -132,13 +115,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/token/': {
-      id: '/token/'
-      path: '/token'
-      fullPath: '/token'
-      preLoaderRoute: typeof TokenIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/token/$tokenId': {
       id: '/token/$tokenId'
       path: '/token/$tokenId'
@@ -155,7 +131,6 @@ const rootRouteChildren: RootRouteChildren = {
   MyTokensRoute: MyTokensRoute,
   TokensRoute: TokensRoute,
   TokenTokenIdRoute: TokenTokenIdRoute,
-  TokenIndexRoute: TokenIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
