@@ -166,3 +166,19 @@ export const formatNumberToCurrency = (x: number) => {
       return x.toFixed(3);
   }
 };
+
+export function formatSolPrice(num: number | string, maxDecimals: number = 10): string {
+  let n = typeof num === "string" ? Number(num) : num;
+  if (isNaN(n)) return "NaN";
+
+  if (n === 0) return "0";
+
+  if (Math.abs(n) < 1e-6) {
+    return n.toFixed(maxDecimals);
+  }
+
+  let formatted = n.toFixed(maxDecimals);
+
+  return formatted.replace(/\.?0+$/, "");
+}
+

@@ -1,6 +1,7 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginNodePolyfill } from '@rsbuild/plugin-node-polyfill';
+import path from "path"
 
 export default defineConfig({
   plugins: [
@@ -9,12 +10,15 @@ export default defineConfig({
   ],
   source: {
     define: {
+      'process.env.PUBLIC_EVM_NETWORK': JSON.stringify(process.env.PUBLIC_EVM_NETWORK),
+      'process.env.PUBLIC_SOL_PRIVATE_KEY': JSON.stringify(process.env.PUBLIC_SOL_PRIVATE_KEY),
       'process.env.PUBLIC_HELIUS_API_KEY': JSON.stringify(process.env.PUBLIC_HELIUS_API_KEY),
-      'process.env.PUBLIC_API_URL': JSON.stringify(process.env.PUBLIC_API_URL),
       'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),
-      'process.env.PUBLIC_JWT_PINATA_SECRET': JSON.stringify(process.env.PUBLIC_JWT_PINATA_SECRET),
+      'process.env.PUBLIC_NEAR_NETWORK': JSON.stringify(process.env.PUBLIC_NEAR_NETWORK),
+      'process.env.PUBLIC_ALCHEMY_API_KEY': JSON.stringify(process.env.PUBLIC_ALCHEMY_API_KEY),
+      'process.env.PUBLIC_WALLET_CONNECT_PROJECT_ID': JSON.stringify(process.env.PUBLIC_WALLET_CONNECT_PROJECT_ID),
       'process.browser': true,
-      'global':{}
+      'global': 'globalThis'
     },
     entry: {
       index: "./src/main.tsx"
@@ -25,6 +29,13 @@ export default defineConfig({
       stream: "stream-browserify",
       buffer: "buffer",
       process: "process/browser",
+      crypto: "crypto-browserify",
+      fs: false,
+      path: false,
+      os: false,
+      algosdk: false,
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
   },
   html: {

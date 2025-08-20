@@ -294,3 +294,12 @@ export interface StepProps {
     stepKey: string;
     onHeaderClick: (stepKey: string) => void;
 }
+
+export interface DeploymentOption {
+    name: string;
+    logo: string;
+    description: string;
+    availableDexes: string;
+    cost: string;
+    estimatedTime: string;
+}
