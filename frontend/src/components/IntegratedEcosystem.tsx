@@ -1,14 +1,63 @@
+import { useLayoutEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
 export default function IntegratedEcosystem(){
+    const rootRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        const ctx = gsap.context(() => {
+            gsap.from('.ie-title', {
+                y: 20,
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 80%',
+                    once: true,
+                },
+            });
+            gsap.from('.ie-subtitle', {
+                y: 16,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 78%',
+                    once: true,
+                },
+            });
+            gsap.utils.toArray<HTMLElement>('.ie-card').forEach((el, i) => {
+                gsap.from(el, {
+                    y: 24,
+                    opacity: 0,
+                    duration: 0.5,
+                    ease: 'power3.out',
+                    delay: Math.min(i * 0.06, 0.4),
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 90%',
+                        toggleActions: 'play none none reverse',
+                    },
+                })
+            })
+        }, rootRef);
+        return () => ctx.revert();
+    }, []);
+
     return(
-        <div className="pt-[68px] md:px-10">
+        <div className="pt-[68px] md:px-10" ref={rootRef}>
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
-                <h1 className="font-bold text-3xl">Integrated Ecosystem</h1>
-                <span className="md:max-w-[22rem] text-xl">Connected with leading blockchains and DeFi protocols</span>
+                <h1 className="font-bold text-3xl ie-title">Integrated Ecosystem</h1>
+                <span className="md:max-w-[22rem] text-xl ie-subtitle">Connected with leading blockchains and DeFi protocols</span>
             </div>
             <div className="relative w-full overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-4 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-4 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://near-intents.org", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -22,7 +71,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://solana.com", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -38,7 +87,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center text-center items-center flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://docs.near.org/chain-abstraction/omnibridge/overview", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -52,7 +101,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 py-5 md:py-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white flex justify-center text-center items-center flex-col rounded-xl p-2 py-5 md:py-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://raydium.io", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-2 gap-2">
@@ -66,7 +115,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] flex justify-center items-center text-center md:text-start flex-col rounded-xl p-2 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://pump.fun/board", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -80,7 +129,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://jup.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -94,7 +143,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://aerodrome.finance", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">
@@ -108,7 +157,7 @@ export default function IntegratedEcosystem(){
                         </p>
                     </div>
                     <div 
-                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400"
+                        className="bg-white min-h-[200px] text-center flex justify-center items-center flex-col rounded-xl p-6 hover:shadow cursor-pointer transition-shadow duration-300 border border-gray-200 hover:border-gray-400 ie-card"
                         onClick={() => window.open("https://www.meteora.ag", "_blank")}
                     >
                         <div className="flex flex-col items-center mb-4 gap-2">

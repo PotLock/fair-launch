@@ -1,6 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 export default function Comprehensive(){
+    const rootRef = useRef<HTMLDivElement>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
@@ -76,11 +79,44 @@ export default function Comprehensive(){
         setTouchEnd(0);
     };
 
+    useLayoutEffect(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        const ctx = gsap.context(() => {
+            gsap.from('.comp-title h1', {
+                y: 20,
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                stagger: 0.1,
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 80%',
+                    once: true,
+                },
+            });
+
+            gsap.utils.toArray<HTMLElement>('.comp-card').forEach((el) => {
+                gsap.from(el, {
+                    y: 28,
+                    opacity: 0,
+                    duration: 0.6,
+                    ease: 'power3.out',
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 85%',
+                        toggleActions: 'play none none reverse',
+                    },
+                });
+            });
+        }, rootRef);
+        return () => ctx.revert();
+    }, []);
+
 
     return(
-        <div className="pt-[68px] md:px-6">
+        <div className="pt-[68px] md:px-6" ref={rootRef}>
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
-                <div className="md:max-w-[20rem]">
+                <div className="md:max-w-[20rem] comp-title">
                     <h1 className="font-bold text-3xl">Comprehensive</h1>
                     <h1 className="font-bold text-3xl">Token Launch Suite</h1>
                 </div>
@@ -98,7 +134,7 @@ export default function Comprehensive(){
                 >
                     {slides.map((slide, index) => (
                         <div key={index} className="w-full flex-shrink-0 min-h-[530px] max-h-[530px]">
-                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex flex-col mx-4">
+                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex flex-col mx-4 comp-card">
                                 <div className={`flex-1 p-6 ${slide.bgColor}`}>
                                     <h3 className="font-normal text-4xl text-black mb-4">{slide.title}</h3>
                                     <p className={`text-base leading-relaxed ${slide.textColor}`}>
@@ -157,7 +193,7 @@ export default function Comprehensive(){
             <div className="hidden md:block relative w-full overflow-hidden">
                 <div className="grid grid-cols-3 gap-4">
                     <div className="flex flex-col gap-4 col-span-2">
-                        <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex max-h-[280px]">
+                        <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 flex max-h-[280px] comp-card">
                             <div className="w-[60%] p-10 bg-gray-50">
                                 <h3 className="font-normal text-3xl text-black mb-4">Multi-Chain Deployment</h3>
                                 <p className="text-gray-700 text-sm leading-relaxed">
@@ -169,7 +205,7 @@ export default function Comprehensive(){
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl overflow-hidden flex items-center max-h-[280px]">
+                        <div className="bg-white rounded-2xl overflow-hidden flex items-center max-h-[280px] comp-card">
                             <div className="w-[40%] bg-[#607316] p-8 flex items-center justify-center relative">
                                 <img src="/icons/vesting.png" alt="Vesting Schedules" className="w-full max-w-[250px] h-full object-contain" />
                             </div>
@@ -182,7 +218,7 @@ export default function Comprehensive(){
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl overflow-hidden flex flex-col w-full">
+                    <div className="bg-white rounded-2xl overflow-hidden flex flex-col w-full comp-card">
                         <div className="p-10 bg-[#FAE2DF] lg:h-[295px] flex justify-center flex-col">
                             <h3 className="font-base text-3xl text-black mb-4">Bonding Curves</h3>
                             <p className="text-gray-700 text-sm leading-relaxed">
@@ -195,7 +231,7 @@ export default function Comprehensive(){
                     </div>
                 </div>
                 <div className="relative flex flex-col gap-4 mt-4">
-                    <div className="bg-[#DFF2F1] rounded-2xl overflow-hidden flex h-[280px]">
+                    <div className="bg-[#DFF2F1] rounded-2xl overflow-hidden flex h-[280px] comp-card">
                         <div className="w-[60%] p-12 bg-[#DFF2F1]">
                             <h3 className="font-base text-3xl text-black mb-4">Launch Mechanism</h3>
                             <p className="text-[#43696B] text-sm leading-relaxed max-w-[80%]">
@@ -207,7 +243,7 @@ export default function Comprehensive(){
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-[#EEF2FF] rounded-2xl overflow-hidden flex col-span-2">
+                        <div className="bg-[#EEF2FF] rounded-2xl overflow-hidden flex col-span-2 comp-card">
                             <div className="w-[60%] p-12 bg-[#EEF2FF]">
                                 <h3 className="font-base text-3xl text-black mb-4 max-w-[14rem]">Cross-Chain DEX Support</h3>
                                 <p className="text-slate-700 text-sm leading-relaxed">
@@ -218,7 +254,7 @@ export default function Comprehensive(){
                                 <img src="/icons/cross-chain-dex.png" alt="Cross-Chain DEX Support" className="w-full h-full object-contain" />
                             </div>
                         </div>
-                        <div className="bg-lime-50 rounded-2xl overflow-hidden flex">
+                        <div className="bg-lime-50 rounded-2xl overflow-hidden flex comp-card">
                             <div className="w-full p-12 bg-lime-50">
                                 <h3 className="font-base text-3xl text-black mb-4 max-w-[12rem]">Fee Configuration</h3>
                                 <p className="text-lime-600 text-sm leading-relaxed">

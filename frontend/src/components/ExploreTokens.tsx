@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ExploreTokenCard from "./ExploreTokenCard";
 import { useNavigate } from "@tanstack/react-router";
 import { getTokens } from "../lib/api";
 import { TokenInfo } from "../utils/tokenUtils";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 export default function ExploreTokens() {
+    const rootRef = useRef<HTMLDivElement>(null);
     const [currentIndex, setCurrentIndex] = useState<number>(0);
     const [cardsPerView, setCardsPerView] = useState<number>(3);
     const navigate = useNavigate();
@@ -58,6 +61,49 @@ export default function ExploreTokens() {
         setCurrentIndex(prev => Math.max(prev - 1, 0));
     };
 
+    useLayoutEffect(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        const ctx = gsap.context(() => {
+            gsap.from('.ex-title', {
+                y: 20,
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 80%',
+                    once: true,
+                },
+            });
+            gsap.from('.ex-subtitle', {
+                y: 16,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 78%',
+                    once: true,
+                },
+            });
+            gsap.utils.toArray<HTMLElement>('.ex-card').forEach((el, i) => {
+                gsap.from(el, {
+                    y: 24,
+                    opacity: 0,
+                    duration: 0.5,
+                    ease: 'power3.out',
+                    delay: Math.min(i * 0.06, 0.4),
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 88%',
+                        toggleActions: 'play none none reverse',
+                    },
+                })
+            })
+        }, rootRef);
+        return () => ctx.revert();
+    }, [cardsPerView, tokens.length]);
+
     const LoadingSkeleton = () => (
         <div className="flex gap-3">
             {Array.from({ length: cardsPerView }).map((_, index) => (
@@ -102,10 +148,10 @@ export default function ExploreTokens() {
     );
 
     return (
-        <div className="pt-[68px] md:px-6">
+        <div className="pt-[68px] md:px-6" ref={rootRef}>
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
-                <h1 className="font-bold text-3xl">Explore Tokens</h1>
-                <span className="lg:max-w-[26rem] text-xl">Participate in all the latest token launches.</span>
+                <h1 className="font-bold text-3xl ex-title">Explore Tokens</h1>
+                <span className="lg:max-w-[26rem] text-xl ex-subtitle">Participate in all the latest token launches.</span>
             </div>
             
             <div className="relative w-full overflow-hidden">
@@ -130,7 +176,7 @@ export default function ExploreTokens() {
                             }}
                         >
                             {tokens.map((token) => (
-                                <div key={token.id} className="flex-shrink-0" style={{ width: `calc((100% - ${(cardsPerView - 0.2) * 0.75}rem) / ${cardsPerView})` }}>
+                                <div key={token.id} className="flex-shrink-0 ex-card" style={{ width: `calc((100% - ${(cardsPerView - 0.2) * 0.75}rem) / ${cardsPerView})` }}>
                                     <ExploreTokenCard  
                                         id={token.id}
                                         mint={token.mintAddress || ''}
