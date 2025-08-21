@@ -143,7 +143,7 @@ export default function ExploreTokens() {
                                         decimals={token.decimals}
                                         status={'Trading'}
                                         actionButton={{
-                                            text: 'Buy on Curve',
+                                            text: `Buy $${token.name}`,
                                             variant: 'presale' as const
                                         }}
                                     />

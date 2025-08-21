@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
       const fetchTokens = async () => {

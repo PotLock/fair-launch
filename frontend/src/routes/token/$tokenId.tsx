@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { 
@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy } from "lucide-react";
+import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,7 +24,7 @@ import {
 import { useCallback, useState,useEffect } from "react";
 import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
-import { copyToClipboard, formatNumberWithCommas, truncateAddress,formatNumberToCurrency, formatSolPrice } from "../../utils";
+import { formatNumberToCurrency, formatSolPrice } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
@@ -32,7 +32,6 @@ import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
 import { TokenDistributionItem, Holders} from "../../types"
-import { Progress } from "../../components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -40,6 +39,7 @@ import { LaunchStatus } from "../../components/LaunchStatus";
 import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
+import { NODE_ENV } from "../../configs/env.config";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -184,10 +184,23 @@ function TokenDetail() {
 
     if (!tokenInfo) {
         return (
-            <div className="min-h-screen container mx-auto py-10 flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Not Found</h2>
-                    <p className="text-gray-500">The token you're looking for doesn't exist or has been removed.</p>
+            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+                <div className="container mx-auto flex items-center justify-center py-24">
+                    <div className="w-full max-w-xl p-10 text-center shadow-sm border-gray-100">
+                        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100">
+                            <ArrowUpRight className="h-7 w-7 text-gray-500" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">Token not found</h2>
+                        <p className="mt-3 text-gray-500">The token you're looking for doesn't exist, was removed, or the URL is incorrect.</p>
+                        <div className="mt-8 flex items-center justify-center gap-3">
+                            <Button asChild size="lg" className="bg-black text-white">
+                                <Link to="/">Return home</Link>
+                            </Button>
+                            <Button asChild variant="outline" size="lg">
+                                <Link to="/tokens">Browse launchpad</Link>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -222,7 +235,11 @@ function TokenDetail() {
     const handlePaymentChange = (option: { name: string; icon: string }) => {
         setSelectedPayment(option);
         if (tokenInfo) {
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+            if (option.name === 'SOL') {
+                setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+            } else if (option.name === tokenInfo.symbol) {
+                setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
+            }
         }
         if (payAmount && tokenInfo && bondingCurveInfo) {
             const numericVal = parseFloat(payAmount);
@@ -518,14 +535,63 @@ function TokenDetail() {
                                 </div>
                             </TabsContent>
                             <TabsContent value="deposit">
-                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                    <div className="text-sm text-gray-500 mb-2">You Pay</div>
+                                <div className="flex flex-col space-y-2 mb-5">
+                                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                        <label className="text-sm text-gray-500 mb-2">You Pay</label>
+                                        <div className="flex items-center justify-between">
+                                            <input
+                                                type="text"
+                                                className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                                                placeholder="0.00"
+                                                value={payAmount}
+                                                onChange={handlePayAmountChange}
+                                            />
+                                            <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                                <img src="/logos/near.svg" alt="NEAR" className="w-5 h-5" />
+                                                <span className="mr-5">NEAR</span>
+                                            </button>
+                                        </div>
+                                        <span className="text-sm text-gray-500 mt-1">-</span>
+                                    </div>
+                                    <Card className="shadow-none p-3 py-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-semibold">Use this depsoit address</h3>
+                                            <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
+                                        </div>
+                                        <div className="h-[1px] w-full bg-gray-300 mt-2 mb-2"/>
+                                        <div className="flex flex-col space-y-5 justify-center items-center">
+                                            <div className="border border-gray-200 p-1 rounded-lg">
+                                                <img src="/icons/qrcode.svg" alt="QRcode" className="w-40 h-40"/>
+                                            </div>
+                                            <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
+                                                <span className="text-sm">qAHMEAU4..........8jiETcaSL5u5sAnZN</span>
+                                                <Button className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2">
+                                                    <Copy className="w-3 h-3 text-gray-600" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="pt-3">
+                                            <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
+                                                <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the Near network</h3>
+                                                <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                    <Card className="shadow-none p-3 space-y-4 w-full">
+                                        <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                                            <span>Minimum Deposit</span>
+                                            <span>0.001 SOL</span>
+                                        </div>
+                                        <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                                            <span>Processing Time</span>
+                                            <span>~5 mins</span>
+                                        </div>
+                                    </Card>
                                 </div>
                             </TabsContent>
                         </Tabs>
                     </div>
 
-                    {/* Mobile DEX Trading Section */}
                     <div className="p-4 flex flex-col gap-2">
                         <h1 className="text-lg font-bold">Trade on DEX</h1>
                         <div className="flex flex-col gap-2">
@@ -599,9 +665,19 @@ function TokenDetail() {
                     </p>
                 </Card>
                 
-                <LaunchStatus/>
+                {
+                    NODE_ENV !== "production" && (
+                        <LaunchStatus/>
+                    )
+                }
+
                 <LaunchConditions tokenInfo={tokenInfo} />
-                <LiquidityPools/>
+
+                {
+                    NODE_ENV !== "production" && (
+                        <LiquidityPools/>
+                    )
+                }
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
@@ -783,7 +859,7 @@ function TokenDetail() {
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                                    <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
+                                                    <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 object-contain" />
                                                     <span>{selectedPayment?.name}</span>
                                                     <div className="relative w-4 h-4 mr-5">
                                                         <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -798,7 +874,7 @@ function TokenDetail() {
                                                         className="cursor-pointer hover:bg-gray-100"
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                                                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full object-contain" />
                                                             <span>{option.name}</span>
                                                         </div>
                                                     </DropdownMenuItem>
@@ -821,8 +897,8 @@ function TokenDetail() {
                                             onChange={handleReceiveAmountChange} 
                                         />
                                         <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
-                                            <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-6 h-6 rounded-full" />
-                                            <span className="text-lg mr-7">{tokenInfo?.symbol}</span>
+                                            <img src={selectedReceive?.icon} alt={selectedReceive?.name} className="w-6 h-6 rounded-full" />
+                                            <span className="text-lg mr-7">{selectedReceive?.name}</span>
                                         </div>
                                     </div>
                                     <div className="text-sm text-gray-500 mt-1">-</div>
@@ -841,31 +917,10 @@ function TokenDetail() {
                                             value={payAmount}
                                             onChange={handlePayAmountChange}
                                         />
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                                    <img src={selectedPayment?.icon} alt={selectedPayment?.name} className="w-5 h-5 rounded-full" />
-                                                    <span>{selectedPayment?.name}</span>
-                                                    <div className="relative w-4 h-4 mr-5">
-                                                        <ChevronDown className="h-4 w-4 text-gray-500" />
-                                                    </div>
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-[200px] bg-white">
-                                                {tokenOptions.map((option) => (
-                                                    <DropdownMenuItem
-                                                        key={option.name}
-                                                        onSelect={() => handlePaymentChange(option)}
-                                                        className="cursor-pointer hover:bg-gray-100"
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
-                                                            <span>{option.name}</span>
-                                                        </div>
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                            <img src="/logos/near.svg" alt="NEAR" className="w-5 h-5" />
+                                            <span className="mr-5">NEAR</span>
+                                        </button>
                                     </div>
                                     <span className="text-sm text-gray-500 mt-1">-</span>
                                 </div>

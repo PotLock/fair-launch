@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as MyTokensRouteImport } from './routes/my-tokens'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as BridgeRouteImport } from './routes/bridge'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TokenTokenIdRouteImport } from './routes/token/$tokenId'
 
@@ -30,6 +31,11 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BridgeRoute = BridgeRouteImport.update({
+  id: '/bridge',
+  path: '/bridge',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const TokenTokenIdRoute = TokenTokenIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bridge': typeof BridgeRoute
   '/create': typeof CreateRoute
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bridge': typeof BridgeRoute
   '/create': typeof CreateRoute
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bridge': typeof BridgeRoute
   '/create': typeof CreateRoute
   '/my-tokens': typeof MyTokensRoute
   '/tokens': typeof TokensRoute
@@ -65,12 +74,19 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId'
+  fullPaths:
+    | '/'
+    | '/bridge'
+    | '/create'
+    | '/my-tokens'
+    | '/tokens'
+    | '/token/$tokenId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId'
+  to: '/' | '/bridge' | '/create' | '/my-tokens' | '/tokens' | '/token/$tokenId'
   id:
     | '__root__'
     | '/'
+    | '/bridge'
     | '/create'
     | '/my-tokens'
     | '/tokens'
@@ -79,6 +95,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BridgeRoute: typeof BridgeRoute
   CreateRoute: typeof CreateRoute
   MyTokensRoute: typeof MyTokensRoute
   TokensRoute: typeof TokensRoute
@@ -108,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bridge': {
+      id: '/bridge'
+      path: '/bridge'
+      fullPath: '/bridge'
+      preLoaderRoute: typeof BridgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -127,6 +151,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BridgeRoute: BridgeRoute,
   CreateRoute: CreateRoute,
   MyTokensRoute: MyTokensRoute,
   TokensRoute: TokensRoute,

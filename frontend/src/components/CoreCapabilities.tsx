@@ -100,10 +100,11 @@ export default function CoreCapabilities() {
         
         const diff = startX - currentX;
         const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
 
         if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < capabilities.length - 1) {
-                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
             } else if (diff < 0 && currentSlide > 0) {
                 setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
@@ -129,10 +130,11 @@ export default function CoreCapabilities() {
         
         const diff = startX - currentX;
         const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
 
         if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < capabilities.length - 1) {
-                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
             } else if (diff < 0 && currentSlide > 0) {
                 setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
@@ -205,8 +207,15 @@ export default function CoreCapabilities() {
 
                 <div className="hidden md:block lg:px-4">
                     <div className="relative overflow-hidden">
-                        <div className="flex transition-transform duration-500 ease-in-out gap-6" 
+                        <div className="flex transition-transform duration-500 ease-in-out gap-6 cursor-grab active:cursor-grabbing select-none" 
                             style={{ transform: `translateX(-${getDesktopTransform()}px)` }}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
                         >
                             {capabilities.map((capability) => (
                                 <div key={capability.id} className="w-[320px] flex-shrink-0">
