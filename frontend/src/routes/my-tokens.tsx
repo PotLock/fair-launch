@@ -3,7 +3,7 @@ import { MyTokenCard } from "../components/MyTokenCard";
 import { WalletButton } from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
-import { TokenInfo } from "../utils/tokenUtils";
+import { TokenInfo } from "../utils/token";
 import { getTokenByAddress } from "../lib/api";
 import { Coins } from "lucide-react";
 

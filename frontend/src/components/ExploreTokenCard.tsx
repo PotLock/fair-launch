@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Holders } from "../types";
-import { BondingCurveTokenInfo, getBondingCurveAccounts, getTokenHoldersByMint } from "../utils/tokenUtils";
+import { BondingCurveTokenInfo, getBondingCurveAccounts, getTokenHoldersByMint } from "../utils/token";
 import { PublicKey } from "@solana/web3.js";
 import { formatNumberToCurrency } from "../utils";
 

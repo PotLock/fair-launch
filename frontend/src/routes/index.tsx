@@ -6,7 +6,7 @@ import Comprehensive from "../components/Comprehensive";
 import IntegratedEcosystem from "../components/IntegratedEcosystem";
 import ConsultUs from "../components/ConsultUs";
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { TokenInfo } from "../utils/tokenUtils";
+import { TokenInfo } from "../utils/token";
 import { getTokens } from "../lib/api";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";

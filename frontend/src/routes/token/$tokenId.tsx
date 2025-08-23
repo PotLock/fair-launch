@@ -22,16 +22,16 @@ import {
     DropdownMenuGroup,
 } from "../../components/ui/dropdown-menu";
 import { useCallback, useState,useEffect } from "react";
-import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint, TokenInfo } from "../../utils/tokenUtils";
+import { BondingCurveTokenInfo, getAllocationsAndVesting, getBondingCurveAccounts, getCurveConfig, getTokenHoldersByMint } from "../../utils/token";
 import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
-import { formatNumberToCurrency, formatSolPrice } from "../../utils";
+import { formatNumberToCurrency, formatDecimal } from "../../utils";
 import { TokenDetailSkeleton } from "../../components/TokenDetailSkeleton";
 import { useTokenTrading } from "../../hook/useTokenTrading";
 import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
-import { TokenDistributionItem, Holders} from "../../types"
+import { TokenDistributionItem, Holders, Token} from "../../types"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -40,6 +40,7 @@ import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
 import { NODE_ENV } from "../../configs/env.config";
+
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -52,26 +53,25 @@ function TokenDetail() {
     const anchorWallet = useAnchorWallet();
     const [selectedPayment, setSelectedPayment] = useState<{ name: string; icon: string } | null>(null);
     const [selectedReceive, setSelectedReceive] = useState<{ name: string; icon: string } | null>(null);
-    const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+    const [tokenInfo, setTokenInfo] = useState<Token | null>(null);
     const [bondingCurveInfo, setBondingCurveInfo] = useState<BondingCurveTokenInfo | null>(null);
-    const [payAmount, setPayAmount] = useState("");
-    const [receiveAmount, setReceiveAmount] = useState("");
-    const [currentTime, setCurrentTime] = useState(new Date());
-    const [loading, setLoading] = useState(true);
+    const [payAmount, setPayAmount] = useState<string>("");
+    const [receiveAmount, setReceiveAmount] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(true);
     const { publicKey } = useWallet();
     const { buyToken, sellToken } = useTokenTrading();
     const isLoggedIn = !!publicKey;
-    const [isBuying, setIsBuying] = useState(false);
+    const [isBuying, setIsBuying] = useState<boolean>(false);
     const [holders, setHolders] = useState<Holders[]>([]);
     const [curveConfig, setCurveConfig] = useState<any>(null)
     const [allocationsAndVesting, setAllocationsAndVesting] = useState<any[]>([]);
     const [currentPrice, setCurrentPrice] = useState<number>(0);
+    const [marketCap, setMarketCap] = useState<number>(0);
 
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
             const tokenRes = await getTokenByMint(tokenId);
-            const holdersRes = await getTokenHoldersByMint(tokenId)
             const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
             const walletAddresses = tokenRes.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
             const allocationsAndVestingArr = await Promise.all(walletAddresses.map(async (wallet: PublicKey) => {
@@ -84,12 +84,12 @@ function TokenDetail() {
                 BigInt(bondingCurveRes?.reserveBalance || 0),
                 BigInt(bondingCurveRes?.reserveToken || 0)
             );
-            setCurrentPrice(Number(priceSol));
 
+            setCurrentPrice(Number(priceSol));
+            setMarketCap(Number(bondingCurveRes?.totalSupply || 0) * Number(priceSol));
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
             setBondingCurveInfo(bondingCurveRes || null);
-            setHolders(holdersRes);
             setCurveConfig(curveConfigInfo)
         } catch (error) {
             console.error('Error loading token info:', error);
@@ -97,6 +97,19 @@ function TokenDetail() {
             setLoading(false);
         }
     }, [tokenId]);
+
+    const fetchCurrentPrice = useCallback(async () => {
+        const priceSol = getCurrentPriceSOL(
+            BigInt(bondingCurveInfo?.reserveBalance || 0),
+            BigInt(bondingCurveInfo?.reserveToken || 0)
+        );
+        setCurrentPrice(Number(priceSol));
+    }, [bondingCurveInfo]);
+
+    const fetchHolders = useCallback(async () => {
+        const holdersRes = await getTokenHoldersByMint(tokenId)
+        setHolders(holdersRes)
+    }, [tokenId])
 
     const loadCurveConfig = useCallback(async () => {
         const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveInfo?.creator || ''), new PublicKey(tokenId));
@@ -110,7 +123,8 @@ function TokenDetail() {
 
     useEffect(() => {
         loadInfoToken();
-    }, [loadInfoToken]);
+        fetchHolders();
+    }, [loadInfoToken, fetchHolders]);
 
     useEffect(() => {
         if (tokenInfo) {
@@ -118,14 +132,6 @@ function TokenDetail() {
             setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
         }
     }, [tokenInfo]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, []);
     
     const handlePayAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -276,6 +282,8 @@ function TokenDetail() {
 
                 await loadBondingCurveInfo()
                 await loadCurveConfig()
+                await fetchHolders()
+                await fetchCurrentPrice()
             } else {
                 await sellToken(mint, amount, admin, tokenInfo?.name || '');
                 // console.log('Sell transaction:', tx);
@@ -284,6 +292,8 @@ function TokenDetail() {
 
                 await loadBondingCurveInfo()
                 await loadCurveConfig()
+                await fetchHolders()
+                await fetchCurrentPrice()
             }
         } catch (error) {
             console.error('Error in token operation:', error);
@@ -418,13 +428,13 @@ function TokenDetail() {
                         </div>
 
                         <div className="flex flex-col">
-                            <div className="text-3xl font-bold text-blue-600">$2.3M</div>
+                            <div className="text-3xl font-bold text-blue-600">${formatNumberToCurrency(marketCap)}</div>
                             <div className="text-xs text-gray-500">Market Cap</div>
                         </div>
 
                         <div className="grid grid-cols-3">
                             <div>
-                                <div className="text-lg font-semibold">{formatSolPrice(currentPrice)}</div>
+                                <div className="text-lg font-semibold">{formatDecimal(currentPrice)}</div>
                                 <div className="text-sm text-gray-500">Current Price</div>
                             </div>
                             <div>
@@ -671,7 +681,7 @@ function TokenDetail() {
                     )
                 }
 
-                <LaunchConditions tokenInfo={tokenInfo} />
+                <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
 
                 {
                     NODE_ENV !== "production" && (
@@ -813,13 +823,13 @@ function TokenDetail() {
                     </div>
 
                     <div className="flex flex-col">
-                        <div className="text-3xl font-bold text-blue-600">$2.3M</div>
+                        <div className="text-3xl font-bold text-blue-600">${formatNumberToCurrency(marketCap)}</div>
                         <div className="text-xs text-gray-500">Market Cap</div>
                     </div>
 
                     <div className="flex justify-between items-center w-full">
                         <div>
-                            <div className="text-lg font-semibold">{formatSolPrice(currentPrice)}</div>
+                            <div className="text-lg font-semibold">{formatDecimal(currentPrice)}</div>
                             <div className="text-sm text-gray-500">Current Price</div>
                         </div>
                         <div>

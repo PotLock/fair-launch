@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { TokenInfo, BondingCurveTokenInfo } from "../utils/tokenUtils";
+import { TokenInfo, BondingCurveTokenInfo } from "../utils/token";
 import { CandlestickChart, generateSampleCandlestickData } from "./CandlestickChart";
 
 interface BondingCurveChartProps {

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import ExploreTokenCard from "./ExploreTokenCard";
 import { useNavigate } from "@tanstack/react-router";
 import { getTokens } from "../lib/api";
-import { TokenInfo } from "../utils/tokenUtils";
+import { TokenInfo } from "../utils/token";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 

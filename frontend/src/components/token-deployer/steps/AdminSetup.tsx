@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import { SliderCustom } from '../../ui/slider-custom';
 import { useWallet } from '@solana/wallet-adapter-react';

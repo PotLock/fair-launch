@@ -1,41 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Card } from "./ui/card";
-import { BadgeCheck, Check, RefreshCcw } from "lucide-react";
-import { DeploymentOption } from "../types";
+import { BadgeCheck, Check, ChevronDown } from "lucide-react";
+import { DeploymentOption, Token } from "../types";
+import { useWalletContext } from '../context/WalletProviderContext';
+import { useAccount } from 'wagmi';
+import { useWalletSelector } from '@near-wallet-selector/react-hook';
+import { BridgeTokens } from "./BridgeTokens";
+import { NEAR_NETWORK, SOL_NETWORK } from "../configs/env.config";
 
 interface BridgeDeployModalProps {
     isOpen: boolean;
     onClose: () => void;
+    bridgeAddress: string[];
+    tokenInfo: Token;
+    currentPrice: number;
+}
+
+interface Chain {
+    name: string;
+    logo: string;
+    address: string;
+    balance?: number;
+    userAddress: string;
+    price: number;
+    explorerUrl: string;
 }
 
 const deploymentOptions: DeploymentOption[] = [
-    {
-        name: "Base",
-        logo: "/chains/base.svg",
-        description: "Deploy to Base mainnet.",
-        availableDexes: "Uniswap V3, SushiSwap",
-        cost: "0.0035 ETH ($12)",
-        estimatedTime: "2-5 minutes"
-    },
-    {
-        name: "Polygon",
-        logo: "/chains/polygon.svg",
-        description: "Deploy to Polygon mainnet.",
-        availableDexes: "Uniswap V3, SushiSwap",
-        cost: "0.015",
-        estimatedTime: "2-5 minutes"
-    },
-    {
-        name: "Solana",
-        logo: "/chains/solana-dark.svg",
-        description: "Deploy to Solana mainnet.",
-        availableDexes: "Raydium",
-        cost: "0.015",
-        estimatedTime: "2-5 minutes"
-    },
     {
         name: "Ethereum",
         logo: "/chains/ethereum.svg",
@@ -48,14 +42,15 @@ const deploymentOptions: DeploymentOption[] = [
         name: "NEAR",
         logo: "/chains/near-dark.svg",
         description: "Deploy to Near mainnet.",
-        availableDexes: "Uniswap V3, SushiSwap",
-        cost: "0.015",
-        estimatedTime: "2-5 minutes"
+        availableDexes: "RHEA Finance",
+        cost: "3.25 NEAR",
+        estimatedTime: "1-3 minutes"
     }
 ];
 
-export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
-    const [activeTab, setActiveTab] = useState<"bridge" | "create">("bridge");
+export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, tokenInfo, currentPrice }: BridgeDeployModalProps) {
+    const defaultTab = bridgeAddress && bridgeAddress.length > 0 ? "bridge" : "create";
+    const [activeTab, setActiveTab] = useState<"bridge" | "create">(defaultTab);
     const [selectedOption, setSelectedOption] = useState<DeploymentOption | null>(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -63,12 +58,17 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [deploymentProgress, setDeploymentProgress] = useState(0);
 
-    // Bridge UI state (visual only for now)
-    const [fromAmount, setFromAmount] = useState<string>("1");
-    const [toAmount, setToAmount] = useState<string>("0.014512661");
-    const userBalance = 4500;
-    const handleMax = () => setFromAmount(String(userBalance));
-    const handleHalf = () => setFromAmount(String(Math.floor(userBalance / 2)));
+    const { signedAccountId } = useWalletSelector()
+    const { address: evmAddress } = useAccount();
+    const { solanaPublicKey } = useWalletContext();
+    
+
+    // Update active tab when bridge address changes
+    useEffect(() => {
+        const newDefaultTab = bridgeAddress && bridgeAddress.length > 0 ? "bridge" : "create";
+        setActiveTab(newDefaultTab);
+    }, [bridgeAddress]);
+
 
     const handleOptionSelect = (option: DeploymentOption) => {
         setSelectedOption(option);
@@ -116,6 +116,8 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
         onClose();
     };
 
+
+
     const handleCopyAddress = () => {
         navigator.clipboard.writeText("0x2848f5...f9e242");
     };
@@ -123,6 +125,72 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
     const handleViewOnExplorer = () => {
         window.open("https://basescan.org/address/0x2848f5...f9e242", "_blank");
     };
+
+    const parseBridgedAddresses = useCallback((addresses: string[]) => {
+        return addresses.map(address => {
+            const parts = address.split(':');
+            if (parts.length < 2) {
+                console.warn('Invalid bridge address format:', address);
+                return null;
+            }
+            
+            const chainType = parts[0];
+            const tokenAddress = parts[1];
+            
+            // Determine chain info based on chain type
+            let chainInfo = {
+                name: "Unknown",
+                logo: "/chains/ethereum.svg",
+                userAddress: '',
+                price: currentPrice,
+                explorerUrl: ''
+            };
+            
+            if (chainType === 'near') {
+                chainInfo = {
+                    name: "NEAR",
+                    logo: "/chains/near-dark.svg",
+                    userAddress: signedAccountId?.toString() || '',
+                    price: currentPrice,
+                    explorerUrl: NEAR_NETWORK == "testnet" ? `https://testnet.nearblocks.io/address/${signedAccountId!}` : `https://nearblocks.io/address/${signedAccountId!}`
+                };
+            } else if (chainType === 'eth') {
+                chainInfo = {
+                    name: "ETHEREUM",
+                    logo: "/chains/ethereum.svg",
+                    userAddress: evmAddress?.toString() || '',
+                    price: currentPrice,
+                    explorerUrl: "https://etherscan.io/address/"
+                };
+            }
+            
+            return {
+                name: chainInfo.name,
+                logo: chainInfo.logo,
+                address: tokenAddress,
+                userAddress: chainInfo.userAddress,
+                price: chainInfo.price,
+                explorerUrl: chainInfo.explorerUrl
+            };
+        }).filter((chain): chain is NonNullable<typeof chain> => chain !== null);
+    }, []);
+
+    const bridgedChains = parseBridgedAddresses(bridgeAddress).filter(chain => chain !== null);
+    
+
+    const solanaChain = tokenInfo?.mintAddress ? {
+        name: "SOLANA",
+        logo: "/chains/solana-dark.svg",
+        address: tokenInfo.mintAddress,
+        userAddress: solanaPublicKey!,
+        price: currentPrice,
+        explorerUrl: SOL_NETWORK == "devnet" ? `https://solscan.io/account/${solanaPublicKey!}?cluster=devnet` : `https://solscan.io/account/${solanaPublicKey!}`
+    } : null;
+    
+    const chains: Chain[] = [
+        ...(solanaChain ? [solanaChain] : []),
+        ...bridgedChains
+    ];
 
     return (
         <>
@@ -136,119 +204,36 @@ export function BridgeDeployModal({ isOpen, onClose }: BridgeDeployModalProps) {
 
                     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "bridge" | "create")} className="mt-4">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="bridge">Bridge Tokens</TabsTrigger>
+                            <TabsTrigger value="bridge" disabled={!bridgeAddress || bridgeAddress.length === 0}>
+                                Bridge Tokens
+                            </TabsTrigger>
                             <TabsTrigger value="create">Create on New Chain</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="bridge" className="mt-6 overflow-y-auto max-h-[55vh]">
-                            <div className="space-y-4">
-                                <div className="flex flex-col space-y-1">
-                                    <h3 className="text-gray-600">From</h3>
-                                    <Card className="p-3 border-gray-200 shadow-none">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
-                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
-                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
-                                                    <span className="text-sm font-medium">CURATE</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>Hosz...4sFU</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between w-full">
-                                            <input
-                                                type="text"
-                                                value={fromAmount}
-                                                onChange={(e) => setFromAmount(e.target.value)}
-                                                className="h-auto text-2xl font-semibold border-0 focus:outline-none px-1 focus-visible:ring-0 text-left"
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
-                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
-                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
-                                                    <span className="text-sm font-medium">CURATE</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center w-full">
-                                            <span className="text-xs text-gray-600">200$</span>
-                                            <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-600">
-                                                <span>{userBalance.toLocaleString()}</span>
-                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleMax}>Max</Button>
-                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleHalf}>50%</Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </div>
-
-                                <div className="flex flex-col space-y-1">
-                                    <h3 className="text-gray-600">To</h3>
-                                    <Card className="p-3 border-gray-200 shadow-none">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
-                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
-                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
-                                                    <span className="text-sm font-medium">CURATE</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>Hosz...4sFU</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between w-full">
-                                            <input
-                                                type="text"
-                                                value={toAmount}
-                                                onChange={(e) => setToAmount(e.target.value)}
-                                                className="h-auto text-2xl font-semibold border-0 focus:outline-none px-1 focus-visible:ring-0 text-left"
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <img src="/public/curate.png" alt="CURATE" className="hidden" />
-                                                <div className="flex items-center gap-2 px-2 py-1 rounded-md border">
-                                                    <img src="/public/curate.png" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} alt="CURATE" className="w-5 h-5" />
-                                                    <span className="text-sm font-medium">CURATE</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center w-full">
-                                            <span className="text-xs text-gray-600">200$</span>
-                                            <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-600">
-                                                <span>{userBalance.toLocaleString()}</span>
-                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleMax}>Max</Button>
-                                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleHalf}>50%</Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </div>
-
-                                <Card className="p-3 border-gray-200 w-full bg-[#475569]/10">
-                                    <div className="flex flex-col w-full gap-2 text-sm">
-                                        <div className="w-full flex items-center justify-between md:gap-3">
-                                            <span className="text-gray-600">Rate</span>
-                                            <div className="flex items-center gap-2 text-gray-800">
-                                                <RefreshCcw className="w-4 h-4" />
-                                                <span>1 NEAR = 0.0145 SOL</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between md:gap-3 text-sm">
-                                            <span className="text-gray-600">Estimated Processing Time</span>
-                                            <span className="text-gray-800">~17s</span>
-                                        </div>
-                                        <div className="flex items-center justify-between md:gap-3 text-sm">
-                                            <span className="text-gray-600">Platform Fee</span>
-                                            <span className="text-gray-800">0.25%</span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </div>
+                            <BridgeTokens
+                                tokenInfo={tokenInfo}
+                                chains={chains}
+                            />
                         </TabsContent>
 
                         <TabsContent value="create" className="mt-6 overflow-y-auto max-h-[50vh]">
+                            {(!bridgeAddress || bridgeAddress.length === 0) && (
+                                <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex-shrink-0">
+                                            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-yellow-800">
+                                                You need to create a bridge contract on a new chain before you can bridge tokens.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div className="space-y-3">
                                 {deploymentOptions.map((option, index) => (
                                     <div

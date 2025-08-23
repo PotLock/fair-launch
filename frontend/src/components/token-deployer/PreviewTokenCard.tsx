@@ -1,5 +1,5 @@
 import { Progress } from "../ui/progress";
-import { useDeployStore } from "../../stores/deployStores";
+import { useDeployStore } from "../../stores/deployStore";
 import { formatNumberWithCommas } from "../../utils";
 
 export const PreviewTokenCard = () => {

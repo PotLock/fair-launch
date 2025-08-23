@@ -1,39 +1,109 @@
-import { formatNumberWithCommas } from "../utils";
-import { TokenInfo } from "../utils/tokenUtils";
+import { useEffect } from "react";
+import { formatDateToReadable, formatNumberWithCommas, getPricingDisplay } from "../utils";
 import { Card } from "./ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Copy, ChevronDown, ChevronUp, ExternalLink, ArrowLeftRight, Plus } from "lucide-react";
-import { truncateAddress,copyToClipboard } from "../utils";
-import { useState } from "react";
+import { copyToClipboard } from "../utils";
+import { useCallback, useState } from "react";
 import { BridgeDeployModal } from "./BridgeDeployModal";
+import { getBridgedAddressToken } from "../lib/omni-bridge";
+import { NEAR_NETWORK, SOL_NETWORK } from "../configs/env.config";
+import { Token } from "../types";
+import { getSolPrice } from "../lib/sol";
 
 interface LaunchConditionsProps {
-    tokenInfo: TokenInfo;
+    tokenInfo: Token;
+    currentPrice: number;
 }
 
-const deployedChains = [
-    {
+
+export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsProps) {
+    const [isContractExpanded, setIsContractExpanded] = useState<boolean>(false);
+    const [isBridgeModalOpen, setIsBridgeModalOpen] = useState<boolean>(false);
+    const [bridgeTokenAddresses, setBridgeTokenAddresses] = useState<string[]>([]);
+    const [solPrice, setSolPrice] = useState<number | null>(null)
+
+    const loadBridgeToken = useCallback(async () => {
+        const bridgedAddresses = await getBridgedAddressToken(tokenInfo?.mintAddress || '')
+        console.log("bridgedAddresses", bridgedAddresses)
+        setBridgeTokenAddresses(bridgedAddresses || [])
+    }, [tokenInfo?.mintAddress])
+
+    const fetchSOLPrice = async() => {
+        const price = await getSolPrice()
+        setSolPrice(price)
+    }
+
+    useEffect(() => {
+        loadBridgeToken()
+        fetchSOLPrice()
+    }, [loadBridgeToken])
+
+    const parseBridgedAddresses = useCallback((addresses: string[]) => {
+        return addresses.map(address => {
+            // Parse address format: "near:sol-0x2d4e5ee3ee5386de80d095f2eef896a94fd471dd.omnidep.testnet"
+            const parts = address.split(':');
+            if (parts.length < 2) {
+                console.warn('Invalid bridge address format:', address);
+                return null;
+            }
+            
+            const chainType = parts[0];
+            const tokenAddress = parts[1];
+            
+            // Determine chain info based on chain type
+            let chainInfo = {
+                name: "Unknown",
+                logo: "/chains/ethereum.svg",
+                explorerUrl: ""
+            };
+            
+            if (chainType === 'near') {
+                chainInfo = {
+                    name: "NEAR",
+                    logo: "/chains/near_light.svg",
+                    explorerUrl: NEAR_NETWORK == "testnet" ? `https://testnet.nearblocks.io/address/${tokenAddress}` : `https://nearblocks.io/address/${tokenAddress}`
+                };
+            } else if (chainType === 'eth') {
+                chainInfo = {
+                    name: "Ethereum",
+                    logo: "/chains/ethereum.svg",
+                    explorerUrl: "https://etherscan.io/token/"
+                };
+            }
+            
+            const shortAddress = tokenAddress.length > 20 
+                ? `${tokenAddress.substring(0, 10)}...${tokenAddress.substring(tokenAddress.length - 10)}`
+                : tokenAddress;
+            
+            return {
+                name: chainInfo.name,
+                logo: chainInfo.logo,
+                address: shortAddress,
+                fullAddress: tokenAddress,
+                status: "Deployed",
+                explorerUrl: chainInfo.explorerUrl
+            };
+        }).filter((chain): chain is NonNullable<typeof chain> => chain !== null);
+    }, []);
+
+    const bridgedChains = parseBridgedAddresses(bridgeTokenAddresses).filter(chain => chain !== null);
+    
+    const solanaChain = tokenInfo?.mintAddress ? {
         name: "Solana",
         logo: "/chains/solana_light.svg",
-        address: "8sWkTMrhoVbWuW......qvJNgS2f7jo",
-        fullAddress: "8sWkTMrhoVbWuW1234567890abcdefqvJNgS2f7jo",
+        address: tokenInfo.mintAddress.length > 20 ? 
+            `${tokenInfo.mintAddress.substring(0, 10)}...${tokenInfo.mintAddress.substring(tokenInfo.mintAddress.length - 10)}` : 
+            tokenInfo.mintAddress,
+        fullAddress: tokenInfo.mintAddress,
         status: "Deployed",
-        explorerUrl: "https://solscan.io/token/"
-    },
-    {
-        name: "NEAR",
-        logo: "/chains/near_light.svg", 
-        address: "curate.token.near",
-        fullAddress: "curate.token.near",
-        status: "Deployed",
-        explorerUrl: "https://explorer.near.org/accounts/"
-    }
-];
+        explorerUrl: SOL_NETWORK == "devnet" ? `https://solscan.io/token/${tokenInfo.mintAddress}?cluster=devnet` : `https://solscan.io/token/${tokenInfo.mintAddress}`
+    } : null;
+    
+    const deployedChains = [
+        ...(solanaChain ? [solanaChain] : []),
+        ...bridgedChains
+    ];
 
-
-export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
-    const [isContractExpanded, setIsContractExpanded] = useState(false);
-    const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
 
     return (
         <Card className="p-4 md:p-6 mb-6 shadow-none">
@@ -50,21 +120,21 @@ export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.targetRaise} SOL</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Percentage</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.liquidityPercentage}%</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Launch Date</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">{formatDateToReadable(tokenInfo?.launchDate)}</p>
                     </div>
                 </div>
                 <div className="flex flex-col gap-2">
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Launch Mechanism</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">{getPricingDisplay(tokenInfo?.selectedPricing || '')}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
@@ -72,7 +142,7 @@ export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.hardCap} SOL</p>
+                        <p className="text-sm font-semibold">${formatNumberWithCommas(Number(tokenInfo?.hardCap) * (solPrice || 0))}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Source</p>
@@ -80,7 +150,7 @@ export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Lockup</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.liquidityLockupPeriod} days</p>
                     </div>
                 </div>
             </div>
@@ -105,16 +175,24 @@ export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
                         {
                             !isContractExpanded && (
                                 <div className="flex items-center gap-1">
-                                    <div className="flex -space-x-1">
-                                        {deployedChains.map((chain, index) => (
-                                            <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-white flex items-center justify-center">
-                                                <img src={chain.logo} alt={chain.name} className="w-5 h-5" />
+                                    {deployedChains.length > 0 ? (
+                                        <>
+                                            <div className="flex -space-x-1">
+                                                {deployedChains.map((chain, index) => (
+                                                    <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-white flex items-center justify-center">
+                                                        <img src={chain.logo} alt={chain.name} className="w-5 h-5" />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                    <span className="text-sm text-gray-600 ml-2">
-                                        CURATE is deployed on {deployedChains.length} chains
-                                    </span>
+                                            <span className="text-sm text-gray-600 ml-2">
+                                                {tokenInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="text-sm text-gray-500">
+                                            Loading deployed chains...
+                                        </span>
+                                    )}
                                 </div>
                             )
                         }
@@ -130,52 +208,60 @@ export function LaunchConditions({ tokenInfo }: LaunchConditionsProps) {
                 
                 {isContractExpanded && (
                     <div className="space-y-2">
-                        {deployedChains.map((chain) => (
-                            <div key={chain.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-black rounded-full flex justify-center items-center  ">
-                                        <img src={chain.logo} alt={chain.name} className="w-6 h-6" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-900">{chain.name}</span>
-                                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                                                {chain.status}
-                                            </span>
+                        {deployedChains.length > 0 ? (
+                            deployedChains.map((chain) => (
+                                <div key={chain.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-black rounded-full flex justify-center items-center">
+                                            <img src={chain.logo} alt={chain.name} className="w-6 h-6" />
                                         </div>
-                                        <p className="text-xs text-gray-600 font-light">{chain.address}</p>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-gray-900">{chain.name}</span>
+                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                                    {chain.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-600 font-light">{chain.address}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                                            <ArrowLeftRight className="w-3 h-3" />
+                                            Bridge
+                                        </button>
+                                        <button 
+                                            className="p-1 hover:bg-gray-100 rounded"
+                                            onClick={() => copyToClipboard(chain.fullAddress)}
+                                        >
+                                            <Copy className="w-4 h-4 text-gray-600" />
+                                        </button>
+                                        <a 
+                                            href={chain.explorerUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1 hover:bg-gray-100 rounded"
+                                        >
+                                            <ExternalLink className="w-4 h-4 text-gray-600" />
+                                        </a>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button className="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
-                                        <ArrowLeftRight className="w-3 h-3" />
-                                        Bridge
-                                    </button>
-                                    <button 
-                                        className="p-1 hover:bg-gray-100 rounded"
-                                        onClick={() => copyToClipboard(chain.fullAddress)}
-                                    >
-                                        <Copy className="w-4 h-4 text-gray-600" />
-                                    </button>
-                                    <a 
-                                        href={`${chain.explorerUrl}${chain.fullAddress}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 hover:bg-gray-100 rounded"
-                                    >
-                                        <ExternalLink className="w-4 h-4 text-gray-600" />
-                                    </a>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="p-4 text-center text-gray-500">
+                                <p>Loading deployed chains...</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
             </div>
             
-            {/* Bridge Deploy Modal */}
             <BridgeDeployModal 
                 isOpen={isBridgeModalOpen}
                 onClose={() => setIsBridgeModalOpen(false)}
+                bridgeAddress={bridgeTokenAddresses}
+                tokenInfo={tokenInfo}
+                currentPrice={currentPrice}
             />
         </Card>
     );
