@@ -3,7 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Holders } from "../types";
 import { BondingCurveTokenInfo, getBondingCurveAccounts, getTokenHoldersByMint } from "../utils/token";
 import { PublicKey } from "@solana/web3.js";
-import { formatNumberToCurrency } from "../utils";
+import { formatNumberToCurrency, formatTinyPrice } from "../utils";
+import { getCurrentPriceSOL } from "../utils/sol";
+import { getSolPrice } from "../lib/sol";
 
 interface ExploreTokenCardProps {
     id: string;
@@ -37,6 +39,8 @@ export default function ExploreTokenCard({
 
     const [holders, setHolders] = useState<Holders[]>([])
     const [bondingCurve, setBondingCurve] = useState<BondingCurveTokenInfo|null>(null);
+    const [currentPrice, setCurrentPrice] = useState<number|null>(null)
+    const [solPrice, setSolPrice] = useState<number>(0)
 
     const loadHolders = useCallback(async () => {
         const holders = await getTokenHoldersByMint(mint)
@@ -46,13 +50,24 @@ export default function ExploreTokenCard({
     const fetchBondingCurveAccounts = useCallback(async () => {
         if(!mint) return;
         const bondingCurveAccounts = await getBondingCurveAccounts(new PublicKey(mint));
+        const priceSol = getCurrentPriceSOL(
+            BigInt(bondingCurveAccounts?.reserveBalance || 0),
+            BigInt(bondingCurveAccounts?.reserveToken || 0)
+        );
+        setCurrentPrice(priceSol)
         setBondingCurve(bondingCurveAccounts || null);
     },[mint])
+
+    const fetchSolPrice = useCallback(async () => {
+        const solPrice = await getSolPrice()
+        setSolPrice(solPrice || 0)
+    },[])
 
     useEffect(() => {
         loadHolders()
         fetchBondingCurveAccounts()
-    }, [loadHolders,fetchBondingCurveAccounts])
+        fetchSolPrice()
+    }, [loadHolders,fetchBondingCurveAccounts,fetchSolPrice])
 
     const navigate = useNavigate()
 
@@ -108,7 +123,7 @@ export default function ExploreTokenCard({
 
                 <div className="grid grid-cols-4 md:gap-4 mt-6">
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">-</span>
+                        <span className="font-bold text-gray-900">${formatTinyPrice(Number(currentPrice || 0) * solPrice || 0)}</span>
                         <span className="text-gray-500 text-xs">Price</span>
                     </div>
                     <div className="text-center flex flex-col">
@@ -120,7 +135,7 @@ export default function ExploreTokenCard({
                         <span className="text-gray-500 text-xs">Holders</span>
                     </div>
                     <div className="text-center flex flex-col">
-                        <span className="font-bold text-gray-900">0</span>
+                        <span className="font-bold text-gray-900">${formatNumberToCurrency(Number(bondingCurve?.totalSupply) * (Number(currentPrice)*solPrice))}</span>
                         <span className="text-gray-500 text-xs">
                             {type === 'bonding-curve' ? 'Curve' : 'Market Cap'}
                         </span>

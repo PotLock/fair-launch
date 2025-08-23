@@ -6,6 +6,7 @@ import { getTokens } from "../lib/api";
 import { TokenInfo } from "../utils/token";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { getPricingDisplay } from "../utils";
 
 export default function ExploreTokens() {
     const rootRef = useRef<HTMLDivElement>(null);
@@ -184,12 +185,12 @@ export default function ExploreTokens() {
                                         avatar={token.avatarUrl || ''}
                                         name={token.name}
                                         symbol={token.symbol}
-                                        type={token.selectedPricing || ''}
+                                        type={getPricingDisplay(token.selectedPricing || '')}
                                         description={token.description}
                                         decimals={token.decimals}
                                         status={'Trading'}
                                         actionButton={{
-                                            text: `Buy $${token.name}`,
+                                            text: `Buy $${token.symbol}`,
                                             variant: 'presale' as const
                                         }}
                                     />

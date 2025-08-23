@@ -40,7 +40,7 @@ import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
 import { NODE_ENV } from "../../configs/env.config";
-
+import { getSolPrice } from "../../lib/sol";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -67,6 +67,7 @@ function TokenDetail() {
     const [allocationsAndVesting, setAllocationsAndVesting] = useState<any[]>([]);
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [marketCap, setMarketCap] = useState<number>(0);
+    const [solPrice, setSolPrice] = useState<number>(0)
 
     const loadInfoToken = useCallback(async () => {
         try {
@@ -79,14 +80,15 @@ function TokenDetail() {
                 return data;
             }));
             const curveConfigInfo = await getCurveConfig(new PublicKey(bondingCurveRes?.creator || ''), new PublicKey(tokenId));
-            
-            const priceSol = getCurrentPriceSOL(
+            const priceSol = await getSolPrice()
+            const price = getCurrentPriceSOL(
                 BigInt(bondingCurveRes?.reserveBalance || 0),
                 BigInt(bondingCurveRes?.reserveToken || 0)
             );
 
-            setCurrentPrice(Number(priceSol));
-            setMarketCap(Number(bondingCurveRes?.totalSupply || 0) * Number(priceSol));
+            setSolPrice(priceSol || 0)
+            setCurrentPrice(Number(price));
+            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)) * (Number(price) * Number(priceSol)));
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
             setBondingCurveInfo(bondingCurveRes || null);
@@ -442,7 +444,7 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * 202.67)}</div>
+                                <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * solPrice)}</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
@@ -837,7 +839,7 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * 202.67)}</div>
+                            <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * solPrice)}</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>

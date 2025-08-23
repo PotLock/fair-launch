@@ -119,7 +119,7 @@ function Home() {
           </div>
         </div>
       </section>
-      <div className="lg:container lg:px-6 mx-auto pt-10 md:pt-20">
+      <div className="lg:container px-5 lg:px-6 mx-auto pt-10 md:pt-20">
         <div className="grid grid-cols-2 gap-3 md:flex items-center md:justify-between md:px-6 home-stats">
           <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center stat-card">
             <span className="font-bold text-4xl">10+</span>

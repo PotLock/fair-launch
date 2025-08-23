@@ -120,7 +120,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.targetRaise} SOL</p>
+                        <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.targetRaise)} SOL</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Percentage</p>
