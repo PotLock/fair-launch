@@ -3,7 +3,7 @@ import type { StepProps } from '../../../types';
 import { ChevronDown, ChevronUp, Loader2, CircleCheck, Lightbulb } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { toast } from 'react-hot-toast';
 
 export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
@@ -290,7 +290,7 @@ export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepPro
                                 onChange={(e) => e.target.files?.[0] && handleImageUpload('banner', e.target.files[0])}
                             />
                             <div 
-                                className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 min-h-[160px] cursor-pointer transition-colors relative ${
+                                className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-2 min-h-[160px] cursor-pointer transition-colors relative ${
                                     validationErrors.bannerUrl 
                                         ? 'border-red-500 hover:border-red-600' 
                                         : 'border-gray-200 hover:border-gray-300'
@@ -309,7 +309,7 @@ export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepPro
                                         <img 
                                             src={bannerDisplay} 
                                             alt="banner" 
-                                            className="w-full h-32 object-cover rounded-lg mb-2"
+                                            className="w-full h-40 object-cover rounded-lg mb-2"
                                         />
                                     ) : (
                                         <>

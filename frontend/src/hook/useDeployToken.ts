@@ -24,7 +24,7 @@ import { useCallback } from "react";
 import toast from "react-hot-toast";
 import useAnchorProvider from "./useAnchorProvider";
 import { getPDAs, getAllocationPDAs, getFairLaunchPDAs } from "../utils/sol";
-import { useDeployStore } from "../stores/deployStores";
+import { useDeployStore } from "../stores/deployStore";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
 import { createToken } from "../lib/api";

@@ -2,7 +2,7 @@ import { ChevronDown, ChevronUp, ArrowRight, CircleCheck, Lightbulb } from "luci
 import { templatesPricingMechanism } from "../../../lib/pricingMechanism";
 import { PricingTemplate } from "../../../types";
 import { Input } from "../../ui/input";
-import { useDeployStore } from "../../../stores/deployStores";
+import { useDeployStore } from "../../../stores/deployStore";
 import type { StepProps } from '../../../types';
 
 export const PricingMechanism = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {

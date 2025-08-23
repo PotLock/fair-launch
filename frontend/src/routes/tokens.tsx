@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState,useEffect } from "react";
-import { TokenInfo } from "../utils/tokenUtils";
+import { TokenInfo } from "../utils/token";
 import { getTokens } from "../lib/api";
 import { TokenCard } from "../components/TokenCard";
 import { formatDateToReadable, getTemplateDisplay } from "../utils";

@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { formatNumberWithCommas } from "../utils";
 import { useNavigate } from "@tanstack/react-router";
-import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/tokenUtils";
+import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/token";
 import { useCallback, useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
 

@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight} from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 export default function CoreCapabilities() {
+    const rootRef = useRef<HTMLDivElement>(null);
     const [currentSlide, setCurrentSlide] = useState<number>(0);
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -100,10 +103,11 @@ export default function CoreCapabilities() {
         
         const diff = startX - currentX;
         const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
 
         if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < capabilities.length - 1) {
-                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
             } else if (diff < 0 && currentSlide > 0) {
                 setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
@@ -129,10 +133,11 @@ export default function CoreCapabilities() {
         
         const diff = startX - currentX;
         const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
 
         if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < capabilities.length - 1) {
-                setCurrentSlide((prev) => Math.min(prev + 1, capabilities.length - 1));
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
             } else if (diff < 0 && currentSlide > 0) {
                 setCurrentSlide((prev) => Math.max(prev - 1, 0));
             }
@@ -161,11 +166,55 @@ export default function CoreCapabilities() {
         return currentSlide * totalCardWidth;
     };
 
+    useLayoutEffect(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        const ctx = gsap.context(() => {
+            gsap.from('.cc-title', {
+                y: 24,
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 80%',
+                    once: true,
+                },
+            });
+            gsap.from('.cc-subtitle', {
+                y: 16,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 78%',
+                    once: true,
+                },
+            });
+
+            gsap.utils.toArray<HTMLElement>('.cc-card').forEach((el, i) => {
+                gsap.from(el, {
+                    y: 30,
+                    opacity: 0,
+                    duration: 0.6,
+                    ease: 'power3.out',
+                    delay: Math.min(i * 0.08, 0.4),
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 85%',
+                        toggleActions: 'play none none reverse',
+                    },
+                });
+            });
+        }, rootRef);
+        return () => ctx.revert();
+    }, []);
+
     return (
-        <div className="pt-[68px] md:px-6">
+        <div className="pt-[68px] md:px-6" ref={rootRef}>
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
-                <h1 className="font-bold text-3xl">Core Capabilities</h1>
-                <span className="md:max-w-[26rem] text-xl">Comprehensive tools for the complete token lifecycle</span>
+                <h1 className="font-bold text-3xl cc-title">Core Capabilities</h1>
+                <span className="md:max-w-[26rem] text-xl cc-subtitle">Comprehensive tools for the complete token lifecycle</span>
             </div>
             
             <div className="relative w-full overflow-hidden">
@@ -184,7 +233,7 @@ export default function CoreCapabilities() {
                     >
                         {capabilities.map((capability) => (
                             <div key={capability.id} className="w-full flex-shrink-0 px-4">
-                                <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col`}>
+                                <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col cc-card`}>
                                     <div className="relative z-10 h-full flex flex-col">
                                         <h3 className="text-xl font-semibold">{capability.title}</h3>
                                         <div className="relative flex items-center justify-center">
@@ -205,12 +254,19 @@ export default function CoreCapabilities() {
 
                 <div className="hidden md:block lg:px-4">
                     <div className="relative overflow-hidden">
-                        <div className="flex transition-transform duration-500 ease-in-out gap-6" 
+                        <div className="flex transition-transform duration-500 ease-in-out gap-6 cursor-grab active:cursor-grabbing select-none" 
                             style={{ transform: `translateX(-${getDesktopTransform()}px)` }}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
                         >
                             {capabilities.map((capability) => (
                                 <div key={capability.id} className="w-[320px] flex-shrink-0">
-                                    <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col`}>
+                                    <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col cc-card`}>
                                         <div className="relative z-10 h-full flex flex-col">
                                             <h3 className="text-lg font-semibold mb-4">{capability.title}</h3>
                                             <div className="relative">

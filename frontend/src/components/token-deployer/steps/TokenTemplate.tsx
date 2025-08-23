@@ -1,4 +1,4 @@
-import { useDeployStore } from "../../../stores/deployStores";
+import { useDeployStore } from "../../../stores/deployStore";
 import { tokenTemplates } from "../../../lib/templates";
 
 export const TokenTemplate = () => {

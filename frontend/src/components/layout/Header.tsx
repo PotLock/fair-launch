@@ -5,7 +5,7 @@ import { PlusIcon } from 'lucide-react';
 
 
 export default function Header() {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     return (
         <header className="border-b border-gray-200 bg-white">
             <div className="xl:container mx-auto px-4 h-16 flex items-center justify-between">
@@ -17,14 +17,17 @@ export default function Header() {
                 </div>
                 <div className="flex items-center">
                     <nav className="hidden lg:flex items-center space-x-8 mr-10">
-                        <Link to="/create" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>Create Token</span>
-                        </Link>
                         <Link to="/tokens" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
                         </Link>
+                        <Link to="/create" className="text-gray-600 hover:text-gray-900">
+                            <span className='text-sm'>Create Token</span>
+                        </Link>
+                        <a href='https://bridge.potlaunch.com' target='_blank' className="text-gray-600 hover:text-gray-900">
+                            <span className='text-sm'>Bridge Tokens</span>
+                        </a>
                         <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>My tokens</span>
+                            <span className='text-sm'>My Tokens</span>
                         </Link>
                     </nav>
 
@@ -65,10 +68,13 @@ export default function Header() {
                         </div>
                         <nav className="flex flex-col space-y-4 mb-8">
                             <Link to="/create" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
-                                Token Creator
+                                Create Token
                             </Link>
-                            <Link to="/" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
+                            <Link to="/tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Launchpad
+                            </Link>
+                            <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
+                                My Tokens
                             </Link>
                         </nav>
                         <div className="mt-auto">

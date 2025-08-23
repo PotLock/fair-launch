@@ -2,18 +2,23 @@ import { exchanges } from "../lib/exchanges";
 import { toast } from "react-hot-toast";
 import { tokenTemplates } from "../lib/templates";
 import dayjs from 'dayjs';
+import { pricingOptions } from "../lib/pricings";
 
 export const getExchangeDisplay = (exchange: string) => {
-    const exchangeData = exchanges.find(e => e.value === exchange);
-    return exchangeData?.title || exchange.charAt(0).toUpperCase() + exchange.slice(1);
+  const exchangeData = exchanges.find(e => e.value === exchange);
+  return exchangeData?.title || exchange.charAt(0).toUpperCase() + exchange.slice(1);
 };
 
 export const getTemplateDisplay = (template: string) => {
-    const templateData = tokenTemplates.find(t => t.key === template);
-    return templateData?.label || template.charAt(0).toUpperCase() + template.slice(1);
+  const templateData = tokenTemplates.find(t => t.key === template);
+  return templateData?.label || template.charAt(0).toUpperCase() + template.slice(1);
 };
 
-// Function to format numbers with comma separators
+export const getPricingDisplay = (pricing: string) => {
+  const pricingData = pricingOptions.find(p => p.key === pricing);
+  return pricingData?.title || pricing.charAt(0).toUpperCase() + pricing.slice(1);
+};
+
 export function formatNumberWithCommas(value: string | number): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return value.toString();
@@ -23,7 +28,8 @@ export function formatNumberWithCommas(value: string | number): string {
 
 export function truncateAddress(address: string): string {
     if (!address) return '';
-    return address.slice(0, 8) + '...' + address.slice(-8);
+    if (address.length < 20) return address;
+    return address.slice(0, 6) + '...' + address.slice(-6);
 }
 
 export function copyToClipboard(text: string) {
@@ -32,41 +38,41 @@ export function copyToClipboard(text: string) {
 }
 
 export function calculateTimeSinceCreation(createdOn: string, currentTime?: Date): string {
-    const createdDate = new Date(createdOn);
-    const now = currentTime || new Date();
-    const diffInMs = now.getTime() - createdDate.getTime();
-    
-    if (diffInMs < 0) {
-        return "-";
-    }
-    
-    const diffInSeconds = Math.floor(diffInMs / 1000);
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    const diffInDays = Math.floor(diffInHours / 24);
+  const createdDate = new Date(createdOn);
+  const now = currentTime || new Date();
+  const diffInMs = now.getTime() - createdDate.getTime();
+  
+  if (diffInMs < 0) {
+      return "-";
+  }
+  
+  const diffInSeconds = Math.floor(diffInMs / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
 
-    const days = diffInDays % 30;
-    const hours = diffInHours % 24;
-    const minutes = diffInMinutes % 60;
-    const seconds = diffInSeconds % 60;
-    
-    return `${days}d | ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+  const days = diffInDays % 30;
+  const hours = diffInHours % 24;
+  const minutes = diffInMinutes % 60;
+  const seconds = diffInSeconds % 60;
+  
+  return `${days}d | ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
 }
 
 export function formatDateToReadable(dateString: string): string {
-    const date = new Date(dateString);
-    
-    if (isNaN(date.getTime())) {
-        return 'Invalid date';
-    }
-    
-    const options: Intl.DateTimeFormatOptions = {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    };
-    
-    return date.toLocaleDateString('en-US', options);
+  const date = new Date(dateString);
+  
+  if (isNaN(date.getTime())) {
+      return 'Invalid date';
+  }
+  
+  const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+  };
+  
+  return date.toLocaleDateString('en-US', options);
 }
 
 export function getVestingData(allocation: any): Array<Record<string, any>> {
@@ -151,23 +157,31 @@ export function formatVestingInfo(vesting: any, percentage: number) {
     return result;
 }
 
-export const formatNumberToCurrency = (x: number) => {
-  switch (true) {
-    case x >= 1000:
-      const kValue = x / 1000;
-      return `${kValue.toFixed(3)}K`;
-    case x >= 1000000:
-      const mValue = x / 1000;
-      return `${mValue}M`;
-    case x >= 1000000000:
-      const bValue = x / 1000;
-      return `${bValue}B`;
-    default:
-      return x.toFixed(3);
+export const formatNumberToCurrency = (x: number): string => {
+  if (x >= 1_000_000_000_000) {
+    return (x / 1_000_000_000_000).toFixed(2) + "T";
   }
+  if (x >= 1_000_000_000) {
+    return (x / 1_000_000_000).toFixed(2) + "B"; 
+  }
+  if (x >= 1_000_000) {
+    return (x / 1_000_000).toFixed(2) + "M";
+  }
+  if (x >= 1_000) {
+    return (x / 1_000).toFixed(2) + "K";
+  }
+  if (x >= 1) {
+    return x.toFixed(2); 
+  }
+
+  if (x > 0 && x < 0.0001) {
+    return x.toExponential(3);
+  }
+
+  return x.toString();
 };
 
-export function formatSolPrice(num: number | string, maxDecimals: number = 10): string {
+export function formatDecimal(num: number | string, maxDecimals: number = 10): string {
   let n = typeof num === "string" ? Number(num) : num;
   if (isNaN(n)) return "NaN";
 
@@ -182,3 +196,33 @@ export function formatSolPrice(num: number | string, maxDecimals: number = 10): 
   return formatted.replace(/\.?0+$/, "");
 }
 
+export const parseFormattedNumber = (value: string): number => {
+  if (!value) return 0;
+  const cleanValue = value.replace(/,/g, '');
+  const numValue = parseFloat(cleanValue);
+  return isNaN(numValue) ? 0 : numValue;
+};
+
+export function formatTinyPrice(num: number): string {
+  if (num === 0) return "0";
+
+  let str = num.toString();
+  if (str.includes("e-")) {
+    const [base, expStr] = str.split("e-");
+    const exp = parseInt(expStr, 10);
+    const digits = base.replace(".", "");
+    str = "0." + "0".repeat(exp - 1) + digits;
+  }
+
+  const match = str.match(/^0\.0+/);
+  if (match) {
+    const zeroCount = match[0].length - 2;
+    const rest = str.slice(match[0].length);
+
+    const restFixed = rest.slice(0, 2);
+    return `0.0{${zeroCount}}${restFixed}`;
+  }
+
+  const [intPart, decPart = ""] = str.split(".");
+  return intPart + "." + decPart.slice(0, 1);
+}

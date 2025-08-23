@@ -6,7 +6,7 @@ import {
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import * as walletAdapterWallets from "@solana/wallet-adapter-wallets";
-import { solNetwork } from "../utils/sol";
+import { getSOLNetwork } from "../utils/sol";
 import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { ALCHEMY_API_KEY } from "../configs/env.config";
@@ -76,7 +76,7 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
       id: 'solana', 
       name: 'Solana', 
       icon: '/chains/solana.svg',
-      rpcUrl: clusterApiUrl(solNetwork())
+      rpcUrl: clusterApiUrl(getSOLNetwork())
     },
     { 
       id: 'near', 
@@ -99,10 +99,10 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
       new walletAdapterWallets.TorusWalletAdapter(),
       new walletAdapterWallets.AlphaWalletAdapter(),
     ],
-    [solNetwork()]
+    [getSOLNetwork()]
   );
 
-  const endpoint = useMemo(() => clusterApiUrl(solNetwork()), [solNetwork()]);
+  const endpoint = useMemo(() => clusterApiUrl(getSOLNetwork()), [getSOLNetwork()]);
 
   const contextValue = useMemo(() => ({
     currentChain,

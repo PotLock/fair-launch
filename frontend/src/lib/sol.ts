@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { SOL_NETWORK } from '../configs/env.config';
 
 const URL_API = "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd";
@@ -11,7 +12,7 @@ interface PriceCache {
 let solPriceCache: PriceCache | null = null;
 const CACHE_DURATION = 5 * 60 * 1000;
 
-const getSolPrice = async (): Promise<number | null> => {
+export const getSolPrice = async (): Promise<number | null> => {
   try {
     const res = await fetch(URL_API);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -34,7 +35,7 @@ const getSolPrice = async (): Promise<number | null> => {
   }
 }
 
-const getRpcSOLEndpoint = (): string => {  
+export const getRpcSOLEndpoint = (): string => {  
   switch (SOL_NETWORK) {
     case 'mainnet':
       return 'https://api.mainnet-beta.solana.com';
@@ -51,7 +52,7 @@ const getRpcSOLEndpoint = (): string => {
  * @param walletAddress - The wallet address to get SOL balance for
  * @returns The SOL balance in SOL units
  */
-const getSolBalance = async (walletAddress: string): Promise<number> => {
+export const getSolBalance = async (walletAddress: string): Promise<number> => {
   try {
     const connection = new Connection(getRpcSOLEndpoint());
     const publicKey = new PublicKey(walletAddress);
@@ -68,19 +69,46 @@ const getSolBalance = async (walletAddress: string): Promise<number> => {
     return solBalance;
   } catch (error) {
     console.error('Error getting SOL balance:', error);
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      walletAddress,
-      network: SOL_NETWORK,
-      rpcEndpoint: getRpcSOLEndpoint()
-    });
     throw new Error(`Failed to get SOL balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-export {
-  getRpcSOLEndpoint,
-  getSolBalance,
-  getSolPrice
+/**
+ * Get token balance for a specific token mint and wallet address
+ * @param tokenMintAddress - The token mint address
+ * @param walletAddress - The wallet address to get token balance for
+ * @returns The token balance
+ */
+export const getTokenBalanceOnSOL = async (tokenMintAddress: string, walletAddress: string): Promise<number> => {
+  try {
+    const connection = new Connection(getRpcSOLEndpoint());
+    const walletPublicKey = new PublicKey(walletAddress);
+    
+    if (!PublicKey.isOnCurve(walletPublicKey)) {
+      throw new Error('Invalid wallet address');
+    }
+
+    // Get all token accounts for the wallet
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      walletPublicKey,
+      {
+        programId: TOKEN_PROGRAM_ID,
+      }
+    );
+
+    // Find the token account for the specific mint
+    const tokenAccount = tokenAccounts.value.find(
+      (account) => account.account.data.parsed.info.mint === tokenMintAddress
+    );
+
+    if (!tokenAccount) {
+      return 0; // No token account found for this mint
+    }
+
+    const balance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmount;
+    return balance;
+  } catch (error) {
+    console.error('Error getting token balance:', error);
+    throw new Error(`Failed to get token balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }

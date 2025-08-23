@@ -10,13 +10,6 @@ export default defineConfig({
   ],
   source: {
     define: {
-      'process.env.PUBLIC_EVM_NETWORK': JSON.stringify(process.env.PUBLIC_EVM_NETWORK),
-      'process.env.PUBLIC_SOL_PRIVATE_KEY': JSON.stringify(process.env.PUBLIC_SOL_PRIVATE_KEY),
-      'process.env.PUBLIC_HELIUS_API_KEY': JSON.stringify(process.env.PUBLIC_HELIUS_API_KEY),
-      'process.env.PUBLIC_SOL_NETWORK': JSON.stringify(process.env.PUBLIC_SOL_NETWORK),
-      'process.env.PUBLIC_NEAR_NETWORK': JSON.stringify(process.env.PUBLIC_NEAR_NETWORK),
-      'process.env.PUBLIC_ALCHEMY_API_KEY': JSON.stringify(process.env.PUBLIC_ALCHEMY_API_KEY),
-      'process.env.PUBLIC_WALLET_CONNECT_PROJECT_ID': JSON.stringify(process.env.PUBLIC_WALLET_CONNECT_PROJECT_ID),
       'process.browser': true,
       'global': 'globalThis'
     },

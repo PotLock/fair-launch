@@ -1,6 +1,6 @@
 import { Badge } from '../../ui/badge';
 import { InfoIcon } from 'lucide-react';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { exchanges } from '../../../lib/exchanges';
 
 export const Exchanges = () => {

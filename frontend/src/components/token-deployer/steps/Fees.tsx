@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, CircleCheck, LucideMessageCircleQuestion } from 'lucide-react';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Input } from '../../ui/input';
 import type { Fees } from '../../../types';
