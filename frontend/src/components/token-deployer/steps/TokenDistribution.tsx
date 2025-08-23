@@ -1,6 +1,6 @@
 import {  useEffect } from 'react';
 import { Plus, Trash2, CircleCheck, ChevronDown, ChevronUp  } from 'lucide-react';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { Input } from '../../ui/input';
 import { TokenDistributionItem } from '../../../types';
 import { ChartNoAxesCombined } from 'lucide-react';

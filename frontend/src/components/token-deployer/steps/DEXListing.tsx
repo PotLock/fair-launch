@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Wallet2, ExternalLink, SquareArrowOutUpRight, LockKeyhole, TrendingUp } from 'lucide-react';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { SliderCustom } from '../../ui/slider-custom';
 import { Badge } from '../../ui/badge';

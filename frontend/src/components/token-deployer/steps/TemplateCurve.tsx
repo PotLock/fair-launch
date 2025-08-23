@@ -1,7 +1,7 @@
 import { Badge } from "../../ui/badge";
 import { InfoIcon } from "lucide-react";
 import { pricingOptions } from "../../../lib/pricings";
-import { useDeployStore } from "../../../stores/deployStores";
+import { useDeployStore } from "../../../stores/deployStore";
 
 export const TemplateCurve = () => {
   const { selectedPricing, setSelectedPricing } = useDeployStore();

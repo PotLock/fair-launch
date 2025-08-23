@@ -303,3 +303,86 @@ export interface DeploymentOption {
     cost: string;
     estimatedTime: string;
 }
+
+export interface Token {
+    id: number;
+    mintAddress: string;
+    name: string;
+    symbol: string;
+    description: string;
+    supply: string;
+    decimals: number;
+    avatarUrl: string;
+    bannerUrl: string;
+    owner: string;
+    selectedTemplate: string;
+    selectedPricing: string;
+    selectedExchange: string;
+    initialPrice: string;
+    finalPrice: string;
+    targetRaise: string;
+    reserveRatio: string;
+    curveType: string;
+    launchLiquidityOnName: string;
+    liquiditySource: string;
+    liquidityData: {
+      type: string;
+      solAmount: number;
+    };
+    liquidityType: string;
+    liquidityPercentage: number;
+    liquidityLockupPeriod: number;
+    isAutoBotProtectionEnabled: boolean;
+    isAutoListingEnabled: boolean;
+    isPriceProtectionEnabled: boolean;
+    mintFee: string;
+    transferFee: string;
+    burnFee: string;
+    feeRecipientAddress: string;
+    adminControlsEnabled: boolean;
+    adminControlsWalletAddress: string;
+    softCap: string;
+    hardCap: string;
+    scheduleLaunchEnabled: boolean;
+    launchDate: string;
+    endDate: string;
+    minimumContribution: string;
+    maximumContribution: string;
+    tokenPrice: string;
+    maxTokenPerWallet: string;
+    distributionDelay: number;
+    revokeMintAuthorityEnabled: boolean;
+    revokeMintAuthorityWalletAddress: string;
+    revokeFreezeAuthorityEnabled: boolean;
+    revokeFreezeAuthorityWalletAddress: string;
+    adminWalletAddress: string;
+    adminStructure: string;
+    tokenOwnerWalletAddress: string;
+    numberOfSignatures: number;
+    mintAuthorityWalletAddress: string;
+    freezeAuthorityWalletAddress: string;
+    createdAt: string;
+    updatedAt: string;
+    allocations: Array<{
+      id: number;
+      tokenId: number;
+      description: string;
+      percentage: string;
+      walletAddress: string;
+      lockupPeriod: number;
+      vestingEnabled: boolean;
+      vestingDescription: string;
+      vestingPercentage: string;
+      vestingCliff: number;
+      vestingDuration: number;
+      vestingInterval: number;
+      createdAt: string;
+    }>;
+    social: {
+      website: string;
+      twitter: string;
+      telegram: string;
+      discord: string;
+      farcaster: string;
+    };
+  }

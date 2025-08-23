@@ -5,7 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { SOL_NETWORK } from "../configs/env.config";
 import { formatNumberWithCommas } from "../utils";
 import { useEffect, useState } from "react";
-import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/tokenUtils";
+import { BondingCurveTokenInfo, getBondingCurveAccounts } from "../utils/token";
 import { PublicKey } from "@solana/web3.js";
 
 interface TokenCardProps {

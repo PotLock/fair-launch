@@ -1,7 +1,7 @@
 import { Input } from "../../ui/input";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, CircleCheck } from "lucide-react";
-import { useDeployStore } from "../../../stores/deployStores";
+import { useDeployStore } from "../../../stores/deployStore";
 import { TokenSaleSetup as TokenSaleSetupType } from "../../../types";
 import { getExchangeDisplay } from "../../../utils";
 import type { StepProps } from '../../../types';

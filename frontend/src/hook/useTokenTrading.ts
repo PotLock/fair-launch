@@ -72,7 +72,7 @@ export const useTokenTrading = () => {
         const sig = await provider.connection.sendRawTransaction(rawTx);
         await provider.connection.confirmTransaction(sig);
         
-        console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`);
+        // console.log("Successfully buy : ", `https://solscan.io/tx/${sig}?cluster=devnet`);
         
 
         toast.success(`Buy ${tokenName} successfully!`);

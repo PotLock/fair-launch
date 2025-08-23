@@ -26,7 +26,7 @@ export const getProvider = () => {
   return null;
 };
 
-export const solNetwork = () => {
+export const getSOLNetwork = () => {
   switch (SOL_NETWORK) {
     case "mainnet":
       return WalletAdapterNetwork.Mainnet;

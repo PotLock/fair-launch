@@ -1,6 +1,6 @@
 import { IconChevronDown } from '@tabler/icons-react';
 import { useState } from 'react';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getExchangeDisplay } from '../../../utils';
 import type { StepProps } from '../../../types';

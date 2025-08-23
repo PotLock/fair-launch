@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, CircleCheck } from 'lucide-react';
 import { Input } from '../../ui/input';
-import { useDeployStore } from '../../../stores/deployStores';
+import { useDeployStore } from '../../../stores/deployStore';
 import { Socials } from '../../../types';
 import type { StepProps } from '../../../types';
 

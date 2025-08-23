@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import TokenDeployerForm from './TokenDeployerForm';
 import { useNavigate } from '@tanstack/react-router';
-import { useDeployStore } from '../../stores/deployStores';
+import { useDeployStore } from '../../stores/deployStore';
 
 
 const TokenDeployerPage = () => {

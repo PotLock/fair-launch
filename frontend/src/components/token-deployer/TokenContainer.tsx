@@ -7,7 +7,7 @@ import { useState } from "react";
 import { LoadingModal } from "./LoadingModal";
 import { SuccessModal } from "./SuccessModal";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useDeployStore } from "../../stores/deployStores";
+import { useDeployStore } from "../../stores/deployStore";
 import useAnchorProvider from "../../hook/useAnchorProvider";
 import { useEffect } from "react";
 import { calculateInitialReserveAmount } from "../../utils/sol";
@@ -34,7 +34,7 @@ export const TokenContainer = () => {
     const provider = useAnchorProvider();
     const [activeStep, setActiveStep] = useState('basicInfo');
 
-    // Define the order and keys of steps
+
     const steps = [
         { key: 'basicInfo', component: BasicInformation },
         { key: 'social', component: Social },
@@ -163,9 +163,6 @@ export const TokenContainer = () => {
         setIsSuccess(false);
         resetState();
         navigate({ to: "/my-tokens" });
-        if (txid) {
-            window.open(`https://solscan.io/tx/${txid}?cluster=devnet`, '_blank');
-        }
     };
 
     const handleReturnHome = () => {
