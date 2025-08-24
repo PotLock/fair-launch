@@ -178,7 +178,7 @@ export const formatNumberToCurrency = (x: number): string => {
     return x.toExponential(3);
   }
 
-  return x.toString();
+  return x.toFixed(5);
 };
 
 export function formatDecimal(num: number | string, maxDecimals: number = 10): string {

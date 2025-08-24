@@ -24,7 +24,6 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
 
     const loadBridgeToken = useCallback(async () => {
         const bridgedAddresses = await getBridgedAddressToken(tokenInfo?.mintAddress || '')
-        console.log("bridgedAddresses", bridgedAddresses)
         setBridgeTokenAddresses(bridgedAddresses || [])
     }, [tokenInfo?.mintAddress])
 

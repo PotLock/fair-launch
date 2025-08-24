@@ -51,6 +51,7 @@
     "bn.js": "^5.2.1",
     "dotenv": "^16.5.0",
     "ethers": "^6.15.0",
+    "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
     "lucide-react": "^0.511.0",
     "omni-bridge-sdk": "0.12.3",

@@ -88,7 +88,7 @@ function TokenDetail() {
 
             setSolPrice(priceSol || 0)
             setCurrentPrice(Number(price));
-            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)) * (Number(price) * Number(priceSol)));
+            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)/ 10 ** Number(tokenRes.data.decimals)) * (Number(price) * Number(priceSol)));
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
             setBondingCurveInfo(bondingCurveRes || null);
