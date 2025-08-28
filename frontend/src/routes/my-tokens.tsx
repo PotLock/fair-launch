@@ -1,11 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MyTokenCard } from "../components/MyTokenCard";
+import { MyTokenCardSkeleton } from "../components/MyTokenCardSkeleton";
 import { WalletButton } from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
-import { TokenInfo } from "../utils/token";
 import { getTokenByAddress } from "../lib/api";
-import { Coins } from "lucide-react";
+import { Coins, Search, ChevronDown } from "lucide-react";
+import { Token } from "../types";
+import { getPricingDisplay, getTemplateDisplay } from "../utils";
+import { getSolPrice, getTokenBalanceOnSOL } from "../lib/sol";
+import { PublicKey } from "@solana/web3.js";
+import { getCurrentPriceSOL } from "../utils/sol";
+import { getBondingCurveAccounts } from "../utils/token";
+import { useMetadata } from "../hook/useMetadata";
 
 export const Route = createFileRoute("/my-tokens")({
     component: MyTokens,
@@ -14,9 +21,19 @@ export const Route = createFileRoute("/my-tokens")({
 function MyTokens() {
     const { publicKey } = useWallet();
     const navigate = useNavigate()
-    const [listTokens, setListTokens] = useState<TokenInfo[]>([]);
+    const [listTokens, setListTokens] = useState<Token[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterValue, setFilterValue] = useState("all");
+    const [solPrice, setSolPrice] = useState<number>(0)
+    const [portfolioValue, setPortfolioValue] = useState<number>(0)
+
+    useMetadata({
+        title: "My Tokens - POTLAUNCH",
+        description: "View and manage all the tokens you've created on POTLAUNCH. Track your portfolio value and token performance across multiple chains.",
+        imageUrl: "/og-image.png"
+    });
 
     const fetchTokens = useCallback(async () => {
         if (!publicKey) {
@@ -29,23 +46,62 @@ function MyTokens() {
         try {
             const tokens = await getTokenByAddress(publicKey.toBase58());
             setListTokens(tokens.data);
+
+            let portfolio = 0;
+            
+            const portfolioCalculations = await Promise.all(
+                tokens.data.map(async (token: Token) => {
+                    try {
+                        const balance = await getTokenBalanceOnSOL(token.mintAddress || '', publicKey.toBase58());
+                        const bondingCurveAccounts = await getBondingCurveAccounts(new PublicKey(token.mintAddress));
+                        const currentPrice = getCurrentPriceSOL(
+                            BigInt(bondingCurveAccounts?.reserveBalance || 0),
+                            BigInt(bondingCurveAccounts?.reserveToken || 0)
+                        );
+                        return balance * currentPrice * solPrice;
+                    } catch (error) {
+                        console.error(`Error calculating portfolio for token ${token.mintAddress}:`, error);
+                        return 0;
+                    }
+                })
+            );
+            
+            portfolio = portfolioCalculations.reduce((sum, value) => sum + value, 0);
+            setPortfolioValue(portfolio);
+
         } catch (err) {
             setError('Failed to fetch token balances');
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [publicKey]);
+    }, [publicKey, solPrice]);
+
+    const fetchSolPrice = useCallback(async () => {
+        const solPrice = await getSolPrice()
+        setSolPrice(solPrice || 0)
+    },[])   
 
     useEffect(() => {
-        fetchTokens();
-    }, [fetchTokens]);
+        fetchSolPrice();
+    }, [fetchSolPrice]);
+
+    useEffect(() => {
+        if (solPrice > 0) {
+            fetchTokens();
+        }
+    }, [fetchTokens, solPrice]);
+
+    // Calculate portfolio statistics
+    const totalTokens = listTokens.length;
+    // For now, assuming all tokens are trading since there's no status field
+    const tradingTokens = totalTokens;
 
     if (!publicKey) {
         return (
             <div className="min-h-screen bg-[#F8FAFC] py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
+                    <h1 className="text-3xl font-bold text-black mb-2">My portfolio</h1>
                     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                         <div className="w-32 h-32 mb-6 flex items-center justify-center">
                             <svg
@@ -76,10 +132,83 @@ function MyTokens() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] py-10">
+            <div className="min-h-screen py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                <p className="text-gray-500 mb-8 text-base">Loading your tokens...</p>
+                    <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
+                        <div className="flex-1 max-w-md">
+                            <h1 className="text-3xl font-bold text-black mb-3">My Tokens</h1>
+                            <p className="text-base text-gray-500 leading-6">
+                                View and manage all the tokens you’ve created on the token launch platforms
+                            </p>
+                        </div>
+                        <div className="flex gap-8">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                                <div className="flex flex-col gap-10">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="text-3xl font-bold text-[#15803D]">
+                                            $0.00
+                                        </div>
+                                        <div className="text-sm font-medium text-[#71717A]">
+                                            Total portfolio value
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                                <div className="flex flex-col gap-10">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="text-3xl font-bold text-[#15803D]">
+                                            0
+                                        </div>
+                                        <div className="text-sm font-medium text-[#71717A]">
+                                            (0 Trading)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 mb-8">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search"
+                                    disabled
+                                    className="w-full px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-base font-medium text-gray-400 placeholder-gray-400 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="relative">
+                            <select
+                                disabled
+                                className="appearance-none px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-sm text-gray-400 pr-10 cursor-not-allowed"
+                            >
+                                <option value="all">Filter</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                        
+                        <button disabled className="bg-gray-300 text-gray-500 px-9 py-2.5 rounded-md font-medium cursor-not-allowed flex items-center justify-center">
+                            Search
+                        </button>
+                    </div>
+
+                    {/* Token Cards Skeleton Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
+                        {[...Array(6)].map((_, index) => (
+                            <MyTokenCardSkeleton key={index} />
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -122,22 +251,102 @@ function MyTokens() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] py-10">
+        <div className="min-h-screen py-10">
             <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                    <p className="text-gray-500 mb-8 text-base">
-                        View and manage all the tokens you've created on the token launch platforms
-                    </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
+                    <div className="flex-1 max-w-md">
+                        <h1 className="text-3xl font-bold text-black mb-3">My Tokens</h1>
+                        <p className="text-base text-gray-500 leading-6">
+                            View and manage all the tokens you’ve created on the token launch platforms
+                        </p>
+                    </div>
+                    <div className="flex gap-8">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                            <div className="flex flex-col gap-10">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <div className="text-3xl font-bold text-[#15803D]">
+                                        ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                    <div className="text-sm font-medium text-[#71717A]">
+                                        Total portfolio value
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                            <div className="flex flex-col gap-10">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <div className="text-3xl font-bold text-[#15803D]">
+                                        {totalTokens}
+                                    </div>
+                                    <div className="text-sm font-medium text-[#71717A]">
+                                        ({tradingTokens} Trading)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 mb-8">
+                    <div className="flex-1">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Search"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-white border border-[#E2E8F0] rounded-md text-base font-medium text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="relative">
+                        <select
+                            value={filterValue}
+                            onChange={(e) => setFilterValue(e.target.value)}
+                            className="appearance-none px-3 py-2.5 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="all">Filter</option>
+                            <option value="trading">Trading</option>
+                            <option value="presale">Presale</option>
+                            <option value="ended">Ended</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    </div>
+                    
+                    <button className="bg-[#DD3345] hover:bg-[#C02A3A] text-white px-9 py-2.5 rounded-md font-medium transition-colors duration-200 flex items-center justify-center">
+                        Search
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
                     {listTokens.map((token) => (
-                        <MyTokenCard
-                            decimals={token.decimals}
+                        <MyTokenCard  
+                            className="lg:max-w-[400px]"
+                            id={token.id.toString()}
+                            user={publicKey}
+                            mint={token.mintAddress || ''}
+                            banner={token.bannerUrl || ''}
                             avatar={token.avatarUrl || ''}
-                            key={token.id}
                             name={token.name}
                             symbol={token.symbol}
-                            supply={token.supply.toString()}
-                            mintAddress={token.mintAddress || ''}
+                            type={getPricingDisplay(token.selectedPricing || '')}
+                            description={token.description}
+                            decimals={token.decimals}
+                            template={getTemplateDisplay(token.selectedTemplate)}
+                            solPrice={solPrice}
+                            actionButton={{
+                                text: `Buy $${token.symbol}`,
+                                variant: 'presale' as const
+                            }}
                         />
                     ))}
                 </div>

@@ -43,6 +43,7 @@ import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
 import { AddLiquidityModal } from "../../components/AddLiquidityModal";
 import { getUserCreatedCpmmPools } from "../../lib/raydium";
+import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -73,9 +74,20 @@ function TokenDetail() {
     const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
     const [listPools, setListPools] = useState<any[]>([]);
 
+    // Metadata management using custom hook
+    const metadataConfig = tokenInfo ? {
+        title: `${tokenInfo.name} (${tokenInfo.symbol}) - POTLAUNCH`,
+        description: tokenInfo.description || `Trade ${tokenInfo.name} (${tokenInfo.symbol}) on POTLAUNCH - The premier token launch platform`,
+        imageUrl: tokenInfo.avatarUrl
+    } : null;
+
+    useMetadata(metadataConfig);
+
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
+            setLoadingMetadata();
+            
             const tokenRes = await getTokenByMint(tokenId);
             const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
             const walletAddresses = tokenRes.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
@@ -99,6 +111,7 @@ function TokenDetail() {
             setCurveConfig(curveConfigInfo)
         } catch (error) {
             console.error('Error loading token info:', error);
+            setErrorMetadata("The requested token could not be found.");
         } finally {
             setLoading(false);
         }
@@ -109,7 +122,7 @@ function TokenDetail() {
             setListPools([])
         }
         const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
-        console.log("pools", pools)
+        // console.log("pools", pools)
         setListPools(pools)
     },[publicKey])
 
@@ -137,6 +150,8 @@ function TokenDetail() {
     }, [tokenId])
 
     useEffect(() => {
+        setLoadingMetadata();
+        
         loadInfoToken();
         fetchHolders();
         fetchPools();

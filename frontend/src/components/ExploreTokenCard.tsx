@@ -23,6 +23,7 @@ interface ExploreTokenCardProps {
         text: string;
         variant: 'presale' | 'curve' | 'trade';
     };
+    className?: string;
 }
 
 export default function ExploreTokenCard({
@@ -35,7 +36,8 @@ export default function ExploreTokenCard({
     type,
     description,
     status,
-    actionButton
+    actionButton,
+    className
 }: ExploreTokenCardProps){
 
     const [holders, setHolders] = useState<Holders[]>([])
@@ -106,7 +108,7 @@ export default function ExploreTokenCard({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="bg-white rounded-xl border-[1.5px] border-gray-200 overflow-hidden cursor-pointer p-4 md:max-w-[365px] shadow-sm hover:shadow-lg transition-all duration-300"
+            className={`bg-white rounded-xl border-[1.5px] border-gray-200 overflow-hidden cursor-pointer p-4 md:max-w-[365px] shadow-sm hover:shadow-lg transition-all duration-300 ${className}`}
         >
             <div className="relative">
                 <motion.img 

@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState,useEffect } from "react";
 import { TokenInfo } from "../utils/token";
 import { getTokens } from "../lib/api";
-import { TokenCard } from "../components/TokenCard";
-import { formatDateToReadable, getTemplateDisplay } from "../utils";
+import { getPricingDisplay } from "../utils";
+import ExploreTokenCard from "../components/ExploreTokenCard";
+import { useMetadata } from "../hook/useMetadata";
 
 export const Route = createFileRoute("/tokens")({
     component: Tokens,
@@ -13,6 +14,12 @@ function Tokens() {
     const [tokens, setTokens] = useState<TokenInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useMetadata({
+        title: "Launchpad - POTLAUNCH",
+        description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in with our comprehensive token launch platform.",
+        imageUrl: "/og-image.png"
+    });
 
     useEffect(() => {
         const fetchTokens = async () => {
@@ -87,22 +94,23 @@ function Tokens() {
                 ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {tokens.map((token) => (
-                    <TokenCard
-                        decimals={token.decimals}
-                        avatar={token.avatarUrl || "/curate.png"}
-                        banner={token.bannerUrl || token.avatarUrl || "/curate.png"}
-                        key={token.id}
-                        type={getTemplateDisplay(token.selectedTemplate || 'meme')}
-                        progress={0}
-                        name={token.name}
-                        symbol={token.symbol}
-                        description={token.description || "No description available"}
-                        supply={token.supply.toString()}
-                        address={token.mintAddress || ''}
-                        createdOn={formatDateToReadable(token.createdAt || '')}
-                        externalLabel={token.launchLiquidityOnName || ''}
-                        value={token.mintAddress || ''}
-                    />
+                        <ExploreTokenCard  
+                            className="lg:max-w-[400px]"
+                            id={token.id}
+                            mint={token.mintAddress || ''}
+                            banner={token.bannerUrl || ''}
+                            avatar={token.avatarUrl || ''}
+                            name={token.name}
+                            symbol={token.symbol}
+                            type={getPricingDisplay(token.selectedPricing || '')}
+                            description={token.description}
+                            decimals={token.decimals}
+                            status={'Trading'}
+                            actionButton={{
+                                text: `Buy $${token.symbol}`,
+                                variant: 'presale' as const
+                            }}
+                        />
                     ))}
                 </div>
                 )}
