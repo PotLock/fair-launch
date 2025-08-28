@@ -4,6 +4,10 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ChevronDown, ChevronUp, ExternalLink, Minus, Plus } from "lucide-react";
 
+
+interface LiquidityPoolsProps {
+    onAddLiquidity: (isOpen: boolean) => void;
+}
 interface PoolMetric {
     label: string;
     value: string;
@@ -305,7 +309,8 @@ const BlockchainSection = ({
     );
 };
 
-export function LiquidityPools() {
+
+export function LiquidityPools({ onAddLiquidity }: LiquidityPoolsProps) {
     const [data, setData] = useState(liquidityData);
 
     const toggleSection = (sectionId: string) => {
@@ -335,7 +340,10 @@ export function LiquidityPools() {
         <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
-                <Button className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100">
+                <Button 
+                    className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
+                    onClick={()=>onAddLiquidity(true)}  
+                >
                     <Plus className="w-3 h-3"/>
                     <span className="font-normal">Add Liquidity</span>
                 </Button>

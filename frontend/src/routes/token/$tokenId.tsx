@@ -41,6 +41,8 @@ import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
 import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
+import { AddLiquidityModal } from "../../components/AddLiquidityModal";
+import { getUserCreatedCpmmPools } from "../../lib/raydium";
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -68,6 +70,8 @@ function TokenDetail() {
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [marketCap, setMarketCap] = useState<number>(0);
     const [solPrice, setSolPrice] = useState<number>(0)
+    const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
+    const [listPools, setListPools] = useState<any[]>([]);
 
     const loadInfoToken = useCallback(async () => {
         try {
@@ -100,6 +104,15 @@ function TokenDetail() {
         }
     }, [tokenId]);
 
+    const fetchPools = useCallback(async()=>{
+        if(!publicKey){
+            setListPools([])
+        }
+        const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
+        console.log("pools", pools)
+        setListPools(pools)
+    },[publicKey])
+
     const fetchCurrentPrice = useCallback(async () => {
         const priceSol = getCurrentPriceSOL(
             BigInt(bondingCurveInfo?.reserveBalance || 0),
@@ -126,7 +139,8 @@ function TokenDetail() {
     useEffect(() => {
         loadInfoToken();
         fetchHolders();
-    }, [loadInfoToken, fetchHolders]);
+        fetchPools();
+    }, [loadInfoToken, fetchHolders, fetchPools]);
 
     useEffect(() => {
         if (tokenInfo) {
@@ -540,7 +554,11 @@ function TokenDetail() {
                                             ) : 'Connect Wallet to Trade'
                                         )}
                                     </Button>
-                                    <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                                    <Button 
+                                        className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                                        disabled={!isLoggedIn}
+                                        onClick={() => setShowAddLiquidityModal(true)}
+                                    >
                                         <Plus className="h-5 w-5"/>
                                         <span className="disabled:text-gray-400">Add Liquidity</span>
                                     </Button>
@@ -677,19 +695,19 @@ function TokenDetail() {
                     </p>
                 </Card>
                 
-                {
+                {/* {
                     NODE_ENV !== "production" && (
                         <LaunchStatus/>
                     )
-                }
+                } */}
 
                 <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
 
-                {
+                {/* {
                     NODE_ENV !== "production" && (
-                        <LiquidityPools/>
+                        <LiquidityPools onAddLiquidity={setShowAddLiquidityModal}/>
                     )
-                }
+                } */}
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
@@ -992,7 +1010,11 @@ function TokenDetail() {
                                 ) : 'Connect Wallet to Trade'
                             )}
                         </Button>
-                        <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                        <Button 
+                            className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                            disabled={!isLoggedIn}
+                            onClick={() => setShowAddLiquidityModal(true)}
+                        >
                             <Plus className="h-5 w-5"/>
                             <span className="disabled:text-gray-400">Add Liquidity</span>
                         </Button>
@@ -1064,6 +1086,11 @@ function TokenDetail() {
                     </div>
                 </div>
             </div>
+            <AddLiquidityModal
+                isOpen={showAddLiquidityModal}
+                onClose={() => setShowAddLiquidityModal(false)}
+                tokenInfo={tokenInfo}
+            />
         </div>
     );
 }

@@ -145,7 +145,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Source</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold capitalize">{tokenInfo?.liquiditySource}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Lockup</p>
