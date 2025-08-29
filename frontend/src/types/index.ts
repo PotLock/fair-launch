@@ -302,6 +302,7 @@ export interface DeploymentOption {
     availableDexes: string;
     cost: string;
     estimatedTime: string;
+    disabled?: boolean;
 }
 
 export interface Token {

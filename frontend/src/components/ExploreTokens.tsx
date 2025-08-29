@@ -177,7 +177,7 @@ export default function ExploreTokens() {
                             }}
                         >
                             {tokens.map((token) => (
-                                <div key={token.id} className="flex-shrink-0 ex-card" style={{ width: `calc((100% - ${(cardsPerView - 0.2) * 0.75}rem) / ${cardsPerView})` }}>
+                                <div key={token.id} className="flex-shrink-0 ex-card p-2" style={{ width: `calc((100% - ${(cardsPerView - 0.2) * 0.75}rem) / ${cardsPerView})` }}>
                                     <ExploreTokenCard  
                                         id={token.id}
                                         mint={token.mintAddress || ''}

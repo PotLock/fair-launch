@@ -41,6 +41,10 @@ import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
 import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
+import { AddLiquidityModal } from "../../components/AddLiquidityModal";
+import { getUserCreatedCpmmPools } from "../../lib/raydium";
+import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
+
 
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
@@ -68,10 +72,26 @@ function TokenDetail() {
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [marketCap, setMarketCap] = useState<number>(0);
     const [solPrice, setSolPrice] = useState<number>(0)
+    const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
+    const [listPools, setListPools] = useState<any[]>([]);
+
+    // Metadata management using custom hook
+    const metadataConfig = tokenInfo ? {
+        title: `${tokenInfo.name} (${tokenInfo.symbol}) - POTLAUNCH`,
+        description: tokenInfo.description || `Trade ${tokenInfo.name} (${tokenInfo.symbol}) on POTLAUNCH - The premier token launch platform`,
+        imageUrl: tokenInfo.bannerUrl,
+        url: `https://potlaunch.com/token/${tokenId}`,
+        type: "website",
+        siteName: "POTLAUNCH"
+    } : null;
+
+    const metadataElement = useMetadata(metadataConfig);
 
     const loadInfoToken = useCallback(async () => {
         try {
             setLoading(true);
+            setLoadingMetadata();
+            
             const tokenRes = await getTokenByMint(tokenId);
             const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
             const walletAddresses = tokenRes.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
@@ -88,17 +108,27 @@ function TokenDetail() {
 
             setSolPrice(priceSol || 0)
             setCurrentPrice(Number(price));
-            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)) * (Number(price) * Number(priceSol)));
+            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)/ 10 ** Number(tokenRes.data.decimals)) * (Number(price) * Number(priceSol)));
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
             setTokenInfo(tokenRes.data);
             setBondingCurveInfo(bondingCurveRes || null);
             setCurveConfig(curveConfigInfo)
         } catch (error) {
             console.error('Error loading token info:', error);
+            setErrorMetadata("The requested token could not be found.");
         } finally {
             setLoading(false);
         }
     }, [tokenId]);
+
+    const fetchPools = useCallback(async()=>{
+        if(!publicKey){
+            setListPools([])
+        }
+        const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
+        // console.log("pools", pools)
+        setListPools(pools)
+    },[publicKey])
 
     const fetchCurrentPrice = useCallback(async () => {
         const priceSol = getCurrentPriceSOL(
@@ -124,9 +154,12 @@ function TokenDetail() {
     }, [tokenId])
 
     useEffect(() => {
+        setLoadingMetadata();
+        
         loadInfoToken();
         fetchHolders();
-    }, [loadInfoToken, fetchHolders]);
+        fetchPools();
+    }, [loadInfoToken, fetchHolders, fetchPools]);
 
     useEffect(() => {
         if (tokenInfo) {
@@ -305,7 +338,9 @@ function TokenDetail() {
     }
 
     return (
-        <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <>
+            {metadataElement}
+            <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
@@ -540,10 +575,14 @@ function TokenDetail() {
                                             ) : 'Connect Wallet to Trade'
                                         )}
                                     </Button>
-                                    <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                                    {/* <Button 
+                                        className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                                        disabled={!isLoggedIn}
+                                        onClick={() => setShowAddLiquidityModal(true)}
+                                    >
                                         <Plus className="h-5 w-5"/>
                                         <span className="disabled:text-gray-400">Add Liquidity</span>
-                                    </Button>
+                                    </Button> */}
                                 </div>
                             </TabsContent>
                             <TabsContent value="deposit">
@@ -677,19 +716,19 @@ function TokenDetail() {
                     </p>
                 </Card>
                 
-                {
+                {/* {
                     NODE_ENV !== "production" && (
                         <LaunchStatus/>
                     )
-                }
+                } */}
 
                 <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
 
-                {
+                {/* {
                     NODE_ENV !== "production" && (
-                        <LiquidityPools/>
+                        <LiquidityPools onAddLiquidity={setShowAddLiquidityModal}/>
                     )
-                }
+                } */}
 
                 <Card className="p-4 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
@@ -992,10 +1031,14 @@ function TokenDetail() {
                                 ) : 'Connect Wallet to Trade'
                             )}
                         </Button>
-                        <Button className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!isLoggedIn}>
+                        {/* <Button 
+                            className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                            disabled={!isLoggedIn}
+                            onClick={() => setShowAddLiquidityModal(true)}
+                        >
                             <Plus className="h-5 w-5"/>
                             <span className="disabled:text-gray-400">Add Liquidity</span>
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
 
@@ -1064,6 +1107,12 @@ function TokenDetail() {
                     </div>
                 </div>
             </div>
+            <AddLiquidityModal
+                isOpen={showAddLiquidityModal}
+                onClose={() => setShowAddLiquidityModal(false)}
+                tokenInfo={tokenInfo}
+            />
         </div>
+        </>
     );
 }

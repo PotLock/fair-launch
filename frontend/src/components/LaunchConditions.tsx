@@ -24,7 +24,6 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
 
     const loadBridgeToken = useCallback(async () => {
         const bridgedAddresses = await getBridgedAddressToken(tokenInfo?.mintAddress || '')
-        console.log("bridgedAddresses", bridgedAddresses)
         setBridgeTokenAddresses(bridgedAddresses || [])
     }, [tokenInfo?.mintAddress])
 
@@ -146,7 +145,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Source</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold capitalize">{tokenInfo?.liquiditySource}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Lockup</p>
@@ -155,7 +154,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                 </div>
             </div>
             
-            {/* Contract Addresses Section */}
+            
             <div className="mt-3">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex flex-col gap-2">
@@ -226,7 +225,10 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button className="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                                        <button 
+                                            onClick={() => setIsBridgeModalOpen(true)}
+                                            className="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                        >
                                             <ArrowLeftRight className="w-3 h-3" />
                                             Bridge
                                         </button>
@@ -262,6 +264,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                 bridgeAddress={bridgeTokenAddresses}
                 tokenInfo={tokenInfo}
                 currentPrice={currentPrice}
+                refetchBridgeAddress={loadBridgeToken}
             />
         </Card>
     );
