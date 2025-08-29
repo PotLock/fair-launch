@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { SOL_NETWORK } from '../configs/env.config';
+import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 
 const URL_API = "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd";
 
@@ -38,11 +38,11 @@ export const getSolPrice = async (): Promise<number | null> => {
 export const getRpcSOLEndpoint = (): string => {  
   switch (SOL_NETWORK) {
     case 'mainnet':
-      return 'https://api.mainnet-beta.solana.com';
+      return `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
     case 'testnet':
-      return 'https://api.testnet.solana.com';
+      return `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
     default:
-      return 'https://api.devnet.solana.com';
+      return `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
   }
 }
 

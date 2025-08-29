@@ -10,6 +10,7 @@ import { TokenInfo } from "../utils/token";
 import { getTokens } from "../lib/api";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useMetadata } from "../hook/useMetadata";
 
 export const Route = createFileRoute("/")({
     component: Home,
@@ -19,6 +20,12 @@ function Home() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  useMetadata({
+    title: "POTLAUNCH - Launch Tokens Across Multiple Chains",
+    description: "POTLAUNCH by POTLOCK - The premier token launch platform. Launch your project with community funding across multiple chains including Solana, NEAR, and more.",
+    imageUrl: "/og-image.png"
+  });
 
   useEffect(() => {
       const fetchTokens = async () => {
@@ -119,7 +126,7 @@ function Home() {
           </div>
         </div>
       </section>
-      <div className="lg:container px-5 lg:px-6 mx-auto pt-10 md:pt-20">
+      <div className="lg:container px-4 lg:px-6 mx-auto pt-10 md:pt-20">
         <div className="grid grid-cols-2 gap-3 md:flex items-center md:justify-between md:px-6 home-stats">
           <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center stat-card">
             <span className="font-bold text-4xl">10+</span>
