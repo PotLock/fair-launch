@@ -146,9 +146,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.1.1(react@19.1.1)
-      react-helmet-async:
-        specifier: ^2.0.5
-        version: 2.0.5(react@19.1.1)
       react-hot-toast:
         specifier: ^2.5.2
         version: 2.6.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -6867,11 +6864,6 @@ packages:
 
   react-fast-compare@3.2.2:
     resolution: {integrity: sha512-nsO+KSNgo1SbJqJEYRE9ERzo7YtYbou/OqjSQKxV7jcKox7+usiUVZOAC+XnDOABXggQTno0Y1CpVnuWEc1boQ==}
-
-  react-helmet-async@2.0.5:
-    resolution: {integrity: sha512-rYUYHeus+i27MvFE+Jaa4WsyBKGkL6qVgbJvSBoX8mbsWoABJXdEO0bZyi0F6i+4f0NuIb8AvqPMj3iXFHkMwg==}
-    peerDependencies:
-      react: ^16.6.0 || ^17.0.0 || ^18.0.0
 
   react-hot-toast@2.6.0:
     resolution: {integrity: sha512-bH+2EBMZ4sdyou/DPrfgIouFpcRLCJ+HoCA32UoAYHn6T3Ur5yfcDCeSr5mwldl6pFOsiocmrXMuoCJ1vV8bWg==}
@@ -18473,13 +18465,6 @@ snapshots:
       scheduler: 0.26.0
 
   react-fast-compare@3.2.2: {}
-
-  react-helmet-async@2.0.5(react@19.1.1):
-    dependencies:
-      invariant: 2.2.4
-      react: 19.1.1
-      react-fast-compare: 3.2.2
-      shallowequal: 1.1.0
 
   react-hot-toast@2.6.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
