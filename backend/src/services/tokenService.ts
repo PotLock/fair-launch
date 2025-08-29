@@ -207,4 +207,37 @@ export class TokenService {
       throw new Error('Failed to delete all allocations');
     }
   }
+
+  async searchTokens(query: string, owner?: string) {
+    try {
+      const { ilike, or, and } = await import('drizzle-orm');
+      
+      const searchConditions = [
+        ilike(tokens.name, `%${query}%`),
+        ilike(tokens.symbol, `%${query}%`),
+        ilike(tokens.description, `%${query}%`),
+        ilike(tokens.mintAddress, `%${query}%`),
+      ];
+
+      let whereCondition = or(...searchConditions);
+      
+      // If owner is provided, filter by owner as well
+      if (owner) {
+        whereCondition = and(whereCondition, eq(tokens.owner, owner));
+      }
+
+      const searchResults = await db.query.tokens.findMany({
+        where: whereCondition,
+        with: {
+          allocations: true,
+        },
+        orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
+      });
+
+      return searchResults;
+    } catch (error) {
+      console.error('Error searching tokens:', error);
+      throw new Error('Failed to search tokens');
+    }
+  }
 } 

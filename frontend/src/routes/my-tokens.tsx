@@ -5,7 +5,7 @@ import { WalletButton } from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { getTokenByAddress } from "../lib/api";
-import { Coins, Search, ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { Token } from "../types";
 import { getPricingDisplay, getTemplateDisplay } from "../utils";
 import { getSolPrice, getTokenBalanceOnSOL } from "../lib/sol";
@@ -13,6 +13,9 @@ import { PublicKey } from "@solana/web3.js";
 import { getCurrentPriceSOL } from "../utils/sol";
 import { getBondingCurveAccounts } from "../utils/token";
 import { useMetadata } from "../hook/useMetadata";
+import { useSearch } from "../hook/useSearch";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
+import { NoTokensFound } from "../components/NoTokensFound";
 
 export const Route = createFileRoute("/my-tokens")({
     component: MyTokens,
@@ -24,10 +27,22 @@ function MyTokens() {
     const [listTokens, setListTokens] = useState<Token[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
     const [filterValue, setFilterValue] = useState("all");
     const [solPrice, setSolPrice] = useState<number>(0)
     const [portfolioValue, setPortfolioValue] = useState<number>(0)
+    
+    // Use the search hook with owner filter
+    const {
+        searchQuery,
+        setSearchQuery,
+        searchResults,
+        isSearching,
+        error: searchError,
+        clearSearch
+    } = useSearch({ 
+        owner: publicKey?.toBase58(),
+        debounceMs: 500 
+    });
 
     useMetadata({
         title: "My Tokens - POTLAUNCH",
@@ -92,8 +107,12 @@ function MyTokens() {
         }
     }, [fetchTokens, solPrice]);
 
+    // Determine which tokens to display
+    const displayTokens = searchQuery.trim() && !isSearching ? searchResults : listTokens;
+    const displayError = searchQuery.trim() ? searchError : error;
+    
     // Calculate portfolio statistics
-    const totalTokens = listTokens.length;
+    const totalTokens = displayTokens.length;
     // For now, assuming all tokens are trading since there's no status field
     const tradingTokens = totalTokens;
 
@@ -181,29 +200,35 @@ function MyTokens() {
                             <div className="relative">
                                 <input
                                     type="text"
-                                    placeholder="Search"
+                                    placeholder="Search your tokens..."
                                     disabled
                                     className="w-full px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-base font-medium text-gray-400 placeholder-gray-400 cursor-not-allowed"
                                 />
                             </div>
                         </div>
                         
-                        <div className="relative">
-                            <select
-                                disabled
-                                className="appearance-none px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-sm text-gray-400 pr-10 cursor-not-allowed"
-                            >
-                                <option value="all">Filter</option>
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild className="w-28">
+                                <button
+                                    disabled
+                                    className="appearance-none px-4 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-sm text-gray-400 cursor-not-allowed flex items-center justify-between w-28"
+                                >
+                                    <span>Filter</span>
+                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-20">
+                                <DropdownMenuItem disabled>
+                                    Filter
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         
-                        <button disabled className="bg-gray-300 text-gray-500 px-9 py-2.5 rounded-md font-medium cursor-not-allowed flex items-center justify-center">
+                        <button disabled className="bg-gray-300 text-gray-500 px-9 py-2.5 rounded-md font-medium flex items-center justify-center">
                             Search
                         </button>
                     </div>
 
-                    {/* Token Cards Skeleton Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
                         {[...Array(6)].map((_, index) => (
                             <MyTokenCardSkeleton key={index} />
@@ -214,12 +239,12 @@ function MyTokens() {
         );
     }
 
-    if (error) {
+    if (displayError) {
         return (
             <div className="min-h-screen bg-[#F8FAFC] py-10">
                 <div className="max-w-7xl mx-auto px-4">
                 <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                <p className="text-red-500 mb-8 text-base">{error}</p>
+                <p className="text-red-500 mb-8 text-base">{displayError}</p>
                 </div>
             </div>
         );
@@ -230,21 +255,34 @@ function MyTokens() {
             <div className="min-h-screen bg-[#F8FAFC] py-10">
                 <div className="max-w-7xl mx-auto px-4">
                     <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                        <div className="w-32 h-32 mb-6 flex items-center justify-center">
-                            <Coins className="w-32 h-32 text-gray-400"/>
+                    
+                    {searchQuery.trim() && isSearching ? (
+                        // Show skeleton when searching
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
+                            {[...Array(6)].map((_, index) => (
+                                <MyTokenCardSkeleton key={index} />
+                            ))}
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No tokens found</h3>
-                        <p className="text-gray-500 mb-6 max-w-md">
-                            You haven't created any tokens yet. Start by deploying your first token to get started.
-                        </p>
-                        <button
-                            onClick={()=>navigate({to: "/create"})}
-                            className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
-                        >
-                            Create Your First Token
-                        </button>
-                    </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                            <NoTokensFound 
+                                searchQuery={searchQuery} 
+                                className="pt-10"
+                                width="170px" 
+                                height="170px"
+                                titleSize="text-[2rem]"
+                                subTitleSize="text-base"
+                            />
+                            {!searchQuery.trim() && (
+                                <button
+                                    onClick={()=>navigate({to: "/create"})}
+                                    className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                                >
+                                    Create Your First Token
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -300,26 +338,52 @@ function MyTokens() {
                         <div className="relative">
                             <input
                                 type="text"
-                                placeholder="Search"
+                                placeholder="Search your tokens..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full px-3 py-2.5 bg-white border border-[#E2E8F0] rounded-md text-base font-medium text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
+                            {searchQuery && (
+                                <button
+                                    onClick={clearSearch}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                            {isSearching && (
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                </div>
+                            )}
                         </div>
                     </div>
                     
                     <div className="relative">
-                        <select
-                            value={filterValue}
-                            onChange={(e) => setFilterValue(e.target.value)}
-                            className="appearance-none px-3 py-2.5 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            <option value="all">Filter</option>
-                            <option value="trading">Trading</option>
-                            <option value="presale">Presale</option>
-                            <option value="ended">Ended</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild className="w-28">
+                                <button
+                                    className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-28 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <span>Filter</span>
+                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-40">
+                                <DropdownMenuItem textValue="all" className="hover:bg-gray-100 cursor-pointer">
+                                    Filter
+                                </DropdownMenuItem>
+                                <DropdownMenuItem textValue="trading" className="hover:bg-gray-100 cursor-pointer">
+                                    Trading
+                                </DropdownMenuItem>
+                                <DropdownMenuItem textValue="presale" className="hover:bg-gray-100 cursor-pointer">
+                                    Presale
+                                </DropdownMenuItem>
+                                <DropdownMenuItem textValue="ended" className="hover:bg-gray-100 cursor-pointer">
+                                    Ended
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     
                     <button className="bg-[#DD3345] hover:bg-[#C02A3A] text-white px-9 py-2.5 rounded-md font-medium transition-colors duration-200 flex items-center justify-center">
@@ -328,27 +392,46 @@ function MyTokens() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
-                    {listTokens.map((token) => (
-                        <MyTokenCard  
-                            className="lg:max-w-[400px]"
-                            id={token.id.toString()}
-                            user={publicKey}
-                            mint={token.mintAddress || ''}
-                            banner={token.bannerUrl || ''}
-                            avatar={token.avatarUrl || ''}
-                            name={token.name}
-                            symbol={token.symbol}
-                            type={getPricingDisplay(token.selectedPricing || '')}
-                            description={token.description}
-                            decimals={token.decimals}
-                            template={getTemplateDisplay(token.selectedTemplate)}
-                            solPrice={solPrice}
-                            actionButton={{
-                                text: `Buy $${token.symbol}`,
-                                variant: 'presale' as const
-                            }}
-                        />
-                    ))}
+                    {searchQuery.trim() && isSearching ? (
+                        // Show skeleton when searching
+                        [...Array(6)].map((_, index) => (
+                            <MyTokenCardSkeleton key={index} />
+                        ))
+                    ) : searchQuery.trim() && !isSearching && searchResults.length === 0 ? (
+                        // Show NoTokensFound when search has no results
+                        <div className="col-span-full flex flex-col items-center justify-center text-center">
+                            <NoTokensFound 
+                                searchQuery={searchQuery} 
+                                className="pt-3"
+                                width="170px" 
+                                height="170px"
+                                titleSize="text-[2rem]"
+                                subTitleSize="text-base"
+                            />
+                        </div>
+                    ) : (
+                        displayTokens.map((token) => (
+                            <MyTokenCard  
+                                className="lg:max-w-[400px]"
+                                id={token.id.toString()}
+                                user={publicKey}
+                                mint={token.mintAddress || ''}
+                                banner={token.bannerUrl || ''}
+                                avatar={token.avatarUrl || ''}
+                                name={token.name}
+                                symbol={token.symbol}
+                                type={getPricingDisplay(token.selectedPricing || '')}
+                                description={token.description}
+                                decimals={token.decimals}
+                                template={getTemplateDisplay(token.selectedTemplate)}
+                                solPrice={solPrice}
+                                actionButton={{
+                                    text: `Buy $${token.symbol}`,
+                                    variant: 'presale' as const
+                                }}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
         </div>

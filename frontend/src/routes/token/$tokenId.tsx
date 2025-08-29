@@ -45,6 +45,7 @@ import { AddLiquidityModal } from "../../components/AddLiquidityModal";
 import { getUserCreatedCpmmPools } from "../../lib/raydium";
 import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
 
+
 export const Route = createFileRoute("/token/$tokenId")({
     component: TokenDetail,
 });
@@ -78,10 +79,13 @@ function TokenDetail() {
     const metadataConfig = tokenInfo ? {
         title: `${tokenInfo.name} (${tokenInfo.symbol}) - POTLAUNCH`,
         description: tokenInfo.description || `Trade ${tokenInfo.name} (${tokenInfo.symbol}) on POTLAUNCH - The premier token launch platform`,
-        imageUrl: tokenInfo.avatarUrl
+        imageUrl: tokenInfo.bannerUrl,
+        url: `https://potlaunch.com/token/${tokenId}`,
+        type: "website",
+        siteName: "POTLAUNCH"
     } : null;
 
-    useMetadata(metadataConfig);
+    const metadataElement = useMetadata(metadataConfig);
 
     const loadInfoToken = useCallback(async () => {
         try {
@@ -334,7 +338,9 @@ function TokenDetail() {
     }
 
     return (
-        <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <>
+            {metadataElement}
+            <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="px-4 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
@@ -569,14 +575,14 @@ function TokenDetail() {
                                             ) : 'Connect Wallet to Trade'
                                         )}
                                     </Button>
-                                    <Button 
+                                    {/* <Button 
                                         className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                         disabled={!isLoggedIn}
                                         onClick={() => setShowAddLiquidityModal(true)}
                                     >
                                         <Plus className="h-5 w-5"/>
                                         <span className="disabled:text-gray-400">Add Liquidity</span>
-                                    </Button>
+                                    </Button> */}
                                 </div>
                             </TabsContent>
                             <TabsContent value="deposit">
@@ -1025,14 +1031,14 @@ function TokenDetail() {
                                 ) : 'Connect Wallet to Trade'
                             )}
                         </Button>
-                        <Button 
+                        {/* <Button 
                             className={`border border-gray-200 justify-center gap-2 py-6 rounded-lg text-black bg-gray-100 w-full shadow-none flex items-center ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`} 
                             disabled={!isLoggedIn}
                             onClick={() => setShowAddLiquidityModal(true)}
                         >
                             <Plus className="h-5 w-5"/>
                             <span className="disabled:text-gray-400">Add Liquidity</span>
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
 
@@ -1107,5 +1113,6 @@ function TokenDetail() {
                 tokenInfo={tokenInfo}
             />
         </div>
+        </>
     );
 }

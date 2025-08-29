@@ -112,6 +112,34 @@ app.get('/mint/:address', async (c) => {
   }
 });
 
+// Search tokens
+app.get('/search', async (c) => {
+  try {
+    const query = c.req.query('q');
+    const owner = c.req.query('owner');
+    
+    if (!query || query.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Search query is required'
+      }, 400);
+    }
+    
+    const tokens = await tokenService.searchTokens(query.trim(), owner);
+    
+    return c.json({
+      success: true,
+      data: tokens
+    });
+  } catch (error) {
+    console.error('Error in search tokens route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
 // Get token by owner
 app.get('/address/:address', async (c) => {
   try {

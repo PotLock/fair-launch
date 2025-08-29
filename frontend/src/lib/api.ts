@@ -96,3 +96,25 @@ export async function getTokens() {
     throw new Error('Failed to get tokens');
   }
 }
+
+export async function searchTokens(query: string, owner?: string) {
+  try {
+    const params = new URLSearchParams({ q: query });
+    if (owner) {
+      params.append('owner', owner);
+    }
+    
+    const response = await fetch(`${API_URL}/api/tokens/search?${params}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error searching tokens:', error);
+    throw new Error('Failed to search tokens');
+  }
+}
