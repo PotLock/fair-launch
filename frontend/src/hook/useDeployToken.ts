@@ -28,6 +28,7 @@ import { useDeployStore } from "../stores/deployStore";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
 import { createToken } from "../lib/api";
+import { JWT_PINATA_SECRET, PINATA_API_KEY } from "../configs/env.config";
 
 // Helper function to convert dates to Unix time
 const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
@@ -44,7 +45,7 @@ const uploadMetadataToPinata = async (metadata: Metadata) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.PUBLIC_JWT_PINATA_SECRET}`
+        'Authorization': `Bearer ${JWT_PINATA_SECRET}`
       },
       body: JSON.stringify(metadata)
     });
@@ -54,7 +55,8 @@ const uploadMetadataToPinata = async (metadata: Metadata) => {
     }
 
     const result = await response.json();
-    return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+    
+    return `https://olive-rational-giraffe-695.mypinata.cloud/ipfs/${result.IpfsHash}?pinataGatewayToken=${PINATA_API_KEY}`;
   } catch (error) {
     console.error('Error uploading metadata to Pinata:', error);
     throw error;

@@ -23,9 +23,9 @@ export default function Header() {
                         <Link to="/create" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Create Token</span>
                         </Link>
-                        <a href='https://bridge.potlaunch.com' target='_blank' className="text-gray-600 hover:text-gray-900">
+                        <Link to="/bridge" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Bridge Tokens</span>
-                        </a>
+                        </Link>
                         <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>My Tokens</span>
                         </Link>
@@ -67,11 +67,14 @@ export default function Header() {
                             <span className="text-2xl font-semibold">POTLAUNCH</span>
                         </div>
                         <nav className="flex flex-col space-y-4 mb-8">
+                            <Link to="/tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
+                                Launchpad
+                            </Link>
                             <Link to="/create" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Create Token
                             </Link>
-                            <Link to="/tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
-                                Launchpad
+                            <Link to="/bridge" className="text-gray-600 hover:text-gray-900">
+                                <span className='text-sm'>Bridge Tokens</span>
                             </Link>
                             <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 My Tokens

@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
-    "@metaplex-foundation/mpl-token-metadata": "2.8.3",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@near-wallet-selector/bitte-wallet": "^9.0.2",
     "@near-wallet-selector/intear-wallet": "^9.0.2",
     "@near-wallet-selector/ledger": "^9.0.2",
