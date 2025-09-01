@@ -87,7 +87,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const handleConnectMetaMask = async () => {
     if (!evmConnected) {
       try {
-        await connect({ connector: connectors[0] });
+        await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
         onClose();
       } catch (error) {
         console.error('Failed to connect MetaMask:', error);

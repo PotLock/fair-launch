@@ -3,15 +3,23 @@ import { useMetadata } from "../hook/useMetadata";
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { ChevronDown, ArrowUpDown, RefreshCw, ExternalLink } from "lucide-react";
+import { ChevronDown, ArrowUpDown, RefreshCw, ExternalLink, Check, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../components/ui/dropdown-menu";
 import { SelectTokenModal } from "../components/SelectTokenModal";
+import { TokenSelectSkeleton } from "../components/ui/token-select-skeleton";
 import { useWalletSelector } from "@near-wallet-selector/react-hook";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "react-hot-toast";
 import { NEAR_NETWORK, SOL_NETWORK } from "../configs/env.config";
 import { formatBalanceNear, getAllTokenOnNear, getNearBalance } from "../lib/near";
-import { getAllTokens } from "../lib/sol";
+import { getAllTokens as getSolanaTokens, getSolBalance } from "../lib/sol";
+import { getAllTokens as getEthereumTokens, getBalanceEVM } from "../lib/evm";
 import { truncateAddress, formatNumberInput, parseFormattedNumber, formatNumberToCurrency } from "../utils";
+import { getAllBridgeTokens } from "../lib/omni-bridge";
+import { ChainKind, normalizeAmount } from "omni-bridge-sdk";
+import { useBridge } from "../hook/useBridge";
+import { useAccount } from "wagmi";
+
 
 interface Transaction {
     id: string;
@@ -35,7 +43,7 @@ interface Token {
     selected?: boolean;
 }
 
-type ChainType = 'solana' | 'near';
+type ChainType = 'solana' | 'near' | 'ethereum';
 
 export const Route = createFileRoute("/bridge")({
     component: Bridge,
@@ -52,12 +60,16 @@ function Bridge() {
     // Wallet hooks
     const { signedAccountId } = useWalletSelector();
     const { connected, publicKey } = useWallet();
+    const { address: ethereumAddress } = useAccount();
+
+    const { deployToken, transferToken } = useBridge();
 
     // Bridge state
     const [amount, setAmount] = useState<string>('0');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isBridging, setIsBridging] = useState(false);
     const [bridgeProgress, setBridgeProgress] = useState(0);
+    const [isTokenDeployedOnTargetChain, setIsTokenDeployedOnTargetChain] = useState(false);
 
     // Chain selection state
     const [fromChain, setFromChain] = useState<ChainType>('solana');
@@ -67,10 +79,12 @@ function Bridge() {
     const [selectedToken, setSelectedToken] = useState<Token>();
     const [solanaTokens, setSolanaTokens] = useState<Token[]>([]);
     const [nearTokens, setNearTokens] = useState<Token[]>([]);
-    const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+    const [ethereumTokens, setEthereumTokens] = useState<Token[]>([]);
+    const [isLoadingSolanaTokens, setIsLoadingSolanaTokens] = useState(false);
+    const [isLoadingNearTokens, setIsLoadingNearTokens] = useState(false);
+    const [isLoadingEthereumTokens, setIsLoadingEthereumTokens] = useState(false);
     const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
     const [tokenModalType, setTokenModalType] = useState<'from' | 'to'>('from');
-
     // Chain information
     const chains = {
         near: { 
@@ -86,16 +100,23 @@ function Bridge() {
             icon: '/chains/solana-dark.svg', 
             color: 'bg-purple-500',
             explorerUrl: "https://solscan.io"
+        },
+        ethereum: { 
+            name: 'Ethereum', 
+            icon: '/chains/ethereum.svg', 
+            color: 'bg-blue-500',
+            explorerUrl: "https://etherscan.io"
         }
     };
+    const availableChains: ChainType[] = ['near', 'solana', 'ethereum'];
 
     // Function to fetch Solana tokens
     const fetchSolanaTokens = async () => {
         if (!connected || !publicKey) return;
         
-        setIsLoadingTokens(true);
+        setIsLoadingSolanaTokens(true);
         try {
-            const tokens = await getAllTokens(publicKey.toString());
+            const tokens = await getSolanaTokens(publicKey.toString());
             const formattedTokens: Token[] = tokens.map(token => ({
                 symbol: token.symbol,
                 balance: token.balance.toString(),
@@ -108,9 +129,8 @@ function Bridge() {
             setSolanaTokens(formattedTokens);
         } catch (error) {
             console.error('Error fetching Solana tokens:', error);
-            toast.error('Failed to fetch Solana tokens');
         } finally {
-            setIsLoadingTokens(false);
+            setIsLoadingSolanaTokens(false);
         }
     };
 
@@ -118,7 +138,7 @@ function Bridge() {
     const fetchNearTokens = async () => {
         if (!signedAccountId) return;
         
-        setIsLoadingTokens(true);
+        setIsLoadingNearTokens(true);
         try {
             const tokens = await getAllTokenOnNear(signedAccountId);
             const formattedTokens: Token[] = tokens.map((token: any, index: number) => ({
@@ -133,16 +153,41 @@ function Bridge() {
             setNearTokens(formattedTokens);
         } catch (error) {
             console.error('Error fetching NEAR tokens:', error);
-            toast.error('Failed to fetch NEAR tokens');
         } finally {
-            setIsLoadingTokens(false);
+            setIsLoadingNearTokens(false);
+        }
+    };
+
+    // Function to fetch Ethereum tokens
+    const fetchEthereumTokens = async () => {
+        if (!ethereumAddress) return;
+        
+        setIsLoadingEthereumTokens(true);
+        try {
+            const tokens = await getEthereumTokens(ethereumAddress);
+            const formattedTokens: Token[] = tokens.map(token => ({
+                symbol: token.symbol,
+                balance: token.balance,
+                value: '0', // TODO: Add price fetching
+                icon: token.logo || '/chains/ethereum.svg',
+                decimals: token.decimals,
+                mint: token.address
+            }));
+            
+            setEthereumTokens(formattedTokens);
+        } catch (error) {
+            console.error('Error fetching Ethereum tokens:', error);
+            toast.error('Failed to fetch Ethereum tokens');
+        } finally {
+            setIsLoadingEthereumTokens(false);
         }
     };
 
     // Available tokens for each chain
     const chainTokens = {
         near: nearTokens,
-        solana: solanaTokens
+        solana: solanaTokens,
+        ethereum: ethereumTokens
     };
 
     // Check if wallet is connected for the selected "from" chain
@@ -151,7 +196,9 @@ function Bridge() {
             case 'near':
                 return !!signedAccountId;
             case 'solana':
-                return connected;
+                return connected && publicKey;
+            case 'ethereum':
+                return !!ethereumAddress;
             default:
                 return false;
         }
@@ -173,22 +220,42 @@ function Bridge() {
         return chainTokens[fromChain] || [];
     };
 
+    // Get loading state for the selected "from" chain
+    const getIsLoadingFromChainTokens = () => {
+        switch (fromChain) {
+            case 'solana':
+                return isLoadingSolanaTokens;
+            case 'near':
+                return isLoadingNearTokens;
+            case 'ethereum':
+                return isLoadingEthereumTokens;
+            default:
+                return false;
+        }
+    };
+
 
 
     // Get wallet connection status text
     const getWalletConnectionText = () => {
-        if (isFromChainWalletConnected()) {
-            return 'Select Token';
+        if (!isFromChainWalletConnected()) {
+            switch (fromChain) {
+                case 'near':
+                    return 'Connect NEAR Wallet';
+                case 'solana':
+                    return 'Connect Solana Wallet';
+                case 'ethereum':
+                    return 'Connect Ethereum Wallet';
+                default:
+                    return 'Connect wallet';
+            }
         }
         
-        switch (fromChain) {
-            case 'near':
-                return 'Connect NEAR Wallet to view tokens';
-            case 'solana':
-                return 'Connect Solana Wallet to view tokens';
-            default:
-                return 'Connect wallet to view tokens';
+        if (getAvailableTokens().length === 0) {
+            return 'No tokens found';
         }
+        
+        return 'Select Token';
     };
 
     // Fetch Solana tokens when wallet connects
@@ -209,6 +276,15 @@ function Bridge() {
         }
     }, [signedAccountId]);
 
+    // Fetch Ethereum tokens when wallet connects
+    useEffect(() => {
+        if (ethereumAddress) {
+            fetchEthereumTokens();
+        } else {
+            setEthereumTokens([]);
+        }
+    }, [ethereumAddress]);
+
 
     // Update selected token when chain changes or wallet connection status changes
     useEffect(() => {
@@ -218,10 +294,49 @@ function Bridge() {
         } else {
             setSelectedToken(undefined);
         }
-    }, [fromChain, connected, signedAccountId, solanaTokens, nearTokens]);
+        // Reset deployment status when token changes
+        setIsTokenDeployedOnTargetChain(false);
+    }, [fromChain, connected, signedAccountId, ethereumAddress]);
 
+    // Update selected token when tokens change (but avoid infinite loop)
+    useEffect(() => {
+        if (isFromChainWalletConnected()) {
+            const availableTokens = getAvailableTokens();
+            if (availableTokens.length > 0 && !selectedToken) {
+                setSelectedToken(availableTokens[0]);
+            }
+        }
+    }, [solanaTokens.length, nearTokens.length, ethereumTokens.length, selectedToken]);
 
+    const fetchBridgeTokens = useCallback(async()=>{
+        if(selectedToken){
+            const chainToken = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
+            const addressTokenBridged = await getAllBridgeTokens(selectedToken.mint,chainToken,'testnet')
+            
+            if (addressTokenBridged && addressTokenBridged.length > 0) {
+                const targetChainAddress = addressTokenBridged.find(addr => {
+                    const [chain] = addr.split(':');
+                    return chain === toChain;
+                });
+                
+                setIsTokenDeployedOnTargetChain(!!targetChainAddress);
+            } else {
+                setIsTokenDeployedOnTargetChain(false);
+            }
+        }
+    },[selectedToken, toChain])
 
+    useEffect(()=>{
+        fetchBridgeTokens()
+    },[fetchBridgeTokens])
+
+    // Reset token deployment status when toChain changes
+    useEffect(() => {
+        setIsTokenDeployedOnTargetChain(false);
+        if (selectedToken) {
+            fetchBridgeTokens();
+        }
+    }, [toChain,fromChain]);
 
     const handleMaxAmount = () => {
         if (selectedToken) {
@@ -237,6 +352,32 @@ function Bridge() {
             const formattedHalfAmount = formatNumberInput(halfAmount);
             setAmount(formattedHalfAmount);
         }
+    };
+
+    const MIN_BALANCE = {
+        sol: 0.0001,
+        near: 0.0001,
+        eth: 0.001,
+    };
+
+    const MIN_TARGET_BALANCE = {
+        sol: 0.0001,
+        near: 3,
+        eth: 0.001,
+    };
+
+    const checkBalance = (
+        chain: "sol" | "near" | "eth",
+        balance: number,
+        minRequired: number
+    ) => {
+        if (balance < minRequired) {
+            toast.error(
+                `Insufficient balance to deploy token, balance need >= ${minRequired} ${chain.toUpperCase()}`
+            );
+            return false;
+        }
+        return true;
     };
 
     const handleBridge = async () => {
@@ -261,57 +402,79 @@ function Bridge() {
         }
 
         setIsBridging(true);
-        setBridgeProgress(0);
 
         try {
-            // Create a pending transaction
-            const pendingTransaction: Transaction = {
-                id: Date.now().toString(),
-                date: new Date().toLocaleString(),
-                status: 'pending',
-                fromChain: chains[fromChain].name,
-                toChain: chains[toChain].name,
-                amount: amount,
-                coin: selectedToken.symbol
-            };
-
-            setTransactions(prev => [pendingTransaction, ...prev]);
-
-            // Simulate bridge progress
-            const progressInterval = setInterval(() => {
-                setBridgeProgress(prev => {
-                    if (prev >= 100) {
-                        clearInterval(progressInterval);
-                        return 100;
-                    }
-                    return prev + 10;
-                });
-            }, 300);
-
-            // Simulate completion after 3 seconds
-            setTimeout(() => {
-                const completedTransaction: Transaction = {
-                    ...pendingTransaction,
-                    status: 'completed',
-                    txHash: '0x1234567890abcdef',
-                    txHashNear: 'near_tx_hash_123'
-                };
-
-                setTransactions(prev => 
-                    prev.map(tx => 
-                        tx.id === pendingTransaction.id ? completedTransaction : tx
-                    )
-                );
-                setIsBridging(false);
-                toast.success('Bridge completed successfully!');
-                setAmount('0.00');
-            }, 3000);
+            const amountBigInt = BigInt(parseFormattedNumber(amount));
+            const decimalsToChain = fromChain == "near" ? 24 : selectedToken.decimals;
+            const normalizeedAmount = normalizeAmount(amountBigInt, selectedToken.decimals, decimalsToChain);
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
+            const from = fromChain === 'near' ? ChainKind.Near : ChainKind.Sol;
+            const to = toChain === 'near' ? ChainKind.Near : ChainKind.Sol;
+            const senderAddress = fromChain === 'near' ? signedAccountId : publicKey?.toString();
+            const recipientAddress = toChain === 'near' ? signedAccountId : publicKey?.toString();
+            const result = await transferToken(
+                network,
+                from,
+                to,
+                senderAddress!,
+                selectedToken.mint, 
+                normalizeedAmount, 
+                recipientAddress!
+            );
+            console.log("result", result)
         } catch (error) {
             console.error('Bridge error:', error);
             toast.error('Bridge failed. Please try again.');
             setIsBridging(false);
+        }finally{
+            setIsBridging(false)
         }
     };
+
+    const handleDeployToken = async () => {
+        console.log("deploy token")
+        if (!selectedToken) {
+            toast.error('Please select a token');
+            return;
+        }
+
+        if (!isFromChainWalletConnected()) {
+            toast.error('Please connect your wallet first');
+            return;
+        }
+        try{
+            const solBalance = await getSolBalance(publicKey?.toBase58() || '')
+            const nearBalance = await getNearBalance(signedAccountId || '')
+            const ethBalance = await getBalanceEVM(ethereumAddress || '')
+            
+            if (fromChain === "solana") {
+                if (!checkBalance("sol", Number(solBalance), MIN_BALANCE.sol)) return;
+            } else if (fromChain === "near") {
+                if (!checkBalance("near", Number(nearBalance), MIN_BALANCE.near)) return;
+            } else if (fromChain === "ethereum") {
+                if (!checkBalance("eth", Number(ethBalance), MIN_BALANCE.eth)) return;
+            }
+
+            if (toChain === "near") {
+                if (!checkBalance("near", Number(nearBalance), MIN_TARGET_BALANCE.near)) return;
+            } else if (toChain === "solana") {
+                if (!checkBalance("sol", Number(solBalance), MIN_TARGET_BALANCE.sol)) return;
+            } else if (toChain === "ethereum") {
+                if (!checkBalance("eth", Number(ethBalance), MIN_TARGET_BALANCE.eth)) return;
+            }
+
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet"
+            const from = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
+            const to = toChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
+
+            await deployToken(network,from,to,selectedToken.mint);
+            toast.success('Deploy token successfully');
+
+        }catch(error){
+            console.error("Deploy token error:", error);
+            toast.error('Deploy token failed. Please try again.');
+        }
+    }
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -332,7 +495,7 @@ function Bridge() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <div className="min-h-screen py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Bridge Tokens</h1>
@@ -343,7 +506,7 @@ function Bridge() {
                     {/* Transaction History Section */}
                     <div className="flex-1">
                         <Card className="bg-white border border-gray-200 rounded-xl shadow-none">
-                            <div className="p-4 border-b border-gray-200">
+                            <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
                                 <div className="flex justify-between items-center">
                                     <div className="flex gap-8">
                                         <span className="text-xs font-medium text-gray-900">DATE & TIME</span>
@@ -360,8 +523,8 @@ function Bridge() {
                             <div className="p-8">
                                 {transactions.length === 0 ? (
                                     <div className="text-center">
-                                        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                                        <div className="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                                            <img src="/icons/empty.svg" alt="empty" className="w-full h-full" />
                                         </div>
                                         <p className="text-gray-500 text-lg">No transaction found</p>
                                     </div>
@@ -411,23 +574,40 @@ function Bridge() {
                                     <h3 className="text-base font-medium text-gray-600">From</h3>
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <div className="flex justify-between items-center mb-3">
-                                            <div className="hover:bg-gray-100 p-2 cursor-pointer rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center">
-                                                        <img 
-                                                            src={chains[fromChain].icon} 
-                                                            alt={chains[fromChain].name}
-                                                            className="w-full h-full rounded-full"
-                                                        />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <div className="hover:bg-gray-100 p-2 cursor-pointer rounded-lg" role="button" tabIndex={0} aria-label="Select source chain">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-5 h-5 rounded-full flex items-center justify-center">
+                                                                <img 
+                                                                    src={chains[fromChain].icon} 
+                                                                    alt={chains[fromChain].name}
+                                                                    className="w-full h-full rounded-full"
+                                                                />
+                                                            </div>
+                                                            <span className="text-sm font-medium">{chains[fromChain].name}</span>
+                                                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                                                        </div>
                                                     </div>
-                                                    <span className="text-sm font-medium">{chains[fromChain].name}</span>
-                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                                                </div>
-                                            </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-44 bg-white">
+                                                    {availableChains.map((c) => (
+                                                        <DropdownMenuItem key={c} onSelect={(e) => { e.preventDefault(); setFromChain(c); }} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50">
+                                                            <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                                                                <img src={chains[c].icon} alt={chains[c].name} className="w-full h-full rounded-full" />
+                                                            </div>
+                                                            <span className="text-sm">{chains[c].name}</span>
+                                                            {fromChain === c && <Check className="w-4 h-4 ml-auto text-green-600" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                             <a 
                                                 href={fromChain === 'solana' 
                                                     ? `${chains[fromChain].explorerUrl}/account/${publicKey?.toBase58()}${SOL_NETWORK=="devnet"&&"?cluster=devnet"}`
-                                                    : `${chains[fromChain].explorerUrl}/address/${signedAccountId}`
+                                                    : fromChain === 'near'
+                                                    ? `${chains[fromChain].explorerUrl}/address/${signedAccountId}`
+                                                    : `${chains[fromChain].explorerUrl}/address/${ethereumAddress}`
                                                 } 
                                                 target="_blank" 
                                                 rel="noopener noreferrer" 
@@ -435,6 +615,7 @@ function Bridge() {
                                             >
                                                 {fromChain === 'solana' && publicKey?.toBase58() && truncateAddress(publicKey.toBase58())}
                                                 {fromChain === 'near' && signedAccountId && truncateAddress(signedAccountId)}
+                                                {fromChain === 'ethereum' && ethereumAddress && truncateAddress(ethereumAddress)}
                                             </a>
                                         </div>
                                         
@@ -446,38 +627,45 @@ function Bridge() {
                                                     const formattedValue = formatNumberInput(e.target.value);
                                                     setAmount(formattedValue);
                                                 }}
-                                                className="text-2xl font-semibold border-none outline-none bg-transparent w-32"
+                                                className="text-2xl font-semibold border-none outline-none bg-transparent w-64"
                                                 placeholder="0"
                                                 disabled={isBridging}
                                             />
                                             <Button 
                                                 variant="outline" 
-                                                className="bg-gray-50 hover:bg-gray-100"
+                                                className="bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 onClick={() => {
                                                     setTokenModalType('from');
                                                     setIsTokenModalOpen(true);
                                                 }}
+                                                disabled={!isFromChainWalletConnected() || getIsLoadingFromChainTokens()}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full flex items-center justify-center relative">
-                                                        <img 
-                                                            src={selectedToken?.icon || '/icons/default-token.svg'} 
-                                                            alt={selectedToken?.symbol || 'Select token'}
-                                                            className="w-full h-full rounded-full"
-                                                        />
+                                                    {getIsLoadingFromChainTokens() ? (
+                                                        <TokenSelectSkeleton />
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-6 h-6 rounded-full flex items-center justify-center relative">
+                                                                <img 
+                                                                    src={selectedToken?.icon || '/icons/default-token.svg'} 
+                                                                    alt={selectedToken?.symbol || 'Select token'}
+                                                                    className="w-full h-full rounded-full"
+                                                                />
 
-                                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center">
-                                                            <img 
-                                                                src={chains[fromChain].icon} 
-                                                                alt={chains[fromChain].name}
-                                                                className="w-full h-full rounded-full"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">
-                                                        {selectedToken?.symbol || getWalletConnectionText()}
-                                                    </span>
-                                                    <ChevronDown className="w-4 h-4" />
+                                                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center">
+                                                                    <img 
+                                                                        src={chains[fromChain].icon} 
+                                                                        alt={chains[fromChain].name}
+                                                                        className="w-full h-full rounded-full"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-sm font-medium">
+                                                                {selectedToken?.symbol || (!getIsLoadingFromChainTokens() && getWalletConnectionText())}
+                                                            </span>
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        </>
+                                                    )}
                                                 </div>
                                             </Button>
                                         </div>
@@ -509,7 +697,7 @@ function Bridge() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-center">
+                                <div className="flex justify-center cursor-pointer">
                                     <Button
                                         size="sm"
                                         variant="outline"
@@ -528,27 +716,44 @@ function Bridge() {
                                     </Button>
                                 </div>
 
-                                <div className="space-y-2 -mt-5">
+                                <div className="space-y-2 -mt-2">
                                     <h3 className="text-base font-medium text-gray-600">To</h3>
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <div className="flex justify-between items-center mb-3">
-                                            <div className="hover:bg-gray-100 p-2 cursor-pointer rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center">
-                                                        <img 
-                                                            src={chains[toChain].icon} 
-                                                            alt={chains[toChain].name}
-                                                            className="w-full h-full rounded-full"
-                                                        />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <div className="hover:bg-gray-100 p-2 cursor-pointer rounded-lg" role="button" tabIndex={0} aria-label="Select destination chain">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-5 h-5 rounded-full flex items-center justify-center">
+                                                                <img 
+                                                                    src={chains[toChain].icon} 
+                                                                    alt={chains[toChain].name}
+                                                                    className="w-full h-full rounded-full"
+                                                                />
+                                                            </div>
+                                                            <span className="text-sm font-medium">{chains[toChain].name}</span>
+                                                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                                                        </div>
                                                     </div>
-                                                    <span className="text-sm font-medium">{chains[toChain].name}</span>
-                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                                                </div>
-                                            </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-44 bg-white">
+                                                    {availableChains.map((c) => (
+                                                        <DropdownMenuItem key={c} onSelect={(e) => { e.preventDefault(); setToChain(c); }} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50">
+                                                            <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                                                                <img src={chains[c].icon} alt={chains[c].name} className="w-full h-full rounded-full" />
+                                                            </div>
+                                                            <span className="text-sm">{chains[c].name}</span>
+                                                            {toChain === c && <Check className="w-4 h-4 ml-auto text-green-600" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                             <a 
                                                 href={toChain === 'solana' 
                                                     ? `${chains[toChain].explorerUrl}/account/${publicKey?.toBase58()}${SOL_NETWORK=="devnet"&&"?cluster=devnet"}`
-                                                    : `${chains[toChain].explorerUrl}/address/${signedAccountId}`
+                                                    : toChain === 'near'
+                                                    ? `${chains[toChain].explorerUrl}/address/${signedAccountId}`
+                                                    : `${chains[toChain].explorerUrl}/address/${ethereumAddress}`
                                                 } 
                                                 target="_blank" 
                                                 rel="noopener noreferrer" 
@@ -556,6 +761,7 @@ function Bridge() {
                                             >
                                                 {toChain === 'solana' && publicKey?.toBase58() && truncateAddress(publicKey.toBase58())}
                                                 {toChain === 'near' && signedAccountId && truncateAddress(signedAccountId)}
+                                                {toChain === 'ethereum' && ethereumAddress && truncateAddress(ethereumAddress)}
                                             </a>
                                         </div>
                                         
@@ -564,29 +770,35 @@ function Bridge() {
                                                 type="text"
                                                 value={amount}
                                                 readOnly
-                                                className="text-2xl font-semibold border-none outline-none bg-transparent w-32 text-gray-400"
+                                                className="text-2xl font-semibold border-none outline-none bg-transparent w-64 text-gray-400"
                                                 placeholder="0.00"
                                             />
                                             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full flex items-center justify-center relative">
-                                                        <img 
-                                                            src={selectedToken?.icon || '/icons/default-token.svg'} 
-                                                            alt={selectedToken?.symbol || 'Select token'}
-                                                            className="w-full h-full rounded-full"
-                                                        />
+                                                    {getIsLoadingFromChainTokens() ? (
+                                                        <TokenSelectSkeleton />
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-6 h-6 rounded-full flex items-center justify-center relative">
+                                                                <img 
+                                                                    src={selectedToken?.icon || '/icons/default-token.svg'} 
+                                                                    alt={selectedToken?.symbol || 'Select token'}
+                                                                    className="w-full h-full rounded-full"
+                                                                />
 
-                                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center">
-                                                            <img 
-                                                                src={chains[toChain].icon} 
-                                                                alt={chains[toChain].name}
-                                                                className="w-full h-full rounded-full"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">
-                                                        {selectedToken?.symbol || 'Select token'}
-                                                    </span>
+                                                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center">
+                                                                    <img 
+                                                                        src={chains[toChain].icon} 
+                                                                        alt={chains[toChain].name}
+                                                                        className="w-full h-full rounded-full"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-sm text-gray-500">
+                                                                {selectedToken?.symbol || (!getIsLoadingFromChainTokens() && 'Select token')}
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -628,11 +840,13 @@ function Bridge() {
 
                                 <div className="mt-5">
                                     <Button
-                                        onClick={handleBridge}
-                                        disabled={isBridging || !amount || parseFormattedNumber(amount) <= 0 || !selectedToken || !isFromChainWalletConnected() || isAmountExceedingBalance()}
-                                        className="w-full bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400"
+                                        onClick={isTokenDeployedOnTargetChain ? handleBridge : handleDeployToken}
+                                        disabled={isBridging ||  !selectedToken || !isFromChainWalletConnected()}
+                                        className="w-full bg-red-500 text-white hover:bg-red-400 disabled:bg-red-400 disabled:text-white disabled:cursor-not-allowed"
                                     >
-                                        {isBridging ? `Bridging... ${bridgeProgress}%` : `Bridge ${selectedToken?.symbol || ''}`}
+                                        {isBridging ? `Bridging... ${bridgeProgress}%` : 
+                                         isTokenDeployedOnTargetChain ? `Bridge ${selectedToken?.symbol || ''}` : 
+                                         `Deploy ${selectedToken?.symbol || ''} on ${toChain.toUpperCase()}`}
                                     </Button>
                                 </div>
                             </div>
@@ -645,7 +859,7 @@ function Bridge() {
                 open={isTokenModalOpen}
                 onOpenChange={setIsTokenModalOpen}
                 tokens={getAvailableTokens()}
-                isLoadingTokens={isLoadingTokens}
+                isLoadingTokens={getIsLoadingFromChainTokens()}
                 onTokenSelect={setSelectedToken}
                 selectedToken={selectedToken}
                 modalType={tokenModalType}

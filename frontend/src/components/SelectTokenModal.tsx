@@ -153,9 +153,19 @@ export const SelectTokenModal = ({
                 </div>
               ) : filteredTokens.length === 0 ? (
                 <div className="flex items-center justify-center p-8">
-                  <span className="text-sm text-gray-500">
-                    {searchQuery ? "No tokens found" : "No tokens available"}
-                  </span>
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                      <img src="/icons/empty.svg" alt="empty" className="w-full h-full opacity-50" />
+                    </div>
+                    <span className="text-sm text-gray-500 block">
+                      {searchQuery ? "No tokens found" : "No tokens available"}
+                    </span>
+                    {!searchQuery && (
+                      <span className="text-xs text-gray-400 block mt-1">
+                        No tokens found in your wallet
+                      </span>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2 mt-1">
