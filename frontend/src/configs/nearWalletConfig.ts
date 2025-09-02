@@ -11,7 +11,7 @@ export const nearWalletConfig: SetupParams = {
     network: NEAR_NETWORK as any,
     modules: [
         setupMeteorWallet(),
-        setupBitteWallet(),
+        setupBitteWallet() as any,
         setupLedger(),
         setupNightly(),
         setupIntearWallet(),
