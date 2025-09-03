@@ -73,8 +73,8 @@ export default function Header() {
                             <Link to="/create" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Create Token
                             </Link>
-                            <Link to="/bridge" className="text-gray-600 hover:text-gray-900">
-                                <span className='text-sm'>Bridge Tokens</span>
+                            <Link to="/bridge" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
+                                Bridge Tokens
                             </Link>
                             <Link to="/my-tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 My Tokens
