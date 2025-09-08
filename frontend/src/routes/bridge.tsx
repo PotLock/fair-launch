@@ -404,10 +404,11 @@ function Bridge() {
         setIsBridging(true);
 
         try {
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
             const amountBigInt = BigInt(parseFormattedNumber(amount));
             const decimalsToChain = fromChain == "near" ? 24 : selectedToken.decimals;
             const normalizeedAmount = normalizeAmount(amountBigInt, selectedToken.decimals, decimalsToChain);
-            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
+            
             const from = fromChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const to = toChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const senderAddress = fromChain === 'near' ? signedAccountId : publicKey?.toString();

@@ -115,20 +115,29 @@ export const useBridge = () => {
             const transfers = await api.findOmniTransfers({
               transaction_id: result,
             });
-            if (transfers.length > 0) {
-              transferData = await api.getTransfer(
-                transfers[0].id.origin_chain,
-                transfers[0].id.origin_nonce,
-              );
-              break;
+            if (transfers.length > 0 && transfers[0].id) {
+              const transferResults = await api.getTransfer({
+                originChain: transfers[0].id.origin_chain,
+                originNonce: transfers[0].id.origin_nonce,
+              });
+              if (transferResults.length > 0) {
+                transferData = transferResults[0];
+                break;
+              }
             }
           } else {
             // Handle non-string transfer events
-            transferData = await api.getTransfer(
-              'Sol' as Chain,
-              (result as any).transfer_message?.origin_nonce || '',
-            );
-            if (transferData) break;
+            const originNonce = (result as any).transfer_message?.origin_nonce;
+            if (originNonce) {
+              const transferResults = await api.getTransfer({
+                originChain: 'Sol' as Chain,
+                originNonce: originNonce,
+              });
+              if (transferResults.length > 0) {
+                transferData = transferResults[0];
+                break;
+              }
+            }
           }
         } catch (err) {
           console.error(`Failed to fetch transfer (attempt ${i + 1}/${maxRetries}):`, err);
@@ -143,8 +152,10 @@ export const useBridge = () => {
       // 7. Get transfer status and complete (100%)
       onProgress?.(100);
       const status = await api.getTransferStatus(
-        transferData.id.origin_chain as Chain,
-        transferData.id.origin_nonce
+        transferData?.id ? {
+          originChain: transferData.id.origin_chain,
+          originNonce: transferData.id.origin_nonce,
+        } : { transactionHash: result.toString() }
       );
 
       console.log('transferData', transferData)

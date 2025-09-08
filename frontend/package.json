@@ -55,7 +55,7 @@
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
     "lucide-react": "^0.511.0",
-    "omni-bridge-sdk": "0.12.3",
+    "omni-bridge-sdk": "0.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",

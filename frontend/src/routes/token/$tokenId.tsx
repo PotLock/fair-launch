@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
+import { Globe, ChevronDown, Download, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,7 +31,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
-import { TokenDistributionItem, Holders, Token} from "../../types"
+import { TokenDistributionItem, Holders, Token, EnhancedPool} from "../../types"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -39,10 +39,9 @@ import { LaunchStatus } from "../../components/LaunchStatus";
 import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
-import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
 import { AddLiquidityModal } from "../../components/AddLiquidityModal";
-import { getUserCreatedCpmmPools } from "../../lib/raydium";
+import { getUserCreatedEnhancedCpmmPools } from "../../lib/raydium";
 import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
 
 
@@ -73,7 +72,9 @@ function TokenDetail() {
     const [marketCap, setMarketCap] = useState<number>(0);
     const [solPrice, setSolPrice] = useState<number>(0)
     const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
-    const [listPools, setListPools] = useState<any[]>([]);
+    const [listPools, setListPools] = useState<EnhancedPool[]>([]);
+    const [loadingPools, setLoadingPools] = useState<boolean>(false)
+    const [errorPools, setErrorPools] = useState<string | null>(null)
 
     // Metadata management using custom hook
     const metadataConfig = tokenInfo ? {
@@ -121,14 +122,27 @@ function TokenDetail() {
         }
     }, [tokenId]);
 
-    const fetchPools = useCallback(async()=>{
+    const fetchPools = async()=>{
+        setLoadingPools(true)
+        setErrorPools(null)
         if(!publicKey){
             setListPools([])
+            return
         }
-        const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
-        // console.log("pools", pools)
-        setListPools(pools)
-    },[publicKey])
+        try {
+            const pools = await getUserCreatedEnhancedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
+            console.log("enhanced pools", pools)
+            setListPools(pools)
+            
+        } catch (error) {
+            console.error("Failed to fetch enhanced pools:", error)
+            setListPools([])
+            setLoadingPools(false)
+            setErrorPools("Failed to fetch enhanced pools")
+        }finally{
+            setLoadingPools(false)
+        }
+    }
 
     const fetchCurrentPrice = useCallback(async () => {
         const priceSol = getCurrentPriceSOL(
@@ -158,8 +172,11 @@ function TokenDetail() {
         
         loadInfoToken();
         fetchHolders();
+    }, [loadInfoToken, fetchHolders]);
+
+    useEffect(() => {
         fetchPools();
-    }, [loadInfoToken, fetchHolders, fetchPools]);
+    }, [publicKey]); 
 
     useEffect(() => {
         if (tokenInfo) {
@@ -716,19 +733,19 @@ function TokenDetail() {
                     </p>
                 </Card>
                 
-                {
-                    NODE_ENV !== "production" && (
-                        <LaunchStatus/>
-                    )
-                }
+                <LaunchStatus/>
 
-                <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
+                <LaunchConditions 
+                    tokenInfo={tokenInfo} 
+                    currentPrice={currentPrice}
+                />
 
-                {/* {
-                    NODE_ENV !== "production" && (
-                        <LiquidityPools onAddLiquidity={setShowAddLiquidityModal}/>
-                    )
-                } */}
+                <LiquidityPools 
+                    onAddLiquidity={setShowAddLiquidityModal} 
+                    listPools={listPools}
+                    loadingPools={loadingPools}
+                    errorPools={errorPools}
+                />
 
                 <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
@@ -1111,6 +1128,8 @@ function TokenDetail() {
                 isOpen={showAddLiquidityModal}
                 onClose={() => setShowAddLiquidityModal(false)}
                 tokenInfo={tokenInfo}
+                listPools={listPools}
+                tokenPrice={currentPrice}
             />
         </div>
         </>

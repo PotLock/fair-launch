@@ -1,17 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ChevronDown, ChevronUp, ExternalLink, Minus, Plus } from "lucide-react";
-
+import { EnhancedPool, PoolMetric } from "../types";
+import { getAllEnhancedCpmmPools } from "../lib/raydium";
 
 interface LiquidityPoolsProps {
     onAddLiquidity: (isOpen: boolean) => void;
-}
-interface PoolMetric {
-    label: string;
-    value: string;
-    isHighlighted?: boolean;
+    listPools: EnhancedPool[];
+    loadingPools: boolean;
+    errorPools: string | null;
 }
 
 interface PoolCard {
@@ -47,72 +46,6 @@ interface BlockchainSection {
     }>;
 }
 
-
-const liquidityData: BlockchainSection[] = [
-    {
-        id: "solana",
-        name: "Solana",
-        icon: "/chains/solana_light.svg",
-        poolCount: 2,
-        activeCount: 2,
-        isExpanded: false,
-        pools: [
-            {
-                id: "curate-sol",
-                name: "CURATE-SOL",
-                token1Icon: "https://gateway.pinata.cloud/ipfs/QmYN7vFLxgW4X8WuoV5RPJhxRCdU8edH7izSVTwrSLh1D7",
-                token2Icon: "/chains/solana_light.svg",
-                platforms: [
-                    {
-                        platform: "Raydium",
-                        platformIcon: "/logos/raydium.png",
-                    },
-                    {
-                        platform: "Solana",
-                        platformIcon: "/chains/solana_light.svg",
-                    }
-                ],
-                isExpanded: false,
-                metrics: [
-                    { label: "Total Liquidity", value: "$1.5M" },
-                    { label: "24h Volume", value: "$45K" },
-                    { label: "24h Fee/TVL", value: "0.051%" },
-                    { label: "Fee Earned", value: "$53.4" },
-                    { label: "Your LP Position", value: "$25,000", isHighlighted: true },
-                ],
-            },
-            {
-                id: "curate-usdc",
-                name: "CURATE-USDC",
-                token1Icon: "https://gateway.pinata.cloud/ipfs/QmYN7vFLxgW4X8WuoV5RPJhxRCdU8edH7izSVTwrSLh1D7",
-                token2Icon: "/icons/usdc.svg",
-                platforms: [
-                    {
-                        platform: "Raydium",
-                        platformIcon: "/logos/raydium.png",
-                    },
-                    {
-                        platform: "Solana",
-                        platformIcon: "/chains/solana_light.svg",
-                    }
-                ],
-                isExpanded: false,
-                metrics: [
-                    { label: "Total Liquidity", value: "$1.5M" },
-                    { label: "24h Volume", value: "$45K" },
-                    { label: "24h Fee/TVL", value: "0.051%" },
-                    { label: "Fee Earned", value: "$53.4" },
-                    { label: "Your LP Position", value: "$25,000", isHighlighted: true },
-                ],
-                position: {
-                    value: "$25,000",
-                    apr: "18.4%",
-                    poolShare: "0.12%",
-                },
-            },
-        ],
-    }
-];
 
 const ChevronIcon = ({ isExpanded }: { isExpanded: boolean }) => (
     isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
@@ -310,8 +243,59 @@ const BlockchainSection = ({
 };
 
 
-export function LiquidityPools({ onAddLiquidity }: LiquidityPoolsProps) {
-    const [data, setData] = useState(liquidityData);
+export function LiquidityPools({ onAddLiquidity, listPools , loadingPools, errorPools}: LiquidityPoolsProps) {
+    const [data, setData] = useState<BlockchainSection[]>([]);
+
+    useEffect(() => {
+        const loadPools = () => {
+            if(listPools.length === 0){
+                setData([]);
+                return;
+            }
+            
+            // Group pools by blockchain/chain
+            const poolsByChain = listPools.reduce((acc, pool) => {
+                const chainName = pool.chain.name;
+                if (!acc[chainName]) {
+                    acc[chainName] = {
+                        id: chainName.toLowerCase().replace(/\s+/g, '-'),
+                        name: chainName,
+                        icon: pool.chain.icon,
+                        poolCount: 0,
+                        activeCount: 0,
+                        pools: [],
+                        isExpanded: false
+                    };
+                }
+                
+                // Convert EnhancedPool to PoolCard format
+                const poolCard: PoolCard = {
+                    id: pool.poolId.toString(),
+                    name: pool.poolName,
+                    token1Icon: pool.token1Icon,
+                    token2Icon: pool.token2Icon,
+                    platforms: pool.platforms,
+                    metrics: pool.metrics,
+                    isExpanded: false,
+                    position: pool.position
+                };
+                
+                acc[chainName].pools.push(poolCard);
+                acc[chainName].poolCount++;
+                if (pool.status === 1) { // Assuming 1 means active
+                    acc[chainName].activeCount++;
+                }
+                
+                return acc;
+            }, {} as Record<string, BlockchainSection>);
+            
+            // Convert to array and set data
+            const blockchainSections = Object.values(poolsByChain);
+            setData(blockchainSections);
+        };
+        
+        loadPools();
+    }, [listPools]);
 
     const toggleSection = (sectionId: string) => {
         setData((prev) =>
@@ -336,6 +320,56 @@ export function LiquidityPools({ onAddLiquidity }: LiquidityPoolsProps) {
         );
     };
 
+    if (loadingPools) {
+        return (
+            <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
+                    <Button 
+                        className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
+                        onClick={()=>onAddLiquidity(true)}  
+                    >
+                        <Plus className="w-3 h-3"/>
+                        <span className="font-normal">Add Liquidity</span>
+                    </Button>
+                </div>
+                <div className="space-y-4 mt-4">
+                    <div className="animate-pulse">
+                        <div className="h-16 bg-gray-200 rounded-xl mb-4"></div>
+                        <div className="h-16 bg-gray-200 rounded-xl mb-4"></div>
+                        <div className="h-16 bg-gray-200 rounded-xl"></div>
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
+    if (errorPools) {
+        return (
+            <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
+                    <Button 
+                        className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
+                        onClick={()=>onAddLiquidity(true)}  
+                    >
+                        <Plus className="w-3 h-3"/>
+                        <span className="font-normal">Add Liquidity</span>
+                    </Button>
+                </div>
+                <div className="text-center py-8">
+                    <p className="text-red-500 mb-4">{errorPools}</p>
+                    <Button 
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                        Retry
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
     return (
         <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200">
             <div className="flex items-center justify-between">
@@ -345,19 +379,31 @@ export function LiquidityPools({ onAddLiquidity }: LiquidityPoolsProps) {
                     onClick={()=>onAddLiquidity(true)}  
                 >
                     <Plus className="w-3 h-3"/>
-                    <span className="font-normal">Add Liquidity</span>
+                    <span className="font-normal">{data.length === 0 ? "Create Pool" : "Add Liquidity"}</span>
                 </Button>
             </div>
 
             <div className="space-y-4 mt-4">
-                {data.map((section) => (
-                    <BlockchainSection
-                        key={section.id}
-                        section={section}
-                        onToggleSection={() => toggleSection(section.id)}
-                        onTogglePool={togglePool}
-                    />
-                ))}
+                {data.length === 0 ? (
+                    <div className="text-center py-8">
+                        <p className="text-gray-500 mb-4">No liquidity pools found</p>
+                        <Button 
+                            onClick={() => onAddLiquidity(true)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                            Create Your First Pool
+                        </Button>
+                    </div>
+                ) : (
+                    data.map((section) => (
+                        <BlockchainSection
+                            key={section.id}
+                            section={section}
+                            onToggleSection={() => toggleSection(section.id)}
+                            onTogglePool={togglePool}
+                        />
+                    ))
+                )}
             </div>
         </Card>
     );
