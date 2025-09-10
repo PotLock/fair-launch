@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { 
     Dialog, 
-    DialogContent
+    DialogContent,
+    DialogTitle,
+    DialogClose
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
@@ -14,6 +16,7 @@ import { PublicKey } from '@solana/web3.js';
 import { getSolBalance, getSolPrice, getTokenBalanceOnSOL } from '../lib/sol';
 import useAddLiquidity from '../hook/useAddLiquidity';
 import { NATIVE_MINT } from '@solana/spl-token';
+ 
 
 interface AddLiquidityModalProps {
     isOpen: boolean;
@@ -24,7 +27,9 @@ interface AddLiquidityModalProps {
 }
 
 export function AddLiquidityModal({ isOpen, onClose, tokenInfo, listPools, tokenPrice }: AddLiquidityModalProps) {
-    const [slippageTolerance, setSlippageTolerance] = useState('1.0');
+    const [slippageTolerance, setSlippageTolerance] = useState('0.5');
+    const [slippageDialogOpen, setSlippageDialogOpen] = useState(false);
+    const [customSlippage, setCustomSlippage] = useState<string>('');
     const [riskAccepted, setRiskAccepted] = useState(false);
     const [fromAmount, setFromAmount] = useState<string>('0');
     const [toAmount, setToAmount] = useState<string>('0');
@@ -66,6 +71,21 @@ export function AddLiquidityModal({ isOpen, onClose, tokenInfo, listPools, token
         { name: 'Raydium', icon: '/logos/raydium-logo.png' },
         { name: 'Meteora', icon: 'https://www.meteora.ag/icons/logo.svg' }
     ];
+
+    // Slippage helpers
+    const presetSlippages = useMemo(() => ['0.1', '0.5', '1'], []);
+    const chosenSlippage = customSlippage === '' ? slippageTolerance : customSlippage;
+    const chosenSlippageNum = useMemo(() => Number(chosenSlippage), [chosenSlippage]);
+    const isAggressiveSlippage = !Number.isNaN(chosenSlippageNum) && chosenSlippageNum <= 0.1;
+
+    const handleCustomSlippageChange = (rawValue: string) => {
+        const sanitized = rawValue.replace(/[^0-9.]/g, '');
+        const parts = sanitized.split('.');
+        if (parts.length > 2) return;
+        if (sanitized === '' || /^\d*(?:\.\d*)?$/.test(sanitized)) {
+            setCustomSlippage(sanitized);
+        }
+    };
 
     const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = e.target.value;
@@ -151,6 +171,7 @@ export function AddLiquidityModal({ isOpen, onClose, tokenInfo, listPools, token
     const isDisable = !riskAccepted || Number(fromAmount) == 0 || Number(toAmount) == 0;
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-5xl bg-white rounded-2xl p-0 border-0 shadow-none max-h-[90vh] overflow-y-auto">
                 <div className="flex flex-col items-center gap-1.5 p-6">
@@ -232,15 +253,26 @@ export function AddLiquidityModal({ isOpen, onClose, tokenInfo, listPools, token
                             </div>
                         </div>
 
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <div className="flex justify-between items-end">
-                                <div className='space-y-2 flex flex-col'>
-                                    <span className="text-sm font-medium text-gray-600">Slippage Tolerance</span>
-                                    <span className="text-2xl font-semibold text-gray-900">{slippageTolerance}%</span>
-                                </div>
-                                <ChevronDown className="w-6 h-6 text-gray-900" />
-                            </div>
-                        </div>
+                        {
+                            listPools.length != 0 && (
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setCustomSlippage('');
+                                        setSlippageDialogOpen(true);
+                                    }}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3"
+                                >
+                                    <div className="flex justify-between items-end">
+                                        <div className='space-y-2 flex flex-col text-left'>
+                                            <span className="text-sm font-medium text-gray-600">Slippage Tolerance</span>
+                                            <span className="text-2xl font-semibold text-gray-900">{slippageTolerance}%</span>
+                                        </div>
+                                        <ChevronDown className="w-6 h-6 text-gray-900" />
+                                    </div>
+                                </button>
+                            )
+                        }
 
                         <div className="space-y-4">
                             <div className="flex items-start gap-1.5">
@@ -332,5 +364,65 @@ export function AddLiquidityModal({ isOpen, onClose, tokenInfo, listPools, token
                 </div>
             </DialogContent>
         </Dialog>
+        {/* Slippage dialog */}
+        <Dialog open={slippageDialogOpen} onOpenChange={setSlippageDialogOpen}>
+            <DialogContent className="max-w-md bg-white">
+                <DialogTitle className="text-xl font-semibold text-gray-900">Swap slippage tolerance</DialogTitle>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                        {presetSlippages.map((opt) => {
+                            const isActive = (customSlippage === '' ? slippageTolerance : customSlippage) === opt;
+                            return (
+                                <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => {
+                                        setSlippageTolerance(opt);
+                                        setCustomSlippage('');
+                                    }}
+                                    className={`h-10 rounded-full border text-sm font-medium ${isActive ? 'bg-red-500 text-white border-red-400' : 'bg-gray-100 text-gray-900 border-gray-300'}`}
+                                >
+                                    {opt}%
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {isAggressiveSlippage ? (
+                        <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
+                            Your transaction may fail
+                        </div>
+                    ) : null}
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-gray-600">Custom</span>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={customSlippage}
+                                onChange={(e) => handleCustomSlippageChange(e.target.value)}
+                                placeholder="0.5"
+                                className="w-24 h-10 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-200"
+                            />
+                            <span className="text-sm text-gray-900">%</span>
+                        </div>
+                    </div>
+                    <div className="pt-2">
+                        <Button
+                            type="button"
+                            className="w-full h-11 bg-red-500 hover:bg-red-700 text-white font-semibold rounded-full"
+                            onClick={() => {
+                                if (Number.isNaN(chosenSlippageNum) || chosenSlippageNum < 0) return;
+                                setSlippageTolerance(chosenSlippageNum.toString());
+                                setSlippageDialogOpen(false);
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                </div>
+                <DialogClose className="hidden" />
+            </DialogContent>
+        </Dialog>
+        </>
     );
 };

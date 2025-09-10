@@ -354,6 +354,7 @@ function TokenDetail() {
         }
     }
 
+
     return (
         <>
             {metadataElement}
@@ -663,8 +664,15 @@ function TokenDetail() {
                     <div className="p-4 flex flex-col gap-2">
                         <h1 className="text-lg font-bold">Trade on DEX</h1>
                         <div className="flex flex-col gap-2">
-                            <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div 
+                                className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                                onClick={()=>(
+                                    window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                                )} 
+                            >
+                                <div 
+                                    className="flex items-center gap-2"
+                                >
                                     <div className="relative w-9 h-9">
                                         <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                         <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
@@ -1062,8 +1070,15 @@ function TokenDetail() {
                 <div className="p-4 flex flex-col gap-2">
                     <h1 className="text-lg font-bold">Trade on DEX</h1>
                     <div className="flex flex-col gap-2">
-                        <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                        <div 
+                            className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                            onClick={()=>(
+                                window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                            )} 
+                        >
+                            <div 
+                                className="flex items-center gap-2"
+                            >
                                 <div className="relative w-9 h-9">
                                     <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                     <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">

@@ -4,7 +4,6 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ChevronDown, ChevronUp, ExternalLink, Minus, Plus } from "lucide-react";
 import { EnhancedPool, PoolMetric } from "../types";
-import { getAllEnhancedCpmmPools } from "../lib/raydium";
 
 interface LiquidityPoolsProps {
     onAddLiquidity: (isOpen: boolean) => void;
@@ -16,6 +15,7 @@ interface LiquidityPoolsProps {
 interface PoolCard {
     id: string;
     name: string;
+    token1Mint: string;
     token1Icon: string;
     token2Icon: string;
     platforms: {
@@ -51,7 +51,14 @@ const ChevronIcon = ({ isExpanded }: { isExpanded: boolean }) => (
     isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
 );
 
-const PoolCard = ({ pool, onToggle }: { pool: PoolCard; onToggle: () => void }) => {
+const PoolCard = ({ pool, onToggle, mintToken }: { pool: PoolCard; onToggle: () => void; mintToken: string }) => {
+
+    const viewOnPlatForm = (platform: string) =>{
+        if(platform == "Raydium"){
+            window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${mintToken}`, '_blank');
+        }
+    }
+
     return (
         <Card className="p-4 mb-3 border border-gray-200 shadow-none rounded-md">
             <div className="flex items-center justify-between mb-3">
@@ -95,7 +102,12 @@ const PoolCard = ({ pool, onToggle }: { pool: PoolCard; onToggle: () => void }) 
                 <div className="flex items-center gap-2">
                     {pool.platforms.map((platform, index) => (
                         platform.platform !== "Solana" && (
-                            <Button key={index} size="sm" className="text-xs bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-none">
+                            <Button  
+                                onClick={()=>viewOnPlatForm(platform.platform)}
+                                key={index} 
+                                size="sm" 
+                                className="text-xs bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-none"
+                            >
                                 View on {platform.platform}
                                 <ExternalLink  className="w-3 h-3"/>
                             </Button>
@@ -129,50 +141,35 @@ const PoolCard = ({ pool, onToggle }: { pool: PoolCard; onToggle: () => void }) 
                     ))}
                 </div>
 
-                {pool.position ? (
-                    <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
-                        <h4 className="font-medium text-sm mb-3 text-orange-600">
-                            Manage your Position
-                        </h4>
-                        <div className="flex justify-between gap-4 mb-3">
-                            <div>
-                                <div className="text-xs text-gray-600 mb-1">My Position</div>
-                                <div className="text-sm font-medium">{pool.position.value}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs text-gray-600 mb-1">APR</div>
-                                <div className="text-sm font-medium">{pool.position.apr}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs text-gray-600 mb-1">Pool Share</div>
-                                <div className="text-sm font-medium">{pool.position.poolShare}</div>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button className="flex-1 shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300">
-                                    <Plus className="w-3 h-3"/>
-                                    <span className="text-xs">Add</span>
-                                </Button>
-                                <Button className="flex-1 shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300">
-                                    <Minus className="w-3 h-3"/>
-                                    <span className="text-xs">Remove</span>
-                                </Button>
-                            </div>
+                <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                    <h4 className="font-medium text-sm mb-3 text-orange-600">
+                        Manage your Position
+                    </h4>
+                    <div className="flex justify-between gap-4 mb-3">
+                        <div>
+                            <div className="text-xs text-gray-600 mb-1">My Position</div>
+                            <div className="text-sm font-medium">0</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-600 mb-1">APR</div>
+                            <div className="text-sm font-medium">0</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-600 mb-1">Pool Share</div>
+                            <div className="text-sm font-medium">0</div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button className="flex-1 shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300">
+                                <Plus className="w-3 h-3"/>
+                                <span className="text-xs">Add</span>
+                            </Button>
+                            <Button className="flex-1 shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300">
+                                <Minus className="w-3 h-3"/>
+                                <span className="text-xs">Remove</span>
+                            </Button>
                         </div>
                     </div>
-                ) : (
-                    <div className="border border-gray-200 rounded-lg p-6 bg-white text-center">
-                        <h4 className="font-medium text-base mb-2 text-gray-900">
-                            No Liquidity Available
-                        </h4>
-                        <p className="text-xs text-gray-600 mb-4">
-                            This Pool hasn't been created yet. Be the first to add Liquidity
-                        </p>
-                        <Button className="bg-red-500 hover:bg-red-600 text-white flex items-center gap-2 mx-auto">
-                            <Plus className="w-4 h-4" />
-                            <span className="font-normal">Create Pool</span>
-                        </Button>
-                    </div>
-                )}
+                </div>
             </>
         )}
         </Card>
@@ -234,6 +231,7 @@ const BlockchainSection = ({
                             key={pool.id}
                             pool={pool}
                             onToggle={() => onTogglePool(pool.id)}
+                            mintToken={pool.token1Mint}
                         />
                     ))}
                 </div>
@@ -271,6 +269,7 @@ export function LiquidityPools({ onAddLiquidity, listPools , loadingPools, error
                 // Convert EnhancedPool to PoolCard format
                 const poolCard: PoolCard = {
                     id: pool.poolId.toString(),
+                    token1Mint: pool.mintB.toBase58(),
                     name: pool.poolName,
                     token1Icon: pool.token1Icon,
                     token2Icon: pool.token2Icon,
