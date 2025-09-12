@@ -15,6 +15,13 @@
       "when": 1752162308437,
       "tag": "0001_lazy_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757706253957,
+      "tag": "0002_strong_roxanne_simpson",
+      "breakpoints": true
     }
   ]
 }
