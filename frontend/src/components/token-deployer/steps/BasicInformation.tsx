@@ -5,6 +5,7 @@ import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { useDeployStore } from '../../../stores/deployStore';
 import { toast } from 'react-hot-toast';
+import { JWT_PINATA_SECRET, PINATA_API_KEY } from '../../../configs/env.config';
 
 export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepProps) => {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
@@ -60,7 +61,7 @@ export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepPro
             const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${process.env.PUBLIC_JWT_PINATA_SECRET}`,
+                    'Authorization': `Bearer ${JWT_PINATA_SECRET}`,
                 },
                 body: formData,
             });
@@ -77,7 +78,7 @@ export const BasicInformation = ({ isExpanded, stepKey, onHeaderClick }: StepPro
                 return null;
             }
             
-            return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+            return `https://olive-rational-giraffe-695.mypinata.cloud/ipfs/${data.IpfsHash}?pinataGatewayToken=${PINATA_API_KEY}`;
         } catch (error) {
             console.error('Upload error:', error);
             toast.error('Failed to upload file');
