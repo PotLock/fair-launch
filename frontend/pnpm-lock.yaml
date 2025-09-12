@@ -12,8 +12,8 @@ importers:
         specifier: ^0.30.1
         version: 0.30.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)
       '@metaplex-foundation/mpl-token-metadata':
-        specifier: ^3.4.0
-        version: 3.4.0(@metaplex-foundation/umi@1.4.1)
+        specifier: 2.8.3
+        version: 2.8.3(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
       '@near-wallet-selector/bitte-wallet':
         specifier: ^9.0.2
         version: 9.5.1
@@ -1226,39 +1226,8 @@ packages:
   '@metaplex-foundation/mpl-token-auth-rules@1.2.0':
     resolution: {integrity: sha512-UkfBkYEdenefIKxE2L15j9ZHUJYYRQoDqNqDawh5DxdemmVV3GLnIlbMilr/HLXyXb2eMAOUdl5XgZFwKYN5EA==}
 
-  '@metaplex-foundation/mpl-token-metadata@2.13.0':
-    resolution: {integrity: sha512-Fl/8I0L9rv4bKTV/RAl5YIbJe9SnQPInKvLz+xR1fEc4/VQkuCn3RPgypfUMEKWmCznzaw4sApDxy6CFS4qmJw==}
-
-  '@metaplex-foundation/mpl-token-metadata@3.4.0':
-    resolution: {integrity: sha512-AxBAYCK73JWxY3g9//z/C9krkR0t1orXZDknUPS4+GjwGH2vgPfsk04yfZ31Htka2AdS9YE/3wH7sMUBHKn9Rg==}
-    peerDependencies:
-      '@metaplex-foundation/umi': '>= 0.8.2 <= 1'
-
-  '@metaplex-foundation/mpl-toolbox@0.10.0':
-    resolution: {integrity: sha512-84KD1L5cFyw5xnntHwL4uPwfcrkKSiwuDeypiVr92qCUFuF3ZENa2zlFVPu+pQcjTlod2LmEX3MhBmNjRMpdKg==}
-    peerDependencies:
-      '@metaplex-foundation/umi': '>= 0.8.2 <= 1'
-
-  '@metaplex-foundation/umi-options@1.4.1':
-    resolution: {integrity: sha512-+36Sm16a9GFlheAnqIjsi5lV7+9J9/lhYOcwXK9bkRARucA9evT/dajmpXHUkPOi3JjlVbl3knWvcPkbhyP2Og==}
-
-  '@metaplex-foundation/umi-public-keys@1.4.1':
-    resolution: {integrity: sha512-UB+MVzK8GIMLYS7qgtl7Qr5fUW36EelUk2VA/VyQJZb2rlQYZu08/whc75uwGhPX2Mr67NzVSoSTkTpUb29zrg==}
-
-  '@metaplex-foundation/umi-serializers-core@1.4.1':
-    resolution: {integrity: sha512-xLI2ZEFJYoVdlQQMeKNLBsi56qQ2xC7htWDa30gqw/hhuMy3W82MtgLiK/3tU96MNi86TKSNVOdXmY815/QJsg==}
-
-  '@metaplex-foundation/umi-serializers-encodings@1.4.1':
-    resolution: {integrity: sha512-KnIp8T3mSMoDI5gmLre6UZMZpBVZ5tpZsAaLLfuiSfRolUsBLo90gmXJWwUWWZihhcvaN0xMdyx+k1KK+nwK9Q==}
-
-  '@metaplex-foundation/umi-serializers-numbers@1.4.1':
-    resolution: {integrity: sha512-vk5f6QTdudXJDyyZAO7IDNiGRkF70nLdx4LBCvstbmTv2535HinV06R1mBRA9dx20D6SxRASdw33BH3mAYPfbQ==}
-
-  '@metaplex-foundation/umi-serializers@1.4.1':
-    resolution: {integrity: sha512-DnuTBS+6Ycjaz1BsOKmUZCJcdyJooIpiJ5gy/snhmh8YKDAZuxezBqRzKSR/pKPXieURbL/UPCdJ6a9OFCjcYQ==}
-
-  '@metaplex-foundation/umi@1.4.1':
-    resolution: {integrity: sha512-GGdmKsZq8nGInhjk8jpW4h4pNX8eZgTChnosvBmX/4lTznu+nOJuIsgO9r7LuUkR8zaSfjUheC/T5e7AtRku+g==}
+  '@metaplex-foundation/mpl-token-metadata@2.8.3':
+    resolution: {integrity: sha512-rUwp2zqrsxu+1ahhqyeu9ytluroVG7vgLS2eunYfkRL545dl8z0eXLE7A16H9Uejln0abyKiSXUsdV8SoXpJIg==}
 
   '@meteorwallet/sdk@1.0.24':
     resolution: {integrity: sha512-fA/D7rTIpe20J/WRGL3I7wr6gFg3GujbYDQ7Y3IIA+O2uAH+hkIzbUpvlqGSZbKT09YpSEhxMcP3W3x5mDox/w==}
@@ -9272,7 +9241,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@metaplex-foundation/mpl-token-metadata@2.13.0(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)':
+  '@metaplex-foundation/mpl-token-metadata@2.8.3(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@metaplex-foundation/beet': 0.7.2
       '@metaplex-foundation/beet-solana': 0.4.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)
@@ -9288,45 +9257,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-
-  '@metaplex-foundation/mpl-token-metadata@3.4.0(@metaplex-foundation/umi@1.4.1)':
-    dependencies:
-      '@metaplex-foundation/mpl-toolbox': 0.10.0(@metaplex-foundation/umi@1.4.1)
-      '@metaplex-foundation/umi': 1.4.1
-
-  '@metaplex-foundation/mpl-toolbox@0.10.0(@metaplex-foundation/umi@1.4.1)':
-    dependencies:
-      '@metaplex-foundation/umi': 1.4.1
-
-  '@metaplex-foundation/umi-options@1.4.1': {}
-
-  '@metaplex-foundation/umi-public-keys@1.4.1':
-    dependencies:
-      '@metaplex-foundation/umi-serializers-encodings': 1.4.1
-
-  '@metaplex-foundation/umi-serializers-core@1.4.1': {}
-
-  '@metaplex-foundation/umi-serializers-encodings@1.4.1':
-    dependencies:
-      '@metaplex-foundation/umi-serializers-core': 1.4.1
-
-  '@metaplex-foundation/umi-serializers-numbers@1.4.1':
-    dependencies:
-      '@metaplex-foundation/umi-serializers-core': 1.4.1
-
-  '@metaplex-foundation/umi-serializers@1.4.1':
-    dependencies:
-      '@metaplex-foundation/umi-options': 1.4.1
-      '@metaplex-foundation/umi-public-keys': 1.4.1
-      '@metaplex-foundation/umi-serializers-core': 1.4.1
-      '@metaplex-foundation/umi-serializers-encodings': 1.4.1
-      '@metaplex-foundation/umi-serializers-numbers': 1.4.1
-
-  '@metaplex-foundation/umi@1.4.1':
-    dependencies:
-      '@metaplex-foundation/umi-options': 1.4.1
-      '@metaplex-foundation/umi-public-keys': 1.4.1
-      '@metaplex-foundation/umi-serializers': 1.4.1
 
   '@meteorwallet/sdk@1.0.24(@near-js/tokens@2.3.0)(@near-js/utils@1.1.0)(near-api-js@5.0.0)':
     dependencies:
@@ -11273,7 +11203,7 @@ snapshots:
     dependencies:
       '@coral-xyz/anchor': 0.27.0(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)
       '@metaplex-foundation/mpl-token-auth-rules': 1.2.0(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
-      '@metaplex-foundation/mpl-token-metadata': 2.13.0(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
+      '@metaplex-foundation/mpl-token-metadata': 2.8.3(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
       '@msgpack/msgpack': 2.8.0
       '@solana/buffer-layout': 4.0.1
       '@solana/spl-token': 0.3.11(@solana/web3.js@1.98.4(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
