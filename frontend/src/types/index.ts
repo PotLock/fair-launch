@@ -1,4 +1,6 @@
 import React from 'react';
+import { PublicKey } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
 
 export interface TokenTemplate {
     key: string;
@@ -386,4 +388,72 @@ export interface Token {
       discord: string;
       farcaster: string;
     };
-  }
+}
+
+export interface Pool {
+    bump: number;
+    configId: PublicKey;
+    creatorFeesMintA: BN;
+    creatorFeesMintB: BN;
+    enableCreatorFee: boolean;
+    epoch: BN;
+    feeOn: number;
+    fundFeesMintA: BN;
+    fundFeesMintB: BN;
+    lpAmount: BN;
+    lpDecimals: number;
+    mintA: PublicKey;
+    mintB: PublicKey;
+    mintDecimalA: number;
+    mintDecimalB: number;
+    mintLp: PublicKey;
+    mintProgramA: PublicKey;
+    mintProgramB: PublicKey;
+    observationId: PublicKey;
+    openTime: BN;
+    poolCreator: PublicKey;
+    poolId: PublicKey;
+    protocolFeesMintA: BN;
+    protocolFeesMintB: BN;
+    status: number;
+    vaultA: PublicKey;
+    vaultB: PublicKey;
+}
+
+export interface TokenMetadata {
+    name: string;
+    symbol: string;
+    image?: string;
+    description?: string;
+}
+
+export interface PoolMetric {
+    label: string;
+    value: string;
+    isHighlighted?: boolean;
+}
+
+export interface EnhancedPool extends Pool {
+    // Display information
+    token1Metadata: TokenMetadata;
+    token2Metadata: TokenMetadata;
+    token1Icon: string;
+    token2Icon: string;
+    poolName: string;
+    chain: {
+        name: string;
+        icon: string;
+    };
+    platforms: Array<{
+        platform: string;
+        platformIcon: string;
+    }>;
+    metrics: PoolMetric[];
+    isExpanded?: boolean;
+    position?: {
+        value: string;
+        apr: string;
+        poolShare: string;
+    };
+}
+
