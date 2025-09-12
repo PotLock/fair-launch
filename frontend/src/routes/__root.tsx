@@ -38,7 +38,7 @@ function RootComponent() {
   const location = useLocation();
 
   useEffect(() => {
-    const validRoutes = ['/', '/create', '/my-tokens', '/tokens'];
+    const validRoutes = ['/', '/create', '/my-tokens', '/tokens', '/bridge'];
     
     const isValidRoute = validRoutes.includes(location.pathname) || location.pathname.startsWith('/token/');
     

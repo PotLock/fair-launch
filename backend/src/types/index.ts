@@ -7,8 +7,8 @@ export const BasicInformationSchema = z.object({
   description: z.string().optional(),
   supply: z.string().min(1, 'Supply is required'),
   decimals: z.string().min(1, 'Decimals is required'),
-  avatarUrl: z.string().optional(),
-  bannerUrl: z.string().optional(),
+  avatarUrl: z.string().min(1, 'Avatar URL is required'),
+  bannerUrl: z.string().min(1, 'Banner URL is required'),
 });
 
 export const SocialsSchema = z.object({
@@ -20,7 +20,6 @@ export const SocialsSchema = z.object({
 });
 
 export const VestingParamsSchema = z.object({
-  enabled: z.boolean(),
   description: z.string().optional(),
   percentage: z.number().min(0).max(100),
   cliff: z.number().min(0),
@@ -61,17 +60,13 @@ export const FeesSchema = z.object({
   transferFee: z.number().min(0),
   burnFee: z.number().min(0),
   feeRecipientAddress: z.string(),
-  adminControls: z.object({
-    isEnabled: z.boolean(),
-    walletAddress: z.string(),
-  }),
+  adminControls: z.string(),
 });
 
 export const TokenSaleSetupSchema = z.object({
   softCap: z.string(),
   hardCap: z.string(),
   scheduleLaunch: z.object({
-    isEnabled: z.boolean(),
     launchDate: z.string(),
     endDate: z.string(),
   }),
@@ -83,20 +78,14 @@ export const TokenSaleSetupSchema = z.object({
 });
 
 export const AdminSetupSchema = z.object({
-  revokeMintAuthority: z.object({
-    isEnabled: z.boolean(),
-    walletAddress: z.string(),
-  }),
-  revokeFreezeAuthority: z.object({
-    isEnabled: z.boolean(),
-    walletAddress: z.string(),
-  }),
+  revokeMintAuthority: z.string().optional(),
+  revokeFreezeAuthority: z.string().optional(),
   adminWalletAddress: z.string(),
   adminStructure: z.enum(['single', 'multisig', 'dao']),
   tokenOwnerWalletAddress: z.string(),
   numberOfSignatures: z.number().min(1),
-  mintAuthorityWalletAddress: z.string(),
-  freezeAuthorityWalletAddress: z.string(),
+  mintAuthorityWalletAddress: z.string().optional(),
+  freezeAuthorityWalletAddress: z.string().optional(),
 });
 
 export const CreateTokenSchema = z.object({

@@ -47,12 +47,10 @@ export class TokenService {
         transferFee: tokenData.fees.transferFee.toString(),
         burnFee: tokenData.fees.burnFee.toString(),
         feeRecipientAddress: tokenData.fees.feeRecipientAddress,
-        adminControlsEnabled: tokenData.fees.adminControls.isEnabled,
-        adminControlsWalletAddress: tokenData.fees.adminControls.walletAddress,
+        adminControlsWalletAddress: tokenData.fees.adminControls,
         
         softCap: tokenData.saleSetup.softCap,
         hardCap: tokenData.saleSetup.hardCap,
-        scheduleLaunchEnabled: tokenData.saleSetup.scheduleLaunch.isEnabled,
         launchDate: tokenData.saleSetup.scheduleLaunch.launchDate ? new Date(tokenData.saleSetup.scheduleLaunch.launchDate) : null,
         endDate: tokenData.saleSetup.scheduleLaunch.endDate ? new Date(tokenData.saleSetup.scheduleLaunch.endDate) : null,
         minimumContribution: tokenData.saleSetup.minimumContribution,
@@ -61,16 +59,14 @@ export class TokenService {
         maxTokenPerWallet: tokenData.saleSetup.maxTokenPerWallet,
         distributionDelay: tokenData.saleSetup.distributionDelay,
         
-        revokeMintAuthorityEnabled: tokenData.adminSetup.revokeMintAuthority.isEnabled,
-        revokeMintAuthorityWalletAddress: tokenData.adminSetup.revokeMintAuthority.walletAddress,
-        revokeFreezeAuthorityEnabled: tokenData.adminSetup.revokeFreezeAuthority.isEnabled,
-        revokeFreezeAuthorityWalletAddress: tokenData.adminSetup.revokeFreezeAuthority.walletAddress,
+        revokeMintAuthorityWalletAddress: tokenData.adminSetup.revokeMintAuthority || '',
+        revokeFreezeAuthorityWalletAddress: tokenData.adminSetup.revokeFreezeAuthority || '',
         adminWalletAddress: tokenData.adminSetup.adminWalletAddress,
         adminStructure: tokenData.adminSetup.adminStructure,
         tokenOwnerWalletAddress: tokenData.adminSetup.tokenOwnerWalletAddress,
         numberOfSignatures: tokenData.adminSetup.numberOfSignatures,
-        mintAuthorityWalletAddress: tokenData.adminSetup.mintAuthorityWalletAddress,
-        freezeAuthorityWalletAddress: tokenData.adminSetup.freezeAuthorityWalletAddress,
+        mintAuthorityWalletAddress: tokenData.adminSetup.mintAuthorityWalletAddress || '',
+        freezeAuthorityWalletAddress: tokenData.adminSetup.freezeAuthorityWalletAddress || '',
         owner: tokenData.owner, // Add this line to handle owner
       }).returning();
 
@@ -82,7 +78,6 @@ export class TokenService {
           percentage: allocation.percentage.toString(), // Convert number to string for decimal field
           walletAddress: allocation.walletAddress,
           lockupPeriod: allocation.lockupPeriod,
-          vestingEnabled: allocation.vesting.enabled,
           vestingDescription: allocation.vesting.description,
           vestingPercentage: allocation.vesting.percentage.toString(), // Convert number to string for decimal field
           vestingCliff: allocation.vesting.cliff,
