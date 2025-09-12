@@ -160,8 +160,8 @@ function MyTokens() {
                                 View and manage all the tokens you’ve created on the token launch platforms
                             </p>
                         </div>
-                        <div className="flex gap-8">
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                        <div className="flex md:flex-row flex-col gap-8 w-full">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                                 <div className="flex flex-col gap-10">
                                     <div>
                                         <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
@@ -177,7 +177,7 @@ function MyTokens() {
                                 </div>
                             </div>
 
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                                 <div className="flex flex-col gap-10">
                                     <div>
                                         <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
@@ -298,8 +298,8 @@ function MyTokens() {
                             View and manage all the tokens you’ve created on the token launch platforms
                         </p>
                     </div>
-                    <div className="flex gap-8">
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                    <div className="flex md:flex-row flex-col gap-8 w-full">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                             <div className="flex flex-col gap-10">
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
@@ -315,7 +315,7 @@ function MyTokens() {
                             </div>
                         </div>
 
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                             <div className="flex flex-col gap-10">
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>

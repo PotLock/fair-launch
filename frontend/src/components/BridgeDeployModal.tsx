@@ -16,6 +16,7 @@ import { getSolBalance } from "../lib/sol";
 import { getNearBalance } from "../lib/near";
 import { useBridge } from "../hook/useBridge";
 import { formatNumberWithCommas } from "../utils";
+import { ChainKind } from "omni-bridge-sdk";
 
 interface BridgeDeployModalProps {
     isOpen: boolean;
@@ -82,7 +83,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, tokenInfo, c
     const { isSolanaConnected,solanaPublicKey } = useWalletContext();
 
     const { 
-        deployTokenNear
+        deployToken
     } = useBridge();
 
     // Update active tab when bridge address changes
@@ -156,7 +157,8 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, tokenInfo, c
 
             // Step 3: Deploying token (60%)
             setDeploymentProgress(60);
-            await deployTokenNear(tokenInfo?.mintAddress);
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet"
+            await deployToken(network,ChainKind.Sol,ChainKind.Near,tokenInfo?.mintAddress);
 
             // Step 4: Finalizing deployment (100%)
             setDeploymentProgress(100);

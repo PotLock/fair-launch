@@ -116,4 +116,21 @@ export const getTokenBalanceOnNEAR = async (
   }
 }
 
+export const getAllTokenOnNear = async(walletAddress: string) => {
+  const inventoryRes = await fetch(`${getApiNEAREndpoint()}/account/${walletAddress}/inventory`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+
+  const res = await inventoryRes.json()
+  const inventory = res.inventory.fts
+  return inventory
+}
+
+export const formatBalanceNear = (amount: string) =>{
+  return formatDecimal(Number(amount) / (10**24));
+}
+
 

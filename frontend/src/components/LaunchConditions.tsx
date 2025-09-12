@@ -59,7 +59,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
             if (chainType === 'near') {
                 chainInfo = {
                     name: "NEAR",
-                    logo: "/chains/near_light.svg",
+                    logo: "/chains/near-dark.svg",
                     explorerUrl: NEAR_NETWORK == "testnet" ? `https://testnet.nearblocks.io/address/${tokenAddress}` : `https://nearblocks.io/address/${tokenAddress}`
                 };
             } else if (chainType === 'eth') {
@@ -89,7 +89,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
     
     const solanaChain = tokenInfo?.mintAddress ? {
         name: "Solana",
-        logo: "/chains/solana_light.svg",
+        logo: "/chains/solana-dark.svg",
         address: tokenInfo.mintAddress.length > 20 ? 
             `${tokenInfo.mintAddress.substring(0, 10)}...${tokenInfo.mintAddress.substring(tokenInfo.mintAddress.length - 10)}` : 
             tokenInfo.mintAddress,
@@ -105,7 +105,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
 
 
     return (
-        <Card className="p-4 md:p-6 mb-6 shadow-none">
+        <Card className="p-3 md:p-6 mb-6 shadow-none">
             <h2 className="text-xl font-medium mb-4">Launch Conditions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 md:gap-20 gap-3 mt-5 border-b border-gray-200 pb-4">
                 <div className="flex flex-col gap-2">
@@ -156,7 +156,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
             
             
             <div className="mt-3">
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center md:items-start justify-between mb-4">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3">
                             <button 
@@ -173,7 +173,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                         </div>
                         {
                             !isContractExpanded && (
-                                <div className="flex items-center gap-1">
+                                <div className="items-center gap-1 hidden md:flex">
                                     {deployedChains.length > 0 ? (
                                         <>
                                             <div className="flex -space-x-1">
@@ -204,36 +204,76 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                         Bridge / Deploy
                     </button>
                 </div>
+                {
+                    !isContractExpanded && (
+                        <div className="flex items-center gap-1 md:hidden">
+                            {deployedChains.length > 0 ? (
+                                <>
+                                    <div className="flex -space-x-1">
+                                        {deployedChains.map((chain, index) => (
+                                            <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-white flex items-center justify-center">
+                                                <img src={chain.logo} alt={chain.name} className="w-5 h-5" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <span className="text-sm text-gray-600 ml-2">
+                                        {tokenInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="text-sm text-gray-500">
+                                    Loading deployed chains...
+                                </span>
+                            )}
+                        </div>
+                    )
+                }
                 
                 {isContractExpanded && (
                     <div className="space-y-2">
                         {deployedChains.length > 0 ? (
                             deployedChains.map((chain) => (
-                                <div key={chain.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-black rounded-full flex justify-center items-center">
-                                            <img src={chain.logo} alt={chain.name} className="w-6 h-6" />
+                                <div key={chain.name} className="flex items-center justify-between p-2 md:p-3 border border-gray-200 rounded-lg bg-white">
+                                    <div className="flex items-center gap-1.5 md:gap-3">
+                                        <div className="md:w-8 md:h-8 w-7 h-7 rounded-full flex justify-center items-center">
+                                            <img src={chain.logo} alt={chain.name} className="w-full h-full" />
                                         </div>
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900">{chain.name}</span>
-                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                                <span className="font-medium text-gray-900 text-sm md:text-base">{chain.name}</span>
+                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] md:text-xs rounded-full">
                                                     {chain.status}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-gray-600 font-light">{chain.address}</p>
+                                            <div className="flex items-center gap-1">
+                                                <p className="text-[10px] md:text-xs text-gray-600 font-light">{chain.address}</p>
+                                                <button 
+                                                    className="p-1 hover:bg-gray-100 rounded block md:hidden"
+                                                    onClick={() => copyToClipboard(chain.fullAddress)}
+                                                >
+                                                    <Copy className="w-3.5 h-3.5 text-gray-600" />
+                                                </button>
+                                                <a 
+                                                    href={chain.explorerUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-1 hover:bg-gray-100 rounded block md:hidden"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button 
                                             onClick={() => setIsBridgeModalOpen(true)}
-                                            className="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                            className="flex items-center gap-1 px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-50"
                                         >
                                             <ArrowLeftRight className="w-3 h-3" />
                                             Bridge
                                         </button>
                                         <button 
-                                            className="p-1 hover:bg-gray-100 rounded"
+                                            className="p-1 hover:bg-gray-100 rounded hidden md:block"
                                             onClick={() => copyToClipboard(chain.fullAddress)}
                                         >
                                             <Copy className="w-4 h-4 text-gray-600" />
@@ -242,7 +282,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                                             href={chain.explorerUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="p-1 hover:bg-gray-100 rounded"
+                                            className="p-1 hover:bg-gray-100 rounded hidden md:block"
                                         >
                                             <ExternalLink className="w-4 h-4 text-gray-600" />
                                         </a>

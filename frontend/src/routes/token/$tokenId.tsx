@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
+import { Globe, ChevronDown, Download, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,7 +31,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
-import { TokenDistributionItem, Holders, Token} from "../../types"
+import { TokenDistributionItem, Holders, Token, EnhancedPool} from "../../types"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -39,10 +39,9 @@ import { LaunchStatus } from "../../components/LaunchStatus";
 import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
-import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
 import { AddLiquidityModal } from "../../components/AddLiquidityModal";
-import { getUserCreatedCpmmPools } from "../../lib/raydium";
+import { getUserCreatedEnhancedCpmmPools } from "../../lib/raydium";
 import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
 
 
@@ -73,7 +72,9 @@ function TokenDetail() {
     const [marketCap, setMarketCap] = useState<number>(0);
     const [solPrice, setSolPrice] = useState<number>(0)
     const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
-    const [listPools, setListPools] = useState<any[]>([]);
+    const [listPools, setListPools] = useState<EnhancedPool[]>([]);
+    const [loadingPools, setLoadingPools] = useState<boolean>(false)
+    const [errorPools, setErrorPools] = useState<string | null>(null)
 
     // Metadata management using custom hook
     const metadataConfig = tokenInfo ? {
@@ -121,14 +122,27 @@ function TokenDetail() {
         }
     }, [tokenId]);
 
-    const fetchPools = useCallback(async()=>{
+    const fetchPools = async()=>{
+        setLoadingPools(true)
+        setErrorPools(null)
         if(!publicKey){
             setListPools([])
+            return
         }
-        const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
-        // console.log("pools", pools)
-        setListPools(pools)
-    },[publicKey])
+        try {
+            const pools = await getUserCreatedEnhancedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
+            console.log("enhanced pools", pools)
+            setListPools(pools)
+            
+        } catch (error) {
+            console.error("Failed to fetch enhanced pools:", error)
+            setListPools([])
+            setLoadingPools(false)
+            setErrorPools("Failed to fetch enhanced pools")
+        }finally{
+            setLoadingPools(false)
+        }
+    }
 
     const fetchCurrentPrice = useCallback(async () => {
         const priceSol = getCurrentPriceSOL(
@@ -158,8 +172,11 @@ function TokenDetail() {
         
         loadInfoToken();
         fetchHolders();
+    }, [loadInfoToken, fetchHolders]);
+
+    useEffect(() => {
         fetchPools();
-    }, [loadInfoToken, fetchHolders, fetchPools]);
+    }, [publicKey]); 
 
     useEffect(() => {
         if (tokenInfo) {
@@ -337,11 +354,12 @@ function TokenDetail() {
         }
     }
 
+
     return (
         <>
             {metadataElement}
-            <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="px-4 col-span-2 space-y-4">
+            <div className="min-h-screen xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4 md:px-2">
+            <div className="px-3 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
                         <img src={tokenInfo?.bannerUrl} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
@@ -469,7 +487,7 @@ function TokenDetail() {
                             <div className="text-xs text-gray-500">Market Cap</div>
                         </div>
 
-                        <div className="grid grid-cols-3">
+                        <div className="flex flex-row justify-between">
                             <div>
                                 <div className="text-lg font-semibold">{formatDecimal(currentPrice)}</div>
                                 <div className="text-sm text-gray-500">Current Price</div>
@@ -485,7 +503,7 @@ function TokenDetail() {
                         </div>
                     </div>
 
-                    <div className="border border-gray-200 p-4 rounded-t-2xl bg-white w-full">
+                    <div className="border border-gray-200 p-3 rounded-t-2xl bg-white w-full">
                         <Tabs className="w-full rounded-lg" defaultValue="trade">
                             <TabsList className="w-full">
                                 <TabsTrigger value="trade" className="w-full rounded-lg flex gap-2 items-center">
@@ -646,8 +664,15 @@ function TokenDetail() {
                     <div className="p-4 flex flex-col gap-2">
                         <h1 className="text-lg font-bold">Trade on DEX</h1>
                         <div className="flex flex-col gap-2">
-                            <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div 
+                                className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                                onClick={()=>(
+                                    window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                                )} 
+                            >
+                                <div 
+                                    className="flex items-center gap-2"
+                                >
                                     <div className="relative w-9 h-9">
                                         <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                         <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
@@ -709,28 +734,28 @@ function TokenDetail() {
                     </div>
                 </div>
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Description</h2>
                     <p className="text-gray-600 text-sm">
                         {tokenInfo?.description}
                     </p>
                 </Card>
                 
-                {/* {
-                    NODE_ENV !== "production" && (
-                        <LaunchStatus/>
-                    )
-                } */}
+                <LaunchStatus/>
 
-                <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
+                <LaunchConditions 
+                    tokenInfo={tokenInfo} 
+                    currentPrice={currentPrice}
+                />
 
-                {/* {
-                    NODE_ENV !== "production" && (
-                        <LiquidityPools onAddLiquidity={setShowAddLiquidityModal}/>
-                    )
-                } */}
+                <LiquidityPools 
+                    onAddLiquidity={setShowAddLiquidityModal} 
+                    listPools={listPools}
+                    loadingPools={loadingPools}
+                    errorPools={errorPools}
+                />
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
                     <div className="flex flex-col md:flex-row md:items-center md:gap-8 bg-gray-50 rounded-lg py-6 px-4">
                         <div className="flex-1 flex flex-col md:flex-row md:items-center justify-center">
@@ -768,14 +793,14 @@ function TokenDetail() {
                         </div>
                     </div>
                     <div className="w-full overflow-x-auto mt-8">
-                        <table className="table-fixed w-full">
+                        <table className="min-w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 bg-white">
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Allocation</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Percentage</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Tokens</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">USD value</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Vesting</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Allocation</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Percentage</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Tokens</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">USD value</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Vesting</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -788,16 +813,16 @@ function TokenDetail() {
                                     const vestingInfo = formatVestingInfo(item?.vesting, item?.percentage || 0);
                                     return (
                                         <tr key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                            <td className="py-4 px-4">
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4">
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
-                                                    <span className="font-bold text-gray-900">{allocation?.description || '-'}</span>
+                                                    <span className="font-bold text-gray-900 text-xs sm:text-sm">{allocation?.description || '-'}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{item?.percentage || 0}%</td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{tokens}</td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{usdValue}</td>
-                                            <td className="py-4 px-4 text-gray-600 text-sm max-w-[180px] break-all whitespace-pre-line">{vestingInfo}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{item?.percentage || 0}%</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{tokens}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{usdValue}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 text-gray-600 text-xs sm:text-sm max-w-[150px] sm:max-w-[180px] break-all whitespace-pre-line">{vestingInfo}</td>
                                         </tr>
                                     );
                                 })}
@@ -806,7 +831,7 @@ function TokenDetail() {
                     </div>
                 </Card>
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Vesting Schedule</h2>
                     <div className="w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1045,8 +1070,15 @@ function TokenDetail() {
                 <div className="p-4 flex flex-col gap-2">
                     <h1 className="text-lg font-bold">Trade on DEX</h1>
                     <div className="flex flex-col gap-2">
-                        <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                        <div 
+                            className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                            onClick={()=>(
+                                window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                            )} 
+                        >
+                            <div 
+                                className="flex items-center gap-2"
+                            >
                                 <div className="relative w-9 h-9">
                                     <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                     <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
@@ -1111,6 +1143,8 @@ function TokenDetail() {
                 isOpen={showAddLiquidityModal}
                 onClose={() => setShowAddLiquidityModal(false)}
                 tokenInfo={tokenInfo}
+                listPools={listPools}
+                tokenPrice={currentPrice}
             />
         </div>
         </>
