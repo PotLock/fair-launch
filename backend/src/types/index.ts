@@ -82,7 +82,7 @@ export const AdminSetupSchema = z.object({
   revokeFreezeAuthority: z.string().optional(),
   adminWalletAddress: z.string(),
   adminStructure: z.enum(['single', 'multisig', 'dao']),
-  tokenOwnerWalletAddress: z.string(),
+  tokenOwnerWalletAddress: z.string().optional(),
   numberOfSignatures: z.number().min(1),
   mintAuthorityWalletAddress: z.string().optional(),
   freezeAuthorityWalletAddress: z.string().optional(),

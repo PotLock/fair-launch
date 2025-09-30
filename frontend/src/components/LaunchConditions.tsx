@@ -111,23 +111,23 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                 <div className="flex flex-col gap-2">
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Total supply</p>
-                        <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.supply || 0)}</p>
+                        <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.basicInfo?.supply || 0)}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Min. Contribution</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.minimumContribution} SOL</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.saleSetup?.minimumContribution} SOL</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                        <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.targetRaise)} SOL</p>
+                        <p className="text-sm font-semibold">{formatNumberWithCommas(tokenInfo?.pricingMechanism?.targetRaise)} SOL</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Percentage</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.liquidityPercentage}%</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.dexListing?.liquidityPercentage}%</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Launch Date</p>
-                        <p className="text-sm font-semibold">{formatDateToReadable(tokenInfo?.launchDate)}</p>
+                        <p className="text-sm font-semibold">{formatDateToReadable(tokenInfo?.saleSetup?.scheduleLaunch?.launchDate)}</p>
                     </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -137,19 +137,19 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Max Contribution</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.maximumContribution} SOL</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.saleSetup?.maximumContribution} SOL</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Hard cap</p>
-                        <p className="text-sm font-semibold">${formatNumberWithCommas(Number(tokenInfo?.hardCap) * (solPrice || 0))}</p>
+                        <p className="text-sm font-semibold">${formatNumberWithCommas(Number(tokenInfo?.saleSetup?.hardCap) * (solPrice || 0))}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Source</p>
-                        <p className="text-sm font-semibold capitalize">{tokenInfo?.liquiditySource}</p>
+                        <p className="text-sm font-semibold capitalize">{tokenInfo?.dexListing?.liquiditySource}</p>
                     </div>
                     <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
                         <p className="text-sm text-gray-500 mb-1">Liquidity Lockup</p>
-                        <p className="text-sm font-semibold">{tokenInfo?.liquidityLockupPeriod} days</p>
+                        <p className="text-sm font-semibold">{tokenInfo?.dexListing?.liquidityLockupPeriod} days</p>
                     </div>
                 </div>
             </div>
@@ -184,7 +184,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                                                 ))}
                                             </div>
                                             <span className="text-sm text-gray-600 ml-2">
-                                                {tokenInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                                {tokenInfo?.basicInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
                                             </span>
                                         </>
                                     ) : (
@@ -217,7 +217,7 @@ export function LaunchConditions({ tokenInfo,currentPrice }: LaunchConditionsPro
                                         ))}
                                     </div>
                                     <span className="text-sm text-gray-600 ml-2">
-                                        {tokenInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                        {tokenInfo?.basicInfo?.symbol || 'Token'} is deployed on {deployedChains.length} chains
                                     </span>
                                 </>
                             ) : (
