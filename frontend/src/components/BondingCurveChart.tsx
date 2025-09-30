@@ -27,9 +27,9 @@ function generateLinearBondingCurveChartData(
     curveConfig: any, 
 ): Array<{ raised: number; price: number }> {
     // Default values if data is not available
-    const targetRaise = Number(tokenInfo?.targetRaise) || 1000; // SOL
+    const targetRaise = Number(tokenInfo?.pricingMechanism?.targetRaise) || 1000; // SOL
     const initialPrice = curveConfig?.initialPrice ? Number(curveConfig.initialPrice) / 10 ** 9 : 0.001; // SOL
-    const finalPrice = Number(tokenInfo?.finalPrice) || initialPrice * 10; // SOL
+    const finalPrice = Number(tokenInfo?.pricingMechanism?.finalPrice) || initialPrice * 10; // SOL
     
     // Generate 50 data points for smooth curve
     const dataPoints = 50;
@@ -136,11 +136,11 @@ export function BondingCurveChart({ tokenInfo, curveConfig, bondingCurveInfo }: 
                                     </div>
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <p className="text-sm text-gray-500 mb-1">Final Price</p>
-                                        <p className="font-semibold">{tokenInfo?.finalPrice || '-'} SOL</p>
+                                        <p className="font-semibold">{tokenInfo?.pricingMechanism?.finalPrice || '-'} SOL</p>
                                     </div>
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                                        <p className="font-semibold">{tokenInfo?.targetRaise || '-'} SOL</p>
+                                        <p className="font-semibold">{tokenInfo?.pricingMechanism?.targetRaise || '-'} SOL</p>
                                     </div>
                                 </div>
                                 <p className="text-sm text-gray-500 mt-4">

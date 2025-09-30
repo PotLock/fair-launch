@@ -1,9 +1,122 @@
 import { db } from '../../db/connection';
 import { tokens, tokenAllocations } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import type { CreateTokenRequest } from '../types';
+import type { CreateTokenRequest, BasicInformation, Socials, PricingMechanismData, DexListing, Fees, TokenSaleSetup, AdminSetup, TokenDistributionItem } from '../types';
 
 export class TokenService {
+  private formatTokenResponse(token: any) {
+    // Format allocations
+    const allocations: TokenDistributionItem[] = token.allocations?.map((allocation: any) => ({
+      description: allocation.description,
+      percentage: parseFloat(allocation.percentage),
+      walletAddress: allocation.walletAddress,
+      lockupPeriod: allocation.lockupPeriod,
+      vesting: {
+        description: allocation.vestingDescription,
+        percentage: parseFloat(allocation.vestingPercentage),
+        cliff: allocation.vestingCliff,
+        duration: allocation.vestingDuration,
+        interval: allocation.vestingInterval,
+      }
+    })) || [];
+
+    // Format basic information
+    const basicInfo: BasicInformation = {
+      name: token.name,
+      symbol: token.symbol,
+      description: token.description,
+      supply: token.supply,
+      decimals: token.decimals,
+      avatarUrl: token.avatarUrl,
+      bannerUrl: token.bannerUrl,
+    };
+
+    // Format socials
+    const socials: Socials = {
+      website: token.website,
+      twitter: token.twitter,
+      telegram: token.telegram,
+      discord: token.discord,
+      farcaster: token.farcaster,
+    };
+
+    // Format pricing mechanism
+    const pricingMechanism: PricingMechanismData = {
+      initialPrice: token.initialPrice,
+      finalPrice: token.finalPrice,
+      targetRaise: token.targetRaise,
+      reserveRatio: token.reserveRatio,
+      curveType: token.curveType,
+    };
+
+    // Format DEX listing
+    const dexListing: DexListing = {
+      launchLiquidityOn: token.launchLiquidityOnName,
+      liquiditySource: token.liquiditySource,
+      liquidityData: token.liquidityData,
+      liquidityType: token.liquidityType,
+      liquidityPercentage: token.liquidityPercentage,
+      liquidityLockupPeriod: token.liquidityLockupPeriod,
+      isAutoBotProtectionEnabled: token.isAutoBotProtectionEnabled,
+      isAutoListingEnabled: token.isAutoListingEnabled,
+      isPriceProtectionEnabled: token.isPriceProtectionEnabled,
+    };
+
+    // Format fees
+    const fees: Fees = {
+      mintFee: parseFloat(token.mintFee),
+      transferFee: parseFloat(token.transferFee),
+      burnFee: parseFloat(token.burnFee),
+      feeRecipientAddress: token.feeRecipientAddress,
+      adminControls: token.adminControlsWalletAddress,
+    };
+
+    // Format sale setup
+    const saleSetup: TokenSaleSetup = {
+      softCap: token.softCap,
+      hardCap: token.hardCap,
+      scheduleLaunch: {
+        launchDate: token.launchDate?.toISOString() || '',
+        endDate: token.endDate?.toISOString() || '',
+      },
+      minimumContribution: token.minimumContribution,
+      maximumContribution: token.maximumContribution,
+      tokenPrice: token.tokenPrice,
+      maxTokenPerWallet: token.maxTokenPerWallet,
+      distributionDelay: token.distributionDelay,
+    };
+
+    // Format admin setup
+    const adminSetup: AdminSetup = {
+      revokeMintAuthority: token.revokeMintAuthorityWalletAddress,
+      revokeFreezeAuthority: token.revokeFreezeAuthorityWalletAddress,
+      adminWalletAddress: token.adminWalletAddress,
+      adminStructure: token.adminStructure,
+      tokenOwnerWalletAddress: token.tokenOwnerWalletAddress,
+      numberOfSignatures: token.numberOfSignatures,
+      mintAuthorityWalletAddress: token.mintAuthorityWalletAddress,
+      freezeAuthorityWalletAddress: token.freezeAuthorityWalletAddress,
+    };
+
+    return {
+      id: token.id,
+      mintAddress: token.mintAddress,
+      owner: token.owner,
+      selectedTemplate: token.selectedTemplate,
+      selectedPricing: token.selectedPricing,
+      selectedExchange: token.selectedExchange,
+      createdAt: token.createdAt,
+      updatedAt: token.updatedAt,
+      basicInfo,
+      socials,
+      allocations,
+      pricingMechanism,
+      dexListing,
+      fees,
+      saleSetup,
+      adminSetup,
+    };
+  }
   async createToken(tokenData: CreateTokenRequest) {
     try {
       // Insert main token data
@@ -112,7 +225,7 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return token;
+      return this.formatTokenResponse(token);
     } catch (error) {
       console.error('Error getting token:', error);
       throw new Error('Failed to get token');
@@ -132,7 +245,7 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return token;
+      return this.formatTokenResponse(token);
     } catch (error) {
       console.error('Error getting token by address:', error);
       throw new Error('Failed to get token');
@@ -148,7 +261,7 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return allTokens;
+      return allTokens.map(token => this.formatTokenResponse(token));
     } catch (error) {
       console.error('Error getting all tokens:', error);
       throw new Error('Failed to get tokens');
@@ -164,7 +277,7 @@ export class TokenService {
         },
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
-      return tokensByOwner;
+      return tokensByOwner.map(token => this.formatTokenResponse(token));
     } catch (error) {
       console.error('Error getting tokens by owner:', error);
       throw new Error('Failed to get tokens by owner');
@@ -229,7 +342,7 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return searchResults;
+      return searchResults.map(token => this.formatTokenResponse(token));
     } catch (error) {
       console.error('Error searching tokens:', error);
       throw new Error('Failed to search tokens');
