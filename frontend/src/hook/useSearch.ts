@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { searchTokens } from '../lib/api';
-import { Token } from '../types';
+import { TokenInfo } from '../utils/token';
 
 interface UseSearchOptions {
   owner?: string;
@@ -10,7 +10,7 @@ interface UseSearchOptions {
 interface UseSearchReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  searchResults: Token[];
+  searchResults: TokenInfo[];
   isLoading: boolean;
   error: string | null;
   isSearching: boolean;
@@ -21,7 +21,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const { owner, debounceMs = 300 } = options;
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Token[]>([]);
+  const [searchResults, setSearchResults] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);

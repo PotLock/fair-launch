@@ -416,17 +416,17 @@ function MyTokens() {
                                 id={token.id.toString()}
                                 user={publicKey}
                                 mint={token.mintAddress || ''}
-                                banner={token.bannerUrl || ''}
-                                avatar={token.avatarUrl || ''}
-                                name={token.name}
-                                symbol={token.symbol}
+                                banner={token.basicInfo.bannerUrl || ''}
+                                avatar={token.basicInfo.avatarUrl || ''}
+                                name={token.basicInfo.name}
+                                symbol={token.basicInfo.symbol}
                                 type={getPricingDisplay(token.selectedPricing || '')}
-                                description={token.description}
-                                decimals={token.decimals}
+                                description={token.basicInfo.description || ''}
+                                decimals={parseInt(token.basicInfo.decimals)}
                                 template={getTemplateDisplay(token.selectedTemplate)}
                                 solPrice={solPrice}
                                 actionButton={{
-                                    text: `Buy $${token.symbol}`,
+                                    text: `Buy $${token.basicInfo.symbol}`,
                                     variant: 'presale' as const
                                 }}
                             />

@@ -29,6 +29,7 @@ import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { Metadata } from "../types";
 import { createToken } from "../lib/api";
 import { JWT_PINATA_SECRET, PINATA_API_KEY } from "../configs/env.config";
+import { CreateTokenSchema } from "../types";
 
 // Helper function to convert dates to Unix time
 const toUnixTime = (dateString?: string, daysToAdd: number = 0): number => {
@@ -189,7 +190,9 @@ export const useDeployToken = () => {
     );
 
     // Add authority revocation instructions if enabled
-    if (adminSetup.revokeMintAuthority.isEnabled) {
+    if (adminSetup.revokeMintAuthority && 
+        typeof adminSetup.revokeMintAuthority === 'object' && 
+        adminSetup.revokeMintAuthority.isEnabled) {
       if (!adminSetup.revokeMintAuthority.walletAddress?.trim()) {
         throw new Error("Mint authority wallet address is required when revoke mint authority is enabled");
       }
@@ -203,7 +206,9 @@ export const useDeployToken = () => {
       );
     }
 
-    if (adminSetup.revokeFreezeAuthority.isEnabled) {
+    if (adminSetup.revokeFreezeAuthority && 
+        typeof adminSetup.revokeFreezeAuthority === 'object' && 
+        adminSetup.revokeFreezeAuthority.isEnabled) {
       if (!adminSetup.revokeFreezeAuthority.walletAddress?.trim()) {
         throw new Error("Freeze authority wallet address is required when revoke freeze authority is enabled");
       }
@@ -374,7 +379,7 @@ export const useDeployToken = () => {
     let startTime: any;
     let endTime: any;
     
-    if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.launchDate) {
+    if (saleSetup.scheduleLaunch && saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.launchDate) {
       // If launch date is provided, convert it to Unix time
       startTime = new BN(toUnixTime(saleSetup.scheduleLaunch.launchDate));
       console.log('start time', startTime.toNumber())
@@ -383,7 +388,7 @@ export const useDeployToken = () => {
       startTime = new BN(currentTime + 60);
     }
     
-    if (saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.endDate) {
+    if (saleSetup.scheduleLaunch && saleSetup.scheduleLaunch.isEnabled && saleSetup.scheduleLaunch.endDate) {
       // If end date is provided, convert it to Unix time
       endTime = new BN(toUnixTime(saleSetup.scheduleLaunch.endDate));
       console.log('end time', endTime.toNumber())
@@ -535,14 +540,12 @@ export const useDeployToken = () => {
           socials,
           allocation,
           dexListing:{
-            launchLiquidityOn: dexListing.launchLiquidityOn.name,
+            launchLiquidityOn: typeof dexListing.launchLiquidityOn === 'string' ? dexListing.launchLiquidityOn : dexListing.launchLiquidityOn.name,
             liquiditySource: dexListing.liquiditySource,
             liquidityData: dexListing.liquidityData,
             liquidityType: dexListing.liquidityType,
             liquidityPercentage: dexListing.liquidityPercentage,
             liquidityLockupPeriod: dexListing.liquidityLockupPeriod,
-            walletLiquidityAmount: dexListing.walletLiquidityAmount,
-            externalSolContribution: dexListing.externalSolContribution,
             isAutoBotProtectionEnabled: dexListing.isAutoBotProtectionEnabled,
             isAutoListingEnabled: dexListing.isAutoListingEnabled,
             isPriceProtectionEnabled: dexListing.isPriceProtectionEnabled,
@@ -555,6 +558,14 @@ export const useDeployToken = () => {
           selectedPricing,
           selectedExchange,
         };
+
+        // Validate token data with Zod schema
+        const validationResult = CreateTokenSchema.safeParse(tokenData);
+        if (!validationResult.success) {
+          console.error("Token data validation failed:", validationResult.error.issues);
+          toast.error("Token data validation failed. Please check your inputs.");
+          return;
+        }
 
         await createToken(tokenData);
         // console.log("Token record created in database successfully");

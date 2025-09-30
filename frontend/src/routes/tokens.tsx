@@ -269,17 +269,17 @@ function Tokens() {
                                 <ExploreTokenCard  
                                     className="lg:max-w-[400px]"
                                     id={token.id.toString()}
-                                    mint={token.mintAddress || ''}
-                                    banner={token.bannerUrl || ''}
-                                    avatar={token.avatarUrl || ''}
-                                    name={token.name}
-                                    symbol={token.symbol}
-                                    type={getPricingDisplay(token.selectedPricing || '')}
-                                    description={token.description}
-                                    decimals={token.decimals}
+                                    mint={token.mintAddress}
+                                    banner={token.basicInfo.bannerUrl}
+                                    avatar={token.basicInfo.avatarUrl}
+                                    name={token.basicInfo.name}
+                                    symbol={token.basicInfo.symbol}
+                                    type={getPricingDisplay(token.selectedPricing)}
+                                    description={token.basicInfo.description}
+                                    decimals={parseInt(token.basicInfo.decimals)}
                                     status={'Trading'}
                                     actionButton={{
-                                        text: `Buy $${token.symbol}`,
+                                        text: `Buy $${token.basicInfo.symbol}`,
                                         variant: 'presale' as const
                                     }}
                                 />
