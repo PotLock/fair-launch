@@ -3,8 +3,8 @@ import { Card } from "./ui/card";
 
 export const TokenDetailSkeleton = () => {
     return (
-        <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="px-4 col-span-2 space-y-4">
+        <div className="min-h-screen md:px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="px-2 col-span-2 space-y-4">
                 {/* Banner and Header Skeleton */}
                 <div className="relative">
                     <div className="relative">

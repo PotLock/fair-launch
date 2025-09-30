@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "bun run --watch index.ts",
     "start": "bun run index.ts",
-    "test": "bun test src/tests/*.test.ts",
-    "test:watch": "bun test --watch src/tests/*.test.ts",
+    "test": "bun run src/tests/*.test.ts",
+    "test:watch": "bun run --watch src/tests/*.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -25,6 +25,8 @@
     "@types/node": "^20.10.5",
     "@types/cors": "^2.8.17",
     "drizzle-kit": "^0.31.4",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
-  }
+  },
+  "packageManager": "pnpm@10.17.0+sha512.fce8a3dd29a4ed2ec566fb53efbb04d8c44a0f05bc6f24a73046910fb9c3ce7afa35a0980500668fa3573345bd644644fa98338fa168235c80f4aa17aa17fbef"
 }

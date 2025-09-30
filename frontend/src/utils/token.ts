@@ -19,41 +19,91 @@ export interface MintAccount {
 }
 
 export interface TokenInfo {
-  id: string;
-  name: string;
-  symbol: string;
-  avatarUrl: string;
-  bannerUrl?: string;
-  description: string;
-  decimals: number;
-  supply: number;
-  mintAuthority: string;
-  freezeAuthority: string;
-  createdOn: string;
-  social: {
-    website?: string;
-    twitter?: string;
-    telegram?: string;
-    discord?: string;
-    farcaster?: string;
-  }
-  pricing: string;
-  curveConfig?: string;
-  mintAddress?: string;
-  targetRaise?: string;
-  createdAt?: string;
-  selectedPricing?: string;
-  selectedExchange?: string;
-  selectedTemplate?: string;
-  hardCap?: string;
-  maximumContribution?: string;
-  minimumContribution?: string;
-  launchLiquidityOnName?: string;
-  reserveRatio?: string;
-  initialPrice?: string;
-  allocations?: any[];
-  finalPrice?: string;
-  liquidityPercentage?: number
+  id: number;
+  mintAddress: string;
+  owner: string;
+  selectedTemplate: string;
+  selectedPricing: string;
+  selectedExchange: string;
+  createdAt: string;
+  updatedAt: string;
+  basicInfo: {
+    name: string;
+    symbol: string;
+    description: string;
+    supply: string;
+    decimals: string;
+    avatarUrl: string;
+    bannerUrl: string;
+  };
+  socials: {
+    website: string;
+    twitter: string;
+    telegram: string;
+    discord: string;
+    farcaster: string | null;
+  };
+  allocations: Array<{
+    description: string;
+    percentage: number;
+    walletAddress: string;
+    lockupPeriod: number;
+    vesting: {
+      description: string;
+      percentage: number;
+      cliff: number;
+      duration: number;
+      interval: number;
+    };
+  }>;
+  pricingMechanism: {
+    initialPrice: string;
+    finalPrice: string;
+    targetRaise: string;
+    reserveRatio: string;
+    curveType: string;
+  };
+  dexListing: {
+    launchLiquidityOn: string;
+    liquiditySource: string;
+    liquidityData: any;
+    liquidityType: string | null;
+    liquidityPercentage: number;
+    liquidityLockupPeriod: number;
+    isAutoBotProtectionEnabled: boolean;
+    isAutoListingEnabled: boolean;
+    isPriceProtectionEnabled: boolean;
+  };
+  fees: {
+    mintFee: number;
+    transferFee: number;
+    burnFee: number;
+    feeRecipientAddress: string;
+    adminControls: string;
+  };
+  saleSetup: {
+    softCap: string;
+    hardCap: string;
+    scheduleLaunch: {
+      launchDate: string;
+      endDate: string;
+    };
+    minimumContribution: string;
+    maximumContribution: string;
+    tokenPrice: string;
+    maxTokenPerWallet: string;
+    distributionDelay: number;
+  };
+  adminSetup: {
+    revokeMintAuthority: string;
+    revokeFreezeAuthority: string;
+    adminWalletAddress: string;
+    adminStructure: string;
+    tokenOwnerWalletAddress: string;
+    numberOfSignatures: number;
+    mintAuthorityWalletAddress: string;
+    freezeAuthorityWalletAddress: string;
+  };
 }
 
 export interface BondingCurveTokenInfo {

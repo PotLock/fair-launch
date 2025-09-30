@@ -46,13 +46,11 @@ export const tokens = pgTable('tokens', {
   transferFee: decimal('transfer_fee', { precision: 10, scale: 2 }),
   burnFee: decimal('burn_fee', { precision: 10, scale: 2 }),
   feeRecipientAddress: varchar('fee_recipient_address', { length: 255 }),
-  adminControlsEnabled: boolean('admin_controls_enabled'),
   adminControlsWalletAddress: varchar('admin_controls_wallet_address', { length: 255 }),
   
   // Sale setup
   softCap: varchar('soft_cap', { length: 100 }),
   hardCap: varchar('hard_cap', { length: 100 }),
-  scheduleLaunchEnabled: boolean('schedule_launch_enabled'),
   launchDate: timestamp('launch_date'),
   endDate: timestamp('end_date'),
   minimumContribution: varchar('minimum_contribution', { length: 100 }),
@@ -62,9 +60,7 @@ export const tokens = pgTable('tokens', {
   distributionDelay: integer('distribution_delay'),
   
   // Admin setup
-  revokeMintAuthorityEnabled: boolean('revoke_mint_authority_enabled'),
   revokeMintAuthorityWalletAddress: varchar('revoke_mint_authority_wallet_address', { length: 255 }),
-  revokeFreezeAuthorityEnabled: boolean('revoke_freeze_authority_enabled'),
   revokeFreezeAuthorityWalletAddress: varchar('revoke_freeze_authority_wallet_address', { length: 255 }),
   adminWalletAddress: varchar('admin_wallet_address', { length: 255 }),
   adminStructure: varchar('admin_structure', { length: 50 }),
@@ -88,7 +84,6 @@ export const tokenAllocations = pgTable('token_allocations', {
   lockupPeriod: integer('lockup_period'),
   
   // Vesting info
-  vestingEnabled: boolean('vesting_enabled'),
   vestingDescription: text('vesting_description'),
   vestingPercentage: decimal('vesting_percentage', { precision: 5, scale: 2 }),
   vestingCliff: integer('vesting_cliff'),

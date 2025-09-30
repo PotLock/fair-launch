@@ -13,7 +13,7 @@ import {
     Cell,
     ResponsiveContainer
 } from 'recharts';
-import { Globe, ChevronDown, Download, Plus, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
+import { Globe, ChevronDown, Download, ExternalLink, Copy, ArrowUpRight } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,7 +31,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Button } from "../../components/ui/button";
 import { getTokenByMint } from "../../lib/api";
 import { linearBuyCost, linearSellCost, getCurrentPriceSOL } from "../../utils/sol";
-import { TokenDistributionItem, Holders, Token} from "../../types"
+import { TokenDistributionItem, Holders, Token, EnhancedPool} from "../../types"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { formatVestingInfo, mergeVestingData } from "../../utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -39,10 +39,9 @@ import { LaunchStatus } from "../../components/LaunchStatus";
 import { LaunchConditions } from "../../components/LaunchConditions";
 import { LiquidityPools } from "../../components/LiquidityPools";
 import { BondingCurveChart } from "../../components/BondingCurveChart";
-import { NODE_ENV } from "../../configs/env.config";
 import { getSolPrice } from "../../lib/sol";
 import { AddLiquidityModal } from "../../components/AddLiquidityModal";
-import { getUserCreatedCpmmPools } from "../../lib/raydium";
+import { getUserCreatedEnhancedCpmmPools } from "../../lib/raydium";
 import { useMetadata, setLoadingMetadata, setErrorMetadata } from "../../hook/useMetadata";
 
 
@@ -73,13 +72,15 @@ function TokenDetail() {
     const [marketCap, setMarketCap] = useState<number>(0);
     const [solPrice, setSolPrice] = useState<number>(0)
     const [showAddLiquidityModal, setShowAddLiquidityModal] = useState<boolean>(false);
-    const [listPools, setListPools] = useState<any[]>([]);
+    const [listPools, setListPools] = useState<EnhancedPool[]>([]);
+    const [loadingPools, setLoadingPools] = useState<boolean>(false)
+    const [errorPools, setErrorPools] = useState<string | null>(null)
 
     // Metadata management using custom hook
     const metadataConfig = tokenInfo ? {
-        title: `${tokenInfo.name} (${tokenInfo.symbol}) - POTLAUNCH`,
-        description: tokenInfo.description || `Trade ${tokenInfo.name} (${tokenInfo.symbol}) on POTLAUNCH - The premier token launch platform`,
-        imageUrl: tokenInfo.bannerUrl,
+        title: `${tokenInfo.basicInfo.name} (${tokenInfo.basicInfo.symbol}) - POTLAUNCH`,
+        description: tokenInfo.basicInfo.description || `Trade ${tokenInfo.basicInfo.name} (${tokenInfo.basicInfo.symbol}) on POTLAUNCH - The premier token launch platform`,
+        imageUrl: tokenInfo.basicInfo.bannerUrl,
         url: `https://potlaunch.com/token/${tokenId}`,
         type: "website",
         siteName: "POTLAUNCH"
@@ -94,7 +95,7 @@ function TokenDetail() {
             
             const tokenRes = await getTokenByMint(tokenId);
             const bondingCurveRes = await getBondingCurveAccounts(new PublicKey(tokenId));
-            const walletAddresses = tokenRes.data.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
+            const walletAddresses = tokenRes.allocations.map((a: TokenDistributionItem) => new PublicKey(a.walletAddress));
             const allocationsAndVestingArr = await Promise.all(walletAddresses.map(async (wallet: PublicKey) => {
                 const data = await getAllocationsAndVesting([wallet], new PublicKey(tokenId));
                 return data;
@@ -108,9 +109,9 @@ function TokenDetail() {
 
             setSolPrice(priceSol || 0)
             setCurrentPrice(Number(price));
-            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)/ 10 ** Number(tokenRes.data.decimals)) * (Number(price) * Number(priceSol)));
+            setMarketCap((Number(bondingCurveRes?.totalSupply || 0)/ 10 ** Number(tokenRes.basicInfo.decimals)) * (Number(price) * Number(priceSol)));
             setAllocationsAndVesting(allocationsAndVestingArr.filter(Boolean));
-            setTokenInfo(tokenRes.data);
+            setTokenInfo(tokenRes);
             setBondingCurveInfo(bondingCurveRes || null);
             setCurveConfig(curveConfigInfo)
         } catch (error) {
@@ -121,14 +122,27 @@ function TokenDetail() {
         }
     }, [tokenId]);
 
-    const fetchPools = useCallback(async()=>{
+    const fetchPools = async()=>{
+        setLoadingPools(true)
+        setErrorPools(null)
         if(!publicKey){
             setListPools([])
+            return
         }
-        const pools = await getUserCreatedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
-        // console.log("pools", pools)
-        setListPools(pools)
-    },[publicKey])
+        try {
+            const pools = await getUserCreatedEnhancedCpmmPools(new PublicKey(publicKey?.toBase58() || ''))
+            console.log("enhanced pools", pools)
+            setListPools(pools)
+            
+        } catch (error) {
+            console.error("Failed to fetch enhanced pools:", error)
+            setListPools([])
+            setLoadingPools(false)
+            setErrorPools("Failed to fetch enhanced pools")
+        }finally{
+            setLoadingPools(false)
+        }
+    }
 
     const fetchCurrentPrice = useCallback(async () => {
         const priceSol = getCurrentPriceSOL(
@@ -158,13 +172,16 @@ function TokenDetail() {
         
         loadInfoToken();
         fetchHolders();
+    }, [loadInfoToken, fetchHolders]);
+
+    useEffect(() => {
         fetchPools();
-    }, [loadInfoToken, fetchHolders, fetchPools]);
+    }, [publicKey]); 
 
     useEffect(() => {
         if (tokenInfo) {
             setSelectedPayment({ name: 'SOL', icon: '/chains/sol.jpeg' });
-            setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
+            setSelectedReceive({ name: tokenInfo.basicInfo.symbol, icon: tokenInfo.basicInfo.avatarUrl });
         }
     }, [tokenInfo]);
     
@@ -181,12 +198,12 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.basicInfo?.symbol) {
                         const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                        setReceiveAmount((Number(linearBuyAmount) / 10 ** Number(tokenInfo?.decimals || 0)).toFixed(5).toString());
+                        setReceiveAmount((Number(linearBuyAmount) / 10 ** Number(tokenInfo?.basicInfo?.decimals || 0)).toFixed(5).toString());
                     }
-                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
-                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    else if (selectedPayment?.name === tokenInfo?.basicInfo?.symbol && selectedReceive?.name === 'SOL') {
+                        const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.basicInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
                 }
@@ -206,11 +223,11 @@ function TokenDetail() {
             if (val && tokenInfo && bondingCurveInfo) {
                 const numericVal = parseFloat(val);
                 if (!isNaN(numericVal)) {
-                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol) {
-                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    if (selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.basicInfo?.symbol) {
+                        const estimatedCost = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.basicInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(estimatedCost) / 10 ** 9).toFixed(5).toString());
                     }
-                    else if (selectedPayment?.name === tokenInfo?.symbol && selectedReceive?.name === 'SOL') {
+                    else if (selectedPayment?.name === tokenInfo?.basicInfo?.symbol && selectedReceive?.name === 'SOL') {
                         const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                         setPayAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                     }
@@ -249,13 +266,13 @@ function TokenDetail() {
 
     const tokenOptions = [
         { name: 'SOL', icon: '/chains/sol.jpeg' },
-        ...(tokenInfo ? [{ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl }] : [])
+        ...(tokenInfo ? [{ name: tokenInfo.basicInfo.symbol, icon: tokenInfo.basicInfo.avatarUrl }] : [])
     ];
     
 
-    const hasSocialLinks = !!(tokenInfo?.social?.website || tokenInfo?.social?.twitter || tokenInfo?.social?.telegram || tokenInfo?.social?.discord || tokenInfo?.social?.farcaster);
+    const hasSocialLinks = !!(tokenInfo?.socials?.website || tokenInfo?.socials?.twitter || tokenInfo?.socials?.telegram || tokenInfo?.socials?.discord || tokenInfo?.socials?.farcaster);
 
-    const getSocialUrl = (type: string, value?: string) => {
+    const getSocialUrl = (type: string, value?: string | null) => {
         if (!value) return null;
         switch (type) {
             case 'website':
@@ -277,8 +294,8 @@ function TokenDetail() {
         setSelectedPayment(option);
         if (tokenInfo) {
             if (option.name === 'SOL') {
-                setSelectedReceive({ name: tokenInfo.symbol, icon: tokenInfo.avatarUrl });
-            } else if (option.name === tokenInfo.symbol) {
+                setSelectedReceive({ name: tokenInfo.basicInfo.symbol, icon: tokenInfo.basicInfo.avatarUrl });
+            } else if (option.name === tokenInfo.basicInfo.symbol) {
                 setSelectedReceive({ name: 'SOL', icon: '/chains/sol.jpeg' });
             }
         }
@@ -287,9 +304,9 @@ function TokenDetail() {
             if (!isNaN(numericVal)) {
                 if (option.name === 'SOL' && tokenInfo) {
                     const linearBuyAmount = linearBuyCost(BigInt(Math.floor(numericVal * 10 ** 9)), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
-                    setReceiveAmount((Number(linearBuyAmount) / 10 ** tokenInfo?.decimals).toFixed(5).toString());
-                } else if (option.name === tokenInfo?.symbol) {
-                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
+                    setReceiveAmount((Number(linearBuyAmount) / 10 ** Number(tokenInfo?.basicInfo?.decimals || 0)).toFixed(5).toString());
+                } else if (option.name === tokenInfo?.basicInfo?.symbol) {
+                    const linearSellAmount = linearSellCost(BigInt(Math.floor(numericVal * 10 ** Number(tokenInfo?.basicInfo?.decimals || 0))), Number(curveConfig?.reserveRatio || 0), BigInt(bondingCurveInfo?.totalSupply || 0));
                     setReceiveAmount((Number(linearSellAmount) / 10 ** 9).toFixed(5).toString());
                 }
             }
@@ -307,10 +324,10 @@ function TokenDetail() {
             // console.log("amount", amount);
             const admin = new PublicKey(anchorWallet?.publicKey?.toString() || '');
             
-            const isBuyOperation = selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol;
+            const isBuyOperation = selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.basicInfo?.symbol;
             
             if (isBuyOperation) {
-                await buyToken(mint, amount, admin, tokenInfo?.name || '');
+                await buyToken(mint, amount, admin, tokenInfo?.basicInfo?.name || '');
                 // console.log('Buy transaction:', tx);
                 setPayAmount("");
                 setReceiveAmount("");
@@ -320,7 +337,7 @@ function TokenDetail() {
                 await fetchHolders()
                 await fetchCurrentPrice()
             } else {
-                await sellToken(mint, amount, admin, tokenInfo?.name || '');
+                await sellToken(mint, amount, admin, tokenInfo?.basicInfo?.name || '');
                 // console.log('Sell transaction:', tx);
                 setPayAmount("");
                 setReceiveAmount("");
@@ -337,37 +354,38 @@ function TokenDetail() {
         }
     }
 
+
     return (
         <>
             {metadataElement}
-            <div className="min-h-screen px-4 xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="px-4 col-span-2 space-y-4">
+            <div className="min-h-screen xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4 md:px-2">
+            <div className="px-3 col-span-2 space-y-4">
                 <div className="relative">
                     <div className="relative">
-                        <img src={tokenInfo?.bannerUrl} alt={tokenInfo?.name} className="w-full h-64 object-cover rounded-lg" />
+                        <img src={tokenInfo?.basicInfo?.bannerUrl} alt={tokenInfo?.basicInfo?.name} className="w-full h-64 object-cover rounded-lg" />
                         <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
                             style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
                     </div>
                     <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
                         <div className="flex items-center gap-3">
-                            <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
+                            <img src={tokenInfo?.basicInfo?.avatarUrl} alt={tokenInfo?.basicInfo?.name} className="w-20 h-20 rounded-xl border-[3px] object-cover border-white shadow-md bg-white" />
                             <div className="flex flex-col">
-                                <span className="text-3xl font-bold text-white uppercase">{tokenInfo?.name}</span>
+                                <span className="text-3xl font-bold text-white uppercase">{tokenInfo?.basicInfo?.name}</span>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-lg text-white">${tokenInfo?.symbol}</span>
+                                    <span className="text-lg text-white">${tokenInfo?.basicInfo?.symbol}</span>
                                     <Badge variant="default" className="bg-green-500 text-white border-white border text-xs px-2 py-0.5 rounded-full">Meme Coin</Badge>
                                 </div>
                             </div>
                         </div>
                         {hasSocialLinks && (
                             <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
-                                {tokenInfo?.social?.website && (
+                                {tokenInfo?.socials?.website && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
                                                 className="w-6 h-6 rounded-full flex items-center justify-center"
                                                 onClick={() => {
-                                                    const url = getSocialUrl('website', tokenInfo.social.website);
+                                                    const url = getSocialUrl('website', tokenInfo.socials.website);
                                                     if (url) window.open(url, '_blank');
                                                 }}
                                             >
@@ -379,13 +397,13 @@ function TokenDetail() {
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
-                                {tokenInfo?.social?.farcaster && (
+                                {tokenInfo?.socials?.farcaster && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
                                                 className="w-6 h-6 rounded-full flex items-center justify-center"
                                                 onClick={() => {
-                                                    const url = getSocialUrl('farcaster', tokenInfo.social.farcaster);
+                                                    const url = getSocialUrl('farcaster', tokenInfo.socials.farcaster);
                                                     if (url) window.open(url, '_blank');
                                                 }}
                                             >
@@ -397,13 +415,13 @@ function TokenDetail() {
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
-                                {tokenInfo?.social?.discord && (
+                                {tokenInfo?.socials?.discord && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
                                                 className="w-6 h-6 rounded-full flex items-center justify-center"
                                                 onClick={() => {
-                                                    const url = getSocialUrl('discord', tokenInfo.social.discord);
+                                                    const url = getSocialUrl('discord', tokenInfo.socials.discord);
                                                     if (url) window.open(url, '_blank');
                                                 }}
                                             >
@@ -415,13 +433,13 @@ function TokenDetail() {
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
-                                {tokenInfo?.social?.twitter && (
+                                {tokenInfo?.socials?.twitter && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
                                                 className="w-6 h-6 rounded-full flex items-center justify-center"
                                                 onClick={() => {
-                                                    const url = getSocialUrl('twitter', tokenInfo.social.twitter);
+                                                    const url = getSocialUrl('twitter', tokenInfo.socials.twitter);
                                                     if (url) window.open(url, '_blank');
                                                 }}
                                             >
@@ -433,13 +451,13 @@ function TokenDetail() {
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
-                                {tokenInfo?.social?.telegram && (
+                                {tokenInfo?.socials?.telegram && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
                                                 className="w-6 h-6 rounded-full flex items-center justify-center"
                                                 onClick={() => {
-                                                    const url = getSocialUrl('telegram', tokenInfo.social.telegram);
+                                                    const url = getSocialUrl('telegram', tokenInfo.socials.telegram);
                                                     if (url) window.open(url, '_blank');
                                                 }}
                                             >
@@ -469,7 +487,7 @@ function TokenDetail() {
                             <div className="text-xs text-gray-500">Market Cap</div>
                         </div>
 
-                        <div className="grid grid-cols-3">
+                        <div className="flex flex-row justify-between">
                             <div>
                                 <div className="text-lg font-semibold">{formatDecimal(currentPrice)}</div>
                                 <div className="text-sm text-gray-500">Current Price</div>
@@ -479,13 +497,13 @@ function TokenDetail() {
                                 <div className="text-sm text-gray-500">Holders</div>
                             </div>
                             <div>
-                                <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * solPrice)}</div>
+                                <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.pricingMechanism?.targetRaise) * solPrice)}</div>
                                 <div className="text-sm text-gray-500">Target</div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="border border-gray-200 p-4 rounded-t-2xl bg-white w-full">
+                    <div className="border border-gray-200 p-3 rounded-t-2xl bg-white w-full">
                         <Tabs className="w-full rounded-lg" defaultValue="trade">
                             <TabsList className="w-full">
                                 <TabsTrigger value="trade" className="w-full rounded-lg flex gap-2 items-center">
@@ -550,8 +568,8 @@ function TokenDetail() {
                                                 onChange={handleReceiveAmountChange} 
                                             />
                                             <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
-                                                <img src={tokenInfo?.avatarUrl} alt={tokenInfo?.symbol} className="w-6 h-6 rounded-full" />
-                                                <span className="text-lg mr-7">{tokenInfo?.symbol}</span>
+                                                <img src={tokenInfo?.basicInfo?.avatarUrl} alt={tokenInfo?.basicInfo?.symbol} className="w-6 h-6 rounded-full" />
+                                                <span className="text-lg mr-7">{tokenInfo?.basicInfo?.symbol}</span>
                                             </div>
                                         </div>
                                         <div className="text-sm text-gray-500 mt-1">-</div>
@@ -569,9 +587,9 @@ function TokenDetail() {
                                             </span>
                                         ) : (
                                             isLoggedIn ? (
-                                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
-                                                    ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
-                                                    : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                                selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.basicInfo?.symbol 
+                                                    ? `Buy $${tokenInfo?.basicInfo?.symbol || 'CURATE'}` 
+                                                    : `Sell $${tokenInfo?.basicInfo?.symbol || 'CURATE'}`
                                             ) : 'Connect Wallet to Trade'
                                         )}
                                     </Button>
@@ -646,8 +664,15 @@ function TokenDetail() {
                     <div className="p-4 flex flex-col gap-2">
                         <h1 className="text-lg font-bold">Trade on DEX</h1>
                         <div className="flex flex-col gap-2">
-                            <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div 
+                                className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                                onClick={()=>(
+                                    window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                                )} 
+                            >
+                                <div 
+                                    className="flex items-center gap-2"
+                                >
                                     <div className="relative w-9 h-9">
                                         <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                         <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
@@ -709,28 +734,28 @@ function TokenDetail() {
                     </div>
                 </div>
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Description</h2>
                     <p className="text-gray-600 text-sm">
-                        {tokenInfo?.description}
+                        {tokenInfo?.basicInfo?.description}
                     </p>
                 </Card>
                 
-                {/* {
-                    NODE_ENV !== "production" && (
-                        <LaunchStatus/>
-                    )
-                } */}
+                <LaunchStatus/>
 
-                <LaunchConditions tokenInfo={tokenInfo} currentPrice={currentPrice}/>
+                <LaunchConditions 
+                    tokenInfo={tokenInfo} 
+                    currentPrice={currentPrice}
+                />
 
-                {/* {
-                    NODE_ENV !== "production" && (
-                        <LiquidityPools onAddLiquidity={setShowAddLiquidityModal}/>
-                    )
-                } */}
+                <LiquidityPools 
+                    onAddLiquidity={setShowAddLiquidityModal} 
+                    listPools={listPools}
+                    loadingPools={loadingPools}
+                    errorPools={errorPools}
+                />
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Allocation & Vesting</h2>
                     <div className="flex flex-col md:flex-row md:items-center md:gap-8 bg-gray-50 rounded-lg py-6 px-4">
                         <div className="flex-1 flex flex-col md:flex-row md:items-center justify-center">
@@ -768,36 +793,36 @@ function TokenDetail() {
                         </div>
                     </div>
                     <div className="w-full overflow-x-auto mt-8">
-                        <table className="table-fixed w-full">
+                        <table className="min-w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 bg-white">
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Allocation</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Percentage</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Tokens</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">USD value</th>
-                                    <th className="text-left py-3 px-4 text-gray-700 font-bold">Vesting</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Allocation</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Percentage</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Tokens</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">USD value</th>
+                                    <th className="text-left py-3 px-2 sm:px-4 text-gray-700 font-bold text-xs sm:text-sm whitespace-nowrap">Vesting</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {allocationsAndVesting.map((item, index) => {
                                     const allocation = tokenInfo?.allocations?.[index];
-                                    const tokens = item?.totalTokens ? (Number(item.totalTokens) / Math.pow(10, Number(tokenInfo?.decimals || 0))).toLocaleString() : '-';
+                                    const tokens = item?.totalTokens ? (Number(item.totalTokens) / Math.pow(10, Number(tokenInfo?.basicInfo?.decimals || 0))).toLocaleString() : '-';
                                     // USD value calculation placeholder (replace with real price if available)
                                     const usdValue = '-';
                                     // Vesting info formatting
                                     const vestingInfo = formatVestingInfo(item?.vesting, item?.percentage || 0);
                                     return (
                                         <tr key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                            <td className="py-4 px-4">
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4">
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
-                                                    <span className="font-bold text-gray-900">{allocation?.description || '-'}</span>
+                                                    <span className="font-bold text-gray-900 text-xs sm:text-sm">{allocation?.description || '-'}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{item?.percentage || 0}%</td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{tokens}</td>
-                                            <td className="py-4 px-4 font-medium text-gray-700">{usdValue}</td>
-                                            <td className="py-4 px-4 text-gray-600 text-sm max-w-[180px] break-all whitespace-pre-line">{vestingInfo}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{item?.percentage || 0}%</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{tokens}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">{usdValue}</td>
+                                            <td className="py-3 sm:py-4 px-2 sm:px-4 text-gray-600 text-xs sm:text-sm max-w-[150px] sm:max-w-[180px] break-all whitespace-pre-line">{vestingInfo}</td>
                                         </tr>
                                     );
                                 })}
@@ -806,7 +831,7 @@ function TokenDetail() {
                     </div>
                 </Card>
 
-                <Card className="p-4 md:p-6 mb-6 shadow-none">
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
                     <h2 className="text-xl font-medium mb-4">Vesting Schedule</h2>
                     <div className="w-full h-[280px] md:h-[320px] bg-gray-50 rounded-lg p-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -878,7 +903,7 @@ function TokenDetail() {
                             <div className="text-sm text-gray-500">Holders</div>
                         </div>
                         <div>
-                            <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.targetRaise) * solPrice)}</div>
+                            <div className="text-lg font-semibold">${formatNumberToCurrency(Number(tokenInfo?.pricingMechanism?.targetRaise) * solPrice)}</div>
                             <div className="text-sm text-gray-500">Target</div>
                         </div>
                     </div>
@@ -1025,9 +1050,9 @@ function TokenDetail() {
                                 </span>
                             ) : (
                                 isLoggedIn ? (
-                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.symbol 
-                                        ? `Buy $${tokenInfo?.symbol || 'CURATE'}` 
-                                        : `Sell $${tokenInfo?.symbol || 'CURATE'}`
+                                    selectedPayment?.name === 'SOL' && selectedReceive?.name === tokenInfo?.basicInfo?.symbol 
+                                        ? `Buy $${tokenInfo?.basicInfo?.symbol || 'CURATE'}` 
+                                        : `Sell $${tokenInfo?.basicInfo?.symbol || 'CURATE'}`
                                 ) : 'Connect Wallet to Trade'
                             )}
                         </Button>
@@ -1045,8 +1070,15 @@ function TokenDetail() {
                 <div className="p-4 flex flex-col gap-2">
                     <h1 className="text-lg font-bold">Trade on DEX</h1>
                     <div className="flex flex-col gap-2">
-                        <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                        <div 
+                            className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
+                            onClick={()=>(
+                                window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${tokenId}`,"_blank")
+                            )} 
+                        >
+                            <div 
+                                className="flex items-center gap-2"
+                            >
                                 <div className="relative w-9 h-9">
                                     <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
                                     <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
@@ -1111,6 +1143,8 @@ function TokenDetail() {
                 isOpen={showAddLiquidityModal}
                 onClose={() => setShowAddLiquidityModal(false)}
                 tokenInfo={tokenInfo}
+                listPools={listPools}
+                tokenPrice={currentPrice}
             />
         </div>
         </>

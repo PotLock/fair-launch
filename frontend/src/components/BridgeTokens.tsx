@@ -7,6 +7,8 @@ import { toast } from "react-hot-toast";
 import { useWalletSelector } from "@near-wallet-selector/react-hook";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useBridge } from "../hook/useBridge";
+import { ChainKind, normalizeAmount } from "omni-bridge-sdk";
+import { SOL_NETWORK } from "../configs/env.config";
 
 interface Chain {
     name: string;
@@ -39,7 +41,7 @@ export function BridgeTokens({tokenInfo, chains, onClose, onBridgeProcessingStar
     // Wallet hooks
     const { signedAccountId } = useWalletSelector();
     const { connected, publicKey } = useWallet();
-    const { transferTokenSolanaToNear } = useBridge();
+    const { transferToken } = useBridge();
 
     const handleFromChainChange = (chain: Chain) => {
         setSelectedFromChain(chain);
@@ -88,15 +90,22 @@ export function BridgeTokens({tokenInfo, chains, onClose, onBridgeProcessingStar
         onBridgeProcessingStart(amount, selectedFromChain.name, selectedToChain.name);
         
         try {
-            // Convert amount to bigint (assuming 6 decimals for most tokens)
-            const amountBigInt = BigInt(Math.floor(parseFloat(amount)*(10**6)));
-            
-            const result = await transferTokenSolanaToNear(
+            const amountBigInt = BigInt(amount);
+            const decimalsToChain = selectedToChain.name === 'NEAR' ? 24 : tokenInfo.decimals;
+            const normalizeedAmount = normalizeAmount(amountBigInt, tokenInfo.decimals, decimalsToChain);
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
+            const fromChain = selectedFromChain.name === 'NEAR' ? ChainKind.Near : ChainKind.Sol;
+            const toChain = selectedToChain.name === 'NEAR' ? ChainKind.Near : ChainKind.Sol;
+            const senderAddress = publicKey.toString();
+            const result = await transferToken(
+                network,
+                fromChain,
+                toChain,
+                senderAddress,
                 tokenInfo.mintAddress, 
-                amountBigInt, 
+                normalizeedAmount, 
                 signedAccountId,
                 (progress: number) => {
-                    // Pass progress to parent component
                     onBridgeProgress?.(progress);
                 }
             );
@@ -104,7 +113,7 @@ export function BridgeTokens({tokenInfo, chains, onClose, onBridgeProcessingStar
             setAmount('0');
             
             // Notify parent component to show success modal with transaction hashes
-            onBridgeProcessingComplete(result?.transactionHash || '', result?.transactionHashNear || '');
+            onBridgeProcessingComplete(result?.txFromChain || '', result?.txToChain || '');
         } catch (error) {
             console.error(error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
