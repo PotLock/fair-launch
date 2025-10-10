@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export interface TokenMetadata {
+	uri?: string;
+	image?: string;
+	description?: string;
+	website?: string;
+	twitter?: string;
+	telegram?: string;
+}
+
 // Zod schemas for validation
 export const BasicInformationSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -114,4 +123,22 @@ export type DexListing = z.infer<typeof DexListingSchema>;
 export type Fees = z.infer<typeof FeesSchema>;
 export type TokenSaleSetup = z.infer<typeof TokenSaleSetupSchema>;
 export type AdminSetup = z.infer<typeof AdminSetupSchema>;
-export type CreateTokenRequest = z.infer<typeof CreateTokenSchema>; 
+export type CreateTokenRequest = z.infer<typeof CreateTokenSchema>;
+
+// IPFS Upload Schemas
+export const UploadImageSchema = z.object({
+  fileName: z.string().optional(),
+});
+
+export const UploadMetadataSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  symbol: z.string().min(1, 'Symbol is required'),
+  imageUri: z.string().min(1, 'Image URI is required'),
+  description: z.string().min(1, 'Description is required'),
+  website: z.string().optional(),
+  twitter: z.string().optional(),
+  telegram: z.string().optional(),
+});
+
+export type UploadImageRequest = z.infer<typeof UploadImageSchema>;
+export type UploadMetadataRequest = z.infer<typeof UploadMetadataSchema>; 
