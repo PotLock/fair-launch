@@ -13,6 +13,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@filebase/sdk": "^1.0.6",
     "@hono/node-server": "^1.8.2",
     "@hono/zod-validator": "^0.2.1",
     "cors": "^2.8.5",
@@ -22,8 +23,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
     "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.5",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
