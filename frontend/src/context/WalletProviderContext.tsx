@@ -8,7 +8,6 @@ import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-reac
 import * as walletAdapterWallets from "@solana/wallet-adapter-wallets";
 import { getSOLNetwork } from "../utils/sol";
 import { clusterApiUrl } from "@solana/web3.js";
-import "@solana/wallet-adapter-react-ui/styles.css";
 import { ALCHEMY_API_KEY } from "../configs/env.config";
 
 export type ChainType = 'solana' | 'near' | 'evm';

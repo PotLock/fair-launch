@@ -7,7 +7,7 @@ import { z } from 'zod';
 const app = new Hono();
 const tokenService = new TokenService();
 
-// Create token
+// Create token with integrated DBC config
 app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
   try {
     const tokenData = c.req.valid('json');
@@ -16,7 +16,7 @@ app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
     return c.json({
       success: true,
       data: result,
-      message: 'Token created successfully'
+      message: 'Token and DBC config created successfully'
     }, 201);
   } catch (error) {
     console.error('Error in create token route:', error);
@@ -147,12 +147,12 @@ app.get('/address/:address', async (c) => {
 // Get token by ID
 app.get('/:id', async (c) => {
   try {
-    const id = parseInt(c.req.param('id'));
+    const id = c.req.param('id');
     
-    if (isNaN(id)) {
+    if (!id || id.trim() === '') {
       return c.json({
         success: false,
-        message: 'Invalid token ID'
+        message: 'Token ID is required'
       }, 400);
     }
     
@@ -179,18 +179,30 @@ app.get('/:id', async (c) => {
   }
 });
 
-// Delete all tokens
-app.delete('/all', async (c) => {
+// Update token status
+app.patch('/:id/status', zValidator('json', z.object({
+  status: z.enum(['pending', 'active', 'migrated', 'failed'])
+})), async (c) => {
   try {
-    const result = await tokenService.deleteAllTokens();
-    await tokenService.deleteAllAllocations();
+    const id = c.req.param('id');
+    const { status } = c.req.valid('json');
+    
+    if (!id || id.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Token ID is required'
+      }, 400);
+    }
+    
+    const result = await tokenService.updateTokenStatus(id, status);
+    
     return c.json({
       success: true,
       data: result,
-      message: 'All tokens deleted successfully'
+      message: 'Token status updated successfully'
     });
   } catch (error) {
-    console.error('Error in delete all tokens route:', error);
+    console.error('Error in update token status route:', error);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -198,4 +210,96 @@ app.delete('/all', async (c) => {
   }
 });
 
-export default app; 
+// Add transaction
+app.post('/:tokenId/transactions', zValidator('json', z.object({
+  transactionHash: z.string().min(1),
+  operation: z.string().min(1),
+  status: z.string().min(1),
+  amount: z.string().optional(),
+  fee: z.string().optional(),
+  fromAddress: z.string().optional(),
+  toAddress: z.string().optional(),
+})), async (c) => {
+  try {
+    const tokenId = c.req.param('tokenId');
+    const transactionData = c.req.valid('json');
+    
+    if (!tokenId || tokenId.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Token ID is required'
+      }, 400);
+    }
+    
+    const result = await tokenService.addTransaction(tokenId, transactionData);
+    
+    return c.json({
+      success: true,
+      data: result,
+      message: 'Transaction added successfully'
+    }, 201);
+  } catch (error) {
+    console.error('Error in add transaction route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+// Get token transactions
+app.get('/:tokenId/transactions', async (c) => {
+  try {
+    const tokenId = c.req.param('tokenId');
+    
+    if (!tokenId || tokenId.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Token ID is required'
+      }, 400);
+    }
+    
+    const transactions = await tokenService.getTokenTransactions(tokenId);
+    
+    return c.json({
+      success: true,
+      data: transactions
+    });
+  } catch (error) {
+    console.error('Error in get token transactions route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+// Delete token
+app.delete('/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    
+    if (!id || id.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Token ID is required'
+      }, 400);
+    }
+    
+    const result = await tokenService.deleteToken(id);
+    
+    return c.json({
+      success: true,
+      data: result,
+      message: 'Token deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error in delete token route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+export default app;

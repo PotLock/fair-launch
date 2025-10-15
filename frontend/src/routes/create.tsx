@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import TokenDeployer from "../components/token-deployer/TokenDeployerPage";
 import { useMetadata } from "../hook/useMetadata";
+import CreateToken from "../components/create-token";
 
 export const Route = createFileRoute("/create")({
   component: CreatePage,
@@ -13,5 +13,9 @@ function CreatePage() {
     imageUrl: "/og-image.png"
   });
 
-  return <TokenDeployer />;
+  return(
+    <div className="pt-5">
+      <CreateToken />
+    </div>
+  );
 }
