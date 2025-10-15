@@ -65,6 +65,7 @@ app.post('/upload-metadata', zValidator('json', UploadMetadataSchema), async (c)
       metadataData.name,
       metadataData.symbol,
       metadataData.imageUri,
+      metadataData.bannerUri,
       metadataData.description,
       metadataData.website || '',
       metadataData.twitter || '',

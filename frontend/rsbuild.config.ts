@@ -24,6 +24,7 @@ export default defineConfig({
       process: "process/browser",
       crypto: "crypto-browserify",
       fs: false,
+      dotenv: path.resolve(__dirname, 'src/lib/dotenv.ts'),
       path: false,
       os: false,
       algosdk: false,

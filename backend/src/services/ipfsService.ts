@@ -15,17 +15,18 @@ export class IPFSService {
         name: string,
         symbol: string,
         description: string,
-        image: string,
+        imageUri: string,
+        bannerUri: string,
         website: string,
         twitter: string,
-        telegram: string,
-        imageUri?: string
+        telegram: string
     ): TokenMetadata {
         const metadata = {
             name: name,
             symbol: symbol,
             description: description,
-            image: imageUri || image,
+            image: imageUri,
+            banner: bannerUri,
             website: website,
             twitter: twitter,
             telegram: telegram,
@@ -39,6 +40,7 @@ export class IPFSService {
         name: string,
         symbol: string,
         imageUri: string,
+        bannerUri: string,
         description: string,
         website: string,
         twitter: string,
@@ -49,10 +51,10 @@ export class IPFSService {
             symbol,
             description,
             imageUri,
+            bannerUri,
             website,
             twitter,
-            telegram,
-            imageUri
+            telegram
         );
 
         try {
