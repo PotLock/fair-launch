@@ -1,12 +1,26 @@
 "use client"
-
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import { 
+  getTokenHolders,
+  getPoolByMint,
+} from "@/lib/api";
+import { 
+    formatNumberToCurrency, 
+    calculateTokenPrice, 
+    formatTokenPrice, 
+    calculateMarketCap, 
+    formatMarketCap 
+} from "@/utils";
+import { getSolPrice } from "@/lib/sol";
+
 
 interface ExploreTokenCardProps {
     id: string;
     mint: string,
     decimals: number,
+    totalSupply: string;
     banner: string;
     avatar: string;
     name: string;
@@ -19,8 +33,17 @@ interface ExploreTokenCardProps {
     className?: string;
 }
 
+interface TokenData {
+    price: number;
+    holders: number;
+    marketCap: number;
+    supply: string;
+}
+
 export default function ExploreTokenCard({
     mint,
+    decimals,
+    totalSupply,
     banner,
     avatar,
     name,
@@ -30,6 +53,51 @@ export default function ExploreTokenCard({
     className
 }: ExploreTokenCardProps){
     const navigate = useRouter()
+    const [tokenData, setTokenData] = useState<TokenData>({
+        price: 0,
+        holders: 0,
+        marketCap: 0,
+        supply: '0'
+    });
+    const [loading, setLoading] = useState(true);
+
+    const fetchTokenData = useCallback(async () => {
+        const solPrice = await getSolPrice();
+        if(!solPrice) return;
+        try {
+            setLoading(true);
+            
+            // Fetch holders and pool data in parallel
+            const [holders, pool] = await Promise.all([
+                getTokenHolders(mint),
+                getPoolByMint(mint)
+            ]);
+
+            // Calculate price from pool sqrtPrice
+            const price = pool?.account?.sqrtPrice 
+                ? calculateTokenPrice(pool.account.sqrtPrice)
+                : 0;
+
+            // Calculate market cap
+            const marketCap = calculateMarketCap(price, totalSupply, decimals);
+
+            setTokenData({
+                price: price * solPrice,
+                holders: holders.length,
+                marketCap,
+                supply: formatNumberToCurrency(Number(totalSupply))
+            });
+        } catch (error) {
+            console.error('Error fetching token data:', error);
+            // Keep default values on error
+        } finally {
+            setLoading(false);
+        }
+    }, [mint, totalSupply, decimals]);
+    
+    useEffect(() => {
+        fetchTokenData();
+    }, [fetchTokenData]);
 
     const getActionButtonStyle = (variant: string) => {
         switch (variant) {
@@ -90,7 +158,9 @@ export default function ExploreTokenCard({
                         transition={{ delay: 0.1 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">${0}</span>
+                        <span className="font-bold text-gray-900">
+                            {loading ? '...' : `$${formatTokenPrice(tokenData.price)}`}
+                        </span>
                         <span className="text-gray-500 text-xs">Price</span>
                     </motion.div>
                     <motion.div 
@@ -99,7 +169,9 @@ export default function ExploreTokenCard({
                         transition={{ delay: 0.2 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">{0}</span>
+                        <span className="font-bold text-gray-900">
+                            {loading ? '...' : tokenData.supply}
+                        </span>
                         <span className="text-gray-500 text-xs">Supply</span>
                     </motion.div>
                     <motion.div 
@@ -108,7 +180,9 @@ export default function ExploreTokenCard({
                         transition={{ delay: 0.3 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">{0}</span>
+                        <span className="font-bold text-gray-900">
+                            {loading ? '...' : tokenData.holders}
+                        </span>
                         <span className="text-gray-500 text-xs">Holders</span>
                     </motion.div>
                     <motion.div 
@@ -117,7 +191,10 @@ export default function ExploreTokenCard({
                         transition={{ delay: 0.4 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">${0}</span>
+                        <span className="font-bold text-gray-900">
+                            {loading ? '...' : formatMarketCap(tokenData.marketCap)}
+                        </span>
+                        <span className="text-gray-500 text-xs">Market Cap</span>
                     </motion.div>
                 </div>
 

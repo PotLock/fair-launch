@@ -8,6 +8,7 @@
         "@filebase/sdk": "^1.0.6",
         "@hono/node-server": "^1.8.2",
         "@hono/zod-validator": "^0.2.1",
+        "@meteora-ag/dynamic-bonding-curve-sdk": "^1.4.5",
         "@solana/web3.js": "^1.98.4",
         "cors": "^2.8.5",
         "drizzle-orm": "^0.44.2",

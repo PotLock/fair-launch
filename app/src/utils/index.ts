@@ -69,3 +69,46 @@ export function formatTinyPrice(num: number): string {
     const [intPart, decPart = ""] = str.split(".");
     return intPart + "." + decPart.slice(0, 1);
 }
+
+export function formatMarketCap(marketCap: number): string {
+  if (marketCap === 0) return '0';
+  if (marketCap >= 1e9) return `$${(marketCap / 1e9).toFixed(2)}B`;
+  if (marketCap >= 1e6) return `$${(marketCap / 1e6).toFixed(2)}M`;
+  if (marketCap >= 1e3) return `$${(marketCap / 1e3).toFixed(2)}K`;
+  return `$${marketCap.toFixed(2)}`;
+}
+
+
+// Token price calculation utilities
+export function calculateTokenPrice(sqrtPrice: string): number {
+  try {
+    // Convert hex string to decimal
+    const sqrtPriceDecimal = parseInt(sqrtPrice, 16);
+    
+    // Apply the DBC formula: price = (sqrtPrice / 2^64)^2
+    const price = Math.pow(sqrtPriceDecimal / Math.pow(2, 64), 2);
+    
+    return price;
+  } catch (error) {
+    console.error('Error calculating token price:', error);
+    return 0;
+  }
+}
+
+export function formatTokenPrice(price: number): string {
+  if (price === 0) return '0';
+  if (price < 0.000001) return price.toExponential(2);
+  if (price < 0.01) return price.toFixed(6);
+  if (price < 1) return price.toFixed(4);
+  return price.toFixed(2);
+}
+
+export function calculateMarketCap(price: number, totalSupply: string, decimals: number): number {
+  try {
+    const supply = parseFloat(totalSupply)
+    return price * supply;
+  } catch (error) {
+    console.error('Error calculating market cap:', error);
+    return 0;
+  }
+}

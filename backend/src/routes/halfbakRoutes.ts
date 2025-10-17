@@ -103,4 +103,25 @@ app.post('/deploy-token', zValidator('json', DeployTokenRequestSchema), async (c
   }
 });
 
+app.get('/pool/state/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const pool = await halfbakService.getPoolStateByMintAddress(mintAddress);
+    return c.json({ success: true, data: pool });
+  } catch (error) {
+    console.error('Error in get pool by mint address route:', error);
+    return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
+  }
+});
+
+app.get('/pool/config/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const poolConfig = await halfbakService.getPoolConfigByMintAddress(mintAddress);
+    return c.json({ success: true, data: poolConfig });
+  } catch (error) {
+    console.error('Error in get pool config by mint address route:', error);
+    return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
+  }
+});
 export default app;
