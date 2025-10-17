@@ -47,15 +47,15 @@ export async function getTokenByAddress(address: string): Promise<Token[]> {
   }
 }
 
-export async function getTokenByMint(mint: string): Promise<Token> {
+export async function getTokenByMint(mint: string): Promise<Token | null> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/mint/${mint}`, {
-      // Cache for 5 minutes
-      next: { revalidate: 300 }
+      // Cache for 30 seconds
+      next: { revalidate: 30 }
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return null;
     }
     
     const result = await response.json();
