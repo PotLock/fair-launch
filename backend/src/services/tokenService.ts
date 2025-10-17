@@ -17,11 +17,15 @@ import type {
   CreateTokenRequest, 
   TokenConfig, 
   DBCConfig, 
-  BaseFeeParams
+  BaseFeeParams,
+  TokenWithRelations,
+  DbcConfigWithRelations,
+  CleanTokenResponse,
+  TokenTransactionsEntity
 } from '../types';
 
 export class TokenService {
-  private formatTokenResponseClean(token: any, dbcConfig?: any, tokenPool?: any) {
+  private formatTokenResponseClean(token: TokenWithRelations, dbcConfig?: DbcConfigWithRelations | null): CleanTokenResponse {
     // Helper function to remove internal IDs from nested objects
     const removeInternalIds = (obj: any): any => {
       if (!obj || typeof obj !== 'object') return obj;
@@ -51,7 +55,6 @@ export class TokenService {
     };
 
     const cleanedDbcConfig = dbcConfig ? removeInternalIds(dbcConfig) : undefined;
-    const cleanedTokenPool = tokenPool ? removeInternalIds(tokenPool) : undefined;
 
     return {
       id: token.id, // Keep only the main token ID
@@ -62,16 +65,14 @@ export class TokenService {
       decimals: token.decimals,
       mintAddress: token.mintAddress,
       owner: token.owner,
-      status: token.status,
       createdAt: token.createdAt,
       updatedAt: token.updatedAt,
       metadata: token.metadata ? removeInternalIds(token.metadata) : undefined,
       dbcConfig: cleanedDbcConfig,
-      pool: cleanedTokenPool,
     };
   }
 
-  async createToken(tokenData: CreateTokenRequest) {
+  async createToken(tokenData: CreateTokenRequest): Promise<{ success: boolean; tokenId: string; dbcConfigId: string }> {
     try {
       // Insert main token data
       const [token] = await db.insert(tokens).values({
@@ -114,7 +115,7 @@ export class TokenService {
     }
   }
 
-  async createDBCConfig(tokenId: string, tokenConfig: TokenConfig) {
+  async createDBCConfig(tokenId: string, tokenConfig: TokenConfig): Promise<{ success: boolean; dbcConfigId: string }> {
     try {
       // Insert DBC configuration
       const [dbcConfig] = await db.insert(dbcConfigs).values({
@@ -245,7 +246,7 @@ export class TokenService {
     }
   }
 
-  async getTokenById(id: string) {
+  async getTokenById(id: string): Promise<CleanTokenResponse> {
     try {
       const token = await db.query.tokens.findFirst({
         where: eq(tokens.id, id),
@@ -272,14 +273,14 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return this.formatTokenResponseClean(token, token.dbcConfig);
+      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error getting token:', error);
       throw new Error('Failed to get token');
     }
   }
 
-  async getTokenByAddress(address: string) {
+  async getTokenByAddress(address: string): Promise<CleanTokenResponse> {
     try {
       const token = await db.query.tokens.findFirst({
         where: eq(tokens.mintAddress, address),
@@ -306,14 +307,14 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return this.formatTokenResponseClean(token, token.dbcConfig);
+      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error getting token by address:', error);
       throw new Error('Failed to get token');
     }
   }
 
-  async getAllTokens() {
+  async getAllTokens(): Promise<CleanTokenResponse[]> {
     try {
       const allTokens = await db.query.tokens.findMany({
         with: {
@@ -336,14 +337,14 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return allTokens.map(token => this.formatTokenResponseClean(token, token.dbcConfig));
+      return allTokens.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
     } catch (error) {
       console.error('Error getting all tokens:', error);
       throw new Error('Failed to get tokens');
     }
   }
 
-  async getTokensByOwner(owner: string) {
+  async getTokensByOwner(owner: string): Promise<CleanTokenResponse[]> {
     try {
       const tokensByOwner = await db.query.tokens.findMany({
         where: eq(tokens.owner, owner),
@@ -366,23 +367,10 @@ export class TokenService {
         },
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
-      return tokensByOwner.map(token => this.formatTokenResponseClean(token, token.dbcConfig));
+      return tokensByOwner.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
     } catch (error) {
       console.error('Error getting tokens by owner:', error);
       throw new Error('Failed to get tokens by owner');
-    }
-  }
-
-  async updateTokenStatus(tokenId: string, status: string) {
-    try {
-      await db.update(tokens)
-        .set({ status, updatedAt: new Date() })
-        .where(eq(tokens.id, tokenId));
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating token status:', error);
-      throw new Error('Failed to update token status');
     }
   }
 
@@ -394,7 +382,7 @@ export class TokenService {
     fee?: string;
     fromAddress?: string;
     toAddress?: string;
-  }) {
+  }): Promise<{ success: boolean }> {
     try {
       await db.insert(tokenTransactions).values({
         tokenId: tokenId,
@@ -414,7 +402,7 @@ export class TokenService {
     }
   }
 
-  async getTokenTransactions(tokenId: string) {
+  async getTokenTransactions(tokenId: string): Promise<TokenTransactionsEntity[]> {
     try {
       const transactions = await db.query.tokenTransactions.findMany({
         where: eq(tokenTransactions.tokenId, tokenId),
@@ -428,7 +416,7 @@ export class TokenService {
     }
   }
 
-  async deleteToken(id: string) {
+  async deleteToken(id: string): Promise<{ success: boolean }> {
     try {
       await db.delete(tokens).where(eq(tokens.id, id));
       return { success: true };
@@ -438,7 +426,7 @@ export class TokenService {
     }
   }
 
-  async searchTokens(query: string, owner?: string) {
+  async searchTokens(query: string, owner?: string): Promise<CleanTokenResponse[]> {
     try {
       const { ilike, or, and } = await import('drizzle-orm');
       
@@ -478,7 +466,7 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return searchResults.map(token => this.formatTokenResponseClean(token, token.dbcConfig));
+      return searchResults.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
     } catch (error) {
       console.error('Error searching tokens:', error);
       throw new Error('Failed to search tokens');

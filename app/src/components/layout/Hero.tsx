@@ -42,8 +42,8 @@ export default function Hero() {
   }, []);
 
   return (
-    <div className="bg-white" ref={rootRef}>
-      <div className="lg:container px-6 mx-auto -mt-10 font-sora mb-10">
+    <div className="relative pb-10" ref={rootRef}>
+      <div className="lg:container px-6 mx-auto font-sora mb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="space-y-2 mt-4 md:space-y-4">
             <div className="text-black text-sm md:text-lg font-light flex gap-1 hero-eyebrow">
@@ -90,11 +90,11 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-row gap-2 md:gap-4 pt-4 md:pt-0 hero-cta">
-              <Button onClick={() => navigate.push("/create")} className="bg-[#DD3345] hover:bg-red-700 text-white p-2 px-3 md:px-8 md:py-5 text-xs md:text-sm rounded-md transition-colors">
+              <Button onClick={() => navigate.push("/create")} className="bg-[#DD3345] hover:bg-red-700 text-white p-2 px-3 md:px-8 md:py-5 text-xs md:text-sm rounded-md transition-colors cursor-pointer">
                 <span className="font-light">Launch Your Token</span> 
                 <ArrowRight className="w-3 h-3 md:w-4 md:h-4"/>
               </Button>
-              <Button onClick={() => window.open("https://docs.potlaunch.com", "_blank")} variant="outline" className="border-none bg-[#eaf0f6] text-black p-2 px-3 md:px-8 md:py-5 text-xs md:text-sm font-normal rounded-md hover:bg-[#f2f6f9] transition-colors">
+              <Button onClick={() => window.open("https://docs.potlaunch.com", "_blank")} variant="outline" className="border-none bg-[#eaf0f6] hover:border-[#eaf0f6] text-black p-2 px-3 md:px-8 md:py-5 text-xs md:text-sm font-normal rounded-md hover:bg-[#f2f6f9] hover:text-gray-600 transition-colors cursor-pointer">
                 <span className="font-light">View Documentation</span>
                 <BookA className="w-3 h-3 md:w-4 md:h-4"/>
               </Button>
