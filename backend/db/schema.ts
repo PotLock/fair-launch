@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar, serial, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Main tokens table
@@ -11,7 +11,6 @@ export const tokens = pgTable('tokens', {
   totalSupply: decimal('total_supply', { precision: 20, scale: 9 }).notNull(),
   decimals: integer('decimals').notNull().default(6),
   owner: varchar('owner', { length: 44 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, active, migrated, failed
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

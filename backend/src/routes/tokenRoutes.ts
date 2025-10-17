@@ -179,37 +179,6 @@ app.get('/:id', async (c) => {
   }
 });
 
-// Update token status
-app.patch('/:id/status', zValidator('json', z.object({
-  status: z.enum(['pending', 'active', 'migrated', 'failed'])
-})), async (c) => {
-  try {
-    const id = c.req.param('id');
-    const { status } = c.req.valid('json');
-    
-    if (!id || id.trim() === '') {
-      return c.json({
-        success: false,
-        message: 'Token ID is required'
-      }, 400);
-    }
-    
-    const result = await tokenService.updateTokenStatus(id, status);
-    
-    return c.json({
-      success: true,
-      data: result,
-      message: 'Token status updated successfully'
-    });
-  } catch (error) {
-    console.error('Error in update token status route:', error);
-    return c.json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Internal server error'
-    }, 500);
-  }
-});
-
 // Add transaction
 app.post('/:tokenId/transactions', zValidator('json', z.object({
   transactionHash: z.string().min(1),

@@ -1,10 +1,9 @@
-import { CreateTokenRequest, Token } from '@/types/api';
-
+import { Token } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-console.log("API_URL", API_URL)
 
-export async function createToken(tokenData: CreateTokenRequest) {
+// Server-side fetch functions with Next.js caching
+export async function createToken(tokenData: Token) {
   try {
     const response = await fetch(`${API_URL}/api/tokens`, {
       method: 'POST',
@@ -12,6 +11,8 @@ export async function createToken(tokenData: CreateTokenRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(tokenData),
+      // Don't cache POST requests
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -29,7 +30,15 @@ export async function createToken(tokenData: CreateTokenRequest) {
 
 export async function getTokenByAddress(address: string): Promise<Token[]> {
   try {
-    const response = await fetch(`${API_URL}/api/tokens/address/${address}`);
+    const response = await fetch(`${API_URL}/api/tokens/address/${address}`, {
+      // Cache for 5 minutes
+      next: { revalidate: 300 }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const result = await response.json();
     return result.data || [];
   } catch (error) {
@@ -40,7 +49,15 @@ export async function getTokenByAddress(address: string): Promise<Token[]> {
 
 export async function getTokenByMint(mint: string): Promise<Token> {
   try {
-    const response = await fetch(`${API_URL}/api/tokens/mint/${mint}`);
+    const response = await fetch(`${API_URL}/api/tokens/mint/${mint}`, {
+      // Cache for 5 minutes
+      next: { revalidate: 300 }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const result = await response.json();
     return result.data;
   } catch (error) {
@@ -51,7 +68,15 @@ export async function getTokenByMint(mint: string): Promise<Token> {
 
 export async function getTokens() {
   try {
-    const response = await fetch(`${API_URL}/api/tokens`);
+    const response = await fetch(`${API_URL}/api/tokens`, {
+      // Cache for 1 minute for frequently changing data
+      next: { revalidate: 60 }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const result = await response.json();
     return result;
   } catch (error) {
@@ -67,7 +92,10 @@ export async function searchTokens(query: string, owner?: string) {
       params.append('owner', owner);
     }
     
-    const response = await fetch(`${API_URL}/api/tokens/search?${params}`);
+    const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {
+      // Cache search results for 2 minutes
+      next: { revalidate: 120 }
+    });
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -91,6 +119,8 @@ export async function uploadImage(imageFile: File, fileName: string) {
     const response = await fetch(`${API_URL}/api/ipfs/upload-image`, {
       method: 'POST',
       body: formData,
+      // Don't cache upload requests
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -122,6 +152,8 @@ export async function uploadMetadata(metadata: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(metadata),
+      // Don't cache upload requests
+      cache: 'no-store',
     });
 
     if (!response.ok) {

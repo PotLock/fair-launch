@@ -198,6 +198,197 @@ export const DeployTokenRequestSchema = z.object({
 
 
 // Type definitions
+// Database Entity Types
+export interface TokenEntity {
+  id: string;
+  mintAddress: string;
+  name: string;
+  symbol: string;
+  description: string | null;
+  totalSupply: string;
+  decimals: number;
+  owner: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TokenMetadataEntity {
+  id: string;
+  tokenId: string;
+  tokenUri: string | null;
+  bannerUri: string | null;
+  website: string | null;
+  twitter: string | null;
+  telegram: string | null;
+  metadataUri: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DbcConfigEntity {
+  id: string;
+  tokenId: string;
+  quoteMint: string;
+  buildCurveMode: number;
+  totalTokenSupply: string;
+  migrationOption: number;
+  tokenBaseDecimal: number;
+  tokenQuoteDecimal: number;
+  dynamicFeeEnabled: boolean;
+  activationType: number;
+  collectFeeMode: number;
+  migrationFeeOption: number;
+  tokenType: number;
+  partnerLpPercentage: string;
+  creatorLpPercentage: string;
+  partnerLockedLpPercentage: string;
+  creatorLockedLpPercentage: string;
+  creatorTradingFeePercentage: string;
+  leftover: string;
+  tokenUpdateAuthority: number;
+  leftoverReceiver: string;
+  feeClaimer: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BuildCurveParamsEntity {
+  id: string;
+  dbcConfigId: string;
+  buildCurveMode: number;
+  percentageSupplyOnMigration: string | null;
+  migrationQuoteThreshold: string | null;
+  initialMarketCap: string | null;
+  migrationMarketCap: string | null;
+  liquidityWeights: number[] | null; // JSONB field from database
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LockedVestingParamsEntity {
+  id: string;
+  dbcConfigId: string;
+  totalLockedVestingAmount: string;
+  numberOfVestingPeriod: number;
+  cliffUnlockAmount: string;
+  totalVestingDuration: number;
+  cliffDurationFromMigrationTime: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BaseFeeParamsEntity {
+  id: string;
+  dbcConfigId: string;
+  baseFeeMode: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FeeSchedulerParamsEntity {
+  id: string;
+  baseFeeParamsId: string;
+  startingFeeBps: number;
+  endingFeeBps: number;
+  numberOfPeriod: number;
+  totalDuration: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RateLimiterParamsEntity {
+  id: string;
+  baseFeeParamsId: string;
+  baseFeeBps: number;
+  feeIncrementBps: number;
+  referenceAmount: string;
+  maxLimiterDuration: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MigrationFeesEntity {
+  id: string;
+  dbcConfigId: string;
+  feePercentage: string;
+  creatorFeePercentage: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MigratedPoolFeesEntity {
+  id: string;
+  dbcConfigId: string;
+  collectFeeMode: number;
+  dynamicFee: number;
+  poolFeeBps: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TokenTransactionsEntity {
+  id: string;
+  tokenId: string;
+  transactionHash: string;
+  operation: string;
+  status: string;
+  amount: string | null;
+  fee: string | null;
+  fromAddress: string | null;
+  toAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Complete Token with Relations
+export interface TokenWithRelations extends TokenEntity {
+  metadata?: TokenMetadataEntity | null;
+  dbcConfig?: DbcConfigWithRelations | null;
+}
+
+export interface DbcConfigWithRelations extends DbcConfigEntity {
+  buildCurveParams?: BuildCurveParamsEntity | null;
+  lockedVestingParams?: LockedVestingParamsEntity | null;
+  baseFeeParams?: BaseFeeParamsWithRelations | null;
+  migrationFee?: MigrationFeesEntity | null;
+  migratedPoolFee?: MigratedPoolFeesEntity | null;
+}
+
+export interface BaseFeeParamsWithRelations extends BaseFeeParamsEntity {
+  feeSchedulerParams?: FeeSchedulerParamsEntity[] | null;
+  rateLimiterParams?: RateLimiterParamsEntity[] | null;
+}
+
+// Clean Response Types (without internal IDs)
+export interface CleanTokenResponse {
+  id: string;
+  name: string;
+  symbol: string;
+  description: string | null;
+  totalSupply: string;
+  decimals: number;
+  mintAddress: string;
+  owner: string;
+  createdAt: Date;
+  updatedAt: Date;
+  metadata?: Omit<TokenMetadataEntity, 'id' | 'tokenId'>;
+  dbcConfig?: CleanDbcConfigResponse;
+}
+
+export interface CleanDbcConfigResponse extends Omit<DbcConfigEntity, 'id' | 'tokenId'> {
+  buildCurveParams?: Omit<BuildCurveParamsEntity, 'id' | 'dbcConfigId'>;
+  lockedVestingParams?: Omit<LockedVestingParamsEntity, 'id' | 'dbcConfigId'>;
+  baseFeeParams?: CleanBaseFeeParamsResponse;
+  migrationFee?: Omit<MigrationFeesEntity, 'id' | 'dbcConfigId'>;
+  migratedPoolFee?: Omit<MigratedPoolFeesEntity, 'id' | 'dbcConfigId'>;
+}
+
+export interface CleanBaseFeeParamsResponse extends Omit<BaseFeeParamsEntity, 'id' | 'dbcConfigId'> {
+  feeSchedulerParams?: Omit<FeeSchedulerParamsEntity, 'id' | 'baseFeeParamsId'>[];
+  rateLimiterParams?: Omit<RateLimiterParamsEntity, 'id' | 'baseFeeParamsId'>[];
+}
+
+// Request/Response Types
 export type CreateTokenRequest = z.infer<typeof CreateTokenSchema>;
 export type DbcConfigRequestType = z.infer<typeof DbcConfigRequestSchema>;
 export type DeployTokenRequestType = z.infer<typeof DeployTokenRequestSchema>;

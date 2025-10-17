@@ -296,12 +296,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       const deployResult = await resDeployToken.json();
       console.log('Deploy token result:', deployResult);
       
-      const serializedDeployTx = deployResult.data.transaction; // từ API server
+      const serializedDeployTx = deployResult.data.transaction;
       const deployTxBuffer = Buffer.from(serializedDeployTx, "base64");
 
       let deployTransaction;
 
-      // thử deserialize theo 2 kiểu
       try {
         deployTransaction = VersionedTransaction.deserialize(deployTxBuffer);
         console.log("Deploy Transaction is VersionedTransaction");

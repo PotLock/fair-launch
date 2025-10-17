@@ -15,6 +15,13 @@
       "when": 1760309413114,
       "tag": "0001_slimy_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760708745891,
+      "tag": "0002_thankful_nico_minoru",
+      "breakpoints": true
     }
   ]
 }
