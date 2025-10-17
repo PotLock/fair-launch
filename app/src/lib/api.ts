@@ -1,4 +1,4 @@
-import { Token } from '@/types/api';
+import { Token, Pool } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -63,6 +63,40 @@ export async function getTokenByMint(mint: string): Promise<Token> {
   } catch (error) {
     console.error('Error getting token by mint:', error);
     throw new Error('Failed to get token by mint');
+  }
+}
+
+export async function getTokenHolders(mint: string): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/holders/${mint}`, {
+      // Cache for 5 minutes
+      next: { revalidate: 300 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error('Error getting token holders:', error);
+    throw new Error('Failed to get token holders');
+  }
+}
+
+export async function getPoolByMint(mint: string): Promise<Pool> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/state/${mint}`, {
+      // Cache for 5 minutes
+      next: { revalidate: 300 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
   }
 }
 

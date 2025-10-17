@@ -5,6 +5,7 @@ import type { DbcConfigRequest, DeployTokenRequest } from "../types";
 import { getDBCConfig } from "../configs/dbc.config";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { toSdkMetadata } from "../lib/halfbak";
+import { DynamicBondingCurveClient } from "@meteora-ag/dynamic-bonding-curve-sdk";
 
 export class HalfbakService {
     private launchClient: LaunchClient;
@@ -92,5 +93,44 @@ export class HalfbakService {
         baseMint: baseMint.publicKey.toBase58(),
         transaction: serializedTx,
       };
+    }
+
+    async getPoolStateByMintAddress(mintAddress: string){
+      try {
+        const connection = new Connection(getRpcSOLEndpoint());
+        const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
+
+        const poolState = await dbcInstance.state.getPoolByBaseMint(mintAddress);
+        if (!poolState) {
+          throw new Error(`DBC Pool not found for ${mintAddress}`);
+        }
+
+        return poolState;
+      } catch (error) {
+        console.error('Error getting pool by mint address:', error);
+        throw new Error('Failed to get pool by mint address');
+      }
+    }
+
+    async getPoolConfigByMintAddress(mintAddress: string){
+      try {
+        const connection = new Connection(getRpcSOLEndpoint());
+        const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
+
+        const poolState = await dbcInstance.state.getPoolByBaseMint(mintAddress);
+        if (!poolState) {
+          throw new Error(`DBC Pool not found for ${mintAddress.toString()}`);
+        }
+      
+        const dbcConfigAddress = poolState.account.config;
+        const poolConfig = await dbcInstance.state.getPoolConfig(dbcConfigAddress);
+        if (!poolConfig) {
+          throw new Error(`DBC Pool config not found for ${dbcConfigAddress.toString()}`);
+        }
+        return poolConfig;
+      } catch (error) {
+        console.error('Error getting pool config by mint address:', error);
+        throw new Error('Failed to get pool config by mint address');
+      }
     }
 }

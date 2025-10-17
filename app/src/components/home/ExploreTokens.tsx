@@ -29,6 +29,7 @@ async function ExploreTokensContent() {
             <ExploreTokenCard  
               id={token.id.toString()}
               mint={token.mintAddress}
+              totalSupply={token.totalSupply}
               banner={token.metadata.bannerUri}
               avatar={token.metadata.tokenUri}
               name={token.name}

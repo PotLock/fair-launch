@@ -179,63 +179,13 @@ app.get('/:id', async (c) => {
   }
 });
 
-// Add transaction
-app.post('/:tokenId/transactions', zValidator('json', z.object({
-  transactionHash: z.string().min(1),
-  operation: z.string().min(1),
-  status: z.string().min(1),
-  amount: z.string().optional(),
-  fee: z.string().optional(),
-  fromAddress: z.string().optional(),
-  toAddress: z.string().optional(),
-})), async (c) => {
+app.get('/holders/:mintAddress', async (c) => {
   try {
-    const tokenId = c.req.param('tokenId');
-    const transactionData = c.req.valid('json');
-    
-    if (!tokenId || tokenId.trim() === '') {
-      return c.json({
-        success: false,
-        message: 'Token ID is required'
-      }, 400);
-    }
-    
-    const result = await tokenService.addTransaction(tokenId, transactionData);
-    
-    return c.json({
-      success: true,
-      data: result,
-      message: 'Transaction added successfully'
-    }, 201);
+    const mintAddress = c.req.param('mintAddress');
+    const holders = await tokenService.getHoldersByMintAddress(mintAddress);
+    return c.json({ success: true, data: holders });
   } catch (error) {
-    console.error('Error in add transaction route:', error);
-    return c.json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Internal server error'
-    }, 500);
-  }
-});
-
-// Get token transactions
-app.get('/:tokenId/transactions', async (c) => {
-  try {
-    const tokenId = c.req.param('tokenId');
-    
-    if (!tokenId || tokenId.trim() === '') {
-      return c.json({
-        success: false,
-        message: 'Token ID is required'
-      }, 400);
-    }
-    
-    const transactions = await tokenService.getTokenTransactions(tokenId);
-    
-    return c.json({
-      success: true,
-      data: transactions
-    });
-  } catch (error) {
-    console.error('Error in get token transactions route:', error);
+    console.error('Error in get holders by mint address route:', error);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'

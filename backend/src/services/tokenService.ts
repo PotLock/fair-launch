@@ -9,8 +9,7 @@ import {
   feeSchedulerParams, 
   rateLimiterParams, 
   migrationFees, 
-  migratedPoolFees,
-  tokenTransactions 
+  migratedPoolFees
 } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import type { 
@@ -21,8 +20,9 @@ import type {
   TokenWithRelations,
   DbcConfigWithRelations,
   CleanTokenResponse,
-  TokenTransactionsEntity
 } from '../types';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getRpcSOLEndpoint } from '../lib/sol';
 
 export class TokenService {
   private formatTokenResponseClean(token: TokenWithRelations, dbcConfig?: DbcConfigWithRelations | null): CleanTokenResponse {
@@ -374,48 +374,6 @@ export class TokenService {
     }
   }
 
-  async addTransaction(tokenId: string, transactionData: {
-    transactionHash: string;
-    operation: string;
-    status: string;
-    amount?: string;
-    fee?: string;
-    fromAddress?: string;
-    toAddress?: string;
-  }): Promise<{ success: boolean }> {
-    try {
-      await db.insert(tokenTransactions).values({
-        tokenId: tokenId,
-        transactionHash: transactionData.transactionHash,
-        operation: transactionData.operation,
-        status: transactionData.status,
-        amount: transactionData.amount,
-        fee: transactionData.fee,
-        fromAddress: transactionData.fromAddress,
-        toAddress: transactionData.toAddress,
-      });
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error adding transaction:', error);
-      throw new Error('Failed to add transaction');
-    }
-  }
-
-  async getTokenTransactions(tokenId: string): Promise<TokenTransactionsEntity[]> {
-    try {
-      const transactions = await db.query.tokenTransactions.findMany({
-        where: eq(tokenTransactions.tokenId, tokenId),
-        orderBy: (tokenTransactions, { desc }) => [desc(tokenTransactions.createdAt)],
-      });
-      
-      return transactions;
-    } catch (error) {
-      console.error('Error getting token transactions:', error);
-      throw new Error('Failed to get token transactions');
-    }
-  }
-
   async deleteToken(id: string): Promise<{ success: boolean }> {
     try {
       await db.delete(tokens).where(eq(tokens.id, id));
@@ -471,5 +429,36 @@ export class TokenService {
       console.error('Error searching tokens:', error);
       throw new Error('Failed to search tokens');
     }
+  }
+
+  async getHoldersByMintAddress(mintAddress: string): Promise<string[]> {
+    const connection = new Connection(getRpcSOLEndpoint());
+    
+    const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    
+    const tokenAccounts = await connection.getProgramAccounts(
+      TOKEN_PROGRAM_ID,
+      {
+        filters: [
+          { dataSize: 165 },
+          { 
+            memcmp: { 
+              offset: 0, 
+              bytes: new PublicKey(mintAddress).toBase58() 
+            } 
+          },
+        ],
+        encoding: "base64",
+      }
+    );
+  
+    const holders = tokenAccounts.map((acc) => {
+      const data = Buffer.from(acc.account.data as unknown as ArrayBuffer);
+      const ownerOffset = 32;
+      const ownerBytes = data.slice(ownerOffset, ownerOffset + 32);
+      return new PublicKey(ownerBytes).toBase58();
+    });
+    
+    return holders.filter((holder) => holder !== mintAddress);
   }
 }
