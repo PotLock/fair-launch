@@ -18,7 +18,7 @@ export default function Header() {
                 </div>
                 <div className="flex items-center">
                     <nav className="hidden lg:flex items-center space-x-8 mr-10">
-                        <Link href="/tokens" className="text-gray-600 hover:text-gray-900">
+                        <Link href="/token" className="text-gray-600 hover:text-gray-900">
                             <span className='text-sm'>Launchpad</span>
                         </Link>
                         <Link href="/create" className="text-gray-600 hover:text-gray-900">
@@ -68,7 +68,7 @@ export default function Header() {
                             <span className="text-2xl font-semibold">POTLAUNCH</span>
                         </div>
                         <nav className="flex flex-col space-y-4 mb-8">
-                            <Link href="/tokens" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
+                            <Link href="/token" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Launchpad
                             </Link>
                             <Link href="/create" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>

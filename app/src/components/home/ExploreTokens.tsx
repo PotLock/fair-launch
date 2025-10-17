@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import ExploreTokenCard from "./ExploreTokenCard";
+import ExploreTokenCard from "../ExploreTokenCard";
 import ExploreTokensLoading from "./ExploreTokensLoading";
 import { getTokens } from "@/lib/api";
 import { Token } from "@/types/api";
@@ -8,7 +8,6 @@ async function ExploreTokensContent() {
   try {
     const response = await getTokens();
     const tokens: Token[] = response.data || [];
-    console.log(tokens)
 
     if (tokens.length === 0) {
       return (
