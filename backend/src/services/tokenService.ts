@@ -280,7 +280,7 @@ export class TokenService {
     }
   }
 
-  async getTokenByAddress(address: string): Promise<CleanTokenResponse> {
+  async getTokenByAddress(address: string): Promise<CleanTokenResponse | null> {
     try {
       const token = await db.query.tokens.findFirst({
         where: eq(tokens.mintAddress, address),
@@ -304,13 +304,13 @@ export class TokenService {
       });
 
       if (!token) {
-        throw new Error('Token not found');
+        return null;
       }
 
       return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error getting token by address:', error);
-      throw new Error('Failed to get token');
+      return null;
     }
   }
 
@@ -460,5 +460,82 @@ export class TokenService {
     });
     
     return holders.filter((holder) => holder !== mintAddress);
+  }
+
+  async getPopularTokens(limit: number): Promise<CleanTokenResponse[]> {
+    try {
+      // Get all tokens with their relations
+      const allTokens = await db.query.tokens.findMany({
+        with: {
+          metadata: true,
+          dbcConfig: {
+            with: {
+              buildCurveParams: true,
+              lockedVestingParams: true,
+              baseFeeParams: {
+                with: {
+                  feeSchedulerParams: true,
+                  rateLimiterParams: true,
+                }
+              },
+              migrationFee: true,
+              migratedPoolFee: true,
+            }
+          }
+        },
+        orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
+      });
+
+      // Calculate popularity score for each token
+      const tokensWithScore = await Promise.all(
+        allTokens.map(async (token) => {
+          try {
+            if (!token.mintAddress) {
+              throw new Error('Token mint address is required');
+            }
+            const holders = await this.getHoldersByMintAddress(token.mintAddress);
+            const holderCount = holders.length;
+            
+            const now = new Date();
+            const daysSinceCreation = Math.max(1, (now.getTime() - token.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+            const recencyScore = Math.max(0, 30 - daysSinceCreation);
+            
+            const holderScore = Math.log(Math.max(1, holderCount + 1));
+            
+            // Combined popularity score
+            const popularityScore = recencyScore + holderScore;
+            
+            return {
+              token: token as TokenWithRelations,
+              popularityScore,
+              holderCount
+            };
+          } catch (error) {
+            console.error(`Error calculating popularity for token ${token.id}:`, error);
+            // If we can't get holder count, just use recency
+            const now = new Date();
+            const daysSinceCreation = Math.max(1, (now.getTime() - token.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+            const recencyScore = Math.max(0, 30 - daysSinceCreation);
+            
+            return {
+              token: token as TokenWithRelations,
+              popularityScore: recencyScore,
+              holderCount: 0
+            };
+          }
+        })
+      );
+
+      // Sort by popularity score (descending) and take the limit
+      const popularTokens = tokensWithScore
+        .sort((a, b) => b.popularityScore - a.popularityScore)
+        .slice(0, limit)
+        .map(item => this.formatTokenResponseClean(item.token, item.token.dbcConfig as DbcConfigWithRelations));
+
+      return popularTokens;
+    } catch (error) {
+      console.error('Error getting popular tokens:', error);
+      throw new Error('Failed to get popular tokens');
+    }
   }
 }

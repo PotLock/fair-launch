@@ -68,19 +68,19 @@ app.get('/mint/:address', async (c) => {
     
     const token = await tokenService.getTokenByAddress(address);
     
+    if (!token) {
+      return c.json({
+        success: false,
+        message: 'Token not found'
+      }, 404);
+    }
+    
     return c.json({
       success: true,
       data: token
     });
   } catch (error) {
     console.error('Error in get token by address route:', error);
-    
-    if (error instanceof Error && error.message === 'Token not found') {
-      return c.json({
-        success: false,
-        message: 'Token not found'
-      }, 404);
-    }
     
     return c.json({
       success: false,
@@ -144,6 +144,49 @@ app.get('/address/:address', async (c) => {
   }
 });
 
+// Get popular tokens - This must come before /:id to avoid route conflicts
+app.get('/popular', async (c) => {
+  try {
+    const limitParam = c.req.query('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 10;
+    
+    // Validate limit parameter
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return c.json({
+        success: false,
+        message: 'Limit must be a number between 1 and 100'
+      }, 400);
+    }
+    
+    const popularTokens = await tokenService.getPopularTokens(limit);
+    
+    return c.json({
+      success: true,
+      data: popularTokens
+    });
+  } catch (error) {
+    console.error('Error in get popular tokens route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+app.get('/holders/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const holders = await tokenService.getHoldersByMintAddress(mintAddress);
+    return c.json({ success: true, data: holders });
+  } catch (error) {
+    console.error('Error in get holders by mint address route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
 // Get token by ID
 app.get('/:id', async (c) => {
   try {
@@ -172,20 +215,6 @@ app.get('/:id', async (c) => {
       }, 404);
     }
     
-    return c.json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Internal server error'
-    }, 500);
-  }
-});
-
-app.get('/holders/:mintAddress', async (c) => {
-  try {
-    const mintAddress = c.req.param('mintAddress');
-    const holders = await tokenService.getHoldersByMintAddress(mintAddress);
-    return c.json({ success: true, data: holders });
-  } catch (error) {
-    console.error('Error in get holders by mint address route:', error);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'

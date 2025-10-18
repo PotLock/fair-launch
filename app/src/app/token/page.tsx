@@ -1,5 +1,121 @@
 import { getTokens } from "@/lib/api";
 import TokenSearch from "@/components/token/TokenSearch";
+import { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const tokensResponse = await getTokens();
+    const tokenCount = tokensResponse.data?.length || 0;
+
+    const title = "Token Launchpad | PotLaunch";
+    const description = `Discover and participate in ${tokenCount}+ token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.`;
+    
+    // Create structured data for better SEO
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "PotLaunch Token Launchpad",
+      "description": description,
+      "url": "https://potlaunch.com/token",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://potlaunch.com/token?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "PotLaunch",
+        "url": "https://potlaunch.com"
+      }
+    };
+
+    return {
+      title,
+      description,
+      keywords: [
+        "token launchpad",
+        "cryptocurrency",
+        "token launch",
+        "DeFi",
+        "Solana",
+        "token trading",
+        "crypto projects",
+        "token discovery",
+        "PotLaunch"
+      ],
+      authors: [{ name: "PotLaunch" }],
+      creator: "PotLaunch",
+      publisher: "PotLaunch",
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-video-preview": -1,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+        },
+      },
+      openGraph: {
+        type: "website",
+        locale: "en_US",
+        url: "https://potlaunch.com/token",
+        title,
+        description,
+        siteName: "PotLaunch",
+        images: [
+          {
+            url: "/hero.png",
+            width: 1200,
+            height: 630,
+            alt: "PotLaunch Token Launchpad",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        site: "@potlaunch",
+        creator: "@potlaunch",
+        title,
+        description,
+        images: ["/hero.png"],
+      },
+      alternates: {
+        canonical: "https://potlaunch.com/token",
+      },
+      other: {
+        "application/ld+json": JSON.stringify(structuredData),
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+    
+    // Fallback metadata
+    return {
+      title: "Token Launchpad | PotLaunch",
+      description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+      openGraph: {
+        title: "Token Launchpad | PotLaunch",
+        description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+        images: [
+          {
+            url: "/hero.png",
+            width: 1200,
+            height: 630,
+            alt: "PotLaunch Token Launchpad",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Token Launchpad | PotLaunch",
+        description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+        images: ["/hero.png"],
+      },
+    };
+  }
+}
 
 export default async function TokenPage() {
   const tokensResponse = await getTokens();
