@@ -2,6 +2,8 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import tokenRoutes from './src/routes/tokenRoutes';
+import ipfsRoutes from './src/routes/ipfsRoutes';
+import halfbakRoutes from './src/routes/halfbakRoutes';
 
 const app = new Hono();
 
@@ -19,6 +21,8 @@ app.get('/', (c) => {
 
 // Routes
 app.route('/api/tokens', tokenRoutes);
+app.route('/api/ipfs', ipfsRoutes);
+app.route('/api/halfbak', halfbakRoutes);
 
 // Error handling
 app.onError((err, c) => {

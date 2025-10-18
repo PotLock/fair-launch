@@ -1,0 +1,12 @@
+Contact: security@potlock.org
+Expires: 2025-12-31T23:59:59.000Z
+Encryption: https://potlock.org/pgp-key.txt
+Acknowledgments: https://potlock.org/security-acknowledgments
+Preferred-Languages: en
+Canonical: https://potlaunch.com/.well-known/security.txt
+Policy: https://potlock.org/security-policy
+
+# Security Policy
+# We take security seriously and appreciate responsible disclosure
+# Please report security vulnerabilities to security@potlock.org
+# We will respond within 48 hours and work with you to resolve issues
