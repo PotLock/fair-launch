@@ -2,7 +2,6 @@ import { Token, Pool } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Server-side fetch functions with Next.js caching
 export async function createToken(tokenData: Token) {
   try {
     const response = await fetch(`${API_URL}/api/tokens`, {
@@ -116,6 +115,50 @@ export async function getTokens() {
   } catch (error) {
     console.error('Error getting tokens:', error);
     throw new Error('Failed to get tokens');
+  }
+}
+
+export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/popular?limit=${limit}`, {
+      next: { revalidate: 60 }
+    });
+    
+    if (!response.ok) {
+      // Fallback to regular tokens if popular endpoint doesn't exist
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+        next: { revalidate: 60 }
+      });
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
+      }
+      
+      const fallbackResult = await fallbackResponse.json();
+      const tokens = fallbackResult.data || fallbackResult.tokens || [];
+      return tokens.slice(0, limit);
+    }
+    
+    const result = await response.json();
+    return result.data || result.tokens || [];
+  } catch (error) {
+    console.error('Error getting popular tokens:', error);
+    try {
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+        next: { revalidate: 300 }
+      });
+      
+      if (!fallbackResponse.ok) {
+        return [];
+      }
+      
+      const fallbackResult = await fallbackResponse.json();
+      const tokens = fallbackResult.data || fallbackResult.tokens || [];
+      return tokens.slice(0, limit);
+    } catch (fallbackError) {
+      console.error('Error getting fallback tokens:', fallbackError);
+      return [];
+    }
   }
 }
 

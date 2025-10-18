@@ -1,9 +1,178 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getTokenByMint } from "@/lib/api";
+import { getTokenByMint, getPopularTokens } from "@/lib/api";
 import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";
+import { Metadata } from "next";
+
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+    try {
+        const popularTokens = await getPopularTokens(10);
+        
+        return popularTokens.map((token) => ({
+            address: token.mintAddress,
+        }));
+    } catch (error) {
+        console.error('Error generating static params:', error);
+        return [];
+    }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ address: string }> }): Promise<Metadata> {
+    const { address } = await params;
+    
+    try {
+        const token = await getTokenByMint(address);
+        
+        if (!token) {
+            return {
+                title: "Token Not Found | PotLaunch",
+                description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                openGraph: {
+                    title: "Token Not Found | PotLaunch",
+                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                    images: [
+                        {
+                            url: "/images/broken-pot.png",
+                            width: 280,
+                            height: 280,
+                            alt: "Token Not Found",
+                        },
+                    ],
+                },
+                twitter: {
+                    card: "summary_large_image",
+                    title: "Token Not Found | PotLaunch",
+                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                    images: ["/images/broken-pot.png"],
+                },
+            };
+        }
+
+        const title = `${token.name} (${token.symbol}) | PotLaunch`;
+        const description = token.description || `Discover ${token.name} (${token.symbol}) on PotLaunch. Trade, explore, and learn about this token.`;
+        const imageUrl = token.metadata.tokenUri || "/logo.png";
+        const bannerUrl = token.metadata.bannerUri || "/hero.png";
+        
+        // Create structured data for better SEO
+        const structuredData = {
+            "@context": "https://schema.org",
+            "@type": "FinancialProduct",
+            "name": token.name,
+            "description": token.description,
+            "image": imageUrl,
+            "brand": {
+                "@type": "Brand",
+                "name": "PotLaunch"
+            },
+            "provider": {
+                "@type": "Organization",
+                "name": "PotLaunch",
+                "url": "https://potlaunch.com"
+            },
+            "category": "Cryptocurrency Token",
+            "offers": {
+                "@type": "Offer",
+                "availability": "https://schema.org/InStock",
+                "url": `https://potlaunch.com/token/${address}`
+            }
+        };
+
+        return {
+            title,
+            description,
+            keywords: [
+                token.name,
+                token.symbol,
+                "cryptocurrency",
+                "token",
+                "trading",
+                "DeFi",
+                "Solana",
+                "PotLaunch"
+            ],
+            authors: [{ name: "PotLaunch" }],
+            creator: "PotLaunch",
+            publisher: "PotLaunch",
+            robots: {
+                index: true,
+                follow: true,
+                googleBot: {
+                    index: true,
+                    follow: true,
+                    "max-video-preview": -1,
+                    "max-image-preview": "large",
+                    "max-snippet": -1,
+                },
+            },
+            openGraph: {
+                type: "website",
+                locale: "en_US",
+                url: `https://potlaunch.com/token/${address}`,
+                title,
+                description,
+                siteName: "PotLaunch",
+                images: [
+                    {
+                        url: bannerUrl,
+                        width: 1200,
+                        height: 630,
+                        alt: `${token.name} banner image`,
+                    },
+                    {
+                        url: imageUrl,
+                        width: 400,
+                        height: 400,
+                        alt: `${token.name} token image`,
+                    },
+                ],
+            },
+            twitter: {
+                card: "summary_large_image",
+                site: "@potlaunch",
+                creator: "@potlaunch",
+                title,
+                description,
+                images: [bannerUrl],
+            },
+            alternates: {
+                canonical: `https://potlaunch.com/token/${address}`,
+            },
+            other: {
+                "application/ld+json": JSON.stringify(structuredData),
+            },
+        };
+    } catch (error) {
+        console.error("Error generating metadata:", error);
+        
+        // Fallback metadata
+        return {
+            title: "Token | PotLaunch",
+            description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+            openGraph: {
+                title: "Token | PotLaunch",
+                description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+                images: [
+                    {
+                        url: "/hero.png",
+                        width: 1200,
+                        height: 630,
+                        alt: "PotLaunch",
+                    },
+                ],
+            },
+            twitter: {
+                card: "summary_large_image",
+                title: "Token | PotLaunch",
+                description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+                images: ["/hero.png"],
+            },
+        };
+    }
+}
 
 export default async function TokenDetailPage({ params }: { params: Promise<{ address: string }> }) {
     const { address } = await params;

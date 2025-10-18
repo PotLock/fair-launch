@@ -7,9 +7,9 @@ import Hero from "@/components/layout/Hero";
 import HeroClient from "@/components/layout/HeroClient";
 import ExploreTokens from "@/components/home/ExploreTokens";
 import ExploreTokensLoading from "@/components/home/ExploreTokensLoading";
+import TokenCount from "@/components/home/TokenCount";
 
 
-// Server Component - Main page
 export default function Home() {
   return (
     <HeroClient>
@@ -83,7 +83,7 @@ export default function Home() {
               <span className="font-thin text-base md:text-lg">PLANNED PROJECT LAUNCHES</span>
             </div>
             <div className="h-[130px] md:w-[300px] p-2 md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center stat-card">
-              <span className="font-bold text-4xl">0</span>
+              <TokenCount />
               <span className="font-thin text-base md:text-lg">TOKENS CREATED</span>
             </div>
             <div className="h-[130px] md:w-[300px] p-2 text-center md:p-6 border rounded-lg border-gray-200 flex flex-col justify-center gap-3 items-center stat-card">
