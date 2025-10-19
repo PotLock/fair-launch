@@ -10,6 +10,7 @@ import { ChevronDown, Copy, Download, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint } from "@/lib/api";
 import { getSolPrice } from "@/lib/sol";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 interface TradingInterfaceProps {
   token: Token;
@@ -20,13 +21,18 @@ interface TokenData {
   price: number;
   holders: number;
   marketCap: number;
+  targetRaise: number;
+  poolAddress: string;
 }
 
 export function TradingInterface({ token, address }: TradingInterfaceProps) {
+  const { publicKey } = useWallet()
   const [tokenData, setTokenData] = useState<TokenData>({
     price: 0,
     holders: 0,
-    marketCap: 0
+    marketCap: 0,
+    targetRaise: 0,
+    poolAddress: ''
   });
   const [loading, setLoading] = useState(true);
 
@@ -60,13 +66,15 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         ? Number(pool?.account?.quoteReserve || 0) / migrationQuoteThreshold
         : 0;
       
-      const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, token.decimals);
+      const baseSold = curveProgress * (migrationBaseThreshold / Math.pow(10, token.decimals));
       const marketCap = calculateMarketCap(baseSold, token.totalSupply, token.decimals);
 
       setTokenData({
         price: price,
         holders: holders.length,
-        marketCap
+        marketCap,
+        targetRaise: (migrationQuoteThreshold / Math.pow(10, 9)) * solPrice,
+        poolAddress: pool.publicKey
       });
     } catch (error) {
       console.error('Error fetching token data:', error);
@@ -106,6 +114,12 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                   {loading ? '...' : tokenData.holders}
                 </div>
                 <div className="text-sm text-gray-500">Holders</div>
+            </div>
+            <div>
+                <div className="text-lg font-semibold">
+                  {loading ? '...' : `$${formatNumberToCurrency(tokenData.targetRaise)}`}
+                </div>
+                <div className="text-sm text-gray-500">Target Raise</div>
             </div>
         </div>
       </div>
@@ -178,7 +192,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
               </div>
 
               <Button
-                className={`w-full bg-red-500 hover:bg-red-600 text-white font-medium py-6 rounded-lg mb-4`}
+                className={`w-full ${publicKey ? "bg-red-500 hover:bg-red-600 cursor-pointer": "bg-red-300 hover:bg-red-200 cursor-not-allowed"} text-white font-medium py-6 rounded-lg mb-4`}
               >
                 Buy ${token.symbol || 'CURATE'}
               </Button>
@@ -246,19 +260,19 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
           <div 
             className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
             onClick={()=>(
-              window.open(`https://raydium.io/swap/?inputMint=sol&outputMint=${address}`,"_blank")
+              window.open(`https://devnet.meteora.ag/dlmm/${tokenData.poolAddress}`,"_blank")
             )} 
           >
             <div 
               className="flex items-center gap-2"
             >
               <div className="relative w-9 h-9">
-                <img src="/logos/raydium.png" alt="Raydium" className="w-9 h-9 rounded-full" />
+                <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
                 <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
                   <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
                 </div>
               </div>
-              <span>Trade on Raydium</span>
+              <span>Trade on Meteora</span>
             </div>
             <div className="flex items-center gap-2">
               <ExternalLink className="w-5 h-5" />

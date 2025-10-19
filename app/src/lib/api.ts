@@ -1,4 +1,5 @@
-import { Token, PoolState, PoolConfig } from '@/types/api';
+import { Token } from '@/types/api';
+import { PoolState, PoolConfig } from '@/types/pool';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -96,6 +97,34 @@ export async function getPoolStateByMint(mint: string): Promise<PoolState> {
   } catch (error) {
     console.error('Error getting pool by mint:', error);
     throw new Error('Failed to get pool by mint');
+  }
+}
+
+// Server-side function for RSC to fetch pool data
+export async function fetchPoolDataForRSC(mint: string) {
+  try {
+    const poolState = await getPoolStateByMint(mint);
+    
+    if (!poolState) {
+      return null;
+    }
+    
+    // Transform pool state into a format suitable for the LiquidityPools component
+    return {
+      poolState,
+      // Add any additional data transformations here
+      formattedData: {
+        id: poolState.publicKey,
+        baseMint: poolState.account.baseMint,
+        quoteReserve: poolState.account.quoteReserve,
+        baseReserve: poolState.account.baseReserve,
+        sqrtPrice: poolState.account.sqrtPrice,
+        // Add more fields as needed
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching pool data for RSC:', error);
+    return null;
   }
 }
 

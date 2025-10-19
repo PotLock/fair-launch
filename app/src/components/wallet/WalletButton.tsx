@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';

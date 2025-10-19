@@ -1,5 +1,6 @@
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { DbcConfig, TokenMetadata } from "@cookedbusiness/halfbaked-sdk";
+import { DbcConfig } from "@/types/dbc";
+import { TokenMetadata } from "@/types/token";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 

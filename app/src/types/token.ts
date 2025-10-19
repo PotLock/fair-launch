@@ -1,8 +1,13 @@
 import { z } from "zod";
 
-export interface Holders {
-  amount: number,
-  owner: string
+export interface TokenMetadata {
+  uri?: string;
+  imageUri?: string;
+  bannerUri?: string;
+  description?: string;
+  website?: string;
+  twitter?: string;
+  telegram?: string;
 }
 
 // Custom Token Creation Schema

@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 
 export const formatNumberToCurrency = (x: number): string => {
     if (x >= 1_000_000_000_000) {
@@ -138,3 +139,37 @@ export function calculateMarketCap(price: number, totalSupply: string, decimals:
 }
 
 export const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));
+
+export function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text);
+  toast.success('Copied to clipboard');
+}
+
+export function formatNumberWithCommas(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return value.toString();
+  
+  return num.toLocaleString('en-US');
+}
+
+export function truncateAddress(address: string): string {
+  if (!address) return '';
+  if (address.length < 20) return address;
+  return address.slice(0, 6) + '...' + address.slice(-6);
+}
+
+export function formatDateToReadable(dateString: string): string {
+  const date = new Date(dateString);
+  
+  if (isNaN(date.getTime())) {
+      return 'Invalid date';
+  }
+  
+  const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+  };
+  
+  return date.toLocaleDateString('en-US', options);
+}

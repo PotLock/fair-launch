@@ -6,6 +6,9 @@ import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";
 import { Metadata } from "next";
 import LaunchStatusData from "@/components/token/LaunchStatusData";
+import { LaunchConditions } from "@/components/token/LaunchConditions";
+import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
+import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
 
 export const dynamicParams = true;
 
@@ -179,6 +182,9 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
     const { address } = await params;
     const token = await getTokenByMint(address);
     // console.log(token);
+    
+    // Fetch launch conditions data using RSC pattern
+    const launchConditionsData = token ? await fetchLaunchConditionsData(token) : null;
 
     if (!token) {
         return (
@@ -256,17 +262,14 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     decimals={token.decimals}
                 />
 
-                {/* <LaunchConditions 
-                    tokenInfo={tokenInfo} 
-                    currentPrice={currentPrice}
+                <LaunchConditions 
+                    token={token}
+                    data={launchConditionsData!}
                 />
 
-                <LiquidityPools 
-                    onAddLiquidity={setShowAddLiquidityModal} 
-                    listPools={listPools}
-                    loadingPools={loadingPools}
-                    errorPools={errorPools}
-                />  */}
+                <LiquidityPoolsWrapper 
+                    token={token}
+                />
             </div>
             <TradingInterface token={token} address={address} />
         </div>

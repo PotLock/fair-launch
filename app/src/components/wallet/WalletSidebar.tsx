@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -198,7 +200,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({
     return (
         <>
             <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                className="fixed inset-0 bg-black/70 bg-opacity-50 z-40"
                 onClick={onClose}
             />
             
@@ -207,14 +209,14 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({
                     <div className="flex items-center justify-between p-4 border-b border-gray-200">
                         <button
                             onClick={onClose}
-                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                            className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                         >
                         <X className="w-5 h-5 text-gray-600" />
                         </button>
                             <Button
                             variant="outline"
                             size="sm"
-                            className="text-sm border-gray-300 hover:bg-gray-50"
+                            className="text-sm border-gray-300 hover:bg-gray-50 cursor-pointer"
                             onClick={() => {
                                 onClose();
                                 onConnectAnother?.();
@@ -264,7 +266,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({
                                         <TooltipTrigger asChild>
                                             <button
                                                 onClick={() => handleCopyAddress(wallet.address)}
-                                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                                className="p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
                                             >
                                                 <Copy className="w-4 h-4 text-gray-500" />
                                             </button>
@@ -277,7 +279,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({
                                         <TooltipTrigger asChild>
                                             <button
                                                 onClick={() => handleDisconnectWallet(wallet.type)}
-                                                className="p-1 hover:bg-red-100 rounded transition-colors"
+                                                className="p-1 hover:bg-red-100 rounded transition-colors cursor-pointer"
                                             >
                                                 <Power className="w-4 h-4 text-red-500" />
                                             </button>
