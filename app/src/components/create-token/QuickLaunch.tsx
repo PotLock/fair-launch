@@ -206,13 +206,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       const result = await response.json();
       console.log(result)
-      const serialized = result.data.transaction; // từ API server
+      const serialized = result.data.transaction; 
       const txBuffer = Buffer.from(serialized, "base64");
 
       let transaction;
 
-
-      // thử deserialize theo 2 kiểu
       try {
         transaction = VersionedTransaction.deserialize(txBuffer);
         console.log("Transaction is VersionedTransaction");
@@ -223,7 +221,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       const connection = new Connection(getRpcSOLEndpoint());
       
-      // Simulate transaction first to catch errors early
       try {
         let simulation;
         if (transaction instanceof VersionedTransaction) {

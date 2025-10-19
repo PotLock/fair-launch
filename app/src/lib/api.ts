@@ -1,4 +1,4 @@
-import { Token, Pool } from '@/types/api';
+import { Token, PoolState, PoolConfig } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -82,11 +82,45 @@ export async function getTokenHolders(mint: string): Promise<string[]> {
   }
 }
 
-export async function getPoolByMint(mint: string): Promise<Pool> {
+export async function getPoolStateByMint(mint: string): Promise<PoolState> {
   try {
     const response = await fetch(`${API_URL}/api/halfbak/pool/state/${mint}`, {
-      // Cache for 5 minutes
-      next: { revalidate: 300 }
+      // Cache for 1 minutes
+      next: { revalidate: 60 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
+  }
+}
+
+export async function getPoolConfigByMint(mint: string): Promise<PoolConfig> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/config/${mint}`, {
+      // Cache for 1 minutes
+      next: { revalidate: 60 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
+  }
+}
+
+export async function getPoolCurveProgressByMint(mint: string): Promise<number> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/curve-progress/${mint}`, {
+      // Cache for 1 minutes
+      next: { revalidate: 60 }
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

@@ -6,6 +6,7 @@ import { getDBCConfig } from "../configs/dbc.config";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { toSdkMetadata } from "../lib/halfbak";
 import { DynamicBondingCurveClient } from "@meteora-ag/dynamic-bonding-curve-sdk";
+import Decimal from 'decimal.js'
 
 export class HalfbakService {
     private launchClient: LaunchClient;
@@ -19,7 +20,6 @@ export class HalfbakService {
     async createDbcConfig(dbcConfigRequest: DbcConfigRequest) {
       const metadata = toSdkMetadata(dbcConfigRequest.metadata);
 
-      // 1️⃣ Build DBC config object
       const dbcConfig: DbcConfig = getDBCConfig(
         dbcConfigRequest.signer,
         dbcConfigRequest.metadata.name,
@@ -30,7 +30,6 @@ export class HalfbakService {
       const quoteMint = new PublicKey(NATIVE_MINT.toString());
       const dbcConfigKeypair = Keypair.generate();
     
-      // 2️⃣ Build transaction via SDK
       const dbcConfigTransaction = await this.launchClient.createDbcConfig(
         dbcConfig,
         dbcConfigRequest.signer,
@@ -41,18 +40,15 @@ export class HalfbakService {
       const latestBlockhash = await this.connection.getLatestBlockhash();
 
       if (dbcConfigTransaction instanceof VersionedTransaction) {
-        // Rebuild message with new blockhash
         const message = TransactionMessage.decompile(dbcConfigTransaction.message);
         message.recentBlockhash = latestBlockhash.blockhash;
       
-        // Create new versioned tx
         const newTx = new VersionedTransaction(message.compileToV0Message());
         return {
           dbcConfigKeypair,
           dbcConfigTransaction: Buffer.from(newTx.serialize()).toString("base64"),
         };
       } else {
-        // Normal Transaction
         dbcConfigTransaction.recentBlockhash = latestBlockhash.blockhash;
         dbcConfigTransaction.feePayer = dbcConfigRequest.signer;
         dbcConfigTransaction.partialSign(dbcConfigKeypair);
@@ -82,7 +78,6 @@ export class HalfbakService {
       
       const latestBlockhash = await this.connection.getLatestBlockhash();
 
-      // Normal Transaction
       txCreateToken.recentBlockhash = latestBlockhash.blockhash;
       txCreateToken.feePayer = deployTokenRequest.signer;
       txCreateToken.partialSign(baseMint);
@@ -131,6 +126,57 @@ export class HalfbakService {
       } catch (error) {
         console.error('Error getting pool config by mint address:', error);
         throw new Error('Failed to get pool config by mint address');
+      }
+    }
+
+    async getPoolMetadataByMintAddress(mintAddress: string){
+      try {
+        const connection = new Connection(getRpcSOLEndpoint());
+        const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
+
+        const poolState = await dbcInstance.state.getPoolByBaseMint(mintAddress);
+        if (!poolState) {
+          throw new Error(`DBC Pool not found for ${mintAddress.toString()}`);
+        }
+      
+        const dbcConfigAddress = poolState.account.config;
+        const poolMetadata = await dbcInstance.state.getPoolMetadata(dbcConfigAddress);
+        if (!poolMetadata) {
+          throw new Error(`DBC Pool metadata not found for ${dbcConfigAddress.toString()}`);
+        }
+        return poolMetadata;
+      } catch (error) {
+        console.error('Error getting pool metadata:', error);
+        throw new Error('Failed to get pool metadata');
+      }
+    }
+
+    async getPoolCurveProgressByMintAddress(mintAddress: string){
+      try {
+        const connection = new Connection(getRpcSOLEndpoint());
+        const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
+
+        const poolState = await dbcInstance.state.getPoolByBaseMint(mintAddress);
+        if (!poolState) {
+          throw new Error(`DBC Pool not found for ${mintAddress.toString()}`);
+        }
+      
+        const dbcConfigAddress = poolState.account.config;
+        const poolConfig = await dbcInstance.state.getPoolConfig(dbcConfigAddress);
+        if (!poolConfig) {
+          throw new Error(`DBC Pool curve progress not found for ${dbcConfigAddress.toString()}`);
+        }
+        const quoteReserve = poolState.account.quoteReserve
+        const migrationThreshold = poolConfig.migrationQuoteThreshold
+
+        const quoteReserveDecimal = new Decimal(quoteReserve.toString())
+        const thresholdDecimal = new Decimal(migrationThreshold.toString())
+
+        const progress = quoteReserveDecimal.div(thresholdDecimal).toNumber()
+        return progress
+      } catch (error) {
+        console.error('Error getting pool curve progress by mint address:', error);
+        throw new Error('Failed to get pool curve progress by mint address');
       }
     }
 }

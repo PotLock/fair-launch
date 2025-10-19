@@ -82,11 +82,26 @@ export function formatMarketCap(marketCap: number): string {
 // Token price calculation utilities
 export function calculateTokenPrice(sqrtPrice: string): number {
   try {
+    // Validate input
+    if (!sqrtPrice || sqrtPrice === "00" || sqrtPrice === "0") {
+      return 0;
+    }
+
     // Convert hex string to decimal
     const sqrtPriceDecimal = parseInt(sqrtPrice, 16);
     
+    // Check if conversion was successful
+    if (isNaN(sqrtPriceDecimal) || sqrtPriceDecimal === 0) {
+      return 0;
+    }
+    
     // Apply the DBC formula: price = (sqrtPrice / 2^64)^2
     const price = Math.pow(sqrtPriceDecimal / Math.pow(2, 64), 2);
+    
+    // Handle edge cases
+    if (!isFinite(price) || price < 0) {
+      return 0;
+    }
     
     return price;
   } catch (error) {
@@ -105,10 +120,21 @@ export function formatTokenPrice(price: number): string {
 
 export function calculateMarketCap(price: number, totalSupply: string, decimals: number): number {
   try {
-    const supply = parseFloat(totalSupply)
-    return price * supply;
+    const supply = parseFloat(totalSupply);
+    
+    // Calculate market cap
+    const marketCap = price * supply;
+    
+    // Handle edge cases
+    if (!isFinite(marketCap) || marketCap < 0) {
+      return 0;
+    }
+    
+    return marketCap;
   } catch (error) {
     console.error('Error calculating market cap:', error);
     return 0;
   }
 }
+
+export const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));

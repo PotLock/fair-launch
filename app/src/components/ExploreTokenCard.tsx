@@ -4,14 +4,16 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { 
   getTokenHolders,
-  getPoolByMint,
+  getPoolStateByMint,
+  getPoolConfigByMint,
 } from "@/lib/api";
 import { 
     formatNumberToCurrency, 
     calculateTokenPrice, 
     formatTokenPrice, 
     calculateMarketCap, 
-    formatMarketCap 
+    formatMarketCap, 
+    hexToNumber
 } from "@/utils";
 import { getSolPrice } from "@/lib/sol";
 
@@ -67,19 +69,25 @@ export default function ExploreTokenCard({
         try {
             setLoading(true);
             
-            // Fetch holders and pool data in parallel
-            const [holders, pool] = await Promise.all([
+            const [holders, pool, poolConfig] = await Promise.all([
                 getTokenHolders(mint),
-                getPoolByMint(mint)
+                getPoolStateByMint(mint),
+                getPoolConfigByMint(mint)
             ]);
+            const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
+            const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
+            
+            const curveProgress = migrationQuoteThreshold > 0
+                ? Number(pool?.account?.quoteReserve || 0) / migrationQuoteThreshold
+                : 0;
+            
+            const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, decimals);
 
-            // Calculate price from pool sqrtPrice
             const price = pool?.account?.sqrtPrice 
                 ? calculateTokenPrice(pool.account.sqrtPrice)
                 : 0;
 
-            // Calculate market cap
-            const marketCap = calculateMarketCap(price, totalSupply, decimals);
+            const marketCap = calculateMarketCap(baseSold, totalSupply, decimals);
 
             setTokenData({
                 price: price * solPrice,
@@ -203,7 +211,7 @@ export default function ExploreTokenCard({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={()=>navigate.push(`/token/${mint}`)} 
-                        className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors"
+                        className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                         <span className="text-sm">View Details</span>
                     </motion.button>
@@ -211,7 +219,7 @@ export default function ExploreTokenCard({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={()=>navigate.push(`/token/${mint}`)} 
-                        className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors`}
+                        className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors cursor-pointer`}
                     >
                         <span className="text-sm">{actionButton.text}</span>
                     </motion.button>

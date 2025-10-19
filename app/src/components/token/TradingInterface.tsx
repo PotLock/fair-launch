@@ -5,25 +5,108 @@ import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Token } from "@/types/api";
+import { formatNumberToCurrency, calculateTokenPrice, calculateMarketCap, formatTokenPrice } from "@/utils";
 import { ChevronDown, Copy, Download, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint } from "@/lib/api";
+import { getSolPrice } from "@/lib/sol";
 
 interface TradingInterfaceProps {
   token: Token;
   address: string;
 }
 
+interface TokenData {
+  price: number;
+  holders: number;
+  marketCap: number;
+}
+
 export function TradingInterface({ token, address }: TradingInterfaceProps) {
+  const [tokenData, setTokenData] = useState<TokenData>({
+    price: 0,
+    holders: 0,
+    marketCap: 0
+  });
+  const [loading, setLoading] = useState(true);
+
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
     { name: token.symbol, icon: token.metadata.tokenUri }
   ];
 
+  const fetchTokenData = useCallback(async () => {
+    const solPrice = await getSolPrice();
+    if(!solPrice) return;
+    try {
+      setLoading(true);
+      
+      const [holders, pool, poolConfig] = await Promise.all([
+        getTokenHolders(address),
+        getPoolStateByMint(address),
+        getPoolConfigByMint(address)
+      ]);
+
+      const price = pool?.account?.sqrtPrice 
+        ? calculateTokenPrice(pool.account.sqrtPrice) * solPrice
+        : 0;
+
+      // Calculate baseSoldUSD for market cap calculation
+      const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));
+      const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
+      const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
+      
+      const curveProgress = migrationQuoteThreshold > 0
+        ? Number(pool?.account?.quoteReserve || 0) / migrationQuoteThreshold
+        : 0;
+      
+      const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, token.decimals);
+      const marketCap = calculateMarketCap(baseSold, token.totalSupply, token.decimals);
+
+      setTokenData({
+        price: price,
+        holders: holders.length,
+        marketCap
+      });
+    } catch (error) {
+      console.error('Error fetching token data:', error);
+      // Keep default values on error
+    } finally {
+      setLoading(false);
+    }
+  }, [address, token.totalSupply, token.decimals]);
+  
+  useEffect(() => {
+    fetchTokenData();
+  }, [fetchTokenData]);
+
   return (
-    <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB]">
+    <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] max-h-[850px]">
       <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
           <span className="font-medium text-blue-700">LIVE TRADING</span>
+        </div>
+        <div className="flex flex-col">
+            <div className="text-3xl font-bold text-blue-600">
+              {loading ? '...' : `$${formatNumberToCurrency(tokenData.marketCap)}`}
+            </div>
+            <div className="text-xs text-gray-500">Market Cap</div>
+        </div>
+
+        <div className="flex items-center gap-10 w-full">
+            <div>
+                <div className="text-lg font-semibold">
+                  {loading ? '...' : `$${formatTokenPrice(tokenData.price)}`}
+                </div>
+                <div className="text-sm text-gray-500">Current Price</div>
+            </div>
+            <div>
+                <div className="text-lg font-semibold">
+                  {loading ? '...' : tokenData.holders}
+                </div>
+                <div className="text-sm text-gray-500">Holders</div>
+            </div>
         </div>
       </div>
 

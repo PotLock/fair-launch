@@ -124,4 +124,28 @@ app.get('/pool/config/:mintAddress', async (c) => {
     return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
   }
 });
+
+app.get('/pool/metadata/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const poolMetadata = await halfbakService.getPoolMetadataByMintAddress(mintAddress);
+    return c.json({ success: true, data: poolMetadata });
+  } catch (error) {
+    console.error('Error in get pool migration quote threshold by mint address route:', error);
+    return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
+  }
+});
+
+app.get('/pool/curve-progress/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const poolCurveProgress = await halfbakService.getPoolCurveProgressByMintAddress(mintAddress);
+    return c.json({ success: true, data: poolCurveProgress });
+  } catch (error) {
+    console.error('Error in get pool curve progress by mint address route:', error);
+    return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
+  }
+});
+
+
 export default app;

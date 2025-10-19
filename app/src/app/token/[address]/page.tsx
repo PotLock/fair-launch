@@ -5,6 +5,7 @@ import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";
 import { Metadata } from "next";
+import LaunchStatusData from "@/components/token/LaunchStatusData";
 
 export const dynamicParams = true;
 
@@ -242,17 +243,20 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
 
                 {/* <TradingInterface token={token} address={address} /> */}
 
-                <Card className="p-3 md:p-6 mb-6 shadow-none">
-                    <h2 className="text-xl font-medium mb-4">Description</h2>
+                <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1">
+                    <h2 className="text-2xl font-semibold mb-4">Description</h2>
                     <p className="text-gray-600 text-sm">
                         {token.description}
                     </p>
                 </Card>
                 
-                
-                {/* <LaunchStatus/>
+                <LaunchStatusData 
+                    mint={token.mintAddress}
+                    totalSupply={token.totalSupply}
+                    decimals={token.decimals}
+                />
 
-                <LaunchConditions 
+                {/* <LaunchConditions 
                     tokenInfo={tokenInfo} 
                     currentPrice={currentPrice}
                 />
@@ -262,7 +266,7 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     listPools={listPools}
                     loadingPools={loadingPools}
                     errorPools={errorPools}
-                /> */}
+                />  */}
             </div>
             <TradingInterface token={token} address={address} />
         </div>
