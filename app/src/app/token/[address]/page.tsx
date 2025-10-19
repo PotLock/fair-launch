@@ -5,10 +5,13 @@ import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";
 import { Metadata } from "next";
+<<<<<<< HEAD
 import LaunchStatusData from "@/components/token/LaunchStatusData";
 import { LaunchConditions } from "@/components/token/LaunchConditions";
 import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
 import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
+=======
+>>>>>>> b5472d195b45e635e5b97f3ff351354929a6751b
 
 export const dynamicParams = true;
 
@@ -182,9 +185,12 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
     const { address } = await params;
     const token = await getTokenByMint(address);
     // console.log(token);
+<<<<<<< HEAD
     
     // Fetch launch conditions data using RSC pattern
     const launchConditionsData = token ? await fetchLaunchConditionsData(token) : null;
+=======
+>>>>>>> b5472d195b45e635e5b97f3ff351354929a6751b
 
     if (!token) {
         return (
@@ -249,13 +255,19 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
 
                 {/* <TradingInterface token={token} address={address} /> */}
 
+<<<<<<< HEAD
                 <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1">
                     <h2 className="text-2xl font-semibold mb-4">Description</h2>
+=======
+                <Card className="p-3 md:p-6 mb-6 shadow-none">
+                    <h2 className="text-xl font-medium mb-4">Description</h2>
+>>>>>>> b5472d195b45e635e5b97f3ff351354929a6751b
                     <p className="text-gray-600 text-sm">
                         {token.description}
                     </p>
                 </Card>
                 
+<<<<<<< HEAD
                 <LaunchStatusData 
                     mint={token.mintAddress}
                     totalSupply={token.totalSupply}
@@ -270,6 +282,22 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                 <LiquidityPoolsWrapper 
                     token={token}
                 />
+=======
+                
+                {/* <LaunchStatus/>
+
+                <LaunchConditions 
+                    tokenInfo={tokenInfo} 
+                    currentPrice={currentPrice}
+                />
+
+                <LiquidityPools 
+                    onAddLiquidity={setShowAddLiquidityModal} 
+                    listPools={listPools}
+                    loadingPools={loadingPools}
+                    errorPools={errorPools}
+                /> */}
+>>>>>>> b5472d195b45e635e5b97f3ff351354929a6751b
             </div>
             <TradingInterface token={token} address={address} />
         </div>
