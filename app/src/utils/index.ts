@@ -146,8 +146,13 @@ export function copyToClipboard(text: string) {
 }
 
 export function formatNumberWithCommas(value: string | number): string {
+  // Handle undefined, null, or empty values
+  if (value === undefined || value === null || value === '') {
+    return '0';
+  }
+  
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return value.toString();
+  if (isNaN(num)) return '0';
   
   return num.toLocaleString('en-US');
 }
@@ -172,4 +177,21 @@ export function formatDateToReadable(dateString: string): string {
   };
   
   return date.toLocaleDateString('en-US', options);
+}
+
+export function formatNumberInput(value: string): string {
+  let cleaned = value.replace(/[^\d.]/g, '');
+  
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  if (!cleaned || cleaned === '.') return '';
+
+  const [integerPart, decimalPart] = cleaned.split('.');
+
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  
+  return decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
 }

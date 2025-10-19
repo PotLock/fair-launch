@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { PublicKey } from "@solana/web3.js";
 import { formatNumberToCurrency } from "@/utils";
 import { getTokenBalanceOnSOL } from "@/lib/sol";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 interface MyTokenCardProps {
     id: string;
@@ -140,7 +140,7 @@ export function MyTokenCard({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={()=>router.push(`/token/${mint}`)} 
-                        className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors"
+                        className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                         <span className="text-sm">View Details</span>
                     </motion.button>
@@ -148,7 +148,7 @@ export function MyTokenCard({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={()=>router.push(`/token/${mint}`)} 
-                        className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors`}
+                        className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors cursor-pointer`}
                     >
                         <span className="text-sm">{actionButton.text}</span>
                     </motion.button>

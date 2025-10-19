@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface QuickStartProps {
@@ -8,11 +9,11 @@ interface QuickStartProps {
 
 export default function QuickStart({ onMethodSelect }: QuickStartProps) {
   const [selectedMethod, setSelectedMethod] = useState<'quick' | 'custom'>('quick');
+  const router = useRouter()
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 px-4">
             How would you like to create your token?
@@ -22,9 +23,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
           </p>
         </div>
 
-        {/* Cards Container */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8 px-4">
-          {/* Quick Mint Card */}
           <div 
             className={`relative border rounded-lg p-4 sm:p-6 cursor-pointer transition-all duration-200 ${
               selectedMethod === 'quick' 
@@ -33,7 +32,6 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
             }`}
             onClick={() => setSelectedMethod('quick')}
           >
-            {/* Icon */}
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <div className="relative">
                 <img src="/images/quick-mint.svg" className="w-16 h-16" alt="Quick Mint" />
@@ -46,12 +44,10 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
               </div>
             </div>
 
-            {/* Description */}
             <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4">
               Fast track token creation with sensible defaults. Perfect for getting started quickly.
             </p>
 
-            {/* Features */}
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
               <li className="flex items-center">
                 <div className="w-1 h-1 bg-gray-400 rounded-full mr-2"></div>
@@ -72,7 +68,6 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
             </ul>
           </div>
 
-          {/* Custom Creation Card */}
           <div 
             className={`relative border rounded-lg p-4 sm:p-6 cursor-pointer transition-all duration-200 ${
               selectedMethod === 'custom' 
@@ -121,14 +116,13 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4">
-          <button className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+          <button onClick={()=>router.push("/")} className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50/10 transition-colors cursor-pointer">
             Cancel
           </button>
           <button 
             onClick={() => onMethodSelect(selectedMethod)}
-            className="w-full sm:w-auto px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
+            className="w-full sm:w-auto px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-400 transition-colors flex items-center justify-center cursor-pointer"
           >
             Continue to Token Creation
             <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">

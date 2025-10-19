@@ -136,7 +136,7 @@ export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, o
                 <InputBridge
                     title="From"
                     token={token}
-                    amount={Number(amount)}
+                    amount={amount ? Number(amount) : 0}
                     selectedChain={selectedFromChain}
                     chains={chains}
                     setAmount={(amount: number) => setAmount(String(amount))}
@@ -145,7 +145,7 @@ export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, o
                 <InputBridge
                     title="To"
                     token={token}
-                    amount={Number(amount)}
+                    amount={amount ? Number(amount) : 0}
                     selectedChain={selectedToChain}
                     chains={chains}
                     setAmount={(amount: number) => setAmount(String(amount))}

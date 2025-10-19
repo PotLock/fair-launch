@@ -187,7 +187,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         body: JSON.stringify({
           metadata: {
             name: formData.tokenName,
-            symbol: formData.tokenSymbol,
+            symbol: formData.tokenSymbol.toUpperCase(),
             description: formData.description,
             imageUri: logoUrl || undefined,
             bannerUri: bannerUrl || undefined,
@@ -272,7 +272,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         body: JSON.stringify({
           metadata: {
             name: formData.tokenName,
-            symbol: formData.tokenSymbol,
+            symbol: formData.tokenSymbol.toUpperCase(),
             description: formData.description,
             imageUri: logoUrl || undefined,
             bannerUri: bannerUrl || undefined,
@@ -335,7 +335,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       const metadata = {
         name: formData.tokenName,
-        symbol: formData.tokenSymbol,
+        symbol: formData.tokenSymbol.toUpperCase(),
         description: formData.description,
         imageUri: logoUrl || undefined,
         bannerUri: bannerUrl || undefined,
@@ -357,7 +357,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       const createTokenPayload = {
         name: formData.tokenName,
-        symbol: formData.tokenSymbol,
+        symbol: formData.tokenSymbol.toUpperCase(),
         description: formData.description,
         totalSupply: formData.tokenSupply,
         decimals: formData.decimal,
@@ -388,7 +388,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       
       toast.dismiss('deployment-progress');
       toast.success('Token deployed successfully! 🎉', {
-        description: `Your token "${formData.tokenName}" (${formData.tokenSymbol}) is now live on Solana!`,
+        description: `Your token "${formData.tokenName}" (${formData.tokenSymbol.toUpperCase()}) is now live on Solana!`,
         duration: 5000
       });
       
@@ -461,7 +461,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               <input
                 type="text"
                 placeholder="Token Symbol"
-                value={formData.tokenSymbol}
+                value={formData.tokenSymbol.toUpperCase()}
                 onChange={(e) => handleInputChange('tokenSymbol', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
               />

@@ -28,11 +28,11 @@ export async function createToken(tokenData: Token) {
   }
 }
 
-export async function getTokenByAddress(address: string): Promise<Token[]> {
+export async function getUserTokens(address: string): Promise<Token[]> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/address/${address}`, {
       // Cache for 5 minutes
-      next: { revalidate: 300 }
+      next: { revalidate: 60 }
     });
     
     if (!response.ok) {
@@ -42,8 +42,8 @@ export async function getTokenByAddress(address: string): Promise<Token[]> {
     const result = await response.json();
     return result.data || [];
   } catch (error) {
-    console.error('Error getting token by address:', error);
-    throw new Error('Failed to get token by address');
+    console.error('Error getting user tokens:', error);
+    throw new Error('Failed to get user tokens');
   }
 }
 
@@ -308,3 +308,4 @@ export async function uploadMetadata(metadata: {
     throw new Error('Failed to upload metadata');
   }
 }
+

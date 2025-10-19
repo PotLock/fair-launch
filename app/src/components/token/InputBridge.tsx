@@ -48,10 +48,10 @@ export function InputBridge({
     disabled = false
 }: InputBridgeProps) {
     const [balanceToken, setTokenBalance] = useState<string|null>(null);
-    const [displayAmount, setDisplayAmount] = useState<string>('');
+    const [displayAmount, setDisplayAmount] = useState<string>(formatNumberWithCommas(amount || 0));
 
     useEffect(() => {
-        setDisplayAmount(formatNumberWithCommas(amount));
+        setDisplayAmount(formatNumberWithCommas(amount || 0));
     }, [amount]);
 
     const fetchBalanceToken = useCallback(async()=>{
