@@ -17,10 +17,6 @@ export interface Metadata {
     }
 }
 
-export interface Holders {
-    amount: number,
-    owner: string
-}
 
 export interface Token {
     id: string;
