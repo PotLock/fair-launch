@@ -62,7 +62,7 @@ function ExploreTokensControls() {
   return (
     <div className="flex flex-row justify-between items-center mt-8 gap-4">
       <a 
-        href="/tokens" 
+        href="/token" 
         className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors"
       >
         <span className="text-sm">Explore All</span>

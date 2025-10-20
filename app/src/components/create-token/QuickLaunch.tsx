@@ -7,6 +7,7 @@ import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "@/lib/sol";
 import { uploadImage } from "@/lib/api";
 import { getDBCConfig } from "@/configs/dbc.config";
+import { useRouter } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 interface QuickLaunchProps {
@@ -15,6 +16,7 @@ interface QuickLaunchProps {
 
 export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const walletSol = useWallet()
+  const router = useRouter()
   const { publicKey, sendTransaction} = walletSol
   const [formData, setFormData] = useState({
     tokenName: "",
@@ -391,7 +393,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         description: `Your token "${formData.tokenName}" (${formData.tokenSymbol.toUpperCase()}) is now live on Solana!`,
         duration: 5000
       });
-      
+      router.push(`/token/${deployResult.data.baseMint}`)
       
     } catch (error) {
       console.error('❌ Error during token deployment:', error);
