@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { CreateToken, DBCConfig, TokenConfig as TokenConfigType } from "@/types/api";
 import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
+import TokenSuccessModal from "@/components/ui/token-success-modal";
 import URLInput from "@/components/ui/url-input";
 
 interface QuickLaunchProps {
@@ -40,8 +41,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [createdTokenData, setCreatedTokenData] = useState<{
+    name: string;
+    symbol: string;
+    mintAddress: string;
+    logoUrl?: string;
+  } | null>(null);
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -412,16 +420,18 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       
       // Complete deployment
       setDeploymentProgress(100);
-      // Show navigation loading overlay
-      setIsNavigating(true);
       toast.dismiss('deployment-progress');
-      toast.success('Token deployed successfully! 🎉', {
-        description: `Your token "${formData.tokenName}" (${formData.tokenSymbol.toUpperCase()}) is now live on Solana!`,
-        duration: 5000
+      
+      // Store token data for success modal
+      setCreatedTokenData({
+        name: formData.tokenName,
+        symbol: formData.tokenSymbol.toUpperCase(),
+        mintAddress: deployResult.data.baseMint,
+        logoUrl: logoUrl || undefined
       });
       
-      // Navigate to token page
-      router.push(`/token/${deployResult.data.baseMint}`)
+      // Show success modal
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('❌ Error during token deployment:', error);
@@ -460,6 +470,20 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
   }
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setCreatedTokenData(null);
+    onCancel(); // Close the entire create token flow
+  };
+
+  const handleViewToken = () => {
+    if (createdTokenData?.mintAddress) {
+      setShowSuccessModal(false);
+      setIsNavigating(true);
+      router.push(`/token/${createdTokenData.mintAddress}`);
+    }
+  };
+
   return (
     <>
       <TokenCreationModal
@@ -470,6 +494,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={logoUrl || undefined}
+      />
+      <TokenSuccessModal
+        isVisible={showSuccessModal}
+        tokenName={createdTokenData?.name || ''}
+        tokenSymbol={createdTokenData?.symbol || ''}
+        tokenLogo={createdTokenData?.logoUrl}
+        mintAddress={createdTokenData?.mintAddress}
+        onClose={handleSuccessModalClose}
+        onViewToken={handleViewToken}
       />
       <LoadingOverlay 
         isVisible={isNavigating}

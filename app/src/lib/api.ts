@@ -223,7 +223,7 @@ export async function getPoolCurveProgressByMint(mint: string): Promise<number> 
 export async function getTokens() {
   try {
     const response = await fetch(`${API_URL}/api/tokens`, {
-      cache: 'no-store'
+      next: { revalidate: 10 } // Cache for 60 seconds instead of no-store
     });
     
     if (!response.ok) {
@@ -289,7 +289,7 @@ export async function searchTokens(query: string, owner?: string) {
     }
     
     const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {
-      cache: 'no-store'
+      next: { revalidate: 10 } // Cache for 10 seconds instead of no-store
     });
     
     if (!response.ok) {

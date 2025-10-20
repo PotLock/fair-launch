@@ -184,8 +184,10 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                     disabled
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
-                    <img src={token.metadata.tokenUri} alt={token.name} className="w-6 h-6 rounded-full" />
-                    <span className="text-lg mr-7">{token.symbol}</span>
+                    <div className="h-6 w-6">
+                      <img src={token.metadata.tokenUri} alt={token.name} className="w-6 h-6 rounded-full" />
+                    </div>
+                    <span className="text-lg">{token.symbol}</span>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500 mt-1">-</div>

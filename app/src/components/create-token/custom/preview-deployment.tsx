@@ -12,6 +12,7 @@ import { CustomMintData } from '@/types/token';
 import { Progress } from '@/components/ui/progress';
 import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
+import TokenSuccessModal from "@/components/ui/token-success-modal";
 
 interface PreviewDeploymentProps {
   onBack: () => void;
@@ -34,8 +35,15 @@ export default function PreviewDeployment({
   
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [createdTokenData, setCreatedTokenData] = useState<{
+    name: string;
+    symbol: string;
+    mintAddress: string;
+    logoUrl?: string;
+  } | null>(null);
 
   const progressPercentage = (currentStep / totalSteps) * 100;
 
@@ -383,15 +391,18 @@ export default function PreviewDeployment({
       
       // Complete deployment
       setDeploymentProgress(100);
-      setIsNavigating(true);
       toast.dismiss('deployment-progress');
-      toast.success('Custom token deployed successfully! 🎉', {
-        description: `Your token "${tokenInfo.name}" (${tokenInfo.symbol.toUpperCase()}) is now live on Solana!`,
-        duration: 5000
+      
+      // Store token data for success modal
+      setCreatedTokenData({
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol.toUpperCase(),
+        mintAddress: deployResult.data.baseMint,
+        logoUrl: tokenInfo.logo || undefined
       });
       
-      // Navigate to token page
-      router.push(`/token/${deployResult.data.baseMint}`);
+      // Show success modal
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('❌ Error during custom token deployment:', error);
@@ -430,6 +441,20 @@ export default function PreviewDeployment({
     }
   };
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setCreatedTokenData(null);
+    onCancel(); // Close the entire create token flow
+  };
+
+  const handleViewToken = () => {
+    if (createdTokenData?.mintAddress) {
+      setShowSuccessModal(false);
+      setIsNavigating(true);
+      router.push(`/token/${createdTokenData.mintAddress}`);
+    }
+  };
+
   return (
     <>
       <TokenCreationModal
@@ -440,6 +465,15 @@ export default function PreviewDeployment({
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={formData.tokenInfo?.logo || undefined}
+      />
+      <TokenSuccessModal
+        isVisible={showSuccessModal}
+        tokenName={createdTokenData?.name || ''}
+        tokenSymbol={createdTokenData?.symbol || ''}
+        tokenLogo={createdTokenData?.logoUrl}
+        mintAddress={createdTokenData?.mintAddress}
+        onClose={handleSuccessModalClose}
+        onViewToken={handleViewToken}
       />
       <LoadingOverlay 
         isVisible={isNavigating}
