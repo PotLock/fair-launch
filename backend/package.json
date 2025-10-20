@@ -12,7 +12,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@cookedbusiness/halfbaked-sdk": "^1.1.7",
+    "@cookedbusiness/halfbaked-sdk": "^1.1.8",
     "@filebase/sdk": "^1.0.6",
     "@hono/node-server": "^1.8.2",
     "@hono/zod-validator": "^0.2.1",
