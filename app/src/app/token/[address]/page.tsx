@@ -10,6 +10,8 @@ import { LaunchConditions } from "@/components/token/LaunchConditions";
 import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
 import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
 
+// Force dynamic rendering since we're fetching data from external API
+export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

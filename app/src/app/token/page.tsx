@@ -2,6 +2,9 @@ import { getTokens } from "@/lib/api";
 import TokenSearch from "@/components/token/TokenSearch";
 import { Metadata } from "next";
 
+// Force dynamic rendering since we're fetching data from external API
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const tokensResponse = await getTokens();

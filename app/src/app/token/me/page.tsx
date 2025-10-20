@@ -2,6 +2,9 @@ import { getSolPrice } from "@/lib/sol";
 import { Metadata } from "next";
 import MyTokensClient from "@/components/token/MyTokensClient";
 
+// Force dynamic rendering since we're fetching data from external API
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const title = "My Portfolio | PotLaunch";
   const description = "View and manage all the tokens you've created on PotLaunch. Track your portfolio performance and manage your token launches.";
