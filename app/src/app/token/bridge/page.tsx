@@ -47,21 +47,18 @@ type ChainType = 'solana' | 'near' | 'ethereum';
 
 
 export default function Bridge() {
-    // Wallet hooks
     const { signedAccountId } = useWalletSelector();
     const { connected, publicKey } = useWallet();
     const { address: ethereumAddress } = useAccount();
 
     const { deployToken, transferToken } = useBridge();
 
-    // Bridge state
     const [amount, setAmount] = useState<string>('0');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isBridging, setIsBridging] = useState(false);
     const [bridgeProgress, setBridgeProgress] = useState(0);
     const [isTokenDeployedOnTargetChain, setIsTokenDeployedOnTargetChain] = useState(false);
 
-    // Chain selection state
     const [fromChain, setFromChain] = useState<ChainType>('solana');
     const [toChain, setToChain] = useState<ChainType>('near');
 
