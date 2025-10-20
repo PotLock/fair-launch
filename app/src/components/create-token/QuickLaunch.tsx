@@ -5,11 +5,14 @@ import { toast } from "sonner";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { uploadImage } from "@/lib/api";
+import { uploadImage, createToken, requestDBCConfig, requestDeployToken } from "@/lib/api";
 import { getDBCConfig } from "@/configs/dbc.config";
 import { useRouter } from "next/navigation";
+import { CreateToken, DBCConfig, TokenConfig as TokenConfigType } from "@/types/api";
+import LoadingOverlay from "@/components/ui/loading-overlay";
+import TokenCreationModal from "@/components/ui/token-creation-modal";
+import URLInput from "@/components/ui/url-input";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 interface QuickLaunchProps {
   onCancel: () => void;
 }
@@ -36,6 +39,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
 
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [deploymentStep, setDeploymentStep] = useState<number>(1);
+  const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +122,32 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     e.preventDefault();
   };
 
+  const getStepMessage = (step: number): string => {
+    const messages = [
+      "Preparing Configuration",
+      "Sending Configuration", 
+      "Confirming Configuration",
+      "Deploying Token",
+      "Sending Deployment Transaction",
+      "Confirming Deployment",
+      "Saving Details"
+    ];
+    return messages[step - 1] || "Processing...";
+  };
+
+  const getStepSubMessage = (step: number): string => {
+    const subMessages = [
+      "Setting up token parameters",
+      "Submitting configuration transaction",
+      "Waiting for confirmation",
+      "Creating your token on blockchain",
+      "Sending token deployment transaction",
+      "Finalizing token creation",
+      "Storing token information"
+    ];
+    return subMessages[step - 1] || "Please wait...";
+  };
+
   const sanitizeUrl = (value: string, placeholders: string[]) => {
     if (!value) return undefined;
     const trimmed = value.trim();
@@ -123,15 +155,22 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       return undefined;
     }
 
-    try {
-      return new URL(trimmed).toString();
-    } catch {
+    // If the value already starts with the prefix, return as is
+    if (placeholders.some(placeholder => trimmed.startsWith(placeholder))) {
+      return trimmed;
+    }
+
+    // For website URLs, try to add https:// if not present
+    if (placeholders.includes('https://')) {
       try {
         return new URL(`https://${trimmed}`).toString();
       } catch {
         return undefined;
       }
     }
+
+    // For other URLs, return the full value
+    return trimmed;
   };
 
   const handleDeployToken = async () => {
@@ -171,42 +210,33 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
     
     setIsDeploying(true);
-   
+    setDeploymentStep(1);
+    setDeploymentProgress(0);
     
     try {
       console.log('🚀 Starting token deployment...');
       console.log('Wallet public key:', publicKey.toString());
       
-      toast.loading('Starting token deployment...', {
+      // Step 1: Preparing Configuration
+      setDeploymentStep(1);
+      setDeploymentProgress(10);
+      toast.loading('Preparing token configuration...', {
         id: 'deployment-progress'
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/halfbak/dbc-config`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+      const result = await requestDBCConfig({
+        metadata: {
+          name: formData.tokenName,
+          symbol: formData.tokenSymbol.toUpperCase(),
+          description: formData.description,
+          imageUri: logoUrl || undefined,
+          bannerUri: bannerUrl || undefined,
+          website: formData.websiteUrl || undefined,
+          twitter: formData.twitterUrl || undefined,
+          telegram: formData.telegramUrl || undefined,
         },
-        body: JSON.stringify({
-          metadata: {
-            name: formData.tokenName,
-            symbol: formData.tokenSymbol.toUpperCase(),
-            description: formData.description,
-            imageUri: logoUrl || undefined,
-            bannerUri: bannerUrl || undefined,
-            website: formData.websiteUrl || undefined,
-            twitter: formData.twitterUrl || undefined,
-            telegram: formData.telegramUrl || undefined,
-          },
-          signer: publicKey.toString()
-        })
+        signer: publicKey.toString()
       });
-
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log(result)
       const serialized = result.data.transaction; 
       const txBuffer = Buffer.from(serialized, "base64");
@@ -241,7 +271,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         throw simError;
       }
       
-
+      // Step 2: Sending Configuration Transaction
+      setDeploymentStep(2);
+      setDeploymentProgress(25);
       toast.loading('Sending configuration transaction...', {
         id: 'deployment-progress'
       });
@@ -255,44 +287,36 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         }
       );
     
-     
+      // Step 3: Confirming Configuration Transaction
+      setDeploymentStep(3);
+      setDeploymentProgress(40);
       toast.loading('Confirming configuration transaction...', {
         id: 'deployment-progress'
       });
       
       await connection.confirmTransaction(signatureDBCConfig, 'confirmed');
 
+      // Step 4: Deploying Token
+      setDeploymentStep(4);
+      setDeploymentProgress(55);
       toast.loading('Deploying token...', {
         id: 'deployment-progress'
       });
       
-      const resDeployToken = await fetch(`${API_BASE_URL}/api/halfbak/deploy-token`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+      const deployResult = await requestDeployToken({
+        metadata: {
+          name: formData.tokenName,
+          symbol: formData.tokenSymbol.toUpperCase(),
+          description: formData.description,
+          imageUri: logoUrl || undefined,
+          bannerUri: bannerUrl || undefined,
+          website: formData.websiteUrl || undefined,
+          twitter: formData.twitterUrl || undefined,
+          telegram: formData.telegramUrl || undefined,
         },
-        body: JSON.stringify({
-          metadata: {
-            name: formData.tokenName,
-            symbol: formData.tokenSymbol.toUpperCase(),
-            description: formData.description,
-            imageUri: logoUrl || undefined,
-            bannerUri: bannerUrl || undefined,
-            website: formData.websiteUrl || undefined,
-            twitter: formData.twitterUrl || undefined,
-            telegram: formData.telegramUrl || undefined,
-          },
-          signer: publicKey.toString(),
-          dbcConfigKeypair: result.data.dbcConfigKeypair._keypair
-        })
+        signer: publicKey.toString(),
+        dbcConfigKeypair: result.data.dbcConfigKeypair._keypair
       });
-
-      if (!resDeployToken.ok) {
-        const errorData = await resDeployToken.json();
-        throw new Error(errorData.message || `HTTP error! status: ${resDeployToken.status}`);
-      }
-
-      const deployResult = await resDeployToken.json();
       console.log('Deploy token result:', deployResult);
       
       const serializedDeployTx = deployResult.data.transaction;
@@ -308,6 +332,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         console.log("Deploy Transaction is Legacy Transaction");
       }
 
+      // Step 5: Sending Token Deployment Transaction
+      setDeploymentStep(5);
+      setDeploymentProgress(70);
       toast.loading('Sending token deployment transaction...', {
         id: 'deployment-progress'
       });
@@ -321,17 +348,23 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         }
       );
     
+      // Step 6: Confirming Token Deployment
+      setDeploymentStep(6);
+      setDeploymentProgress(85);
       toast.loading('Confirming token deployment...', {
         id: 'deployment-progress'
       });
       
       await connection.confirmTransaction(signatureDeployToken, 'confirmed');
 
+      // Step 7: Saving Token Details
+      setDeploymentStep(7);
+      setDeploymentProgress(95);
       toast.loading('Saving token details...', {
         id: 'deployment-progress'
       });
 
-      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, ['https://', 'http://']);
+      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, ['https://']);
       const sanitizedTwitter = sanitizeUrl(formData.twitterUrl, ['x.com/']);
       const sanitizedTelegram = sanitizeUrl(formData.telegramUrl, ['t.me/']);
 
@@ -348,16 +381,16 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       const dbcConfigData = getDBCConfig(publicKey, formData.tokenName, formData.tokenSymbol, metadata);
 
-      const tokenConfig = {
-        quoteMint: dbcConfigData.quoteMint,
-        dbcConfig: {
-          ...dbcConfigData.dbcConfig,
+      const tokenConfig: TokenConfigType = {
+        quoteMint: (dbcConfigData.quoteMint as string) || "",
+        dbcConfig: ({
+          ...dbcConfigData.dbcConfig!,
           totalTokenSupply: totalSupply,
           tokenBaseDecimal: decimals,
-        }
+        } as unknown) as DBCConfig,
       };
 
-      const createTokenPayload = {
+      const createTokenPayload: CreateToken = {
         name: formData.tokenName,
         symbol: formData.tokenSymbol.toUpperCase(),
         description: formData.description,
@@ -365,34 +398,29 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         decimals: formData.decimal,
         mintAddress: deployResult.data.baseMint,
         owner: publicKey.toString(),
-        tokenUri: logoUrl || undefined,
-        bannerUri: bannerUrl || undefined,
-        website: sanitizedWebsite,
-        twitter: sanitizedTwitter,
-        telegram: sanitizedTelegram,
+        tokenUri: logoUrl || "",
+        bannerUri: bannerUrl || "",
+        website: sanitizedWebsite || "",
+        twitter: sanitizedTwitter || "",
+        telegram: sanitizedTelegram || "",
         tokenConfig,
       };
 
-      const createTokenResponse = await fetch(`${API_BASE_URL}/api/tokens`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(createTokenPayload)
-      });
-
-      if (!createTokenResponse.ok) {
-        const errorData = await createTokenResponse.json().catch(() => ({} as any));
-        throw new Error(errorData.message || `HTTP error! status: ${createTokenResponse.status}`);
-      }
+      await createToken(createTokenPayload);
 
       console.log('✅ Deploy transaction confirmed:', signatureDeployToken);
       
+      // Complete deployment
+      setDeploymentProgress(100);
+      // Show navigation loading overlay
+      setIsNavigating(true);
       toast.dismiss('deployment-progress');
       toast.success('Token deployed successfully! 🎉', {
         description: `Your token "${formData.tokenName}" (${formData.tokenSymbol.toUpperCase()}) is now live on Solana!`,
         duration: 5000
       });
+      
+      // Navigate to token page
       router.push(`/token/${deployResult.data.baseMint}`)
       
     } catch (error) {
@@ -400,7 +428,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       
       toast.dismiss('deployment-progress');
       
-      // More specific error messages
       if (error instanceof Error) {
         if (error.message.includes('User rejected')) {
           toast.error('Transaction was rejected by user', {
@@ -427,13 +454,31 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       throw error;
     } finally {
       setIsDeploying(false);
+      setIsNavigating(false);
+      setDeploymentStep(1);
+      setDeploymentProgress(0);
     }
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-6 sm:mb-8">
+    <>
+      <TokenCreationModal
+        isVisible={isDeploying}
+        currentStep={deploymentStep}
+        totalSteps={7}
+        stepMessage={getStepMessage(deploymentStep)}
+        subMessage={getStepSubMessage(deploymentStep)}
+        progress={deploymentProgress}
+        tokenLogo={logoUrl || undefined}
+      />
+      <LoadingOverlay 
+        isVisible={isNavigating}
+        message="Redirecting to your token..."
+        subMessage="Please wait while we take you to your token page"
+      />
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2 px-4">
             Make your own token
           </h1>
@@ -605,33 +650,36 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 X/Twitter
               </label>
-              <input
-                type="text"
+              <URLInput
+                prefix="x.com/"
                 value={formData.twitterUrl}
-                onChange={(e) => handleInputChange('twitterUrl', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                onChange={(value) => handleInputChange('twitterUrl', value)}
+                placeholder="yourusername"
+                className="w-full"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Website
               </label>
-              <input
-                type="text"
+              <URLInput
+                prefix="https://"
                 value={formData.websiteUrl}
-                onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                onChange={(value) => handleInputChange('websiteUrl', value)}
+                placeholder="yourwebsite.com"
+                className="w-full"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Telegram
               </label>
-              <input
-                type="text"
+              <URLInput
+                prefix="t.me/"
                 value={formData.telegramUrl}
-                onChange={(e) => handleInputChange('telegramUrl', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                onChange={(value) => handleInputChange('telegramUrl', value)}
+                placeholder="yourchannel"
+                className="w-full"
               />
             </div>
           </div>
@@ -640,9 +688,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
           <button 
             onClick={onCancel}
-            disabled={isDeploying}
+            disabled={isDeploying || isNavigating}
             className={`w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors ${
-              isDeploying 
+              isDeploying || isNavigating
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:bg-gray-50'
             }`}
@@ -651,17 +699,22 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
           </button>
           <button 
             onClick={handleDeployToken} 
-            disabled={isDeploying}
+            disabled={isDeploying || isNavigating}
             className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
-              isDeploying
+              isDeploying || isNavigating
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                : 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
             }`}
           >
             {isDeploying ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 {'Deploying...'}
+              </>
+            ) : isNavigating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {'Redirecting...'}
               </>
             ) : (
               <>
@@ -673,7 +726,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             )}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

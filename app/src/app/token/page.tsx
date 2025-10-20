@@ -7,14 +7,14 @@ export async function generateMetadata(): Promise<Metadata> {
     const tokensResponse = await getTokens();
     const tokenCount = tokensResponse.data?.length || 0;
 
-    const title = "Token Launchpad | PotLaunch";
-    const description = `Discover and participate in ${tokenCount}+ token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.`;
+    const title = "Token Launchpad | POTLAUNCH";
+    const description = `Discover and participate in ${tokenCount}+ token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.`;
     
     // Create structured data for better SEO
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "PotLaunch Token Launchpad",
+      "name": "POTLAUNCH Token Launchpad",
       "description": description,
       "url": "https://potlaunch.com/token",
       "potentialAction": {
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
       },
       "provider": {
         "@type": "Organization",
-        "name": "PotLaunch",
+        "name": "POTLAUNCH",
         "url": "https://potlaunch.com"
       }
     };
@@ -41,11 +41,11 @@ export async function generateMetadata(): Promise<Metadata> {
         "token trading",
         "crypto projects",
         "token discovery",
-        "PotLaunch"
+        "POTLAUNCH"
       ],
-      authors: [{ name: "PotLaunch" }],
-      creator: "PotLaunch",
-      publisher: "PotLaunch",
+      authors: [{ name: "POTLAUNCH" }],
+      creator: "POTLAUNCH",
+      publisher: "POTLAUNCH",
       robots: {
         index: true,
         follow: true,
@@ -63,13 +63,13 @@ export async function generateMetadata(): Promise<Metadata> {
         url: "https://potlaunch.com/token",
         title,
         description,
-        siteName: "PotLaunch",
+        siteName: "POTLAUNCH",
         images: [
           {
             url: "/hero.png",
             width: 1200,
             height: 630,
-            alt: "PotLaunch Token Launchpad",
+            alt: "POTLAUNCH Token Launchpad",
           },
         ],
       },
@@ -93,24 +93,24 @@ export async function generateMetadata(): Promise<Metadata> {
     
     // Fallback metadata
     return {
-      title: "Token Launchpad | PotLaunch",
-      description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+      title: "Token Launchpad | POTLAUNCH",
+      description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.",
       openGraph: {
-        title: "Token Launchpad | PotLaunch",
-        description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+        title: "Token Launchpad | POTLAUNCH",
+        description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.",
         images: [
           {
             url: "/hero.png",
             width: 1200,
             height: 630,
-            alt: "PotLaunch Token Launchpad",
+            alt: "POTLAUNCH Token Launchpad",
           },
         ],
       },
       twitter: {
         card: "summary_large_image",
-        title: "Token Launchpad | PotLaunch",
-        description: "Discover and participate in token launches on PotLaunch. Support projects you believe in and explore the latest cryptocurrency tokens.",
+        title: "Token Launchpad | POTLAUNCH",
+        description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.",
         images: ["/hero.png"],
       },
     };

@@ -101,10 +101,10 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
         );
     }
 
-    if (loading) {
+    if (!loading) {
         return (
             <div className="min-h-screen py-10">
-                <div className="max-w-7xl mx-auto px-4">
+                <div className="w-full px-4">
                     <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
                         <div className="flex-1 max-w-md">
                             <h1 className="text-3xl font-bold text-black mb-3">My Portfolio</h1>

@@ -17,6 +17,117 @@ export interface Metadata {
     }
 }
 
+// Locked Vesting Parameters
+export interface LockedVestingParam {
+  totalLockedVestingAmount: number;
+  numberOfVestingPeriod: number;
+  cliffUnlockAmount: number;
+  totalVestingDuration: number;
+  cliffDurationFromMigrationTime: number;
+}
+
+// Fee Scheduler Parameters
+export interface FeeSchedulerParam {
+  startingFeeBps: number;
+  endingFeeBps: number;
+  numberOfPeriod: number;
+  totalDuration: number;
+}
+
+// Rate Limiter Parameters
+export interface RateLimiterParam {
+  baseFeeBps: number;
+  feeIncrementBps: number;
+  referenceAmount: number;
+  maxLimiterDuration: number;
+}
+
+// Base Fee Parameters
+export interface BaseFeeParams {
+  baseFeeMode: number;
+  feeSchedulerParam?: FeeSchedulerParam;
+  rateLimiterParam?: RateLimiterParam;
+}
+
+// Migration Fee
+export interface MigrationFee {
+  feePercentage: number;
+  creatorFeePercentage: number;
+}
+
+// Migrated Pool Fee
+export interface MigratedPoolFee {
+  collectFeeMode: number;
+  dynamicFee: number;
+  poolFeeBps: number;
+}
+
+// Build Curve Parameters
+export interface BuildCurveParams {
+  buildCurveMode: number;
+  percentageSupplyOnMigration?: number;
+  migrationQuoteThreshold?: number;
+  initialMarketCap?: number;
+  migrationMarketCap?: number;
+  liquidityWeights?: number[]; // length 16, nhưng interface ko enforce length
+}
+
+// Main DBC Config
+export interface DBCConfig {
+  buildCurveMode: number;
+  totalTokenSupply: number;
+  migrationOption: number;
+  tokenBaseDecimal: number;
+  tokenQuoteDecimal: number;
+  dynamicFeeEnabled: boolean;
+  activationType: number;
+  collectFeeMode: number;
+  migrationFeeOption: number;
+  tokenType: number;
+  partnerLpPercentage: number;
+  creatorLpPercentage: number;
+  partnerLockedLpPercentage: number;
+  creatorLockedLpPercentage: number;
+  creatorTradingFeePercentage: number;
+  leftover: number;
+  tokenUpdateAuthority: number;
+  leftoverReceiver: string;
+  feeClaimer: string;
+
+  // Build curve optional parameters
+  percentageSupplyOnMigration?: number;
+  migrationQuoteThreshold?: number;
+  initialMarketCap?: number;
+  migrationMarketCap?: number;
+  liquidityWeights?: number[];
+
+  // Nested schemas
+  lockedVestingParam: LockedVestingParam;
+  baseFeeParams: BaseFeeParams;
+  migrationFee: MigrationFee;
+  migratedPoolFee?: MigratedPoolFee;
+}
+
+export interface TokenConfig {
+  quoteMint: string,
+  dbcConfig: DBCConfig;
+};
+
+export interface CreateToken {
+  name: string;
+  symbol: string;
+  description: string;
+  totalSupply: string;
+  decimals: string;
+  mintAddress: string;
+  owner: string;
+  tokenUri: string;
+  bannerUri: string;
+  website: string;
+  twitter: string;
+  telegram: string;
+  tokenConfig: TokenConfig;
+}
 
 export interface Token {
     id: string;

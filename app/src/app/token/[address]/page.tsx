@@ -33,11 +33,11 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
         
         if (!token) {
             return {
-                title: "Token Not Found | PotLaunch",
-                description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                title: "Token Not Found | POTLAUNCH",
+                description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
                 openGraph: {
-                    title: "Token Not Found | PotLaunch",
-                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                    title: "Token Not Found | POTLAUNCH",
+                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
                     images: [
                         {
                             url: "/images/broken-pot.png",
@@ -49,15 +49,15 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 },
                 twitter: {
                     card: "summary_large_image",
-                    title: "Token Not Found | PotLaunch",
-                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on PotLaunch.",
+                    title: "Token Not Found | POTLAUNCH",
+                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
                     images: ["/images/broken-pot.png"],
                 },
             };
         }
 
-        const title = `${token.name} (${token.symbol}) | PotLaunch`;
-        const description = token.description || `Discover ${token.name} (${token.symbol}) on PotLaunch. Trade, explore, and learn about this token.`;
+        const title = `${token.name} (${token.symbol}) | POTLAUNCH`;
+        const description = token.description || `Discover ${token.name} (${token.symbol}) on POTLAUNCH. Trade, explore, and learn about this token.`;
         const imageUrl = token.metadata.tokenUri || "/logo.png";
         const bannerUrl = token.metadata.bannerUri || "/hero.png";
         
@@ -70,11 +70,11 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             "image": imageUrl,
             "brand": {
                 "@type": "Brand",
-                "name": "PotLaunch"
+                "name": "POTLAUNCH"
             },
             "provider": {
                 "@type": "Organization",
-                "name": "PotLaunch",
+                "name": "POTLAUNCH",
                 "url": "https://potlaunch.com"
             },
             "category": "Cryptocurrency Token",
@@ -96,11 +96,11 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 "trading",
                 "DeFi",
                 "Solana",
-                "PotLaunch"
+                "POTLAUNCH"
             ],
-            authors: [{ name: "PotLaunch" }],
-            creator: "PotLaunch",
-            publisher: "PotLaunch",
+            authors: [{ name: "POTLAUNCH" }],
+            creator: "POTLAUNCH",
+            publisher: "POTLAUNCH",
             robots: {
                 index: true,
                 follow: true,
@@ -154,24 +154,24 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
         
         // Fallback metadata
         return {
-            title: "Token | PotLaunch",
-            description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+            title: "Token | POTLAUNCH",
+            description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
             openGraph: {
-                title: "Token | PotLaunch",
-                description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+                title: "Token | POTLAUNCH",
+                description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
                 images: [
                     {
                         url: "/hero.png",
                         width: 1200,
                         height: 630,
-                        alt: "PotLaunch",
+                        alt: "POTLAUNCH",
                     },
                 ],
             },
             twitter: {
                 card: "summary_large_image",
-                title: "Token | PotLaunch",
-                description: "Discover and trade tokens on PotLaunch. Explore the latest cryptocurrency tokens and trading opportunities.",
+                title: "Token | POTLAUNCH",
+                description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
                 images: ["/hero.png"],
             },
         };

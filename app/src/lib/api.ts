@@ -1,9 +1,9 @@
-import { Token } from '@/types/api';
+import { Token, CreateToken } from '@/types/api';
 import { PoolState, PoolConfig } from '@/types/pool';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export async function createToken(tokenData: Token) {
+export async function createToken(tokenData: CreateToken) {
   try {
     const response = await fetch(`${API_URL}/api/tokens`, {
       method: 'POST',
@@ -11,7 +11,6 @@ export async function createToken(tokenData: Token) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(tokenData),
-      // Don't cache POST requests
       cache: 'no-store',
     });
 
@@ -28,11 +27,79 @@ export async function createToken(tokenData: Token) {
   }
 }
 
+export async function requestDBCConfig(params: {
+  metadata: {
+    name: string;
+    symbol: string;
+    description: string;
+    imageUri?: string;
+    bannerUri?: string;
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+  };
+  signer: string;
+}) {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/dbc-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error requesting DBC config:', error);
+    throw error;
+  }
+}
+
+export async function requestDeployToken(params: {
+  metadata: {
+    name: string;
+    symbol: string;
+    description: string;
+    imageUri?: string;
+    bannerUri?: string;
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+  };
+  signer: string;
+  dbcConfigKeypair: any;
+}) {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/deploy-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error requesting deploy token:', error);
+    throw error;
+  }
+}
+
 export async function getUserTokens(address: string): Promise<Token[]> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/address/${address}`, {
-      // Cache for 5 minutes
-      next: { revalidate: 60 }
+      next: { revalidate: 10 }
     });
     
     if (!response.ok) {
@@ -50,8 +117,7 @@ export async function getUserTokens(address: string): Promise<Token[]> {
 export async function getTokenByMint(mint: string): Promise<Token | null> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/mint/${mint}`, {
-      // Cache for 30 seconds
-      next: { revalidate: 30 }
+      next: { revalidate: 10 }
     });
     
     if (!response.ok) {
@@ -69,8 +135,7 @@ export async function getTokenByMint(mint: string): Promise<Token | null> {
 export async function getTokenHolders(mint: string): Promise<string[]> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/holders/${mint}`, {
-      // Cache for 5 minutes
-      next: { revalidate: 300 }
+      next: { revalidate: 10 }
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -86,8 +151,7 @@ export async function getTokenHolders(mint: string): Promise<string[]> {
 export async function getPoolStateByMint(mint: string): Promise<PoolState> {
   try {
     const response = await fetch(`${API_URL}/api/halfbak/pool/state/${mint}`, {
-      // Cache for 1 minutes
-      next: { revalidate: 60 }
+      next: { revalidate: 10 }
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -100,7 +164,6 @@ export async function getPoolStateByMint(mint: string): Promise<PoolState> {
   }
 }
 
-// Server-side function for RSC to fetch pool data
 export async function fetchPoolDataForRSC(mint: string) {
   try {
     const poolState = await getPoolStateByMint(mint);
@@ -109,17 +172,14 @@ export async function fetchPoolDataForRSC(mint: string) {
       return null;
     }
     
-    // Transform pool state into a format suitable for the LiquidityPools component
     return {
       poolState,
-      // Add any additional data transformations here
       formattedData: {
         id: poolState.publicKey,
         baseMint: poolState.account.baseMint,
         quoteReserve: poolState.account.quoteReserve,
         baseReserve: poolState.account.baseReserve,
         sqrtPrice: poolState.account.sqrtPrice,
-        // Add more fields as needed
       }
     };
   } catch (error) {
@@ -131,7 +191,6 @@ export async function fetchPoolDataForRSC(mint: string) {
 export async function getPoolConfigByMint(mint: string): Promise<PoolConfig> {
   try {
     const response = await fetch(`${API_URL}/api/halfbak/pool/config/${mint}`, {
-      // Cache for 1 minutes
       next: { revalidate: 60 }
     });
     if (!response.ok) {
@@ -148,7 +207,6 @@ export async function getPoolConfigByMint(mint: string): Promise<PoolConfig> {
 export async function getPoolCurveProgressByMint(mint: string): Promise<number> {
   try {
     const response = await fetch(`${API_URL}/api/halfbak/pool/curve-progress/${mint}`, {
-      // Cache for 1 minutes
       next: { revalidate: 60 }
     });
     if (!response.ok) {
@@ -165,8 +223,7 @@ export async function getPoolCurveProgressByMint(mint: string): Promise<number> 
 export async function getTokens() {
   try {
     const response = await fetch(`${API_URL}/api/tokens`, {
-      // Cache for 1 minute for frequently changing data
-      next: { revalidate: 60 }
+      cache: 'no-store'
     });
     
     if (!response.ok) {
@@ -184,13 +241,12 @@ export async function getTokens() {
 export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
   try {
     const response = await fetch(`${API_URL}/api/tokens/popular?limit=${limit}`, {
-      next: { revalidate: 60 }
+      next: { revalidate: 1 }
     });
     
     if (!response.ok) {
-      // Fallback to regular tokens if popular endpoint doesn't exist
       const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
-        next: { revalidate: 60 }
+        next: { revalidate: 1 }
       });
       
       if (!fallbackResponse.ok) {
@@ -208,7 +264,7 @@ export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
     console.error('Error getting popular tokens:', error);
     try {
       const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
-        next: { revalidate: 300 }
+        next: { revalidate: 1 }
       });
       
       if (!fallbackResponse.ok) {
@@ -233,8 +289,7 @@ export async function searchTokens(query: string, owner?: string) {
     }
     
     const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {
-      // Cache search results for 2 minutes
-      next: { revalidate: 120 }
+      cache: 'no-store'
     });
     
     if (!response.ok) {
@@ -259,7 +314,6 @@ export async function uploadImage(imageFile: File, fileName: string) {
     const response = await fetch(`${API_URL}/api/ipfs/upload-image`, {
       method: 'POST',
       body: formData,
-      // Don't cache upload requests
       cache: 'no-store',
     });
 
@@ -292,7 +346,6 @@ export async function uploadMetadata(metadata: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(metadata),
-      // Don't cache upload requests
       cache: 'no-store',
     });
 

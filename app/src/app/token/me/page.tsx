@@ -10,17 +10,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "My Portfolio - PotLaunch",
+    "name": "My Portfolio - POTLAUNCH",
     "description": description,
     "url": "https://potlaunch.com/me",
     "isPartOf": {
       "@type": "WebSite",
-      "name": "PotLaunch",
+      "name": "POTLAUNCH",
       "url": "https://potlaunch.com"
     },
     "provider": {
       "@type": "Organization",
-      "name": "PotLaunch",
+      "name": "POTLAUNCH",
       "url": "https://potlaunch.com"
     }
   };
@@ -37,11 +37,11 @@ export async function generateMetadata(): Promise<Metadata> {
       "DeFi",
       "Solana",
       "token dashboard",
-      "PotLaunch"
+      "POTLAUNCH"
     ],
-    authors: [{ name: "PotLaunch" }],
-    creator: "PotLaunch",
-    publisher: "PotLaunch",
+    authors: [{ name: "POTLAUNCH" }],
+    creator: "POTLAUNCH",
+    publisher: "POTLAUNCH",
     robots: {
       index: false, // Private page, don't index
       follow: false,
@@ -52,13 +52,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "https://potlaunch.com/me",
       title,
       description,
-      siteName: "PotLaunch",
+      siteName: "POTLAUNCH",
       images: [
         {
           url: "/hero.png",
           width: 1200,
           height: 630,
-          alt: "PotLaunch My Portfolio",
+          alt: "POTLAUNCH My Portfolio",
         },
       ],
     },

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "DeFi token",
     "cryptocurrency creation",
     "blockchain token",
-    "fair launch",
+    "POTLAUNCH",
     "bonding curve",
     "community token",
     "tokenomics",
