@@ -1,9 +1,13 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 interface AuthorityProps {
   onNext: (data: AuthorityData) => void;
@@ -11,6 +15,7 @@ interface AuthorityProps {
   onCancel: () => void;
   currentStep?: number;
   totalSteps?: number;
+  initialData?: AuthorityData;
 }
 
 export interface AuthorityData {
@@ -32,12 +37,13 @@ export default function Authority({
   onBack,
   onCancel, 
   currentStep = 6, 
-  totalSteps = 7 
+  totalSteps = 7,
+  initialData
 }: AuthorityProps) {
   const [formData, setFormData] = useState<AuthorityData>({
-    tokenUpdateAuthority: "0",
-    leftoverReceiver: "",
-    feeClaimer: "",
+    tokenUpdateAuthority: initialData?.tokenUpdateAuthority || "1",
+    leftoverReceiver: initialData?.leftoverReceiver || "",
+    feeClaimer: initialData?.feeClaimer || "",
   });
 
   const progressPercentage = (currentStep / totalSteps) * 100;
@@ -66,7 +72,7 @@ export default function Authority({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl mx-auto w-full">
         <div className="flex justify-between items-center mb-2">
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
@@ -79,66 +85,66 @@ export default function Authority({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* Token Update Authority */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Token Update Authority</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Token Update Authority</h3>
             
-            <div className="space-y-2">
-              <label className="text-black font-medium">
-                Who can update the token? <span className="text-red-500">*</span>
+            <div className="mb-3 sm:mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Who can update the token? <strong className="text-red-500">*</strong>
               </label>
-              <select
-                value={formData.tokenUpdateAuthority}
-                onChange={(e) => handleInputChange('tokenUpdateAuthority', e.target.value as "0" | "1" | "2" | "3" | "4")}
-                className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                {tokenUpdateAuthorities.map(authority => (
-                  <option key={authority.value} value={authority.value}>{authority.label}</option>
-                ))}
-              </select>
-              <p className="text-sm text-gray-600">
-                Choose who has the authority to update token parameters
-              </p>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                  {tokenUpdateAuthorities.find(authority => authority.value === formData.tokenUpdateAuthority)?.label || 'Select authority'}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {tokenUpdateAuthorities.map(authority => (
+                    <DropdownMenuItem
+                      key={authority.value}
+                      onClick={() => handleInputChange('tokenUpdateAuthority', authority.value as "0" | "1" | "2" | "3" | "4")}
+                    >
+                      {authority.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
           {/* Receiver Addresses */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Receiver Addresses</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Receiver Addresses</h3>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Leftover Receiver Address <span className="text-red-500">*</span>
+            <div className="space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Leftover Receiver Address <strong className="text-red-500">*</strong>
                 </label>
-                <Input
+                <input
                   placeholder="Enter wallet address for leftover tokens"
                   value={formData.leftoverReceiver}
                   onChange={(e) => handleInputChange('leftoverReceiver', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   required
                 />
-                <p className="text-sm text-gray-600">
-                  Address that will receive any leftover tokens after distribution
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Fee Claimer Address <span className="text-red-500">*</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fee Claimer Address <strong className="text-red-500">*</strong>
                 </label>
-                <Input
+                <input
                   placeholder="Enter wallet address for fee collection"
                   value={formData.feeClaimer}
                   onChange={(e) => handleInputChange('feeClaimer', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   required
                 />
-                <p className="text-sm text-gray-600">
-                  Address that will receive collected fees from transactions
-                </p>
               </div>
             </div>
           </div>
@@ -218,38 +224,31 @@ export default function Authority({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="px-8 py-3"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="px-8 py-3"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button 
             type="submit"
             disabled={!isFormValid}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+              !isFormValid
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+            }`}
           >
             Continue to Advanced
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </Button>
+          </button>
         </div>
       </form>
     </div>

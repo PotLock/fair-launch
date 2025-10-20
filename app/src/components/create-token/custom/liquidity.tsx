@@ -1,8 +1,6 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +10,7 @@ interface LiquidityProps {
   onCancel: () => void;
   currentStep?: number;
   totalSteps?: number;
+  initialData?: LiquidityData;
 }
 
 export interface LiquidityData {
@@ -26,13 +25,14 @@ export default function Liquidity({
   onBack,
   onCancel, 
   currentStep = 5, 
-  totalSteps = 7 
+  totalSteps = 7,
+  initialData
 }: LiquidityProps) {
   const [formData, setFormData] = useState<LiquidityData>({
-    partnerLpPercentage: 20,
-    creatorLpPercentage: 30,
-    partnerLockedLpPercentage: 50,
-    creatorLockedLpPercentage: 70,
+    partnerLpPercentage: initialData?.partnerLpPercentage || 50,
+    creatorLpPercentage: initialData?.creatorLpPercentage || 50,
+    partnerLockedLpPercentage: initialData?.partnerLockedLpPercentage || 0,
+    creatorLockedLpPercentage: initialData?.creatorLockedLpPercentage || 0,
   });
 
   const progressPercentage = (currentStep / totalSteps) * 100;
@@ -69,7 +69,7 @@ export default function Liquidity({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl mx-auto w-full">
         <div className="flex justify-between items-center mb-2">
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
@@ -82,52 +82,46 @@ export default function Liquidity({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* LP Distribution */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">LP Distribution</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">LP Distribution</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Partner LP Percentage
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="20"
                   value={formData.partnerLpPercentage}
                   onChange={(e) => handleInputChange('partnerLpPercentage', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="100"
                 />
-                <p className="text-sm text-gray-600">
-                  Percentage of LP tokens allocated to partners
-                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Creator LP Percentage
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="30"
                   value={formData.creatorLpPercentage}
                   onChange={(e) => handleInputChange('creatorLpPercentage', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="100"
                 />
-                <p className="text-sm text-gray-600">
-                  Percentage of LP tokens allocated to creator
-                </p>
               </div>
             </div>
 
             {/* Total LP Validation */}
             <div className={cn(
-              "p-4 rounded-lg",
+              "p-4 rounded-lg mt-2",
               isLpValid ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
             )}>
               <div className="flex justify-between items-center">
@@ -148,43 +142,37 @@ export default function Liquidity({
           </div>
 
           {/* LP Locking */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">LP Locking</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">LP Locking</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Partner Locked LP Percentage
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="50"
                   value={formData.partnerLockedLpPercentage}
                   onChange={(e) => handleInputChange('partnerLockedLpPercentage', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="100"
                 />
-                <p className="text-sm text-gray-600">
-                  Percentage of partner LP tokens that will be locked
-                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Creator Locked LP Percentage
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="70"
                   value={formData.creatorLockedLpPercentage}
                   onChange={(e) => handleInputChange('creatorLockedLpPercentage', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="100"
                 />
-                <p className="text-sm text-gray-600">
-                  Percentage of creator LP tokens that will be locked
-                </p>
               </div>
             </div>
           </div>
@@ -263,38 +251,31 @@ export default function Liquidity({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="px-8 py-3"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="px-8 py-3"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button 
             type="submit"
             disabled={!isLpValid}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+              !isLpValid
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+            }`}
           >
             Continue to Authority
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </Button>
+          </button>
         </div>
       </form>
     </div>

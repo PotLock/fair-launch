@@ -1,8 +1,17 @@
 "use client"
 
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { useState } from 'react';
+import { toast } from "sonner";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
+import { getRpcSOLEndpoint } from "@/lib/sol";
+import { createToken, requestDBCConfig, requestDeployToken } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { CreateToken, TokenConfig as TokenConfigType } from "@/types/api";
 import { CustomMintData } from '@/types/token';
+import { Progress } from '@/components/ui/progress';
+import LoadingOverlay from "@/components/ui/loading-overlay";
+import TokenCreationModal from "@/components/ui/token-creation-modal";
 
 interface PreviewDeploymentProps {
   onBack: () => void;
@@ -19,13 +28,424 @@ export default function PreviewDeployment({
   totalSteps = 7,
   formData = {}
 }: PreviewDeploymentProps) {
+  const walletSol = useWallet();
+  const router = useRouter();
+  const { publicKey, sendTransaction } = walletSol;
+  
+  const [isDeploying, setIsDeploying] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [deploymentStep, setDeploymentStep] = useState<number>(1);
+  const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+
   const progressPercentage = (currentStep / totalSteps) * 100;
 
-  const handleCreateToken = () => {
+  // Build custom DBC config from form data
+  const buildCustomDBCConfig = () => {
+    if (!formData.tokenInfo || !formData.dbcConfig || !formData.baseFeeParams || 
+        !formData.lockedVestingParam || !formData.lpDistribution || !formData.authority) {
+      throw new Error('Incomplete form data');
+    }
 
+    const tokenInfo = formData.tokenInfo;
+    const dbcConfig = formData.dbcConfig;
+    const feeConfig = formData.baseFeeParams;
+    const vestingConfig = formData.lockedVestingParam;
+    const liquidityConfig = formData.lpDistribution;
+    const authorityConfig = formData.authority;
+
+    return {
+      quoteMint: "So11111111111111111111111111111111111111112", // SOL
+      dbcConfig: {
+        buildCurveMode: parseInt(dbcConfig.buildCurveMode),
+        percentageSupplyOnMigration: dbcConfig.percentageSupplyOnMigration,
+        migrationQuoteThreshold: dbcConfig.migrationQuoteThreshold,
+        totalTokenSupply: tokenInfo.totalTokenSupply,
+        migrationOption: parseInt(dbcConfig.migrationOption),
+        tokenBaseDecimal: tokenInfo.tokenBaseDecimal,
+        tokenQuoteDecimal: tokenInfo.tokenQuoteDecimal,
+        lockedVestingParam: {
+          totalLockedVestingAmount: vestingConfig.totalLockedVestingAmount,
+          numberOfVestingPeriod: vestingConfig.numberOfVestingPeriod,
+          cliffUnlockAmount: vestingConfig.cliffUnlockAmount,
+          totalVestingDuration: vestingConfig.totalVestingDuration,
+          cliffDurationFromMigrationTime: vestingConfig.cliffDurationFromMigrationTime
+        },
+        baseFeeParams: {
+          baseFeeMode: parseInt(feeConfig.baseFeeMode),
+          feeSchedulerParam: {
+            startingFeeBps: feeConfig.feeSchedulerParam.startingFeeBps,
+            endingFeeBps: feeConfig.feeSchedulerParam.endingFeeBps,
+            numberOfPeriod: feeConfig.feeSchedulerParam.numberOfPeriod,
+            totalDuration: feeConfig.feeSchedulerParam.totalDuration
+          }
+        },
+        dynamicFeeEnabled: dbcConfig.dynamicFeeEnabled,
+        activationType: parseInt(dbcConfig.activationType),
+        collectFeeMode: parseInt(dbcConfig.collectFeeMode),
+        migrationFeeOption: parseInt(dbcConfig.migrationFeeOption),
+        tokenType: parseInt(dbcConfig.tokenType),
+        partnerLpPercentage: liquidityConfig.partnerLpPercentage,
+        creatorLpPercentage: liquidityConfig.creatorLpPercentage,
+        partnerLockedLpPercentage: liquidityConfig.partnerLockedLpPercentage,
+        creatorLockedLpPercentage: liquidityConfig.creatorLockedLpPercentage,
+        creatorTradingFeePercentage: 50, // Default value
+        leftover: 0, // Default value
+        tokenUpdateAuthority: parseInt(authorityConfig.tokenUpdateAuthority),
+        migrationFee: {
+          feePercentage: 0,
+          creatorFeePercentage: 0
+        },
+        leftoverReceiver: authorityConfig.leftoverReceiver,
+        feeClaimer: authorityConfig.feeClaimer
+      },
+      dbcPool: {
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol,
+        metadata: {
+          imageUri: tokenInfo.logo || "",
+          bannerUri: tokenInfo.banner || "",
+          description: tokenInfo.description || "",
+          website: tokenInfo.website || "",
+          twitter: tokenInfo.twitter || "",
+          telegram: tokenInfo.telegram || ""
+        }
+      }
+    };
+  };
+
+  const getStepMessage = (step: number): string => {
+    const messages = [
+      "Preparing Configuration",
+      "Sending Configuration", 
+      "Confirming Configuration",
+      "Deploying Token",
+      "Sending Deployment Transaction",
+      "Confirming Deployment",
+      "Saving Details"
+    ];
+    return messages[step - 1] || "Processing...";
+  };
+
+  const getStepSubMessage = (step: number): string => {
+    const subMessages = [
+      "Setting up token parameters",
+      "Submitting configuration transaction",
+      "Waiting for confirmation",
+      "Creating your token on blockchain",
+      "Sending token deployment transaction",
+      "Finalizing token creation",
+      "Storing token information"
+    ];
+    return subMessages[step - 1] || "Please wait...";
+  };
+
+  const sanitizeUrl = (value: string, placeholders: string[]) => {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || placeholders.includes(trimmed)) {
+      return undefined;
+    }
+
+    if (placeholders.some(placeholder => trimmed.startsWith(placeholder))) {
+      return trimmed;
+    }
+
+    if (placeholders.includes('https://')) {
+      try {
+        return new URL(`https://${trimmed}`).toString();
+      } catch {
+        return undefined;
+      }
+    }
+
+    return trimmed;
+  };
+
+  const handleCreateToken = async () => {
+    if (!publicKey) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!formData.tokenInfo) {
+      toast.error('Token information is missing');
+      return;
+    }
+
+    const tokenInfo = formData.tokenInfo;
+    
+    // Validate required fields
+    if (!tokenInfo.name.trim()) {
+      toast.error('Token name is required');
+      return;
+    }
+    if (!tokenInfo.symbol.trim()) {
+      toast.error('Token symbol is required');
+      return;
+    }
+    if (!tokenInfo.description?.trim()) {
+      toast.error('Token description is required');
+      return;
+    }
+    if (!tokenInfo.logo) {
+      toast.error('Token logo is required');
+      return;
+    }
+
+    setIsDeploying(true);
+    setDeploymentStep(1);
+    setDeploymentProgress(0);
+    
+    try {
+      console.log('🚀 Starting custom token deployment...');
+      console.log('Wallet public key:', publicKey.toString());
+      
+      // Step 1: Preparing Configuration
+      setDeploymentStep(1);
+      setDeploymentProgress(10);
+      toast.loading('Preparing token configuration...', {
+        id: 'deployment-progress'
+      });
+
+      const customConfig = buildCustomDBCConfig();
+      console.log('Custom DBC Config:', customConfig);
+
+      const result = await requestDBCConfig({
+        metadata: {
+          name: tokenInfo.name,
+          symbol: tokenInfo.symbol.toUpperCase(),
+          description: tokenInfo.description,
+          imageUri: tokenInfo.logo,
+          bannerUri: tokenInfo.banner || undefined,
+          website: tokenInfo.website || undefined,
+          twitter: tokenInfo.twitter || undefined,
+          telegram: tokenInfo.telegram || undefined,
+        },
+        signer: publicKey.toString()
+      });
+      
+      console.log('DBC Config result:', result);
+      const serialized = result.data.transaction; 
+      const txBuffer = Buffer.from(serialized, "base64");
+
+      let transaction;
+
+      try {
+        transaction = VersionedTransaction.deserialize(txBuffer);
+        console.log("Transaction is VersionedTransaction");
+      } catch {
+        transaction = Transaction.from(txBuffer);
+        console.log("Transaction is Legacy Transaction");
+      }
+
+      const connection = new Connection(getRpcSOLEndpoint());
+      
+      try {
+        let simulation;
+        if (transaction instanceof VersionedTransaction) {
+          simulation = await connection.simulateTransaction(transaction);
+        } else {
+          simulation = await connection.simulateTransaction(transaction);
+        }
+        
+        if (simulation.value.err) {
+          console.error('❌ Simulation error:', simulation.value.err);
+          throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
+        }
+        console.log('✅ Simulation successful!');
+      } catch (simError) {
+        console.error('❌ Simulation failed:', simError);
+        throw simError;
+      }
+      
+      // Step 2: Sending Configuration Transaction
+      setDeploymentStep(2);
+      setDeploymentProgress(25);
+      toast.loading('Sending configuration transaction...', {
+        id: 'deployment-progress'
+      });
+      
+      const signatureDBCConfig = await sendTransaction(
+        transaction,
+        connection,
+        {
+          skipPreflight: false,
+          preflightCommitment: 'processed'
+        }
+      );
+    
+      // Step 3: Confirming Configuration Transaction
+      setDeploymentStep(3);
+      setDeploymentProgress(40);
+      toast.loading('Confirming configuration transaction...', {
+        id: 'deployment-progress'
+      });
+      
+      await connection.confirmTransaction(signatureDBCConfig, 'confirmed');
+
+      // Step 4: Deploying Token
+      setDeploymentStep(4);
+      setDeploymentProgress(55);
+      toast.loading('Deploying token...', {
+        id: 'deployment-progress'
+      });
+      
+      const deployResult = await requestDeployToken({
+        metadata: {
+          name: tokenInfo.name,
+          symbol: tokenInfo.symbol.toUpperCase(),
+          description: tokenInfo.description,
+          imageUri: tokenInfo.logo,
+          bannerUri: tokenInfo.banner || undefined,
+          website: tokenInfo.website || undefined,
+          twitter: tokenInfo.twitter || undefined,
+          telegram: tokenInfo.telegram || undefined,
+        },
+        signer: publicKey.toString(),
+        dbcConfigKeypair: result.data.dbcConfigKeypair._keypair
+      });
+      
+      console.log('Deploy token result:', deployResult);
+      
+      const serializedDeployTx = deployResult.data.transaction;
+      const deployTxBuffer = Buffer.from(serializedDeployTx, "base64");
+
+      let deployTransaction;
+
+      try {
+        deployTransaction = VersionedTransaction.deserialize(deployTxBuffer);
+        console.log("Deploy Transaction is VersionedTransaction");
+      } catch {
+        deployTransaction = Transaction.from(deployTxBuffer);
+        console.log("Deploy Transaction is Legacy Transaction");
+      }
+
+      // Step 5: Sending Token Deployment Transaction
+      setDeploymentStep(5);
+      setDeploymentProgress(70);
+      toast.loading('Sending token deployment transaction...', {
+        id: 'deployment-progress'
+      });
+      
+      const signatureDeployToken = await sendTransaction(
+        deployTransaction,
+        connection,
+        {
+          skipPreflight: false,
+          preflightCommitment: 'processed'
+        }
+      );
+    
+      // Step 6: Confirming Token Deployment
+      setDeploymentStep(6);
+      setDeploymentProgress(85);
+      toast.loading('Confirming token deployment...', {
+        id: 'deployment-progress'
+      });
+      
+      await connection.confirmTransaction(signatureDeployToken, 'confirmed');
+
+      // Step 7: Saving Token Details
+      setDeploymentStep(7);
+      setDeploymentProgress(95);
+      toast.loading('Saving token details...', {
+        id: 'deployment-progress'
+      });
+
+      const sanitizedWebsite = sanitizeUrl(tokenInfo.website || "", ['https://']);
+      const sanitizedTwitter = sanitizeUrl(tokenInfo.twitter || "", ['x.com/', 'https://twitter.com/', 'https://x.com/']);
+      const sanitizedTelegram = sanitizeUrl(tokenInfo.telegram || "", ['t.me/', 'https://t.me/']);
+
+      const tokenConfig: TokenConfigType = {
+        quoteMint: customConfig.quoteMint,
+        dbcConfig: customConfig.dbcConfig as any,
+      };
+
+      const createTokenPayload: CreateToken = {
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol.toUpperCase(),
+        description: tokenInfo.description,
+        totalSupply: tokenInfo.totalTokenSupply.toString(),
+        decimals: tokenInfo.tokenBaseDecimal.toString(),
+        mintAddress: deployResult.data.baseMint,
+        owner: publicKey.toString(),
+        tokenUri: tokenInfo.logo || "",
+        bannerUri: tokenInfo.banner || "",
+        website: sanitizedWebsite || "",
+        twitter: sanitizedTwitter || "",
+        telegram: sanitizedTelegram || "",
+        tokenConfig,
+      };
+
+      await createToken(createTokenPayload);
+
+      console.log('✅ Deploy transaction confirmed:', signatureDeployToken);
+      
+      // Complete deployment
+      setDeploymentProgress(100);
+      setIsNavigating(true);
+      toast.dismiss('deployment-progress');
+      toast.success('Custom token deployed successfully! 🎉', {
+        description: `Your token "${tokenInfo.name}" (${tokenInfo.symbol.toUpperCase()}) is now live on Solana!`,
+        duration: 5000
+      });
+      
+      // Navigate to token page
+      router.push(`/token/${deployResult.data.baseMint}`);
+      
+    } catch (error) {
+      console.error('❌ Error during custom token deployment:', error);
+      
+      toast.dismiss('deployment-progress');
+      
+      if (error instanceof Error) {
+        if (error.message.includes('User rejected')) {
+          toast.error('Transaction was rejected by user', {
+            description: 'Please try again and approve the transaction in your wallet.'
+          });
+        } else if (error.message.includes('Insufficient funds')) {
+          toast.error('Insufficient SOL balance for transaction', {
+            description: 'Please add more SOL to your wallet and try again.'
+          });
+        } else if (error.message.includes('Simulation failed')) {
+          toast.error('Transaction simulation failed', {
+            description: 'Please check your inputs and try again.'
+          });
+        } else {
+          toast.error(`Deployment failed: ${error.message}`, {
+            description: 'Please check your inputs and try again.'
+          });
+        }
+      } else {
+        toast.error('An unexpected error occurred during deployment', {
+          description: 'Please try again or contact support if the issue persists.'
+        });
+      }
+      throw error;
+    } finally {
+      setIsDeploying(false);
+      setIsNavigating(false);
+      setDeploymentStep(1);
+      setDeploymentProgress(0);
+    }
   };
 
   return (
+    <>
+      <TokenCreationModal
+        isVisible={isDeploying}
+        currentStep={deploymentStep}
+        totalSteps={7}
+        stepMessage={getStepMessage(deploymentStep)}
+        subMessage={getStepSubMessage(deploymentStep)}
+        progress={deploymentProgress}
+        tokenLogo={formData.tokenInfo?.logo || undefined}
+      />
+      <LoadingOverlay 
+        isVisible={isNavigating}
+        message="Redirecting to your token..."
+        subMessage="Please wait while we take you to your token page"
+      />
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
@@ -38,7 +458,7 @@ export default function PreviewDeployment({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl mx-auto w-full">
         <div className="flex justify-between items-center mb-2">
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
@@ -51,14 +471,14 @@ export default function PreviewDeployment({
       </div>
 
       {/* Preview Content */}
-      <div className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* Token Info Preview */}
           {formData.tokenInfo && (
-            <div className="space-y-6 mb-8">
-              <h3 className="text-xl font-semibold text-black">Token Information</h3>
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Token Information</h3>
               <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-gray-600">Name:</span>
                     <p className="font-medium">{formData.tokenInfo.name}</p>
@@ -67,10 +487,11 @@ export default function PreviewDeployment({
                     <span className="text-sm text-gray-600">Symbol:</span>
                     <p className="font-medium">{formData.tokenInfo.symbol}</p>
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="sm:col-span-2">
                     <span className="text-sm text-gray-600">Description:</span>
                     <p className="font-medium">{formData.tokenInfo.description || 'No description'}</p>
                   </div>
+                  
                 </div>
               </div>
             </div>
@@ -78,10 +499,10 @@ export default function PreviewDeployment({
 
           {/* Tokenomics Preview */}
           {formData.tokenInfo && (
-            <div className="space-y-6 mb-8">
-              <h3 className="text-xl font-semibold text-black">Tokenomics</h3>
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Tokenomics</h3>
               <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <span className="text-sm text-gray-600">Total Supply:</span>
                     <p className="font-medium">{formData.tokenInfo.totalTokenSupply?.toLocaleString()}</p>
@@ -101,10 +522,10 @@ export default function PreviewDeployment({
 
           {/* Vesting Preview */}
           {formData.lockedVestingParam && (
-            <div className="space-y-6 mb-8">
-              <h3 className="text-xl font-semibold text-black">Vesting Configuration</h3>
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Vesting Configuration</h3>
               <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-gray-600">Total Vesting Amount:</span>
                     <p className="font-medium">{formData.lockedVestingParam.totalLockedVestingAmount?.toLocaleString()}</p>
@@ -128,10 +549,10 @@ export default function PreviewDeployment({
 
           {/* Liquidity Preview */}
           {formData.lpDistribution && (
-            <div className="space-y-6 mb-8">
-              <h3 className="text-xl font-semibold text-black">Liquidity Distribution</h3>
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Liquidity Distribution</h3>
               <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-gray-600">Partner LP:</span>
                     <p className="font-medium">{formData.lpDistribution.partnerLpPercentage}%</p>
@@ -155,8 +576,8 @@ export default function PreviewDeployment({
 
           {/* Authority Preview */}
           {formData.authority && (
-            <div className="space-y-6 mb-8">
-              <h3 className="text-xl font-semibold text-black">Authority Settings</h3>
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Authority Settings</h3>
               <div className="bg-gray-50 p-6 rounded-lg">
                 <div className="space-y-4">
                   <div>
@@ -197,40 +618,49 @@ export default function PreviewDeployment({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="px-8 py-3"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="px-8 py-3"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button 
             type="button"
             onClick={handleCreateToken}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            disabled={isDeploying || isNavigating}
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+              isDeploying || isNavigating
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+            }`}
           >
-            Create Token
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Button>
+            {isDeploying ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {'Deploying...'}
+              </>
+            ) : isNavigating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {'Redirecting...'}
+              </>
+            ) : (
+              <>
+                Create Token
+                <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

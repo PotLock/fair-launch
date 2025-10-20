@@ -1,9 +1,13 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 interface DBCConfigProps {
   onNext: (data: DBCConfigData) => void;
@@ -11,6 +15,7 @@ interface DBCConfigProps {
   onCancel: () => void;
   currentStep?: number;
   totalSteps?: number;
+  initialData?: DBCConfigData;
 }
 
 export interface DBCConfigData {
@@ -66,18 +71,19 @@ export default function DBCConfig({
   onBack,
   onCancel, 
   currentStep = 2, 
-  totalSteps = 7 
+  totalSteps = 7,
+  initialData
 }: DBCConfigProps) {
   const [formData, setFormData] = useState<DBCConfigData>({
-    buildCurveMode: "0",
-    percentageSupplyOnMigration: 50,
-    migrationQuoteThreshold: 1000,
-    migrationOption: "0",
-    dynamicFeeEnabled: false,
-    activationType: "0",
-    collectFeeMode: "0",
-    migrationFeeOption: "0",
-    tokenType: "0",
+    buildCurveMode: initialData?.buildCurveMode || "0",
+    percentageSupplyOnMigration: initialData?.percentageSupplyOnMigration || 20,
+    migrationQuoteThreshold: initialData?.migrationQuoteThreshold || 100,
+    migrationOption: initialData?.migrationOption || "1",
+    dynamicFeeEnabled: initialData?.dynamicFeeEnabled || true,
+    activationType: initialData?.activationType || "1",
+    collectFeeMode: initialData?.collectFeeMode || "0",
+    migrationFeeOption: initialData?.migrationFeeOption || "3",
+    tokenType: initialData?.tokenType || "0",
   });
 
   const progressPercentage = (currentStep / totalSteps) * 100;
@@ -92,7 +98,7 @@ export default function DBCConfig({
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col items-center">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
         <h1 className="text-3xl font-bold text-black mb-2">
@@ -104,7 +110,7 @@ export default function DBCConfig({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl mx-auto w-full">
         <div className="flex justify-between items-center mb-2">
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
@@ -117,184 +123,233 @@ export default function DBCConfig({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* Curve Configuration */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Curve Settings</h3>
-            
-            <div className="space-y-2">
-              <label className="text-black font-medium">
-                Build Curve Mode <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.buildCurveMode}
-                onChange={(e) => handleInputChange('buildCurveMode', e.target.value as "0" | "1" | "2" | "3")}
-                className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                {buildCurveModes.map(mode => (
-                  <option key={mode.value} value={mode.value}>{mode.label}</option>
-                ))}
-              </select>
-            </div>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Curve Settings</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Build Curve Mode <strong className="text-red-500">*</strong>
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {buildCurveModes.find(mode => mode.value === formData.buildCurveMode)?.label || 'Select mode'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {buildCurveModes.map(mode => (
+                      <DropdownMenuItem
+                        key={mode.value}
+                        onClick={() => handleInputChange('buildCurveMode', mode.value as "0" | "1" | "2" | "3")}
+                      >
+                        {mode.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Percentage Supply on Migration
-                </label>
-                <Input
-                  type="number"
-                  placeholder="50"
-                  value={formData.percentageSupplyOnMigration}
-                  onChange={(e) => handleInputChange('percentageSupplyOnMigration', e.target.value)}
-                  className="h-12"
-                  min="0"
-                  max="100"
-                />
-                <p className="text-sm text-gray-600">Percentage of supply available at migration (0-100%)</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Migration Quote Threshold
-                </label>
-                <Input
-                  type="number"
-                  placeholder="1000"
-                  value={formData.migrationQuoteThreshold}
-                  onChange={(e) => handleInputChange('migrationQuoteThreshold', e.target.value)}
-                  className="h-12"
-                  min="1"
-                />
-                <p className="text-sm text-gray-600">Minimum quote amount for migration</p>
-              </div>
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Percentage Supply on Migration
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="50"
+                    value={formData.percentageSupplyOnMigration}
+                    onChange={(e) => handleInputChange('percentageSupplyOnMigration', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Migration Quote Threshold
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1000"
+                    value={formData.migrationQuoteThreshold}
+                    onChange={(e) => handleInputChange('migrationQuoteThreshold', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="1"
+                  />
+                </div>
             </div>
           </div>
 
           {/* Migration Settings */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Migration Settings</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Migration Settings</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">Migration Option</label>
-                <select
-                  value={formData.migrationOption}
-                  onChange={(e) => handleInputChange('migrationOption', e.target.value as "0" | "1")}
-                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {migrationOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Migration Option
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {migrationOptions.find(option => option.value === formData.migrationOption)?.label || 'Select option'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {migrationOptions.map(option => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => handleInputChange('migrationOption', option.value as "0" | "1")}
+                      >
+                        {option.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">Migration Fee Option</label>
-                <select
-                  value={formData.migrationFeeOption}
-                  onChange={(e) => handleInputChange('migrationFeeOption', e.target.value as "0" | "1" | "2" | "3" | "4" | "5")}
-                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {migrationFeeOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Migration Fee Option
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {migrationFeeOptions.find(option => option.value === formData.migrationFeeOption)?.label || 'Select fee option'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {migrationFeeOptions.map(option => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => handleInputChange('migrationFeeOption', option.value as "0" | "1" | "2" | "3" | "4" | "5")}
+                      >
+                        {option.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
 
           {/* Advanced Settings */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Advanced Settings</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Advanced Settings</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">Activation Type</label>
-                <select
-                  value={formData.activationType}
-                  onChange={(e) => handleInputChange('activationType', e.target.value as "0" | "1")}
-                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {activationTypes.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Activation Type
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {activationTypes.find(type => type.value === formData.activationType)?.label || 'Select type'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {activationTypes.map(type => (
+                      <DropdownMenuItem
+                        key={type.value}
+                        onClick={() => handleInputChange('activationType', type.value as "0" | "1")}
+                      >
+                        {type.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">Collect Fee Mode</label>
-                <select
-                  value={formData.collectFeeMode}
-                  onChange={(e) => handleInputChange('collectFeeMode', e.target.value as "0" | "1")}
-                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {collectFeeModes.map(mode => (
-                    <option key={mode.value} value={mode.value}>{mode.label}</option>
-                  ))}
-                </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Collect Fee Mode
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {collectFeeModes.find(mode => mode.value === formData.collectFeeMode)?.label || 'Select mode'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {collectFeeModes.map(mode => (
+                      <DropdownMenuItem
+                        key={mode.value}
+                        onClick={() => handleInputChange('collectFeeMode', mode.value as "0" | "1")}
+                      >
+                        {mode.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">Token Type</label>
-                <select
-                  value={formData.tokenType}
-                  onChange={(e) => handleInputChange('tokenType', e.target.value as "0" | "1")}
-                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {tokenTypes.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Token Type
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                    {tokenTypes.find(type => type.value === formData.tokenType)?.label || 'Select type'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {tokenTypes.map(type => (
+                      <DropdownMenuItem
+                        key={type.value}
+                        onClick={() => handleInputChange('tokenType', type.value as "0" | "1")}
+                      >
+                        {type.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="space-y-2">
+              <div className='mt-10 ml-1'>
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={formData.dynamicFeeEnabled}
                     onChange={(e) => handleInputChange('dynamicFeeEnabled', e.target.checked)}
-                    className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                    className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
                   />
-                  <span className="text-black font-medium">Enable Dynamic Fee</span>
+                  <span className="text-sm font-medium text-gray-700">Enable Dynamic Fee</span>
                 </label>
-                <p className="text-sm text-gray-600">Allow fees to change based on market conditions</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="px-8 py-3"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="px-8 py-3"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button 
             type="submit"
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            className="w-full sm:w-auto px-6 py-3 bg-red-500 text-white rounded-lg transition-colors hover:bg-red-600 flex items-center justify-center"
           >
             Continue to Fee Config
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </Button>
+          </button>
         </div>
       </form>
     </div>

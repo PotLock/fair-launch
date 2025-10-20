@@ -63,6 +63,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.tokenInfo}
           />
         );
       case 'dbcConfig':
@@ -73,6 +74,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.dbcConfig}
           />
         );
       case 'baseFeeParams':
@@ -83,6 +85,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.baseFeeParams}
           />
         );
       case 'lockedVestingParam':
@@ -93,6 +96,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.lockedVestingParam}
           />
         );
       case 'lpDistribution':
@@ -103,6 +107,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.lpDistribution}
           />
         );
       case 'authority':
@@ -113,6 +118,7 @@ export default function CustomToken() {
             onCancel={handleCancel}
             currentStep={currentStepIndex + 1}
             totalSteps={steps.length}
+            initialData={formData.authority}
           />
         );
       case 'previewDeployment':

@@ -1,22 +1,23 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { uploadImage } from '@/lib/api';
+import URLInput from '@/components/ui/url-input';
 
 interface TokenInfoProps {
   onNext: (data: TokenInfoData) => void;
   onCancel: () => void;
   currentStep?: number;
   totalSteps?: number;
+  initialData?: TokenInfoData;
 }
 
 export interface TokenInfoData {
   name: string;
   symbol: string;
-  description: string;
+  description?: string;
   logo?: string;
   banner?: string;
   website?: string;
@@ -31,23 +32,26 @@ export default function TokenInfo({
   onNext, 
   onCancel, 
   currentStep = 1, 
-  totalSteps = 7 
+  totalSteps = 7,
+  initialData
 }: TokenInfoProps) {
   const [formData, setFormData] = useState<TokenInfoData>({
-    name: '',
-    symbol: '',
-    description: '',
-    logo: '',
-    banner: '',
-    website: '',
-    twitter: '',
-    telegram: '',
-    totalTokenSupply: 1000000,
-    tokenBaseDecimal: 6,
-    tokenQuoteDecimal: 6,
+    name: initialData?.name || '',
+    symbol: initialData?.symbol || '',
+    description: initialData?.description || '',
+    logo: initialData?.logo || '',
+    banner: initialData?.banner || '',
+    website: initialData?.website || '',
+    twitter: initialData?.twitter || '',
+    telegram: initialData?.telegram || '',
+    totalTokenSupply: initialData?.totalTokenSupply || 1000000000,
+    tokenBaseDecimal: initialData?.tokenBaseDecimal || 6,
+    tokenQuoteDecimal: initialData?.tokenQuoteDecimal || 9,
   });
 
   const [dragOver, setDragOver] = useState<'logo' | 'banner' | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
 
   const progressPercentage = (currentStep / totalSteps) * 100;
 
@@ -55,13 +59,51 @@ export default function TokenInfo({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (field: 'logo' | 'banner', file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setFormData(prev => ({ ...prev, [field]: result }));
-    };
-    reader.readAsDataURL(file);
+  const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
+    if (!file) {
+      console.error('No file provided for upload');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+
+    try {
+      if (type === 'logo') {
+        setIsUploadingLogo(true);
+      } else {
+        setIsUploadingBanner(true);
+      }
+
+      // Upload the image using our API
+      const fileName = `${type}-${Date.now()}-${file.name}`;
+      const result = await uploadImage(file, fileName);
+
+      if (result.success && result.data?.imageUri) {
+        const imageUrl = result.data.imageUri;
+        
+        if (type === 'logo') {
+          setFormData(prev => ({ ...prev, logo: imageUrl }));
+          toast.success('Logo uploaded successfully!');
+        } else {
+          setFormData(prev => ({ ...prev, banner: imageUrl }));
+          toast.success('Banner uploaded successfully!');
+        }
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      toast.error(`Failed to upload ${type}. Please try again.`);
+    } finally {
+      if (type === 'logo') {
+        setIsUploadingLogo(false);
+      } else {
+        setIsUploadingBanner(false);
+      }
+    }
   };
 
   const handleDragOver = (e: React.DragEvent, field: 'logo' | 'banner') => {
@@ -79,14 +121,14 @@ export default function TokenInfo({
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handleFileUpload(field, files[0]);
+      handleImageUpload(field, files[0]);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'banner') => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileUpload(field, files[0]);
+      handleImageUpload(field, files[0]);
     }
   };
 
@@ -100,7 +142,7 @@ export default function TokenInfo({
   const isFormValid = formData.name.trim() !== '' && formData.symbol.trim() !== '' && formData.totalTokenSupply > 0;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col items-center">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
         <h1 className="text-3xl font-bold text-black mb-2">
@@ -112,274 +154,272 @@ export default function TokenInfo({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl w-full">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
-          <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
-        </div>
-        <Progress 
-          value={progressPercentage} 
-          className="h-2"
-          bgProgress="bg-red-500"
-        />
+            <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
+            <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
+          </div>
+          <Progress 
+            value={progressPercentage} 
+            className="h-2"
+            bgProgress="bg-red-500"
+          />
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* Token Information */}
-          <div className="space-y-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Token Name <span className="text-red-500">*</span>
+          <div className="mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Token Name <strong className="text-red-500">*</strong>
                 </label>
-                <Input
+                <input
+                  type="text"
                   placeholder="e.g, Dogecoin"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Token Symbol
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Token Symbol <strong className="text-red-500">*</strong>
                 </label>
-                <Input
+                <input
+                  type="text"
                   placeholder="Token Symbol"
-                  value={formData.symbol}
+                  value={formData.symbol.toUpperCase()}
                   onChange={(e) => handleInputChange('symbol', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-black font-medium">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Describe your token's purpose
               </label>
               <textarea
-                placeholder="Describe what your token is for..."
+                placeholder="Describe your token's purpose"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base resize-none"
               />
             </div>
           </div>
 
           {/* Token Branding */}
-          <div className="space-y-4 mb-8">
-            <h3 className="text-xl font-semibold text-black">Token Branding</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Token Logo Upload */}
-              <div className="space-y-2">
-                <label className="text-black font-medium">Token Logo</label>
-                <div
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                    dragOver === 'logo' ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-gray-400",
-                    formData.logo && "border-green-500 bg-green-50"
-                  )}
-                  onDragOver={(e) => handleDragOver(e, 'logo')}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, 'logo')}
-                  onClick={() => document.getElementById('logo-upload')?.click()}
-                >
-                  {formData.logo ? (
-                    <div className="space-y-2">
-                      <img 
-                        src={formData.logo} 
-                        alt="Token Logo" 
-                        className="w-16 h-16 mx-auto rounded-lg object-cover"
-                      />
-                      <p className="text-sm text-gray-600">Click to change</p>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Token Branding <strong className="text-red-500">*</strong></h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {/* Logo Upload Area */}
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                onClick={() => document.getElementById('logo-upload')?.click()}
+                onDrop={(e) => handleDrop(e, 'logo')}
+                onDragOver={(e) => handleDragOver(e, 'logo')}
+                onDragLeave={handleDragLeave}
+              >
+                {formData.logo ? (
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={formData.logo} 
+                      alt="Token Logo" 
+                      className="w-32 h-32 object-cover rounded-lg mb-2"
+                    />
+                    {isUploadingLogo && (
+                      <p className="text-xs text-blue-600 mt-1">Uploading...</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 flex items-center justify-center mb-2">
+                      {isUploadingLogo ? (
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+                      ) : (
+                        <img src="/icons/add-image.svg" alt="Add Image" />
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="w-12 h-12 mx-auto text-gray-400">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21,15 16,10 5,21"/>
-                        </svg>
-                      </div>
-                      <p className="text-black font-medium">Token Logo</p>
-                      <p className="text-sm text-gray-600">Drop your image here or browse</p>
-                    </div>
-                  )}
-                  <input
-                    id="logo-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileInputChange(e, 'logo')}
-                  />
-                </div>
+                    <h4 className="text-gray-700 mb-1 font-medium text-sm">Token Logo</h4>
+                    <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  </div>
+                )}
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileInputChange(e, 'logo')}
+                />
               </div>
 
-              {/* Banner Image Upload */}
-              <div className="space-y-2">
-                <label className="text-black font-medium">Banner image</label>
-                <div
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                    dragOver === 'banner' ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-gray-400",
-                    formData.banner && "border-green-500 bg-green-50"
-                  )}
-                  onDragOver={(e) => handleDragOver(e, 'banner')}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, 'banner')}
-                  onClick={() => document.getElementById('banner-upload')?.click()}
-                >
-                  {formData.banner ? (
-                    <div className="space-y-2">
-                      <img 
-                        src={formData.banner} 
-                        alt="Banner Image" 
-                        className="w-16 h-16 mx-auto rounded-lg object-cover"
-                      />
-                      <p className="text-sm text-gray-600">Click to change</p>
+              {/* Banner Upload Area */}
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                onClick={() => document.getElementById('banner-upload')?.click()}
+                onDrop={(e) => handleDrop(e, 'banner')}
+                onDragOver={(e) => handleDragOver(e, 'banner')}
+                onDragLeave={handleDragLeave}
+              >
+                {formData.banner ? (
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={formData.banner} 
+                      alt="Banner Image" 
+                      className="w-full h-32 object-cover rounded-lg mb-2"
+                    />
+                    {isUploadingBanner && (
+                      <p className="text-xs text-blue-600 mt-1">Uploading...</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 flex items-center justify-center mb-2">
+                      {isUploadingBanner ? (
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+                      ) : (
+                        <img src="/icons/add-image.svg" alt="Add Image" />
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="w-12 h-12 mx-auto text-gray-400">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21,15 16,10 5,21"/>
-                        </svg>
-                      </div>
-                      <p className="text-black font-medium">Banner image</p>
-                      <p className="text-sm text-gray-600">Drop your image here or browse</p>
-                    </div>
-                  )}
-                  <input
-                    id="banner-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileInputChange(e, 'banner')}
-                  />
-                </div>
+                    <h4 className="font-medium text-gray-700 mb-1 text-sm">Banner image</h4>
+                    <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  </div>
+                )}
+                <input
+                  id="banner-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileInputChange(e, 'banner')}
+                />
               </div>
             </div>
           </div>
 
           {/* Social Links */}
-          <div className="space-y-4 mb-8">
-            <h3 className="text-xl font-semibold text-black">Social Links</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">Website</label>
-                <Input
-                  placeholder="https://example.com"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  className="h-12"
+          <div className="mb-6 sm:mb-8">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-black">Add Socials</h3>
+            </div>
+            <div className="flex flex-col md:flex-row justify-between gap-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Website
+                </label>
+                <URLInput
+                  prefix="https://"
+                  value={formData.website || ""}
+                  onChange={(value) => handleInputChange('website', value)}
+                  placeholder="yourwebsite.com"
+                  className="w-full"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">Twitter</label>
-                <Input
-                  placeholder="https://twitter.com/username"
-                  value={formData.twitter}
-                  onChange={(e) => handleInputChange('twitter', e.target.value)}
-                  className="h-12"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  X/Twitter
+                </label>
+                <URLInput
+                  prefix="x.com/"
+                  value={formData.twitter || ""}
+                  onChange={(value) => handleInputChange('twitter', value)}
+                  placeholder="yourusername"
+                  className="w-full"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">Telegram</label>
-                <Input
-                  placeholder="https://t.me/username"
-                  value={formData.telegram}
-                  onChange={(e) => handleInputChange('telegram', e.target.value)}
-                  className="h-12"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Telegram
+                </label>
+                <URLInput
+                  prefix="t.me/"
+                  value={formData.telegram || ""}
+                  onChange={(value) => handleInputChange('telegram', value)}
+                  placeholder="yourchannel"
+                  className="w-full"
                 />
               </div>
             </div>
           </div>
 
           {/* Tokenomics */}
-          <div className="space-y-4 mb-8">
-            <h3 className="text-xl font-semibold text-black">Tokenomics</h3>
-            <div className="space-y-2">
-              <label className="text-black font-medium">
-                Total Token Supply <span className="text-red-500">*</span>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Tokenomics</h3>
+            <div className="space-y-2 mb-3 sm:mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Token Supply <strong className="text-red-500">*</strong>
               </label>
-              <Input
+              <input
                 type="number"
                 placeholder="1000000"
                 value={formData.totalTokenSupply}
                 onChange={(e) => handleInputChange('totalTokenSupply', e.target.value)}
-                className="h-12"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 min="1"
                 required
               />
-              <p className="text-sm text-gray-600">
-                The total number of tokens that will be created
-              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Token Base Decimal
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="6"
                   value={formData.tokenBaseDecimal}
                   onChange={(e) => handleInputChange('tokenBaseDecimal', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="18"
                 />
-                <p className="text-sm text-gray-600">
-                  Decimal places for the token (0-18)
-                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Token Quote Decimal
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="6"
                   value={formData.tokenQuoteDecimal}
                   onChange={(e) => handleInputChange('tokenQuoteDecimal', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                   max="18"
                 />
-                <p className="text-sm text-gray-600">
-                  Decimal places for the quote token (0-18)
-                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
             type="button"
-            variant="outline"
             onClick={onCancel}
-            className="px-8 py-3"
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button 
             type="submit"
             disabled={!isFormValid}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+              !isFormValid
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+            }`}
           >
             Continue to Curve Config
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </Button>
+          </button>
         </div>
       </form>
     </div>

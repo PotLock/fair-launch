@@ -1,8 +1,6 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 
 interface VestingProps {
@@ -11,6 +9,7 @@ interface VestingProps {
   onCancel: () => void;
   currentStep?: number;
   totalSteps?: number;
+  initialData?: VestingData;
 }
 
 export interface VestingData {
@@ -26,14 +25,15 @@ export default function Vesting({
   onBack,
   onCancel, 
   currentStep = 4, 
-  totalSteps = 7 
+  totalSteps = 7,
+  initialData
 }: VestingProps) {
   const [formData, setFormData] = useState<VestingData>({
-    totalLockedVestingAmount: 100000,
-    numberOfVestingPeriod: 12,
-    cliffUnlockAmount: 10000,
-    totalVestingDuration: 365,
-    cliffDurationFromMigrationTime: 30,
+    totalLockedVestingAmount: initialData?.totalLockedVestingAmount || 20000,
+    numberOfVestingPeriod: initialData?.numberOfVestingPeriod || 9,
+    cliffUnlockAmount: initialData?.cliffUnlockAmount || 5000,
+    totalVestingDuration: initialData?.totalVestingDuration || 9*30*24*3600,
+    cliffDurationFromMigrationTime: initialData?.cliffDurationFromMigrationTime || 3*30*24*3600,
   });
 
   const progressPercentage = (currentStep / totalSteps) * 100;
@@ -71,7 +71,7 @@ export default function Vesting({
       </div>
 
       {/* Progress Indicator */}
-      <div className="px-8 mb-8">
+      <div className="px-4 mb-8 max-w-4xl mx-auto w-full">
         <div className="flex justify-between items-center mb-2">
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
@@ -84,108 +84,93 @@ export default function Vesting({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 px-8 pb-8">
-        <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="w-full px-4 pb-8">
+        <div className="max-w-4xl mx-auto px-4">
           {/* Vesting Amount */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Vesting Amount</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Vesting Amount</h3>
             
-            <div className="space-y-2">
-              <label className="text-black font-medium">
-                Total Locked Vesting Amount <span className="text-red-500">*</span>
+            <div className="mb-3 sm:mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Locked Vesting Amount <strong className="text-red-500">*</strong>
               </label>
-              <Input
+              <input
                 type="number"
                 placeholder="100000"
                 value={formData.totalLockedVestingAmount}
                 onChange={(e) => handleInputChange('totalLockedVestingAmount', e.target.value)}
-                className="h-12"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 min="1"
                 required
               />
-              <p className="text-sm text-gray-600">
-                Total number of tokens to be vested
-              </p>
             </div>
           </div>
 
           {/* Cliff Configuration */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Cliff Configuration</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Cliff Configuration</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cliff Unlock Amount
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="10000"
                   value={formData.cliffUnlockAmount}
                   onChange={(e) => handleInputChange('cliffUnlockAmount', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                 />
-                <p className="text-sm text-gray-600">
-                  Tokens unlocked immediately at cliff period
-                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cliff Duration (Days)
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="30"
                   value={formData.cliffDurationFromMigrationTime}
                   onChange={(e) => handleInputChange('cliffDurationFromMigrationTime', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="0"
                 />
-                <p className="text-sm text-gray-600">
-                  Days from migration until cliff unlock
-                </p>
               </div>
             </div>
           </div>
 
           {/* Vesting Schedule */}
-          <div className="space-y-6 mb-8">
-            <h3 className="text-xl font-semibold text-black">Vesting Schedule</h3>
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Vesting Schedule</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-black font-medium">
-                  Number of Vesting Periods <span className="text-red-500">*</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Number of Vesting Periods <strong className="text-red-500">*</strong>
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="12"
                   value={formData.numberOfVestingPeriod}
                   onChange={(e) => handleInputChange('numberOfVestingPeriod', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="1"
                   required
                 />
-                <p className="text-sm text-gray-600">
-                  How many periods to distribute remaining tokens
-                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-black font-medium">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Total Vesting Duration (Days)
                 </label>
-                <Input
+                <input
                   type="number"
                   placeholder="365"
                   value={formData.totalVestingDuration}
                   onChange={(e) => handleInputChange('totalVestingDuration', e.target.value)}
-                  className="h-12"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                   min="1"
                 />
-                <p className="text-sm text-gray-600">
-                  Total time for complete vesting
-                </p>
               </div>
             </div>
           </div>
@@ -238,38 +223,31 @@ export default function Vesting({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="px-8 py-3"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="px-8 py-3"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button 
             type="submit"
             disabled={!isFormValid}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white"
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+              !isFormValid
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+            }`}
           >
             Continue to Liquidity
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </Button>
+          </button>
         </div>
       </form>
     </div>
