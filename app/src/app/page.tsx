@@ -9,7 +9,6 @@ import ExploreTokens from "@/components/home/ExploreTokens";
 import ExploreTokensLoading from "@/components/home/ExploreTokensLoading";
 import TokenCount from "@/components/home/TokenCount";
 
-// Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
 
 

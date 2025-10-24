@@ -152,8 +152,6 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             },
         };
     } catch (error) {
-        console.error("Error generating metadata:", error);
-        
         // Fallback metadata
         return {
             title: "Token | POTLAUNCH",
