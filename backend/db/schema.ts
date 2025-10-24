@@ -1,106 +1,241 @@
-import { pgTable, serial, text, varchar, integer, boolean, decimal, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Bảng chính lưu thông tin token
+// Main tokens table
 export const tokens = pgTable('tokens', {
-  id: serial('id').primaryKey(),
-  mintAddress: varchar('mint_address', { length: 255 }).notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  mintAddress: varchar('mint_address', { length: 44 }).unique(),
   name: varchar('name', { length: 255 }).notNull(),
   symbol: varchar('symbol', { length: 50 }).notNull(),
   description: text('description'),
-  supply: varchar('supply', { length: 100 }).notNull(),
-  decimals: varchar('decimals', { length: 10 }).notNull(),
-  avatarUrl: text('avatar_url'),
-  bannerUrl: text('banner_url'),
-  owner: varchar('owner', { length: 255 }),
-  
-  // Template và pricing
-  selectedTemplate: varchar('selected_template', { length: 100 }).notNull(),
-  selectedPricing: varchar('selected_pricing', { length: 100 }).notNull(),
-  selectedExchange: varchar('selected_exchange', { length: 100 }).notNull(),
-  
-  // Social links
+  totalSupply: decimal('total_supply', { precision: 20, scale: 9 }).notNull(),
+  decimals: integer('decimals').notNull().default(6),
+  owner: varchar('owner', { length: 44 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Token metadata table
+export const tokenMetadata = pgTable('token_metadata', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tokenId: uuid('token_id').notNull().references(() => tokens.id, { onDelete: 'cascade' }),
+  tokenUri: text('token_uri'),
+  bannerUri: text('banner_uri'),
   website: text('website'),
   twitter: text('twitter'),
   telegram: text('telegram'),
-  discord: text('discord'),
-  farcaster: text('farcaster'),
-  
-  initialPrice: varchar('initial_price', { length: 100 }),
-  finalPrice: varchar('final_price', { length: 100 }),
-  targetRaise: varchar('target_raise', { length: 100 }),
-  reserveRatio: varchar('reserve_ratio', { length: 100 }),
-  curveType: varchar('curve_type', { length: 50 }),
-  
-  launchLiquidityOnName: varchar('launch_liquidity_on_name', { length: 100 }),
-  liquiditySource: varchar('liquidity_source', { length: 50 }),
-  liquidityData: jsonb('liquidity_data'),
-  liquidityType: varchar('liquidity_type', { length: 50 }),
-  liquidityPercentage: integer('liquidity_percentage'),
-  liquidityLockupPeriod: integer('liquidity_lockup_period'),
-  isAutoBotProtectionEnabled: boolean('is_auto_bot_protection_enabled'),
-  isAutoListingEnabled: boolean('is_auto_listing_enabled'),
-  isPriceProtectionEnabled: boolean('is_price_protection_enabled'),
-  
-  mintFee: decimal('mint_fee', { precision: 10, scale: 2 }),
-  transferFee: decimal('transfer_fee', { precision: 10, scale: 2 }),
-  burnFee: decimal('burn_fee', { precision: 10, scale: 2 }),
-  feeRecipientAddress: varchar('fee_recipient_address', { length: 255 }),
-  adminControlsWalletAddress: varchar('admin_controls_wallet_address', { length: 255 }),
-  
-  // Sale setup
-  softCap: varchar('soft_cap', { length: 100 }),
-  hardCap: varchar('hard_cap', { length: 100 }),
-  launchDate: timestamp('launch_date'),
-  endDate: timestamp('end_date'),
-  minimumContribution: varchar('minimum_contribution', { length: 100 }),
-  maximumContribution: varchar('maximum_contribution', { length: 100 }),
-  tokenPrice: varchar('token_price', { length: 100 }),
-  maxTokenPerWallet: varchar('max_token_per_wallet', { length: 100 }),
-  distributionDelay: integer('distribution_delay'),
-  
-  // Admin setup
-  revokeMintAuthorityWalletAddress: varchar('revoke_mint_authority_wallet_address', { length: 255 }),
-  revokeFreezeAuthorityWalletAddress: varchar('revoke_freeze_authority_wallet_address', { length: 255 }),
-  adminWalletAddress: varchar('admin_wallet_address', { length: 255 }),
-  adminStructure: varchar('admin_structure', { length: 50 }),
-  tokenOwnerWalletAddress: varchar('token_owner_wallet_address', { length: 255 }),
-  numberOfSignatures: integer('number_of_signatures'),
-  mintAuthorityWalletAddress: varchar('mint_authority_wallet_address', { length: 255 }),
-  freezeAuthorityWalletAddress: varchar('freeze_authority_wallet_address', { length: 255 }),
-  
-  // Metadata
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  metadataUri: text('metadata_uri'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Bảng lưu thông tin allocation/vesting
-export const tokenAllocations = pgTable('token_allocations', {
-  id: serial('id').primaryKey(),
-  tokenId: integer('token_id').references(() => tokens.id, { onDelete: 'cascade' }),
-  description: text('description'),
-  percentage: decimal('percentage', { precision: 5, scale: 2 }),
-  walletAddress: varchar('wallet_address', { length: 255 }).notNull(),
-  lockupPeriod: integer('lockup_period'),
-  
-  // Vesting info
-  vestingDescription: text('vesting_description'),
-  vestingPercentage: decimal('vesting_percentage', { precision: 5, scale: 2 }),
-  vestingCliff: integer('vesting_cliff'),
-  vestingDuration: integer('vesting_duration'),
-  vestingInterval: integer('vesting_interval'),
-  
-  createdAt: timestamp('created_at').defaultNow(),
+// DBC Configuration table
+export const dbcConfigs = pgTable('dbc_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tokenId: uuid('token_id').notNull().references(() => tokens.id, { onDelete: 'cascade' }),
+  quoteMint: varchar('quote_mint', { length: 44 }).notNull(), // SOL, USDC, or other token address
+  buildCurveMode: integer('build_curve_mode').notNull(), // 0-3
+  totalTokenSupply: decimal('total_token_supply', { precision: 20, scale: 9 }).notNull(),
+  migrationOption: integer('migration_option').notNull(), // 0: DAMM v1, 1: DAMM v2
+  tokenBaseDecimal: integer('token_base_decimal').notNull(),
+  tokenQuoteDecimal: integer('token_quote_decimal').notNull(),
+  dynamicFeeEnabled: boolean('dynamic_fee_enabled').notNull().default(true),
+  activationType: integer('activation_type').notNull(), // 0: Slot, 1: Timestamp
+  collectFeeMode: integer('collect_fee_mode').notNull(), // 0: Quote Token, 1: Output Token
+  migrationFeeOption: integer('migration_fee_option').notNull(), // 0-5: LP Fee options
+  tokenType: integer('token_type').notNull(), // 0: SPL, 1: Token 2022
+  partnerLpPercentage: decimal('partner_lp_percentage', { precision: 5, scale: 2 }).notNull(),
+  creatorLpPercentage: decimal('creator_lp_percentage', { precision: 5, scale: 2 }).notNull(),
+  partnerLockedLpPercentage: decimal('partner_locked_lp_percentage', { precision: 5, scale: 2 }).notNull().default('0'),
+  creatorLockedLpPercentage: decimal('creator_locked_lp_percentage', { precision: 5, scale: 2 }).notNull().default('0'),
+  creatorTradingFeePercentage: decimal('creator_trading_fee_percentage', { precision: 5, scale: 2 }).notNull(),
+  leftover: decimal('leftover', { precision: 20, scale: 9 }).notNull().default('0'),
+  tokenUpdateAuthority: integer('token_update_authority').notNull(), // 0-4: Authority options
+  leftoverReceiver: varchar('leftover_receiver', { length: 44 }).notNull(),
+  feeClaimer: varchar('fee_claimer', { length: 44 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Relations
-export const tokensRelations = relations(tokens, ({ many }) => ({
-  allocations: many(tokenAllocations),
+// Build curve specific parameters table
+export const buildCurveParams = pgTable('build_curve_params', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dbcConfigId: uuid('dbc_config_id').notNull().references(() => dbcConfigs.id, { onDelete: 'cascade' }),
+  buildCurveMode: integer('build_curve_mode').notNull(),
+  // For buildCurve (0)
+  percentageSupplyOnMigration: decimal('percentage_supply_on_migration', { precision: 5, scale: 2 }),
+  migrationQuoteThreshold: decimal('migration_quote_threshold', { precision: 20, scale: 9 }),
+  // For buildCurveWithMarketCap (1) and buildCurveWithTwoSegments (2)
+  initialMarketCap: decimal('initial_market_cap', { precision: 20, scale: 9 }),
+  migrationMarketCap: decimal('migration_market_cap', { precision: 20, scale: 9 }),
+  // For buildCurveWithLiquidityWeights (3)
+  liquidityWeights: jsonb('liquidity_weights'), // Array of 16 numbers
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Locked vesting parameters table
+export const lockedVestingParams = pgTable('locked_vesting_params', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dbcConfigId: uuid('dbc_config_id').notNull().references(() => dbcConfigs.id, { onDelete: 'cascade' }),
+  totalLockedVestingAmount: decimal('total_locked_vesting_amount', { precision: 20, scale: 9 }).notNull().default('0'),
+  numberOfVestingPeriod: integer('number_of_vesting_period').notNull().default(0),
+  cliffUnlockAmount: decimal('cliff_unlock_amount', { precision: 20, scale: 9 }).notNull().default('0'),
+  totalVestingDuration: integer('total_vesting_duration').notNull().default(0), // in seconds
+  cliffDurationFromMigrationTime: integer('cliff_duration_from_migration_time').notNull().default(0), // in seconds
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Base fee parameters table
+export const baseFeeParams = pgTable('base_fee_params', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dbcConfigId: uuid('dbc_config_id').notNull().references(() => dbcConfigs.id, { onDelete: 'cascade' }),
+  baseFeeMode: integer('base_fee_mode').notNull(), // 0: Linear, 1: Exponential, 2: Rate Limiter
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Fee scheduler parameters table
+export const feeSchedulerParams = pgTable('fee_scheduler_params', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  baseFeeParamsId: uuid('base_fee_params_id').notNull().references(() => baseFeeParams.id, { onDelete: 'cascade' }),
+  startingFeeBps: integer('starting_fee_bps').notNull(), // max 9900 bps
+  endingFeeBps: integer('ending_fee_bps').notNull(), // min 1 bps
+  numberOfPeriod: integer('number_of_period').notNull().default(0),
+  totalDuration: integer('total_duration').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Rate limiter parameters table
+export const rateLimiterParams = pgTable('rate_limiter_params', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  baseFeeParamsId: uuid('base_fee_params_id').notNull().references(() => baseFeeParams.id, { onDelete: 'cascade' }),
+  baseFeeBps: integer('base_fee_bps').notNull(), // max 9900 bps
+  feeIncrementBps: integer('fee_increment_bps').notNull(), // max 9900 bps
+  referenceAmount: decimal('reference_amount', { precision: 20, scale: 9 }).notNull().default('0'),
+  maxLimiterDuration: integer('max_limiter_duration').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Migration fee table
+export const migrationFees = pgTable('migration_fees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dbcConfigId: uuid('dbc_config_id').notNull().references(() => dbcConfigs.id, { onDelete: 'cascade' }),
+  feePercentage: decimal('fee_percentage', { precision: 5, scale: 2 }).notNull().default('0'), // 0-50%
+  creatorFeePercentage: decimal('creator_fee_percentage', { precision: 5, scale: 2 }).notNull().default('0'), // 0-100%
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Migrated pool fee table (optional, only for migrationOption = 1 and migrationFeeOption = 6)
+export const migratedPoolFees = pgTable('migrated_pool_fees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dbcConfigId: uuid('dbc_config_id').notNull().references(() => dbcConfigs.id, { onDelete: 'cascade' }),
+  collectFeeMode: integer('collect_fee_mode').notNull(), // 0: Quote Token, 1: Output Token
+  dynamicFee: integer('dynamic_fee').notNull(), // 0: Disabled, 1: Enabled
+  poolFeeBps: integer('pool_fee_bps').notNull(), // 10-1000 bps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Token transactions table (for tracking token operations)
+export const tokenTransactions = pgTable('token_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tokenId: uuid('token_id').notNull().references(() => tokens.id, { onDelete: 'cascade' }),
+  transactionHash: varchar('transaction_hash', { length: 88 }).notNull(),
+  operation: varchar('operation', { length: 50 }).notNull(), // create-config, create-pool, migrate, etc.
+  status: varchar('status', { length: 20 }).notNull(), // pending, confirmed, failed
+  amount: decimal('amount', { precision: 20, scale: 9 }),
+  fee: decimal('fee', { precision: 20, scale: 9 }),
+  fromAddress: varchar('from_address', { length: 44 }),
+  toAddress: varchar('to_address', { length: 44 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Define relationships
+export const tokensRelations = relations(tokens, ({ one, many }) => ({
+  metadata: one(tokenMetadata),
+  dbcConfig: one(dbcConfigs),
+  transactions: many(tokenTransactions),
 }));
 
-export const tokenAllocationsRelations = relations(tokenAllocations, ({ one }) => ({
+export const tokenMetadataRelations = relations(tokenMetadata, ({ one }) => ({
   token: one(tokens, {
-    fields: [tokenAllocations.tokenId],
+    fields: [tokenMetadata.tokenId],
     references: [tokens.id],
   }),
-})); 
+}));
+
+export const dbcConfigsRelations = relations(dbcConfigs, ({ one, many }) => ({
+  token: one(tokens, {
+    fields: [dbcConfigs.tokenId],
+    references: [tokens.id],
+  }),
+  buildCurveParams: one(buildCurveParams),
+  lockedVestingParams: one(lockedVestingParams),
+  baseFeeParams: one(baseFeeParams),
+  migrationFee: one(migrationFees),
+  migratedPoolFee: one(migratedPoolFees),
+}));
+
+export const buildCurveParamsRelations = relations(buildCurveParams, ({ one }) => ({
+  dbcConfig: one(dbcConfigs, {
+    fields: [buildCurveParams.dbcConfigId],
+    references: [dbcConfigs.id],
+  }),
+}));
+
+export const lockedVestingParamsRelations = relations(lockedVestingParams, ({ one }) => ({
+  dbcConfig: one(dbcConfigs, {
+    fields: [lockedVestingParams.dbcConfigId],
+    references: [dbcConfigs.id],
+  }),
+}));
+
+export const baseFeeParamsRelations = relations(baseFeeParams, ({ one, many }) => ({
+  dbcConfig: one(dbcConfigs, {
+    fields: [baseFeeParams.dbcConfigId],
+    references: [dbcConfigs.id],
+  }),
+  feeSchedulerParams: many(feeSchedulerParams),
+  rateLimiterParams: many(rateLimiterParams),
+}));
+
+export const feeSchedulerParamsRelations = relations(feeSchedulerParams, ({ one }) => ({
+  baseFeeParams: one(baseFeeParams, {
+    fields: [feeSchedulerParams.baseFeeParamsId],
+    references: [baseFeeParams.id],
+  }),
+}));
+
+export const rateLimiterParamsRelations = relations(rateLimiterParams, ({ one }) => ({
+  baseFeeParams: one(baseFeeParams, {
+    fields: [rateLimiterParams.baseFeeParamsId],
+    references: [baseFeeParams.id],
+  }),
+}));
+
+export const migrationFeesRelations = relations(migrationFees, ({ one }) => ({
+  dbcConfig: one(dbcConfigs, {
+    fields: [migrationFees.dbcConfigId],
+    references: [dbcConfigs.id],
+  }),
+}));
+
+export const migratedPoolFeesRelations = relations(migratedPoolFees, ({ one }) => ({
+  dbcConfig: one(dbcConfigs, {
+    fields: [migratedPoolFees.dbcConfigId],
+    references: [dbcConfigs.id],
+  }),
+}));
+
+export const tokenTransactionsRelations = relations(tokenTransactions, ({ one }) => ({
+  token: one(tokens, {
+    fields: [tokenTransactions.tokenId],
+    references: [tokens.id],
+  }),
+}));

@@ -1,0 +1,16 @@
+# POTLAUNCH - Cross-chain Token Launch Platform
+
+/* TEAM */
+Developer: PotLock Labs
+Contact: https://potlock.org
+Twitter: @PotLock_
+Location: Global
+
+/* THANKS */
+Built with ❤️ by the PotLock community
+
+/* SITE */
+Last update: 2024/01/01
+Language: English
+Doctype: HTML5
+IDE: Cursor, VS Code
