@@ -3,7 +3,7 @@ import { Outlet, createRootRoute, useNavigate, useLocation } from "@tanstack/rea
 import { useEffect } from "react";
 import Header from "../components/layout/Header";
 import WalletContextProvider from "../context/WalletProviderContext";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from 'sonner';
 import { InforWarning } from "../components/layout/InforWarning";
 import { Footer } from "../components/layout/Footer";
 import { HelpButton } from "../components/layout/HelpButton";
@@ -12,8 +12,12 @@ import { nearWalletConfig } from "../configs/nearWalletConfig";
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet, sepolia, polygon, arbitrum, base } from 'wagmi/chains';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import '@rainbow-me/rainbowkit/styles.css';
 import { ALCHEMY_API_KEY } from "../configs/env.config";
+
+//@ts-ignore
+import '@rainbow-me/rainbowkit/styles.css';
+//@ts-ignore
+import "@solana/wallet-adapter-react-ui/styles.css";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +42,7 @@ function RootComponent() {
   const location = useLocation();
 
   useEffect(() => {
-    const validRoutes = ['/', '/create', '/my-tokens', '/tokens'];
+    const validRoutes = ['/', '/create', '/my-tokens', '/tokens', '/bridge'];
     
     const isValidRoute = validRoutes.includes(location.pathname) || location.pathname.startsWith('/token/');
     
@@ -58,7 +62,7 @@ function RootComponent() {
               <Outlet />
               <Footer/>
               <HelpButton />
-              <Toaster position="top-right" />
+              <Toaster position="bottom-right" />
             </WalletSelectorProvider>
           </WalletContextProvider>
         </RainbowKitProvider>

@@ -26,6 +26,25 @@ export function formatNumberWithCommas(value: string | number): string {
     return num.toLocaleString('en-US');
 }
 
+export function formatNumberInput(value: string): string {
+    let cleaned = value.replace(/[^\d.]/g, '');
+    
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+        cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    if (!cleaned || cleaned === '.') return '';
+  
+    const [integerPart, decimalPart] = cleaned.split('.');
+  
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    
+    return decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+}
+
+
+
 export function truncateAddress(address: string): string {
     if (!address) return '';
     if (address.length < 20) return address;

@@ -1,0 +1,364 @@
+import { Token, CreateToken } from '@/types/api';
+import { PoolState, PoolConfig } from '@/types/pool';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export async function createToken(tokenData: CreateToken) {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tokenData),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error creating token:', error);
+    throw new Error('Failed to create token');
+  }
+}
+
+export async function requestDBCConfig(params: {
+  metadata: {
+    name: string;
+    symbol: string;
+    description: string;
+    imageUri?: string;
+    bannerUri?: string;
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+  };
+  signer: string;
+}) {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/dbc-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error requesting DBC config:', error);
+    throw error;
+  }
+}
+
+export async function requestDeployToken(params: {
+  metadata: {
+    name: string;
+    symbol: string;
+    description: string;
+    imageUri?: string;
+    bannerUri?: string;
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+  };
+  signer: string;
+  dbcConfigKeypair: any;
+}) {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/deploy-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error requesting deploy token:', error);
+    throw error;
+  }
+}
+
+export async function getUserTokens(address: string): Promise<Token[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/address/${address}`, {
+      next: { revalidate: 10 }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error('Error getting user tokens:', error);
+    throw new Error('Failed to get user tokens');
+  }
+}
+
+export async function getTokenByMint(mint: string): Promise<Token | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/mint/${mint}`, {
+      next: { revalidate: 10 }
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting token by mint:', error);
+    throw new Error('Failed to get token by mint');
+  }
+}
+
+export async function getTokenHolders(mint: string): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/holders/${mint}`, {
+      next: { revalidate: 10 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error('Error getting token holders:', error);
+    throw new Error('Failed to get token holders');
+  }
+}
+
+export async function getPoolStateByMint(mint: string): Promise<PoolState> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/state/${mint}`, {
+      next: { revalidate: 10 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
+  }
+}
+
+export async function fetchPoolDataForRSC(mint: string) {
+  try {
+    const poolState = await getPoolStateByMint(mint);
+    
+    if (!poolState) {
+      return null;
+    }
+    
+    return {
+      poolState,
+      formattedData: {
+        id: poolState.publicKey,
+        baseMint: poolState.account.baseMint,
+        quoteReserve: poolState.account.quoteReserve,
+        baseReserve: poolState.account.baseReserve,
+        sqrtPrice: poolState.account.sqrtPrice,
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching pool data for RSC:', error);
+    return null;
+  }
+}
+
+export async function getPoolConfigByMint(mint: string): Promise<PoolConfig> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/config/${mint}`, {
+      next: { revalidate: 60 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
+  }
+}
+
+export async function getPoolCurveProgressByMint(mint: string): Promise<number> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/pool/curve-progress/${mint}`, {
+      next: { revalidate: 60 }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error getting pool by mint:', error);
+    throw new Error('Failed to get pool by mint');
+  }
+}
+
+export async function getTokens() {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens`, {
+      next: { revalidate: 10 } // Cache for 60 seconds instead of no-store
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error getting tokens:', error);
+    throw new Error('Failed to get tokens');
+  }
+}
+
+export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/popular?limit=${limit}`, {
+      next: { revalidate: 1 }
+    });
+    
+    if (!response.ok) {
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+        next: { revalidate: 1 }
+      });
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
+      }
+      
+      const fallbackResult = await fallbackResponse.json();
+      const tokens = fallbackResult.data || fallbackResult.tokens || [];
+      return tokens.slice(0, limit);
+    }
+    
+    const result = await response.json();
+    return result.data || result.tokens || [];
+  } catch (error) {
+    console.error('Error getting popular tokens:', error);
+    try {
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+        next: { revalidate: 1 }
+      });
+      
+      if (!fallbackResponse.ok) {
+        return [];
+      }
+      
+      const fallbackResult = await fallbackResponse.json();
+      const tokens = fallbackResult.data || fallbackResult.tokens || [];
+      return tokens.slice(0, limit);
+    } catch (fallbackError) {
+      console.error('Error getting fallback tokens:', fallbackError);
+      return [];
+    }
+  }
+}
+
+export async function searchTokens(query: string, owner?: string) {
+  try {
+    const params = new URLSearchParams({ q: query });
+    if (owner) {
+      params.append('owner', owner);
+    }
+    
+    const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {
+      next: { revalidate: 10 } // Cache for 10 seconds instead of no-store
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error searching tokens:', error);
+    throw new Error('Failed to search tokens');
+  }
+}
+
+export async function uploadImage(imageFile: File, fileName: string) {
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('fileName', fileName);
+
+    const response = await fetch(`${API_URL}/api/ipfs/upload-image`, {
+      method: 'POST',
+      body: formData,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw new Error('Failed to upload image');
+  }
+}
+
+export async function uploadMetadata(metadata: {
+  name: string;
+  symbol: string;
+  imageUri: string;
+  description: string;
+  website?: string;
+  twitter?: string;
+  telegram?: string;
+}) {
+  try {
+    const response = await fetch(`${API_URL}/api/ipfs/upload-metadata`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(metadata),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error uploading metadata:', error);
+    throw new Error('Failed to upload metadata');
+  }
+}
+

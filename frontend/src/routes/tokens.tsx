@@ -98,15 +98,11 @@ function Tokens() {
                             Search
                         </button>
                     </div>
-                    {tokens.length === 0 ? (
-                        <NoTokensFound />
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {[...Array(6)].map((_, index) => (
-                                <MyTokenCardSkeleton key={index} />
-                            ))}
-                        </div>
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[...Array(6)].map((_, index) => (
+                            <MyTokenCardSkeleton key={index} />
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -273,17 +269,17 @@ function Tokens() {
                                 <ExploreTokenCard  
                                     className="lg:max-w-[400px]"
                                     id={token.id.toString()}
-                                    mint={token.mintAddress || ''}
-                                    banner={token.bannerUrl || ''}
-                                    avatar={token.avatarUrl || ''}
-                                    name={token.name}
-                                    symbol={token.symbol}
-                                    type={getPricingDisplay(token.selectedPricing || '')}
-                                    description={token.description}
-                                    decimals={token.decimals}
+                                    mint={token.mintAddress}
+                                    banner={token.basicInfo.bannerUrl}
+                                    avatar={token.basicInfo.avatarUrl}
+                                    name={token.basicInfo.name}
+                                    symbol={token.basicInfo.symbol}
+                                    type={getPricingDisplay(token.selectedPricing)}
+                                    description={token.basicInfo.description}
+                                    decimals={parseInt(token.basicInfo.decimals)}
                                     status={'Trading'}
                                     actionButton={{
-                                        text: `Buy $${token.symbol}`,
+                                        text: `Buy $${token.basicInfo.symbol}`,
                                         variant: 'presale' as const
                                     }}
                                 />

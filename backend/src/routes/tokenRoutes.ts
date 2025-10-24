@@ -7,7 +7,7 @@ import { z } from 'zod';
 const app = new Hono();
 const tokenService = new TokenService();
 
-// Create token
+// Create token with integrated DBC config
 app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
   try {
     const tokenData = c.req.valid('json');
@@ -16,7 +16,7 @@ app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
     return c.json({
       success: true,
       data: result,
-      message: 'Token created successfully'
+      message: 'Token and DBC config created successfully'
     }, 201);
   } catch (error) {
     console.error('Error in create token route:', error);
@@ -68,42 +68,19 @@ app.get('/mint/:address', async (c) => {
     
     const token = await tokenService.getTokenByAddress(address);
     
-    if (token) {
-      const {
-        website,
-        twitter,
-        telegram,
-        discord,
-        farcaster,
-        ...rest
-      } = token;
+    if (!token) {
       return c.json({
-        success: true,
-        data: {
-          ...rest,
-          social: {
-            website,
-            twitter,
-            telegram,
-            discord,
-            farcaster,
-          },
-        },
-      });
+        success: false,
+        message: 'Token not found'
+      }, 404);
     }
+    
     return c.json({
       success: true,
       data: token
     });
   } catch (error) {
     console.error('Error in get token by address route:', error);
-    
-    if (error instanceof Error && error.message === 'Token not found') {
-      return c.json({
-        success: false,
-        message: 'Token not found'
-      }, 404);
-    }
     
     return c.json({
       success: false,
@@ -167,15 +144,58 @@ app.get('/address/:address', async (c) => {
   }
 });
 
+// Get popular tokens - This must come before /:id to avoid route conflicts
+app.get('/popular', async (c) => {
+  try {
+    const limitParam = c.req.query('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 10;
+    
+    // Validate limit parameter
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return c.json({
+        success: false,
+        message: 'Limit must be a number between 1 and 100'
+      }, 400);
+    }
+    
+    const popularTokens = await tokenService.getPopularTokens(limit);
+    
+    return c.json({
+      success: true,
+      data: popularTokens
+    });
+  } catch (error) {
+    console.error('Error in get popular tokens route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+app.get('/holders/:mintAddress', async (c) => {
+  try {
+    const mintAddress = c.req.param('mintAddress');
+    const holders = await tokenService.getHoldersByMintAddress(mintAddress);
+    return c.json({ success: true, data: holders });
+  } catch (error) {
+    console.error('Error in get holders by mint address route:', error);
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
 // Get token by ID
 app.get('/:id', async (c) => {
   try {
-    const id = parseInt(c.req.param('id'));
+    const id = c.req.param('id');
     
-    if (isNaN(id)) {
+    if (!id || id.trim() === '') {
       return c.json({
         success: false,
-        message: 'Invalid token ID'
+        message: 'Token ID is required'
       }, 400);
     }
     
@@ -202,18 +222,27 @@ app.get('/:id', async (c) => {
   }
 });
 
-// Delete all tokens
-app.delete('/all', async (c) => {
+// Delete token
+app.delete('/:id', async (c) => {
   try {
-    const result = await tokenService.deleteAllTokens();
-    await tokenService.deleteAllAllocations();
+    const id = c.req.param('id');
+    
+    if (!id || id.trim() === '') {
+      return c.json({
+        success: false,
+        message: 'Token ID is required'
+      }, 400);
+    }
+    
+    const result = await tokenService.deleteToken(id);
+    
     return c.json({
       success: true,
       data: result,
-      message: 'All tokens deleted successfully'
+      message: 'Token deleted successfully'
     });
   } catch (error) {
-    console.error('Error in delete all tokens route:', error);
+    console.error('Error in delete token route:', error);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -221,4 +250,4 @@ app.delete('/all', async (c) => {
   }
 });
 
-export default app; 
+export default app;

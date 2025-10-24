@@ -11,7 +11,6 @@ interface UseSearchReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   searchResults: Token[];
-  isLoading: boolean;
   error: string | null;
   isSearching: boolean;
   clearSearch: () => void;
@@ -22,7 +21,6 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Token[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -75,7 +73,6 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
     searchQuery,
     setSearchQuery,
     searchResults,
-    isLoading,
     error,
     isSearching,
     clearSearch,

@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MyTokenCard } from "../components/MyTokenCard";
 import { MyTokenCardSkeleton } from "../components/MyTokenCardSkeleton";
-import { WalletButton } from "../components/WalletButton";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { getTokenByAddress } from "../lib/api";
@@ -27,7 +26,6 @@ function MyTokens() {
     const [listTokens, setListTokens] = useState<Token[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [filterValue, setFilterValue] = useState("all");
     const [solPrice, setSolPrice] = useState<number>(0)
     const [portfolioValue, setPortfolioValue] = useState<number>(0)
     
@@ -60,12 +58,13 @@ function MyTokens() {
         setError(null);
         try {
             const tokens = await getTokenByAddress(publicKey.toBase58());
-            setListTokens(tokens.data);
+            setListTokens(tokens);
 
             let portfolio = 0;
             
             const portfolioCalculations = await Promise.all(
-                tokens.data.map(async (token: Token) => {
+                tokens.map(async (token: Token) => {
+                    if (!token) return 0;
                     try {
                         const balance = await getTokenBalanceOnSOL(token.mintAddress || '', publicKey.toBase58());
                         const bondingCurveAccounts = await getBondingCurveAccounts(new PublicKey(token.mintAddress));
@@ -81,7 +80,7 @@ function MyTokens() {
                 })
             );
             
-            portfolio = portfolioCalculations.reduce((sum, value) => sum + value, 0);
+            portfolio = portfolioCalculations.reduce((sum: number, value: number) => sum + value, 0);
             setPortfolioValue(portfolio);
 
         } catch (err) {
@@ -112,37 +111,23 @@ function MyTokens() {
     const displayError = searchQuery.trim() ? searchError : error;
     
     // Calculate portfolio statistics
-    const totalTokens = displayTokens.length;
+    const totalTokens = displayTokens?.length || 0;
     // For now, assuming all tokens are trading since there's no status field
     const tradingTokens = totalTokens;
 
     if (!publicKey) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] py-10">
+            <div className="min-h-screen py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-black mb-2">My portfolio</h1>
+                    <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
                     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                        <div className="w-32 h-32 mb-6 flex items-center justify-center">
-                            <svg
-                                className="w-full h-full text-gray-300"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={1.5}
-                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                />
-                            </svg>
+                        <div className="w-64 h-64 mb-6 flex items-center justify-center">
+                            <img src="/images/broken-pot.png" alt="Not Found" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2">Wallet not connected</h3>
+                        <h3 className="text-xl font-semibold text-gray-700 mb-2">Solana wallet not connected</h3>
                         <p className="text-gray-500 mb-6 max-w-md">
-                            Connect your wallet to view and manage your tokens
+                            Connect your Solana wallet to view and manage your tokens.
                         </p>
-                        <WalletButton />
                     </div>
                 </div>
             </div>
@@ -155,13 +140,13 @@ function MyTokens() {
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
                         <div className="flex-1 max-w-md">
-                            <h1 className="text-3xl font-bold text-black mb-3">My Tokens</h1>
+                            <h1 className="text-3xl font-bold text-black mb-3">My Portfolio</h1>
                             <p className="text-base text-gray-500 leading-6">
                                 View and manage all the tokens you’ve created on the token launch platforms
                             </p>
                         </div>
-                        <div className="flex gap-8">
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                        <div className="flex md:flex-row flex-col gap-8 w-full">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                                 <div className="flex flex-col gap-10">
                                     <div>
                                         <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
@@ -177,7 +162,7 @@ function MyTokens() {
                                 </div>
                             </div>
 
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                                 <div className="flex flex-col gap-10">
                                     <div>
                                         <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
@@ -241,9 +226,9 @@ function MyTokens() {
 
     if (displayError) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] py-10">
+            <div className="min-h-screen py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
+                <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
                 <p className="text-red-500 mb-8 text-base">{displayError}</p>
                 </div>
             </div>
@@ -252,9 +237,9 @@ function MyTokens() {
 
     if (listTokens.length === 0) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] py-10">
+            <div className="min-h-screen py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-black mb-2">My Tokens</h1>
+                    <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
                     
                     {searchQuery.trim() && isSearching ? (
                         // Show skeleton when searching
@@ -292,14 +277,14 @@ function MyTokens() {
         <div className="min-h-screen py-10">
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
-                    <div className="flex-1 max-w-md">
-                        <h1 className="text-3xl font-bold text-black mb-3">My Tokens</h1>
+                    <div className="max-w-md md:max-w-full">
+                        <h1 className="text-3xl font-bold text-black mb-3">My Portfolio</h1>
                         <p className="text-base text-gray-500 leading-6">
                             View and manage all the tokens you’ve created on the token launch platforms
                         </p>
                     </div>
-                    <div className="flex gap-8">
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                    <div className="flex md:flex-row flex-col gap-8 w-full">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                             <div className="flex flex-col gap-10">
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
@@ -315,7 +300,7 @@ function MyTokens() {
                             </div>
                         </div>
 
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 w-80">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
                             <div className="flex flex-col gap-10">
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
@@ -410,23 +395,23 @@ function MyTokens() {
                             />
                         </div>
                     ) : (
-                        displayTokens.map((token) => (
+                        displayTokens?.map((token: Token) => (
                             <MyTokenCard  
                                 className="lg:max-w-[400px]"
                                 id={token.id.toString()}
                                 user={publicKey}
                                 mint={token.mintAddress || ''}
-                                banner={token.bannerUrl || ''}
-                                avatar={token.avatarUrl || ''}
-                                name={token.name}
-                                symbol={token.symbol}
+                                banner={token.basicInfo.bannerUrl || ''}
+                                avatar={token.basicInfo.avatarUrl || ''}
+                                name={token.basicInfo.name}
+                                symbol={token.basicInfo.symbol}
                                 type={getPricingDisplay(token.selectedPricing || '')}
-                                description={token.description}
-                                decimals={token.decimals}
+                                description={token.basicInfo.description || ''}
+                                decimals={parseInt(token.basicInfo.decimals)}
                                 template={getTemplateDisplay(token.selectedTemplate)}
                                 solPrice={solPrice}
                                 actionButton={{
-                                    text: `Buy $${token.symbol}`,
+                                    text: `Buy $${token.basicInfo.symbol}`,
                                     variant: 'presale' as const
                                 }}
                             />
