@@ -6,25 +6,30 @@ import MyTokensClient from "@/components/token/MyTokensClient";
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const title = "My Portfolio | PotLaunch";
-  const description = "View and manage all the tokens you've created on PotLaunch. Track your portfolio performance and manage your token launches.";
+  const title = "My Portfolio | Cooked Pad";
+  const description = "View and manage all the tokens you've created on Cooked Pad. Track your portfolio performance and manage your token launches.";
   
   // Create structured data for better SEO
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "My Portfolio - POTLAUNCH",
+    "name": "My Portfolio - Cooked Pad",
     "description": description,
-    "url": "https://potlaunch.com/me",
+-    "url": "https://potlaunch.com/me",
++    "url": "https://cooked.business/me",
     "isPartOf": {
       "@type": "WebSite",
-      "name": "POTLAUNCH",
-      "url": "https://potlaunch.com"
+-      "name": "POTLAUNCH",
+-      "url": "https://potlaunch.com"
++      "name": "Cooked Pad",
++      "url": "https://cooked.business"
     },
     "provider": {
       "@type": "Organization",
-      "name": "POTLAUNCH",
-      "url": "https://potlaunch.com"
+-      "name": "POTLAUNCH",
+-      "url": "https://potlaunch.com"
++      "name": "Cooked Labs",
++      "url": "https://cooked.business"
     }
   };
 
@@ -40,11 +45,15 @@ export async function generateMetadata(): Promise<Metadata> {
       "DeFi",
       "Solana",
       "token dashboard",
-      "POTLAUNCH"
+-      "POTLAUNCH"
++      "Cooked Pad"
     ],
-    authors: [{ name: "POTLAUNCH" }],
-    creator: "POTLAUNCH",
-    publisher: "POTLAUNCH",
+-    authors: [{ name: "POTLAUNCH" }],
+-    creator: "POTLAUNCH",
+-    publisher: "POTLAUNCH",
++    authors: [{ name: "Cooked Pad" }],
++    creator: "Cooked Labs",
++    publisher: "Cooked Labs",
     robots: {
       index: false, // Private page, don't index
       follow: false,
@@ -52,29 +61,35 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale: "en_US",
-      url: "https://potlaunch.com/me",
+-      url: "https://potlaunch.com/me",
++      url: "https://cooked.business/me",
       title,
       description,
-      siteName: "POTLAUNCH",
+-      siteName: "POTLAUNCH",
++      siteName: "Cooked Pad",
       images: [
         {
           url: "/hero.png",
           width: 1200,
           height: 630,
-          alt: "POTLAUNCH My Portfolio",
+-          alt: "POTLAUNCH My Portfolio",
++          alt: "Cooked Pad My Portfolio",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      site: "@potlaunch",
-      creator: "@potlaunch",
+-      site: "@potlaunch",
+-      creator: "@potlaunch",
++      site: "@cooked_business",
++      creator: "@cooked_business",
       title,
       description,
       images: ["/hero.png"],
     },
     alternates: {
-      canonical: "https://potlaunch.com/me",
+-      canonical: "https://potlaunch.com/me",
++      canonical: "https://cooked.business/me",
     },
     other: {
       "application/ld+json": JSON.stringify(structuredData),

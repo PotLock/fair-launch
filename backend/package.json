@@ -1,7 +1,7 @@
 {
-  "name": "potlaunch-backend",
+  "name": "cooked-pad-backend",
   "version": "1.0.0",
-  "description": "Backend for PotLaunch token platform",
+  "description": "Cooked Pad — Backend API built on Cooked Labs",
   "main": "index.ts",
   "scripts": {
     "dev": "bun run --watch index.ts",
