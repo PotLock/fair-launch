@@ -1,7 +1,7 @@
 {
-  "name": "Cooked Pad — Launch Your Token Everywhere",
-  "short_name": "Cooked Pad",
-  "description": "Meme-native token launchpad built on Cooked Labs",
+  "name": "POTLAUNCH - Launch Your Token Everywhere",
+  "short_name": "POTLAUNCH",
+  "description": "Cross-chain token launch kit powered by Solana x NEAR Intents x Omnibridge",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -31,7 +31,7 @@
       "sizes": "1200x630",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Cooked Pad — Meme-native Token Launchpad"
+      "label": "POTLAUNCH Cross-chain Token Launch Platform"
     }
   ],
   "shortcuts": [

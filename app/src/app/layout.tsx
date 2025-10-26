@@ -16,59 +16,60 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cooked Pad — Launch Tokens with Comedy",
-    template: "%s | Cooked Pad"
+    default: "POTLAUNCH - Launch Your Token Everywhere",
+    template: "%s | POTLAUNCH"
   },
-  description: "Cooked Pad is the meme-native token launchpad built on Cooked Labs. Launch and manage tokens with utility, humor, and cross-chain support.",
+  description: "Cross-chain token launch kit powered by Solana x NEAR Intents x Omnibridge. Create, launch, and manage tokens across multiple blockchains with fair launch mechanisms, bonding curves, and community funding.",
   keywords: [
-    "Cooked Pad",
-    "Cooked Labs",
     "token launch",
     "cryptocurrency",
     "blockchain",
     "Solana",
-    "NEAR Intents",
+    "NEAR Protocol",
     "cross-chain",
     "DeFi",
+    "token creation",
     "bonding curves",
     "fair launch",
     "community funding",
-    "comedic capital markets"
+    "PotLock",
+    "web3",
+    "decentralized"
   ],
-  authors: [{ name: "Cooked Labs", url: "https://cooked.business" }],
-  creator: "Cooked Labs",
-  publisher: "Cooked Labs",
+  authors: [{ name: "PotLock Labs", url: "https://potlock.org" }],
+  creator: "PotLock Labs",
+  publisher: "PotLock Foundation DAO",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://cooked.business"),
+  metadataBase: new URL("https://potlaunch.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://cooked.business",
-    siteName: "Cooked Pad",
-    title: "Cooked Pad — Launch Tokens with Comedy",
-    description: "Cooked Pad is the meme-native token launchpad built on Cooked Labs.",
+    url: "https://potlaunch.com",
+    siteName: "POTLAUNCH",
+    title: "POTLAUNCH - Launch Your Token Everywhere",
+    description: "Cross-chain token launch kit powered by Solana x NEAR Intents x Omnibridge. Create, launch, and manage tokens across multiple blockchains.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Cooked Pad — Meme-native token launchpad",
+        alt: "POTLAUNCH - Cross-chain token launch platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@cooked_business",
-    creator: "@cooked_business",
-    title: "Cooked Pad — Launch Tokens with Comedy",
-    description: "Cooked Pad is the meme-native token launchpad built on Cooked Labs.",
+    site: "@PotLock_",
+    creator: "@PotLock_",
+    title: "POTLAUNCH - Launch Your Token Everywhere",
+    description: "Cross-chain token launch kit powered by Solana x NEAR Intents x Omnibridge.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -83,12 +84,12 @@ export const metadata: Metadata = {
     },
   },
   category: "technology",
-  classification: "Comedic Capital Markets, Meme Tech, Blockchain",
+  classification: "Cryptocurrency, Blockchain, DeFi, Token Launch Platform",
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "Cooked Pad",
-    "application-name": "Cooked Pad",
+    "apple-mobile-web-app-title": "POTLAUNCH",
+    "application-name": "POTLAUNCH",
     "msapplication-TileColor": "#000000",
     "msapplication-config": "/browserconfig.xml",
     "theme-color": "#000000",
@@ -111,8 +112,8 @@ export default async function RootLayout({
         <meta name="theme-color" content="#000000" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Cooked Pad" />
-        <meta name="application-name" content="Cooked Pad" />
+        <meta name="apple-mobile-web-app-title" content="POTLAUNCH" />
+        <meta name="application-name" content="POTLAUNCH" />
         <meta name="msapplication-TileColor" content="#000000" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>

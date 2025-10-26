@@ -1,0 +1,336 @@
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { ChevronLeft, ChevronRight} from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+export default function CoreCapabilities() {
+    const rootRef = useRef<HTMLDivElement>(null);
+    const [currentSlide, setCurrentSlide] = useState<number>(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [currentX, setCurrentX] = useState(0);
+    const carouselRef = useRef<HTMLDivElement>(null);
+
+    const capabilities = [
+        {
+            id: 1,
+            title: "Custom and Fast Tokens",
+            headline: "Launch your own token with Solana",
+            description: "Deploy professional tokens across multiple chains with our no-code platform",
+            bgColor: "bg-[#B7E6D7] border border-[#b0efdb]",
+            icon: "/icons/rocket-3d.png"
+        },
+        {
+            id: 2,
+            title: "Cross-Chain Native",
+            headline: "4+ Blockchain Networks Supported",
+            description: "Seamlessly bridge tokens between Solana, NEAR, Base, and Ethereum and provide liquidity across tokens.",
+            bgColor: "bg-gradient-to-br from-purple-100 to-violet-100",
+            icon: "/icons/cross-chain.png"
+        },
+        {
+            id: 3,
+            title: "Bridge & Provide Liquidity",
+            headline: "Make your token accessible everywhere",
+            description: "Bridge new or existing tokens to other chains and provide liquidity on these new chains.",
+            bgColor: "bg-gradient-to-br from-yellow-100 to-amber-100",
+            icon: "/icons/bridge.png"
+        },
+        {
+            id: 4,
+            title: "Trade Tokens",
+            headline: "Instant Token Swaps with best rates",
+            description: "Trade thousands of tokens on our platform. We provide deep liquidity and competitive rates for all your transactions.",
+            bgColor: "bg-gradient-to-br from-gray-100 to-slate-100",
+            icon: "/icons/trade.png"
+        }
+    ];
+
+    const getCardsPerView = () => {
+        if (typeof window !== 'undefined') {
+            const width = window.innerWidth;
+            if (width >= 1536) return 4; // 2xl screens
+            if (width >= 1280) return 3; // xl screens
+            if (width >= 1024) return 2; // lg screens
+        }
+        return 1; 
+    };
+
+    const [cardsPerView, setCardsPerView] = useState(getCardsPerView());
+    const maxDesktopSlide = Math.max(0, capabilities.length - cardsPerView);
+
+    // Update cards per view on window resize
+    useEffect(() => {
+        const handleResize = () => {
+            const newCardsPerView = getCardsPerView();
+            setCardsPerView(newCardsPerView);
+            // Adjust current slide if it exceeds the new maximum
+            const newMaxSlide = Math.max(0, capabilities.length - newCardsPerView);
+            if (currentSlide > newMaxSlide) {
+                setCurrentSlide(newMaxSlide);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [currentSlide, capabilities.length]);
+
+    const nextSlide = () => {
+        setCurrentSlide((prev) => Math.min(prev + 1, maxDesktopSlide));
+    };
+
+    const prevSlide = () => {
+        setCurrentSlide((prev) => Math.max(prev - 1, 0));
+    };
+
+    const goToSlide = (index: number) => {
+        setCurrentSlide(index);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setIsDragging(true);
+        setStartX(e.touches[0].clientX);
+        setCurrentX(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging) return;
+        setCurrentX(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging) return;
+        
+        const diff = startX - currentX;
+        const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
+            } else if (diff < 0 && currentSlide > 0) {
+                setCurrentSlide((prev) => Math.max(prev - 1, 0));
+            }
+        }
+
+        setIsDragging(false);
+    };
+
+    // Mouse drag handlers for desktop
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        setStartX(e.clientX);
+        setCurrentX(e.clientX);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        setCurrentX(e.clientX);
+    };
+
+    const handleMouseUp = () => {
+        if (!isDragging) return;
+        
+        const diff = startX - currentX;
+        const threshold = 50;
+        const maxSlide = cardsPerView > 1 ? maxDesktopSlide : (capabilities.length - 1);
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0 && currentSlide < maxSlide) {
+                setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
+            } else if (diff < 0 && currentSlide > 0) {
+                setCurrentSlide((prev) => Math.max(prev - 1, 0));
+            }
+        }
+
+        setIsDragging(false);
+    };
+
+    useEffect(() => {
+        if (isDragging) {
+            document.body.style.userSelect = 'none';
+        } else {
+            document.body.style.userSelect = 'auto';
+        }
+
+        return () => {
+            document.body.style.userSelect = 'auto';
+        };
+    }, [isDragging]);
+
+    // Calculate the transform value for desktop
+    const getDesktopTransform = () => {
+        const cardWidth = 320; // Width of each card
+        const gap = 24; // Gap between cards (6 * 4px = 24px)
+        const totalCardWidth = cardWidth + gap;
+        return currentSlide * totalCardWidth;
+    };
+
+    useLayoutEffect(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        const ctx = gsap.context(() => {
+            gsap.from('.cc-title', {
+                y: 24,
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 80%',
+                    once: true,
+                },
+            });
+            gsap.from('.cc-subtitle', {
+                y: 16,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: rootRef.current,
+                    start: 'top 78%',
+                    once: true,
+                },
+            });
+
+            gsap.utils.toArray<HTMLElement>('.cc-card').forEach((el, i) => {
+                gsap.from(el, {
+                    y: 30,
+                    opacity: 0,
+                    duration: 0.6,
+                    ease: 'power3.out',
+                    delay: Math.min(i * 0.08, 0.4),
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 85%',
+                        toggleActions: 'play none none reverse',
+                    },
+                });
+            });
+        }, rootRef);
+        return () => ctx.revert();
+    }, []);
+
+    return (
+        <div className="pt-[68px] md:px-6" ref={rootRef}>
+            <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
+                <h1 className="font-bold text-3xl cc-title">Core Capabilities</h1>
+                <span className="md:max-w-[26rem] text-xl cc-subtitle">Comprehensive tools for the complete token lifecycle</span>
+            </div>
+            
+            <div className="relative w-full overflow-hidden">
+                <div className="md:hidden">
+                    <div 
+                        ref={carouselRef}
+                        className="flex transition-transform duration-500 ease-in-out"
+                        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                    >
+                        {capabilities.map((capability) => (
+                            <div key={capability.id} className="w-full flex-shrink-0 px-4">
+                                <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col cc-card`}>
+                                    <div className="relative z-10 h-full flex flex-col">
+                                        <h3 className="text-xl font-semibold">{capability.title}</h3>
+                                        <div className="relative flex items-center justify-center">
+                                            <img src={capability.icon as string} alt={capability.title} className='w-60 h-60'/>
+                                        </div>
+                                        <div className='absolute bottom-12'>
+                                            <h4 className="text-xl font-semibold mb-5 flex items-end">{capability.headline}</h4>
+                                        </div>
+                                        <div className='absolute bottom-0'>
+                                            <p className="text-xs text-gray-600 leading-relaxed">{capability.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="hidden md:block lg:px-4">
+                    <div className="relative overflow-hidden">
+                        <div className="flex transition-transform duration-500 ease-in-out gap-6 cursor-grab active:cursor-grabbing select-none" 
+                            style={{ transform: `translateX(-${getDesktopTransform()}px)` }}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                        >
+                            {capabilities.map((capability) => (
+                                <div key={capability.id} className="w-[320px] flex-shrink-0">
+                                    <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col cc-card`}>
+                                        <div className="relative z-10 h-full flex flex-col">
+                                            <h3 className="text-lg font-semibold mb-4">{capability.title}</h3>
+                                            <div className="relative">
+                                                <img src={capability.icon as string} alt={capability.title} className='w-56 h-56'/>
+                                            </div>
+                                            <div className='absolute bottom-12'>
+                                                <h4 className="text-xl font-semibold mb-5 flex items-end">{capability.headline}</h4>
+                                            </div>
+                                            <div className='absolute bottom-0'>
+                                                <p className="text-xs text-gray-600 leading-relaxed">{capability.description}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className='flex justify-center mt-5 md:hidden'>
+                    <div className="flex gap-2">
+                        {capabilities.map((capability, index) => (
+                            <button
+                                key={capability.id}
+                                onClick={() => goToSlide(index)}
+                                className={`transition-all duration-300 ${
+                                    currentSlide === index 
+                                        ? 'w-8 h-3 rounded-full' 
+                                        : 'w-3 h-3 rounded-full'
+                                } ${
+                                    currentSlide === index 
+                                        ? capability.bgColor.includes('B7E6D7') ? 'bg-[#B7E6D7]' 
+                                          : capability.bgColor.includes('purple') ? 'bg-purple-200'
+                                          : capability.bgColor.includes('yellow') ? 'bg-yellow-200'
+                                          : 'bg-gray-200'
+                                        : capability.bgColor.includes('B7E6D7') ? 'bg-[#B7E6D7]' 
+                                          : capability.bgColor.includes('purple') ? 'bg-purple-200'
+                                          : capability.bgColor.includes('yellow') ? 'bg-yellow-200'
+                                          : 'bg-gray-200/30'
+                                }`}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className='hidden md:flex justify-center mt-8'>
+                    <div className="border border-black max-w-[200px] flex rounded-full">
+                        <button
+                            onClick={prevSlide}
+                            disabled={currentSlide === 0}
+                            className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            disabled={currentSlide >= maxDesktopSlide}
+                            className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

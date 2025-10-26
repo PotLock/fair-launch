@@ -10,8 +10,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const tokensResponse = await getTokens();
     const tokenCount = tokensResponse.data?.length || 0;
 
-    const title = "Token Launchpad | Cooked Pad";
-    const description = `Discover and participate in ${tokenCount}+ token launches on Cooked Pad. Support projects you believe in and explore the latest cryptocurrency tokens.`;
+    const title = "Token Launchpad | POTLAUNCH";
+    const description = `Discover and participate in ${tokenCount}+ token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.`;
     
     // Create structured data for better SEO
     const structuredData = {
