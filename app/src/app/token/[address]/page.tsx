@@ -35,11 +35,11 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
         
         if (!token) {
             return {
-                title: "Token Not Found | POTLAUNCH",
-                description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
+                title: "Token Not Found | Cooked Pad",
+                description: "The token you're looking for doesn't exist or was removed. Discover tokens on Cooked Pad.",
                 openGraph: {
-                    title: "Token Not Found | POTLAUNCH",
-                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
+                    title: "Token Not Found | Cooked Pad",
+                    description: "The token you're looking for doesn't exist or was removed. Discover tokens on Cooked Pad.",
                     images: [
                         {
                             url: "/images/broken-pot.png",
@@ -51,8 +51,8 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 },
                 twitter: {
                     card: "summary_large_image",
-                    title: "Token Not Found | POTLAUNCH",
-                    description: "The token you're looking for doesn't exist or was removed. Discover amazing tokens on POTLAUNCH.",
+                    title: "Token Not Found | Cooked Pad",
+                    description: "The token you're looking for doesn't exist or was removed. Discover tokens on Cooked Pad.",
                     images: ["/images/broken-pot.png"],
                 },
             };
@@ -72,18 +72,18 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             "image": imageUrl,
             "brand": {
                 "@type": "Brand",
-                "name": "POTLAUNCH"
+                "name": "Cooked Pad"
             },
             "provider": {
                 "@type": "Organization",
-                "name": "POTLAUNCH",
-                "url": "https://potlaunch.com"
+                "name": "Cooked Labs",
+                "url": "https://cooked.business"
             },
             "category": "Cryptocurrency Token",
             "offers": {
                 "@type": "Offer",
                 "availability": "https://schema.org/InStock",
-                "url": `https://potlaunch.com/token/${address}`
+                "url": `https://cooked.business/token/${address}`
             }
         };
 
@@ -98,11 +98,11 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 "trading",
                 "DeFi",
                 "Solana",
-                "POTLAUNCH"
+                "Cooked Pad"
             ],
-            authors: [{ name: "POTLAUNCH" }],
-            creator: "POTLAUNCH",
-            publisher: "POTLAUNCH",
+            authors: [{ name: "Cooked Pad" }],
+            creator: "Cooked Labs",
+            publisher: "Cooked Labs",
             robots: {
                 index: true,
                 follow: true,
@@ -117,10 +117,10 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             openGraph: {
                 type: "website",
                 locale: "en_US",
-                url: `https://potlaunch.com/token/${address}`,
+                url: `https://cooked.business/token/${address}`,
                 title,
                 description,
-                siteName: "PotLaunch",
+                siteName: "Cooked Pad",
                 images: [
                     {
                         url: bannerUrl,
@@ -138,14 +138,14 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             },
             twitter: {
                 card: "summary_large_image",
-                site: "@potlaunch",
-                creator: "@potlaunch",
+                site: "@cooked_business",
+                creator: "@cooked_business",
                 title,
                 description,
                 images: [bannerUrl],
             },
             alternates: {
-                canonical: `https://potlaunch.com/token/${address}`,
+                canonical: `https://cooked.business/token/${address}`,
             },
             other: {
                 "application/ld+json": JSON.stringify(structuredData),
@@ -157,21 +157,21 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
             title: "Token | POTLAUNCH",
             description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
             openGraph: {
-                title: "Token | POTLAUNCH",
-                description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
+                title: "Token | Cooked Pad",
+                description: "Discover and trade tokens on Cooked Pad. Explore the latest cryptocurrency tokens and trading opportunities.",
                 images: [
                     {
                         url: "/hero.png",
                         width: 1200,
                         height: 630,
-                        alt: "POTLAUNCH",
+                        alt: "Cooked Pad",
                     },
                 ],
             },
             twitter: {
                 card: "summary_large_image",
-                title: "Token | POTLAUNCH",
-                description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
+                title: "Token | Cooked Pad",
+                description: "Discover and trade tokens on Cooked Pad. Explore the latest cryptocurrency tokens and trading opportunities.",
                 images: ["/hero.png"],
             },
         };
