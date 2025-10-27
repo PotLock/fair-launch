@@ -1,5 +1,7 @@
-import { pgTable, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, pgEnum, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+
+export const launchpadEnum = pgEnum("launchpad", ["potlaunch", "cookedpad"]);
 
 // Main tokens table
 export const tokens = pgTable('tokens', {
@@ -11,6 +13,9 @@ export const tokens = pgTable('tokens', {
   totalSupply: decimal('total_supply', { precision: 20, scale: 9 }).notNull(),
   decimals: integer('decimals').notNull().default(6),
   owner: varchar('owner', { length: 44 }).notNull(),
+  launchpad: launchpadEnum('launchpad').notNull().default("potlaunch"),
+  tags: text('tags').array().default(sql`ARRAY[]::text[]`),
+  active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

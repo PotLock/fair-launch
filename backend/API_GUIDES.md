@@ -1,55 +1,3 @@
-# POTLAUNCH Backend
-
-## Features
-
-- ✅ Store token information with complete metadata
-- ✅ Manage allocation and vesting schedules
-- ✅ RESTful API with validation
-- ✅ Use Drizzle ORM with PostgreSQL
-- ✅ IPFS integration for metadata storage
-- ✅ Halfbak SDK integration for DBC configuration
-- ✅ Multi-launchpad support (potlaunch, cookedpad)
-
-## Installation
-
-1. **Clone repository and install dependencies:**
-```bash
-cd backend
-bun install
-```
-
-2. **Configure database:**
-```bash
-# Copy env.example file
-cp env.example .env
-
-# Update DATABASE_URL in .env
-DATABASE_URL=postgresql://username:password@localhost:5432/fair_launch
-```
-
-3. **Generate and run migrations:**
-```bash
-# Generate migration files
-bun run db:generate
-
-# Run migrations
-bun run db:migrate
-```
-
-## Running the Application
-
-### Development
-```bash
-bun run dev
-```
-
-### Production
-```bash
-bun run start
-```
-
-Server will run at `http://localhost:3001`
-
 ## API Documentation
 
 ### Token Routes (`/api/tokens`)
@@ -144,8 +92,10 @@ Retrieves all tokens with optional filtering.
 
 **Query Parameters:**
 - `launchpad` (optional): Filter by launchpad (`potlaunch` or `cookedpad`)
-- `active` (optional): Filter by active status (`true` or `false`)
+- `active` (optional): Filter by active status (`true` for trading/presale, `false` for ended/inactive)
 - `tag` (optional): Filter by tag membership (token has this tag)
+- `startDate` (optional): Filter tokens created on or after this date (ISO 8601 format)
+- `endDate` (optional): Filter tokens created on or before this date (ISO 8601 format)
 
 **Examples:**
 ```bash
@@ -155,11 +105,20 @@ curl "http://localhost:3001/api/tokens"
 # Get tokens from specific launchpad
 curl "http://localhost:3001/api/tokens?launchpad=potlaunch"
 
-# Get only active tokens
-curl "http://localhost:3001/api/tokens?active=true"
+# Get only active tokens (trading/presale)
+curl "http://localhost:3001/api/tokens?launchpad=potlaunch&active=true"
+
+# Get inactive/ended tokens
+curl "http://localhost:3001/api/tokens?launchpad=potlaunch&active=false"
 
 # Get tokens containing a tag
-curl "http://localhost:3001/api/tokens?tag=meme"
+curl "http://localhost:3001/api/tokens?launchpad=potlaunch&tag=meme"
+
+# Get tokens by date range
+curl "http://localhost:3001/api/tokens?launchpad=potlaunch&startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z"
+
+# Combine filters
+curl "http://localhost:3001/api/tokens?launchpad=potlaunch&active=true&tag=defi&startDate=2024-01-01T00:00:00Z"
 ```
 
 **Response:**
@@ -240,28 +199,33 @@ Search tokens by name, symbol, or description.
 - `q` (required): Search query
 - `owner` (optional): Filter by owner address
 - `launchpad` (optional): Filter by launchpad (`potlaunch` or `cookedpad`)
-- `active` (optional): Filter by active status (`true` or `false`)
+- `active` (optional): Filter by active status (`true` for active, `false` for inactive/ended)
 - `tag` (optional): Filter by tag membership (token has this tag)
+- `startDate` (optional): Filter tokens created on or after this date (ISO 8601 format)
+- `endDate` (optional): Filter tokens created on or before this date (ISO 8601 format)
 
 **Examples:**
 ```bash
 # Basic search
-curl "http://localhost:3001/api/tokens/search?q=bitcoin"
-
-# Search with owner filter
-curl "http://localhost:3001/api/tokens/search?q=bitcoin&owner=11111111111111111111111111111112"
-
-# Search with launchpad filter
 curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch"
 
-# Search active tokens
-curl "http://localhost:3001/api/tokens/search?q=bitcoin&active=true"
+# Search with owner filter
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&owner=11111111111111111111111111111112"
+
+# Search active tokens only
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&active=true"
+
+# Search inactive/ended tokens
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&active=false"
 
 # Search tokens with tag
-curl "http://localhost:3001/api/tokens/search?q=bitcoin&tag=meme"
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&tag=meme"
+
+# Search tokens by date range
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z"
 
 # Combine filters
-curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=cookedpad&active=false&tag=defi"
+curl "http://localhost:3001/api/tokens/search?q=bitcoin&launchpad=potlaunch&active=true&tag=defi&startDate=2024-01-01T00:00:00Z"
 ```
 
 #### Get Tokens by Owner
@@ -282,25 +246,33 @@ Retrieves popular tokens with optional filtering.
 **Query Parameters:**
 - `limit` (optional): Number of tokens to return (1-100, default: 10)
 - `launchpad` (optional): Filter by launchpad (`potlaunch` or `cookedpad`)
-- `active` (optional): Filter by active status (`true` or `false`)
+- `active` (optional): Filter by active status (`true` for active, `false` for inactive/ended)
 - `tag` (optional): Filter by tag membership (token has this tag)
+- `startDate` (optional): Filter tokens created on or after this date (ISO 8601 format)
+- `endDate` (optional): Filter tokens created on or before this date (ISO 8601 format)
 
 **Examples:**
 ```bash
 # Get top 10 popular tokens
-curl "http://localhost:3001/api/tokens/popular"
+curl "http://localhost:3001/api/tokens/popular?launchpad=potlaunch"
 
 # Get top 5 popular tokens from specific launchpad
 curl "http://localhost:3001/api/tokens/popular?limit=5&launchpad=potlaunch"
 
-# Popular active tokens
-curl "http://localhost:3001/api/tokens/popular?active=true"
+# Popular active tokens only
+curl "http://localhost:3001/api/tokens/popular?limit=20&launchpad=potlaunch&active=true"
+
+# Popular inactive/ended tokens
+curl "http://localhost:3001/api/tokens/popular?limit=20&launchpad=potlaunch&active=false"
 
 # Popular tokens with tag
-curl "http://localhost:3001/api/tokens/popular?tag=meme"
+curl "http://localhost:3001/api/tokens/popular?limit=20&launchpad=potlaunch&tag=meme"
+
+# Popular tokens by date range
+curl "http://localhost:3001/api/tokens/popular?limit=20&launchpad=potlaunch&startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z"
 
 # Popular tokens combining filters
-curl "http://localhost:3001/api/tokens/popular?limit=5&launchpad=potlaunch&active=true&tag=defi"
+curl "http://localhost:3001/api/tokens/popular?limit=5&launchpad=potlaunch&active=true&tag=defi&startDate=2024-01-01T00:00:00Z"
 ```
 
 #### Get Token Holders
@@ -503,6 +475,39 @@ Creates a token deployment transaction.
 }
 ```
 
+#### Swap Tokens
+**POST** `/api/halfbak/swap`
+
+Creates a swap transaction on the DBC pool.
+
+- `swapBaseForQuote=false` buys base token with quote
+- `swapBaseForQuote=true` sells base token for quote
+
+**Request Body:**
+```json
+{
+  "baseMint": "11111111111111111111111111111112",
+  "signer": "11111111111111111111111111111112",
+  "amount": 1000000,
+  "slippageBps": 100,
+  "swapBaseForQuote": false,
+  "computeUnitPriceMicroLamports": 0,
+  "referralTokenAccount": "11111111111111111111111111111112"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": "base64-encoded-transaction",
+    "baseMint": "11111111111111111111111111111112",
+    "message": "Swap transaction created successfully"
+  }
+}
+```
+
 #### Get Pool State
 **GET** `/api/halfbak/pool/state/:mintAddress`
 
@@ -552,118 +557,3 @@ Retrieves curve progress information for a token pool.
 ```bash
 curl "http://localhost:3001/api/halfbak/pool/curve-progress/11111111111111111111111111111112"
 ```
-
-### Health Check
-
-**GET** `/`
-
-Checks server status.
-
-**Example:**
-```bash
-curl "http://localhost:3001/"
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Server is running"
-}
-```
-
-## Error Responses
-
-All API endpoints follow a consistent error response format:
-
-```json
-{
-  "success": false,
-  "message": "Error description here"
-}
-```
-
-### Common HTTP Status Codes
-
-- `200` - Success
-- `201` - Created successfully
-- `400` - Bad Request (validation errors, missing parameters)
-- `404` - Not Found
-- `500` - Internal Server Error
-
-### Validation Errors
-
-When validation fails, the response includes detailed error information:
-
-```json
-{
-  "success": false,
-  "message": "Validation error: Name is required, Symbol must be at least 1 character"
-}
-```
-
-## Environment Variables
-
-Required environment variables for the application:
-
-```bash
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/potlaunch
-
-# Filebase (IPFS)
-FILEBASE_API_KEY=your_filebase_api_key
-FILEBASE_API_SECRET=your_filebase_api_secret
-FILEBASE_BUCKET_NAME=your_bucket_name
-FILEBASE_GATEWAY=https://gateway.filebase.io/ipfs/
-
-# Solana RPC (for token holder queries)
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-
-# Server
-PORT=3001
-```
-
-## Database Schema
-
-### `tokens` Table
-Store main token information:
-- Basic information (name, symbol, description, supply, decimals)
-- Social links (website, twitter, telegram, discord, farcaster)
-- Pricing mechanism (initialPrice, finalPrice, targetRaise, reserveRatio, curveType)
-- DEX listing 
-- Fees (mintFee, transferFee, burnFee, feeRecipientAddress)
-- Sale setup (softCap, hardCap, scheduleLaunch, etc.)
-- Admin setup (revokeMintAuthority, revokeFreezeAuthority, etc.)
-
-### `token_allocations` Table
-Store allocation and vesting information:
-- Token distribution (percentage, walletAddress, lockupPeriod)
-- Vesting parameters (enabled, percentage, cliff, duration, interval)
-
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── db/
-│   │   ├── schema.ts          # Database schema
-│   │   └── connection.ts      # Database connection
-│   ├── services/
-│   │   └── tokenService.ts    # Business logic
-│   ├── routes/
-│   │   └── tokenRoutes.ts     # API routes
-│   └── types/
-│       └── index.ts           # Type definitions
-├── drizzle/                   # Migration files
-├── index.ts                   # Server entry point
-├── drizzle.config.ts          # Drizzle configuration
-└── package.json
-```
-
-## Scripts
-
-- `bun run dev` - Run development server with hot reload
-- `bun run start` - Run production server
-- `bun run db:generate` - Generate migration files
-- `bun run db:migrate` - Run migrations
-- `bun run db:studio` - Open Drizzle Studio to view database

@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { HalfbakService } from '../services/halfbakService';
 import { z } from 'zod';
-import { buildDbcConfigRequest, buildDeployTokenRequest } from '../lib/halfbak';
-import { DbcConfigRequestSchema, DeployTokenRequestSchema } from '../types';
-import type { DbcConfigRequestType, DeployTokenRequestType } from '../types';
+import { buildDbcConfigRequest, buildDeployTokenRequest, buildSwapTokenRequest } from '../lib/halfbak';
+import { DbcConfigRequestSchema, DeployTokenRequestSchema, SwapTokenRequestSchema } from '../types';
+import type { DbcConfigRequestType, DeployTokenRequestType, SwapTokenRequestType } from '../types';
 
 const app = new Hono();
 const halfbakService = new HalfbakService();
@@ -93,6 +93,44 @@ app.post('/deploy-token', zValidator('json', DeployTokenRequestSchema), async (c
       return c.json({
         success: false,
         message: 'Invalid DBC config keypair format'
+      }, 400);
+    }
+    
+    return c.json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Internal server error'
+    }, 500);
+  }
+});
+
+// Add Swap Route
+app.post('/swap', zValidator('json', SwapTokenRequestSchema), async (c) => {
+  try {
+    const requestData = c.req.valid('json') as SwapTokenRequestType;
+    const swapRequest = buildSwapTokenRequest(requestData);
+    const result = await halfbakService.swap(swapRequest);
+    return c.json({
+      success: true,
+      data: {
+        transaction: result.transaction,
+        baseMint: result.baseMint,
+        message: 'Swap transaction created successfully'
+      }
+    }, 201);
+  } catch (error) {
+    console.error('Error in swap route:', error);
+    
+    if (error instanceof z.ZodError) {
+      return c.json({
+        success: false,
+        message: 'Validation error: ' + error.errors.map(e => e.message).join(', ')
+      }, 400);
+    }
+    
+    if (error instanceof Error && error.message.includes('Invalid public key')) {
+      return c.json({
+        success: false,
+        message: 'Invalid public key format in request'
       }, 400);
     }
     

@@ -1,0 +1,1 @@
+ALTER TABLE "tokens" ADD COLUMN "active" boolean DEFAULT true NOT NULL;

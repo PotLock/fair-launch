@@ -11,7 +11,7 @@ import {
   migrationFees, 
   migratedPoolFees
 } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import type { 
   CreateTokenRequest, 
   TokenConfig, 
@@ -65,6 +65,9 @@ export class TokenService {
       decimals: token.decimals,
       mintAddress: token.mintAddress,
       owner: token.owner,
+      launchpad: token.launchpad,
+      tags: token.tags,
+      active: token.active,
       createdAt: token.createdAt,
       updatedAt: token.updatedAt,
       metadata: token.metadata ? removeInternalIds(token.metadata) : undefined,
@@ -83,6 +86,9 @@ export class TokenService {
         decimals: parseInt(tokenData.decimals),
         mintAddress: tokenData.mintAddress,
         owner: tokenData.owner,
+        launchpad: tokenData.launchpad || 'potlaunch',
+        tags: tokenData.tags ?? [],
+        active: tokenData.active ?? true,
       }).returning();
 
       if (!token) {
@@ -384,9 +390,9 @@ export class TokenService {
     }
   }
 
-  async searchTokens(query: string, owner?: string): Promise<CleanTokenResponse[]> {
+  async searchTokens(query: string, owner?: string, launchpad?: string, active?: boolean, tag?: string, startDate?: string, endDate?: string): Promise<CleanTokenResponse[]> {
     try {
-      const { ilike, or, and } = await import('drizzle-orm');
+      const { ilike, or, and: andDyn, eq: eqDyn, sql: sqlDyn, gte: gteDyn, lte: lteDyn } = await import('drizzle-orm');
       
       const searchConditions = [
         ilike(tokens.name, `%${query}%`),
@@ -399,7 +405,32 @@ export class TokenService {
       
       // If owner is provided, filter by owner as well
       if (owner) {
-        whereCondition = and(whereCondition, eq(tokens.owner, owner));
+        whereCondition = andDyn(whereCondition, eqDyn(tokens.owner, owner));
+      }
+
+      // If launchpad is provided, filter by launchpad as well
+      if (launchpad && (launchpad === 'potlaunch' || launchpad === 'cookedpad')) {
+        whereCondition = andDyn(whereCondition, eqDyn(tokens.launchpad, launchpad as 'potlaunch' | 'cookedpad'));
+      }
+
+      // If active is provided, filter by active
+      if (typeof active === 'boolean') {
+        whereCondition = andDyn(whereCondition, eqDyn(tokens.active, active));
+      }
+
+      // If tag is provided, filter where tag is in tags array
+      if (tag && tag.trim() !== '') {
+        whereCondition = andDyn(whereCondition, sqlDyn`${tag} = ANY(${tokens.tags})`);
+      }
+
+      // If startDate is provided, filter by createdAt >= startDate
+      if (startDate) {
+        whereCondition = andDyn(whereCondition, gteDyn(tokens.createdAt, new Date(startDate)));
+      }
+
+      // If endDate is provided, filter by createdAt <= endDate
+      if (endDate) {
+        whereCondition = andDyn(whereCondition, lteDyn(tokens.createdAt, new Date(endDate)));
       }
 
       const searchResults = await db.query.tokens.findMany({
@@ -431,41 +462,147 @@ export class TokenService {
     }
   }
 
-  async getHoldersByMintAddress(mintAddress: string): Promise<string[]> {
-    const connection = new Connection(getRpcSOLEndpoint());
-    
-    const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-    
-    const tokenAccounts = await connection.getProgramAccounts(
-      TOKEN_PROGRAM_ID,
-      {
-        filters: [
-          { dataSize: 165 },
-          { 
-            memcmp: { 
-              offset: 0, 
-              bytes: new PublicKey(mintAddress).toBase58() 
-            } 
-          },
-        ],
-        encoding: "base64",
-      }
-    );
-  
-    const holders = tokenAccounts.map((acc) => {
-      const data = Buffer.from(acc.account.data as unknown as ArrayBuffer);
-      const ownerOffset = 32;
-      const ownerBytes = data.slice(ownerOffset, ownerOffset + 32);
-      return new PublicKey(ownerBytes).toBase58();
-    });
-    
-    return holders.filter((holder) => holder !== mintAddress);
+  async getTokensByLaunchpad(launchpad: 'potlaunch' | 'cookedpad'): Promise<CleanTokenResponse[]> {
+    try {
+      const tokensByLaunchpad = await db.query.tokens.findMany({
+        where: eq(tokens.launchpad, launchpad),
+        with: {
+          metadata: true,
+          dbcConfig: {
+            with: {
+              buildCurveParams: true,
+              lockedVestingParams: true,
+              baseFeeParams: {
+                with: {
+                  feeSchedulerParams: true,
+                  rateLimiterParams: true,
+                }
+              },
+              migrationFee: true,
+              migratedPoolFee: true,
+            }
+          }
+        },
+        orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
+      });
+
+      return tokensByLaunchpad.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+    } catch (error) {
+      console.error('Error getting tokens by launchpad:', error);
+      throw new Error('Failed to get tokens by launchpad');
+    }
   }
 
-  async getPopularTokens(limit: number): Promise<CleanTokenResponse[]> {
+  // New: filtered listing by optional launchpad, active, tag, and date range
+  async getTokensFiltered(launchpad?: 'potlaunch' | 'cookedpad', active?: boolean, tag?: string, startDate?: string, endDate?: string): Promise<CleanTokenResponse[]> {
     try {
+      const conditions: any[] = [];
+      if (launchpad) {
+        conditions.push(eq(tokens.launchpad, launchpad));
+      }
+      if (typeof active === 'boolean') {
+        conditions.push(eq(tokens.active, active));
+      }
+      if (tag && tag.trim() !== '') {
+        conditions.push(sql`${tag} = ANY(${tokens.tags})`);
+      }
+      if (startDate) {
+        conditions.push(gte(tokens.createdAt, new Date(startDate)));
+      }
+      if (endDate) {
+        conditions.push(lte(tokens.createdAt, new Date(endDate)));
+      }
+      const whereCondition = conditions.length ? and(...conditions) : undefined;
+
+      const filteredTokens = await db.query.tokens.findMany({
+        where: whereCondition,
+        with: {
+          metadata: true,
+          dbcConfig: {
+            with: {
+              buildCurveParams: true,
+              lockedVestingParams: true,
+              baseFeeParams: {
+                with: {
+                  feeSchedulerParams: true,
+                  rateLimiterParams: true,
+                }
+              },
+              migrationFee: true,
+              migratedPoolFee: true,
+            }
+          }
+        },
+        orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
+      });
+
+      return filteredTokens.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+    } catch (error) {
+      console.error('Error getting filtered tokens:', error);
+      throw new Error('Failed to get filtered tokens');
+    }
+  }
+
+  async getHoldersByMintAddress(mintAddress: string): Promise<string[]> {
+    try {
+      const connection = new Connection(getRpcSOLEndpoint());
+      
+      const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+      
+      const tokenAccounts = await connection.getProgramAccounts(
+        TOKEN_PROGRAM_ID,
+        {
+          filters: [
+            { dataSize: 165 },
+            { 
+              memcmp: { 
+                offset: 0, 
+                bytes: new PublicKey(mintAddress).toBase58() 
+              } 
+            },
+          ],
+          encoding: "base64",
+        }
+      );
+    
+      const holders = tokenAccounts.map((acc) => {
+        const data = Buffer.from(acc.account.data as unknown as ArrayBuffer);
+        const ownerOffset = 32;
+        const ownerBytes = data.slice(ownerOffset, ownerOffset + 32);
+        return new PublicKey(ownerBytes).toBase58();
+      });
+      
+      return holders.filter((holder) => holder !== mintAddress);
+    } catch (error) {
+      console.error('Error getting holders by mint address:', error);
+      return [];
+    }
+  }
+
+  async getPopularTokens(limit: number, launchpad?: 'potlaunch' | 'cookedpad', active?: boolean, tag?: string, startDate?: string, endDate?: string): Promise<CleanTokenResponse[]> {
+    try {
+      // Build where condition for filters
+      const conditions: any[] = [];
+      if (launchpad) {
+        conditions.push(eq(tokens.launchpad, launchpad));
+      }
+      if (typeof active === 'boolean') {
+        conditions.push(eq(tokens.active, active));
+      }
+      if (tag && tag.trim() !== '') {
+        conditions.push(sql`${tag} = ANY(${tokens.tags})`);
+      }
+      if (startDate) {
+        conditions.push(gte(tokens.createdAt, new Date(startDate)));
+      }
+      if (endDate) {
+        conditions.push(lte(tokens.createdAt, new Date(endDate)));
+      }
+      const whereCondition = conditions.length ? and(...conditions) : undefined;
+
       // Get all tokens with their relations
       const allTokens = await db.query.tokens.findMany({
+        where: whereCondition,
         with: {
           metadata: true,
           dbcConfig: {

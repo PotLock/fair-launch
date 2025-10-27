@@ -209,7 +209,7 @@ export default function LaunchStatus({ data }: LaunchStatusProps) {
                     </div>
                     <div className="space-y-1">
                         <div className="text-sm text-gray-600 mb-1 font-light">Market Cap</div>
-                        <div className="text-2xl font-bold">${formatMarketCap(data.marketCap)}</div>
+                        <div className="text-2xl font-bold">{formatMarketCap(data.marketCap)}</div>
                         <div className="text-xs text-gray-600 font-light">
                             {data.holders} holders
                         </div>

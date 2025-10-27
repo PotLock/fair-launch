@@ -1,10 +1,15 @@
-import { Token, CreateToken } from '@/types/api';
+import { Token, CreateToken, SwapParams, SwapResponse } from '@/types/api';
 import { PoolState, PoolConfig } from '@/types/pool';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function createToken(tokenData: CreateToken) {
   try {
+    tokenData.launchpad = 'potlaunch';
+    // ensure tags are lowercased and valid
+    if (Array.isArray((tokenData as any).tags)) {
+      (tokenData as any).tags = (tokenData as any).tags.map((t: string) => t.toLowerCase());
+    }
     const response = await fetch(`${API_URL}/api/tokens`, {
       method: 'POST',
       headers: {
@@ -93,6 +98,30 @@ export async function requestDeployToken(params: {
   } catch (error) {
     console.error('Error requesting deploy token:', error);
     throw error;
+  }
+}
+
+export async function Swap(swapParams: SwapParams): Promise<SwapResponse> {
+  try {
+    const response = await fetch(`${API_URL}/api/halfbak/swap`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(swapParams),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error executing swap:', error);
+    throw new Error('Failed to execute swap transaction');
   }
 }
 
@@ -220,10 +249,26 @@ export async function getPoolCurveProgressByMint(mint: string): Promise<number> 
   }
 }
 
-export async function getTokens() {
+export async function getTokens(options?: {
+  tag?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
   try {
-    const response = await fetch(`${API_URL}/api/tokens`, {
-      next: { revalidate: 10 } // Cache for 60 seconds instead of no-store
+    const params = new URLSearchParams({ launchpad: 'potlaunch' });
+    
+    if (options?.tag) {
+      params.append('tag', options.tag);
+    }
+    if (options?.startDate) {
+      params.append('startDate', options.startDate);
+    }
+    if (options?.endDate) {
+      params.append('endDate', options.endDate);
+    }
+    
+    const response = await fetch(`${API_URL}/api/tokens?${params}`, {
+      next: { revalidate: 10 }
     });
     
     if (!response.ok) {
@@ -238,14 +283,44 @@ export async function getTokens() {
   }
 }
 
-export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
+export async function getPopularTokens(limit: number = 20, options?: {
+  tag?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<Token[]> {
   try {
-    const response = await fetch(`${API_URL}/api/tokens/popular?limit=${limit}`, {
+    const params = new URLSearchParams({ 
+      limit: String(limit),
+      launchpad: 'potlaunch' 
+    });
+    
+    if (options?.tag) {
+      params.append('tag', options.tag);
+    }
+    if (options?.startDate) {
+      params.append('startDate', options.startDate);
+    }
+    if (options?.endDate) {
+      params.append('endDate', options.endDate);
+    }
+    
+    const response = await fetch(`${API_URL}/api/tokens/popular?${params}`, {
       next: { revalidate: 1 }
     });
     
     if (!response.ok) {
-      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+      const params2 = new URLSearchParams({ launchpad: 'potlaunch' });
+      if (options?.tag) {
+        params2.append('tag', options.tag);
+      }
+      if (options?.startDate) {
+        params2.append('startDate', options.startDate);
+      }
+      if (options?.endDate) {
+        params2.append('endDate', options.endDate);
+      }
+      
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens?${params2}`, {
         next: { revalidate: 1 }
       });
       
@@ -263,7 +338,18 @@ export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
   } catch (error) {
     console.error('Error getting popular tokens:', error);
     try {
-      const fallbackResponse = await fetch(`${API_URL}/api/tokens`, {
+      const params2 = new URLSearchParams({ launchpad: 'potlaunch' });
+      if (options?.tag) {
+        params2.append('tag', options.tag);
+      }
+      if (options?.startDate) {
+        params2.append('startDate', options.startDate);
+      }
+      if (options?.endDate) {
+        params2.append('endDate', options.endDate);
+      }
+      
+      const fallbackResponse = await fetch(`${API_URL}/api/tokens?${params2}`, {
         next: { revalidate: 1 }
       });
       
@@ -281,15 +367,31 @@ export async function getPopularTokens(limit: number = 20): Promise<Token[]> {
   }
 }
 
-export async function searchTokens(query: string, owner?: string) {
+export async function searchTokens(query: string, options?: {
+  owner?: string;
+  tag?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
   try {
     const params = new URLSearchParams({ q: query });
-    if (owner) {
-      params.append('owner', owner);
+    params.append('launchpad', 'potlaunch');
+    
+    if (options?.owner) {
+      params.append('owner', options.owner);
+    }
+    if (options?.tag) {
+      params.append('tag', options.tag);
+    }
+    if (options?.startDate) {
+      params.append('startDate', options.startDate);
+    }
+    if (options?.endDate) {
+      params.append('endDate', options.endDate);
     }
     
     const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {
-      next: { revalidate: 10 } // Cache for 10 seconds instead of no-store
+      next: { revalidate: 10 }
     });
     
     if (!response.ok) {
@@ -334,6 +436,7 @@ export async function uploadMetadata(metadata: {
   name: string;
   symbol: string;
   imageUri: string;
+  bannerUri?: string;
   description: string;
   website?: string;
   twitter?: string;

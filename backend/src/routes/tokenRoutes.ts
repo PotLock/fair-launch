@@ -39,7 +39,46 @@ app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
 // Get all tokens
 app.get('/', async (c) => {
   try {
-    const tokens = await tokenService.getAllTokens();
+    const launchpad = c.req.query('launchpad');
+    
+    // Validate launchpad parameter if provided
+    if (launchpad && launchpad !== 'potlaunch' && launchpad !== 'cookedpad') {
+      return c.json({
+        success: false,
+        message: 'Invalid launchpad value. Must be "potlaunch" or "cookedpad"'
+      }, 400);
+    }
+
+    const activeParam = c.req.query('active');
+    const tag = c.req.query('tag');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+    
+    let active: boolean | undefined = undefined;
+    if (activeParam !== undefined) {
+      const lower = activeParam.toLowerCase();
+      if (lower === 'true' || lower === 'false') {
+        active = lower === 'true';
+      } else {
+        return c.json({
+          success: false,
+          message: 'Invalid active value. Must be "true" or "false"'
+        }, 400);
+      }
+    }
+    
+    let tokens;
+    if (launchpad || activeParam !== undefined || (tag && tag.trim() !== '') || startDate || endDate) {
+      tokens = await tokenService.getTokensFiltered(
+        launchpad as 'potlaunch' | 'cookedpad', 
+        active, 
+        tag?.trim() || undefined,
+        startDate,
+        endDate
+      );
+    } else {
+      tokens = await tokenService.getAllTokens();
+    }
     
     return c.json({
       success: true,
@@ -94,6 +133,11 @@ app.get('/search', async (c) => {
   try {
     const query = c.req.query('q');
     const owner = c.req.query('owner');
+    const launchpad = c.req.query('launchpad');
+    const activeParam = c.req.query('active');
+    const tag = c.req.query('tag');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
     
     if (!query || query.trim() === '') {
       return c.json({
@@ -102,7 +146,36 @@ app.get('/search', async (c) => {
       }, 400);
     }
     
-    const tokens = await tokenService.searchTokens(query.trim(), owner);
+    // Validate launchpad parameter if provided
+    if (launchpad && launchpad !== 'potlaunch' && launchpad !== 'cookedpad') {
+      return c.json({
+        success: false,
+        message: 'Invalid launchpad value. Must be "potlaunch" or "cookedpad"'
+      }, 400);
+    }
+
+    let active: boolean | undefined = undefined;
+    if (activeParam !== undefined) {
+      const lower = activeParam.toLowerCase();
+      if (lower === 'true' || lower === 'false') {
+        active = lower === 'true';
+      } else {
+        return c.json({
+          success: false,
+          message: 'Invalid active value. Must be "true" or "false"'
+        }, 400);
+      }
+    }
+    
+    const tokens = await tokenService.searchTokens(
+      query.trim(), 
+      owner, 
+      launchpad, 
+      active, 
+      tag?.trim() || undefined,
+      startDate,
+      endDate
+    );
     
     return c.json({
       success: true,
@@ -148,6 +221,11 @@ app.get('/address/:address', async (c) => {
 app.get('/popular', async (c) => {
   try {
     const limitParam = c.req.query('limit');
+    const launchpad = c.req.query('launchpad');
+    const activeParam = c.req.query('active');
+    const tag = c.req.query('tag');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
     const limit = limitParam ? parseInt(limitParam, 10) : 10;
     
     // Validate limit parameter
@@ -158,7 +236,35 @@ app.get('/popular', async (c) => {
       }, 400);
     }
     
-    const popularTokens = await tokenService.getPopularTokens(limit);
+    // Validate launchpad parameter if provided
+    if (launchpad && launchpad !== 'potlaunch' && launchpad !== 'cookedpad') {
+      return c.json({
+        success: false,
+        message: 'Invalid launchpad value. Must be "potlaunch" or "cookedpad"'
+      }, 400);
+    }
+
+    let active: boolean | undefined = undefined;
+    if (activeParam !== undefined) {
+      const lower = activeParam.toLowerCase();
+      if (lower === 'true' || lower === 'false') {
+        active = lower === 'true';
+      } else {
+        return c.json({
+          success: false,
+          message: 'Invalid active value. Must be "true" or "false"'
+        }, 400);
+      }
+    }
+    
+    const popularTokens = await tokenService.getPopularTokens(
+      limit,
+      launchpad as 'potlaunch' | 'cookedpad',
+      active,
+      tag?.trim() || undefined,
+      startDate,
+      endDate
+    );
     
     return c.json({
       success: true,

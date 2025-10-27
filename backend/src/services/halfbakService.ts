@@ -1,7 +1,7 @@
 import { type DbcConfig, LaunchClient} from "@cookedbusiness/halfbaked-sdk";
 import { Connection, Keypair, PublicKey, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "../lib/sol";
-import type { DbcConfigRequest, DeployTokenRequest } from "../types";
+import type { DbcConfigRequest, DeployTokenRequest, SwapTokenRequest } from "../types";
 import { getDBCConfig } from "../configs/dbc.config";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { toSdkMetadata } from "../lib/halfbak";
@@ -86,6 +86,28 @@ export class HalfbakService {
         .toString("base64");
       return {
         baseMint: baseMint.publicKey.toBase58(),
+        transaction: serializedTx,
+      };
+    }
+
+    async swap(swapRequest: SwapTokenRequest){
+      const swapConfig = {
+        baseMint: swapRequest.baseMint,
+        amountIn: swapRequest.amount,
+        slippageBps: swapRequest.slippageBps,
+        swapBaseForQuote: swapRequest.swapBaseForQuote, // if true, swap base for quote | if false, swap quote for base
+        referralTokenAccount: swapRequest.referralTokenAccount,
+      }
+      const txSwap = await this.launchClient.swap(swapConfig,swapRequest.computeUnitPriceMicroLamports ,swapRequest.signer, swapRequest.baseMint);
+      
+      const latestBlockhash = await this.connection.getLatestBlockhash();
+      txSwap.recentBlockhash = latestBlockhash.blockhash;
+      txSwap.feePayer = swapRequest.signer;
+      const serializedTx = txSwap
+        .serialize({ requireAllSignatures: false })
+        .toString("base64");
+      return {
+        baseMint: swapRequest.baseMint.toBase58(),
         transaction: serializedTx,
       };
     }

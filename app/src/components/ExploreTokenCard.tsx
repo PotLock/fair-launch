@@ -9,9 +9,7 @@ import {
 } from "@/lib/api";
 import { 
     formatNumberToCurrency, 
-    calculateTokenPrice, 
     formatTokenPrice, 
-    calculateMarketCap, 
     formatMarketCap, 
     hexToNumber
 } from "@/utils";
@@ -77,20 +75,31 @@ export default function ExploreTokenCard({
             const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
             const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
             
+            // Convert quoteReserve to number for curve progress calculation
+            const quoteReserveNumber = hexToNumber(pool?.account?.quoteReserve);
             const curveProgress = migrationQuoteThreshold > 0
-                ? Number(pool?.account?.quoteReserve || 0) / migrationQuoteThreshold
+                ? quoteReserveNumber / migrationQuoteThreshold
                 : 0;
             
-            const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, decimals);
+            // Convert hex values to numbers
+            const quote = hexToNumber(pool?.account?.quoteReserve);
+            const base = hexToNumber(pool?.account?.baseReserve);
+            const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply);
 
-            const price = pool?.account?.sqrtPrice 
-                ? calculateTokenPrice(pool.account.sqrtPrice)
-                : 0;
-
-            const marketCap = calculateMarketCap(baseSold, totalSupply, decimals);
+            // Calculate price: quote / base (in SOL)
+            const price = base > 0 ? quote / base : 0;
+            
+            // Calculate total supply: preMigrationTokenSupply + baseReserve
+            const totalSupplyCalc = preMigrationTokenSupply + base;
+            
+            // Calculate circulating supply: totalSupply - base (tokens NOT in pool)
+            const circulating = totalSupplyCalc - base;
+            
+            // Calculate market cap: price * circulating
+            const marketCap = price * circulating * solPrice;
 
             setTokenData({
-                price: price * solPrice,
+                price: price * solPrice, // Convert to USD
                 holders: holders.length,
                 marketCap,
                 supply: formatNumberToCurrency(Number(totalSupply))

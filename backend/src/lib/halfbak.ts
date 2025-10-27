@@ -7,6 +7,8 @@ import type {
   DeployTokenRequestType,
   TokenMetadata,
   TokenMetadataRequest,
+  SwapTokenRequest,
+  SwapTokenRequestType,
 } from '../types';
 
 export const fromRequestMetadata = (metadata: TokenMetadataRequest): TokenMetadata => ({
@@ -44,3 +46,14 @@ export const buildDeployTokenRequest = (request: DeployTokenRequestType): Deploy
     dbcConfigKeypair: Keypair.fromSecretKey(Uint8Array.from(secretKeyArray)),
   };
 };
+
+// Build Swap Token Request
+export const buildSwapTokenRequest = (request: SwapTokenRequestType): SwapTokenRequest => ({
+  baseMint: new PublicKey(request.baseMint),
+  signer: new PublicKey(request.signer),
+  amount: request.amount,
+  slippageBps: request.slippageBps,
+  swapBaseForQuote: request.swapBaseForQuote,
+  computeUnitPriceMicroLamports: request.computeUnitPriceMicroLamports,
+  referralTokenAccount: request.referralTokenAccount ?? null,
+});

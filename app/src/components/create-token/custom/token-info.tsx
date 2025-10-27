@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { uploadImage } from '@/lib/api';
 import URLInput from '@/components/ui/url-input';
+import { TagsSelectModal, TAG_ICONS } from '@/components/modal/TagsSelectModal';
 
 interface TokenInfoProps {
   onNext: (data: TokenInfoData) => void;
@@ -26,6 +27,7 @@ export interface TokenInfoData {
   totalTokenSupply: number;
   tokenBaseDecimal: number;
   tokenQuoteDecimal: number;
+  tags?: string[];
 }
 
 export default function TokenInfo({ 
@@ -47,11 +49,13 @@ export default function TokenInfo({
     totalTokenSupply: initialData?.totalTokenSupply || 1000000000,
     tokenBaseDecimal: initialData?.tokenBaseDecimal || 6,
     tokenQuoteDecimal: initialData?.tokenQuoteDecimal || 9,
+    tags: initialData?.tags || [],
   });
 
   const [dragOver, setDragOver] = useState<'logo' | 'banner' | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
+  const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
   const progressPercentage = (currentStep / totalSteps) * 100;
 
@@ -210,6 +214,53 @@ export default function TokenInfo({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base resize-none"
               />
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tags
+              </label>
+              <div className="flex flex-wrap gap-2 min-h-[48px] p-3 border border-gray-300 rounded-lg bg-neutral-50">
+                {formData.tags && formData.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 transition-shadow"
+                      >
+                        <span className="text-base">{TAG_ICONS[tag] || "📦"}</span>
+                        <span className="capitalize">{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ 
+                            ...prev, 
+                            tags: prev.tags?.filter(t => t !== tag) || [] 
+                          }))}
+                          className="ml-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    No tags selected
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTagsModalOpen(true)}
+                className="mt-2 px-4 py-2 text-sm font-medium text-red-500 border border-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+              >
+                {formData.tags && formData.tags.length > 0 ? "Edit Tags" : "Add Tags"}
+              </button>
             </div>
           </div>
 
@@ -422,6 +473,13 @@ export default function TokenInfo({
           </button>
         </div>
       </form>
+
+      <TagsSelectModal
+        open={isTagsModalOpen}
+        onOpenChange={setIsTagsModalOpen}
+        value={formData.tags || []}
+        onConfirm={(tags) => setFormData(prev => ({ ...prev, tags }))}
+      />
     </div>
   );
 }

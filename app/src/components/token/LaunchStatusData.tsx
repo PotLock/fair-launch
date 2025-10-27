@@ -5,9 +5,7 @@ import {
   getTokenHolders 
 } from "@/lib/api";
 import { 
-  calculateTokenPrice, 
   formatTokenPrice, 
-  calculateMarketCap, 
   formatMarketCap 
 } from "@/utils";
 import { getSolPrice } from "@/lib/sol";
@@ -64,19 +62,34 @@ export default async function LaunchStatusData({
     
     const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));
     
-    const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
-    const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
+    const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold) / Math.pow(10, 9);
+    const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold) / Math.pow(10, 9);
     const isMigrated = poolConfig?.migratedPoolFeeBps > 0;
-    
+
+    // Convert quoteReserve to number for curve progress calculation
+    const quoteReserveNumber = hexToNumber(poolState?.account?.quoteReserve) / Math.pow(10, 9);
     const curveProgress = migrationQuoteThreshold > 0
-      ? Number(poolState?.account?.quoteReserve || 0) / migrationQuoteThreshold
+      ? quoteReserveNumber / migrationQuoteThreshold
       : curveProgressRaw || 0;
     
-    const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, decimals);
+    // Convert hex values to numbers
+    const quote = hexToNumber(poolState?.account?.quoteReserve) / Math.pow(10, 9);
+    const base = hexToNumber(poolState?.account?.baseReserve) / Math.pow(10, 9);
+    const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply) / Math.pow(10, decimals);
 
-    const sqrtPrice = poolState?.account?.sqrtPrice;
-    const tokenPrice = sqrtPrice ? calculateTokenPrice(sqrtPrice) * (solPrice || 0) : 0;
-    const marketCap = calculateMarketCap(baseSold, totalSupply.toString(), decimals);
+    // Calculate price: quote / base (in SOL)
+    const tokenPrice = base > 0 ? quote / base : 0;
+    
+    // Calculate total supply: preMigrationTokenSupply + baseReserve
+    const totalSupplyCalc = preMigrationTokenSupply + base;
+    
+    // Calculate circulating supply: totalSupply - base (tokens NOT in pool)
+    const circulating = totalSupplyCalc - base;
+    
+    // Calculate market cap: price * circulating
+    const marketCap = tokenPrice * circulating * (solPrice || 0);
+
+    const baseSold = curveProgress * migrationBaseThreshold / Math.pow(10, decimals);
     
     const phase = await determineLaunchPhase(
       baseSold,
@@ -87,7 +100,7 @@ export default async function LaunchStatusData({
     const launchData: LaunchStatusData = {
       phase,
       progress: curveProgress,
-      currentPrice: tokenPrice,
+      currentPrice: tokenPrice * (solPrice || 0), // Convert to USD
       marketCap,
       holders: holders.length,
       poolConfig,

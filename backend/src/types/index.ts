@@ -36,6 +36,16 @@ export interface DeployTokenRequest extends DbcConfigRequest {
   dbcConfigKeypair: Keypair;
 }
 
+export interface SwapTokenRequest {
+  baseMint: PublicKey;
+  signer: PublicKey;
+  amount: number;
+  slippageBps: number;
+  swapBaseForQuote: boolean;
+  computeUnitPriceMicroLamports: number;
+  referralTokenAccount?: string | null;
+}
+
 // IPFS Upload Schemas
 export const UploadImageSchema = z.object({
   fileName: z.string().optional(),
@@ -155,6 +165,7 @@ export const TokenConfigSchema = z.object({
 
 
 // Token Creation Schemas
+// Create Token Schema with launchpad field
 export const CreateTokenSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   symbol: z.string().min(1, 'Symbol is required'),
@@ -163,13 +174,16 @@ export const CreateTokenSchema = z.object({
   decimals: z.string().min(1, 'Decimals is required'),
   mintAddress: z.string().min(1, 'Mint address is required'),
   owner: z.string().min(1, 'Owner address is required'),
+  launchpad: z.enum(['potlaunch', 'cookedpad']).default('potlaunch'),
+  tags: z.array(z.string()).default([]).optional(),
+  active: z.boolean().default(true).optional(),
   // Optional metadata fields
   tokenUri: z.string().optional(),
   bannerUri: z.string().optional(),
   website: z.string().url().optional().or(z.literal('')),
   twitter: z.string().url().optional().or(z.literal('')),
   telegram: z.string().url().optional().or(z.literal('')),
-  // DBC Configuration (required for integrated flow)
+  // Token configuration
   tokenConfig: TokenConfigSchema,
 });
 
@@ -196,6 +210,17 @@ export const DeployTokenRequestSchema = z.object({
   }),
 });
 
+// Add Swap Token Request Schema
+export const SwapTokenRequestSchema = z.object({
+  baseMint: z.string().min(1, 'Base mint is required'),
+  signer: z.string().min(1, 'Signer public key is required'),
+  amount: z.number().positive('Amount must be positive'),
+  slippageBps: z.number().int().min(0).max(9900),
+  swapBaseForQuote: z.boolean(),
+  computeUnitPriceMicroLamports: z.number().int().min(0),
+  referralTokenAccount: z.string().nullable().optional(),
+});
+
 
 // Type definitions
 // Database Entity Types
@@ -208,6 +233,9 @@ export interface TokenEntity {
   totalSupply: string;
   decimals: number;
   owner: string;
+  launchpad: 'potlaunch' | 'cookedpad';
+  tags: string[];
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -369,6 +397,9 @@ export interface CleanTokenResponse {
   decimals: number;
   mintAddress: string;
   owner: string;
+  launchpad: 'potlaunch' | 'cookedpad';
+  tags?: string[];
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
   metadata?: Omit<TokenMetadataEntity, 'id' | 'tokenId'>;
@@ -394,6 +425,8 @@ export type DbcConfigRequestType = z.infer<typeof DbcConfigRequestSchema>;
 export type DeployTokenRequestType = z.infer<typeof DeployTokenRequestSchema>;
 export type TokenConfig = z.infer<typeof TokenConfigSchema>;
 export type DBCConfig = z.infer<typeof DBCConfigSchema>;
+// Add Swap Token Request Type
+export type SwapTokenRequestType = z.infer<typeof SwapTokenRequestSchema>;
 export type BuildCurveParams = z.infer<typeof BuildCurveParamsSchema>;
 export type LockedVestingParam = z.infer<typeof LockedVestingParamSchema>;
 export type FeeSchedulerParam = z.infer<typeof FeeSchedulerParamSchema>;

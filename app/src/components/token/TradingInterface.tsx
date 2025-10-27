@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Token } from "@/types/api";
-import { formatNumberToCurrency, calculateTokenPrice, calculateMarketCap, formatTokenPrice } from "@/utils";
+import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
 import { ChevronDown, Copy, Download, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint } from "@/lib/api";
-import { getSolPrice } from "@/lib/sol";
+import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
+import { getRpcSOLEndpoint, getSolPrice } from "@/lib/sol";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { toast } from "sonner";
+import { Connection, Transaction } from "@solana/web3.js";
 
 interface TradingInterfaceProps {
   token: Token;
@@ -26,7 +28,7 @@ interface TokenData {
 }
 
 export function TradingInterface({ token, address }: TradingInterfaceProps) {
-  const { publicKey } = useWallet()
+  const { publicKey, sendTransaction } = useWallet()
   const [tokenData, setTokenData] = useState<TokenData>({
     price: 0,
     holders: 0,
@@ -34,7 +36,12 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
     targetRaise: 0,
     poolAddress: ''
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isBuying, setIsBuying] = useState<boolean>(false);
+  const [amountPay, setAmountPay] = useState<string | null>(null);
+  const [amountReceive, setAmountReceive] = useState<string | null>(null);
+  const [baseReserve, setBaseReserve] = useState<number>(0);
+  const [quoteReserve, setQuoteReserve] = useState<number>(0);
 
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -53,27 +60,38 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         getPoolConfigByMint(address)
       ]);
 
-      const price = pool?.account?.sqrtPrice 
-        ? calculateTokenPrice(pool.account.sqrtPrice) * solPrice
-        : 0;
-
-      // Calculate baseSoldUSD for market cap calculation
+      // Helper function to convert hex to number
       const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));
+
+      // Convert hex values to numbers
+      const quote = hexToNumber(pool?.account?.quoteReserve) / Math.pow(10, 9);
+      const base = hexToNumber(pool?.account?.baseReserve) / Math.pow(10, 9);
+      setBaseReserve(base);
+      setQuoteReserve(quote);
+
+      const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply) / Math.pow(10, token.decimals);
+
+      // Calculate price: quote / base (in SOL)
+      const price = base > 0 ? quote / base : 0;
+      
+      // Calculate total supply: preMigrationTokenSupply + baseReserve
+      const totalSupply = preMigrationTokenSupply + base;
+      
+      // Calculate circulating supply: totalSupply - base (tokens NOT in pool)
+      const circulating = totalSupply - base;
+      
+      // Calculate market cap: price * circulating
+      const marketCap = price * circulating;
+
+      // Calculate target raise
       const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
-      const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
-      
-      const curveProgress = migrationQuoteThreshold > 0
-        ? Number(pool?.account?.quoteReserve || 0) / migrationQuoteThreshold
-        : 0;
-      
-      const baseSold = curveProgress * (migrationBaseThreshold / Math.pow(10, token.decimals));
-      const marketCap = calculateMarketCap(baseSold, token.totalSupply, token.decimals);
+      const targetRaise = (migrationQuoteThreshold / Math.pow(10, 9)) * solPrice;
 
       setTokenData({
-        price: price,
+        price: price * solPrice, // Convert to USD
         holders: holders.length,
-        marketCap,
-        targetRaise: (migrationQuoteThreshold / Math.pow(10, 9)) * solPrice,
+        marketCap: marketCap * solPrice, // Convert to USD
+        targetRaise,
         poolAddress: pool.publicKey
       });
     } catch (error) {
@@ -87,6 +105,82 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
   useEffect(() => {
     fetchTokenData();
   }, [fetchTokenData]);
+
+  const handleAmountPayChange = (value: string) => {
+    setAmountPay(value);
+    const amountPayNum = parseFloat(value);
+
+    if (!baseReserve || !quoteReserve || !amountPayNum || amountPayNum <= 0) {
+      setAmountReceive("0.00");
+      return;
+    }
+    // Constant product formula
+    const k = baseReserve * quoteReserve;
+    const newQuote = quoteReserve + amountPayNum;
+    const newBase = k / newQuote;
+    const deltaBase = baseReserve - newBase;
+
+    setAmountReceive(deltaBase.toFixed(6));
+  };
+
+
+  const handleBuy = async () => {
+    if(!publicKey){
+      toast.error('Please connect your wallet to buy tokens');
+      return;
+    };
+    if(!amountPay){
+      toast.error('Please enter an amount to buy');
+      return;
+    };
+    setIsBuying(true);
+    try{
+      const connection = new Connection(getRpcSOLEndpoint());
+      const amountInLamports = parseFloat(amountPay);
+      
+      const swapParams = {
+        baseMint: address, // Token mint address
+        signer: publicKey.toString(), // User's wallet address
+        amount: amountInLamports, // Amount in lamports
+        slippageBps: 50, // 0.5% slippage tolerance (50 basis points)
+        swapBaseForQuote: false, // false means buying tokens with SOL (quote for base)
+        computeUnitPriceMicroLamports: 100000, // Optional: compute unit price (100k micro-lamports)
+      };
+
+      const result = await Swap(swapParams);
+      
+      const serializedDeployTx = result.data.transaction;
+      const swapTxBuffer = Buffer.from(serializedDeployTx, "base64");
+      const swapTransaction = Transaction.from(swapTxBuffer);
+      const signatureDeployToken = await sendTransaction(
+        swapTransaction,
+        connection,
+        {
+          skipPreflight: false,
+          preflightCommitment: 'processed'
+        }
+      );
+
+      await connection.confirmTransaction(signatureDeployToken, 'confirmed');
+
+      if (result.success) {
+        toast.success(`Successfully bought ${token.symbol}! ${amountReceive} ${token.symbol}`);
+        console.log('Swap Transaction Signature:', signatureDeployToken);
+        // Refresh token data after successful swap
+        await fetchTokenData();
+        // Clear input fields
+        setAmountPay(null);
+        setAmountReceive(null);
+      } else {
+        toast.error('Swap failed. Please try again.');
+      }
+    }catch(error){
+      console.error('Error buying token:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to execute swap. Please try again.');
+    }finally{
+      setIsBuying(false);
+    }
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] max-h-[850px]">
@@ -143,6 +237,8 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
+                    value={amountPay || '0.00'}
+                    onChange={(e) => handleAmountPayChange(e.target.value)}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
                   />
@@ -179,6 +275,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input 
                     type="text" 
+                    value={amountReceive || '0.00'}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
                     placeholder="0.00"
                     disabled
@@ -194,7 +291,9 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
               </div>
 
               <Button
-                className={`w-full ${publicKey ? "bg-red-500 hover:bg-red-600 cursor-pointer": "bg-red-300 hover:bg-red-200 cursor-not-allowed"} text-white font-medium py-6 rounded-lg mb-4`}
+                onClick={handleBuy}
+                disabled={isBuying || !publicKey || !amountPay}
+                className={`w-full ${publicKey && !isBuying ? "bg-red-500 hover:bg-red-600 cursor-pointer": "bg-red-300 hover:bg-red-200 cursor-not-allowed"} text-white font-medium py-6 rounded-lg mb-4`}
               >
                 Buy ${token.symbol || 'CURATE'}
               </Button>
