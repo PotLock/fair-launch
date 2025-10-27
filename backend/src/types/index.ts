@@ -1,4 +1,3 @@
-import type { DbcConfig } from '@cookedbusiness/halfbaked-sdk';
 import type { Keypair, PublicKey } from '@solana/web3.js';
 import { z } from 'zod';
 
@@ -221,6 +220,38 @@ export const SwapTokenRequestSchema = z.object({
   referralTokenAccount: z.string().nullable().optional(),
 });
 
+// Transactions Schemas
+export const TransactionActionEnum = z.enum(['BUY', 'SELL']);
+export const TransactionStatusEnum = z.enum(['pending', 'success', 'failed']);
+
+export const CreateTransactionSchema = z.object({
+  userAddress: z.string().min(1, 'User address is required'),
+  txHash: z.string().optional(),
+  action: TransactionActionEnum,
+  baseToken: z.string().min(1, 'Base token is required'),
+  quoteToken: z.string().min(1, 'Quote token is required'),
+  amountIn: z.number().positive('amountIn must be positive'),
+  amountOut: z.number().positive('amountOut must be positive'),
+  pricePerToken: z.number().positive().optional(),
+  slippageBps: z.number().min(0).max(9900).optional(),
+  fee: z.number().min(0).optional(),
+  feeToken: z.string().optional(),
+  status: TransactionStatusEnum.optional(),
+  chain: z.string().optional(),
+  poolAddress: z.string().optional(),
+});
+
+export const TransactionQuerySchema = z.object({
+  userAddress: z.string().optional(),
+  action: TransactionActionEnum.optional(),
+  baseToken: z.string().optional(),
+  quoteToken: z.string().optional(),
+  status: TransactionStatusEnum.optional(),
+  chain: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
 
 // Type definitions
 // Database Entity Types
@@ -368,6 +399,26 @@ export interface TokenTransactionsEntity {
   updatedAt: Date;
 }
 
+export interface TransactionEntity {
+  id: string;
+  userAddress: string;
+  txHash: string | null;
+  action: 'BUY' | 'SELL';
+  baseToken: string;
+  quoteToken: string;
+  amountIn: string;
+  amountOut: string;
+  pricePerToken: string | null;
+  slippageBps: string; // stored as numeric in DB
+  fee: string;
+  feeToken: string;
+  status: 'pending' | 'success' | 'failed';
+  chain: string;
+  poolAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Complete Token with Relations
 export interface TokenWithRelations extends TokenEntity {
   metadata?: TokenMetadataEntity | null;
@@ -427,6 +478,9 @@ export type TokenConfig = z.infer<typeof TokenConfigSchema>;
 export type DBCConfig = z.infer<typeof DBCConfigSchema>;
 // Add Swap Token Request Type
 export type SwapTokenRequestType = z.infer<typeof SwapTokenRequestSchema>;
+// Transactions Types
+export type CreateTransactionRequest = z.infer<typeof CreateTransactionSchema>;
+export type TransactionQueryRequest = z.infer<typeof TransactionQuerySchema>;
 export type BuildCurveParams = z.infer<typeof BuildCurveParamsSchema>;
 export type LockedVestingParam = z.infer<typeof LockedVestingParamSchema>;
 export type FeeSchedulerParam = z.infer<typeof FeeSchedulerParamSchema>;

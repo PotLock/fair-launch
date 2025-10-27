@@ -242,3 +242,60 @@ export interface SwapResponse {
   };
 }
 
+// Transactions API Types
+export type TransactionAction = 'BUY' | 'SELL';
+export type TransactionStatus = 'pending' | 'success' | 'failed';
+
+// Request payload for creating a transaction
+export interface TransactionCreateRequest {
+  userAddress: string;
+  txHash: string;
+  action: TransactionAction;
+  baseToken: string;
+  quoteToken: string;
+  amountIn: number;
+  amountOut: number;
+  pricePerToken: number;
+  slippageBps: number;
+  fee: number;
+  feeToken: string;
+  status: TransactionStatus;
+  chain: string;
+  poolAddress: string;
+}
+
+// Transaction model returned by the API
+export interface Transaction {
+  id: string;
+  userAddress: string;
+  txHash: string;
+  action: TransactionAction;
+  baseToken: string;
+  quoteToken: string;
+  amountIn: string | number;
+  amountOut: string | number;
+  pricePerToken: string | number;
+  slippageBps: string | number;
+  fee: string | number;
+  feeToken: string;
+  status: TransactionStatus;
+  chain: string;
+  poolAddress: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionsListResponse {
+  success: boolean;
+  transactions: Transaction[];
+}
+
+export interface TransactionResponse {
+  success: boolean;
+  transaction: Transaction;
+}
+
+// Update status request payload
+export interface TransactionUpdateStatusRequest {
+  status: TransactionStatus;
+}

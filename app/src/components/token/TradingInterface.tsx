@@ -13,6 +13,8 @@ import { getRpcSOLEndpoint, getSolPrice } from "@/lib/sol";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
+import { createTransaction, updateTransactionStatus } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 interface TradingInterfaceProps {
   token: Token;
@@ -29,6 +31,7 @@ interface TokenData {
 
 export function TradingInterface({ token, address }: TradingInterfaceProps) {
   const { publicKey, sendTransaction } = useWallet()
+  const router = useRouter();
   const [tokenData, setTokenData] = useState<TokenData>({
     price: 0,
     holders: 0,
@@ -42,6 +45,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
   const [amountReceive, setAmountReceive] = useState<string | null>(null);
   const [baseReserve, setBaseReserve] = useState<number>(0);
   const [quoteReserve, setQuoteReserve] = useState<number>(0);
+  const [payIsSol, setPayIsSol] = useState<boolean>(true);
 
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -108,79 +112,145 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
 
   const handleAmountPayChange = (value: string) => {
     setAmountPay(value);
+    // Allow clearing the input without auto-filling 0.00
+    if (value.trim() === '') {
+      setAmountReceive(null);
+      return;
+    }
+
     const amountPayNum = parseFloat(value);
 
-    if (!baseReserve || !quoteReserve || !amountPayNum || amountPayNum <= 0) {
-      setAmountReceive("0.00");
+    if (!baseReserve || !quoteReserve || isNaN(amountPayNum) || amountPayNum <= 0) {
+      setAmountReceive(null);
       return;
     }
     // Constant product formula
     const k = baseReserve * quoteReserve;
-    const newQuote = quoteReserve + amountPayNum;
-    const newBase = k / newQuote;
-    const deltaBase = baseReserve - newBase;
-
-    setAmountReceive(deltaBase.toFixed(6));
+    if (payIsSol) {
+      // Paying SOL -> receive token
+      const newQuote = quoteReserve + amountPayNum;
+      const newBase = k / newQuote;
+      const deltaBase = baseReserve - newBase;
+      setAmountReceive(deltaBase.toFixed(3));
+    } else {
+      // Paying token -> receive SOL
+      const newBase = baseReserve + amountPayNum;
+      const newQuote = k / newBase;
+      const deltaQuote = quoteReserve - newQuote;
+      setAmountReceive(deltaQuote.toFixed(3));
+    }
   };
 
 
-  const handleBuy = async () => {
-    if(!publicKey){
-      toast.error('Please connect your wallet to buy tokens');
+  const handleBuyAndSell = async () => {
+    if (!publicKey) {
+      toast.error("Please connect your wallet to buy tokens");
       return;
-    };
-    if(!amountPay){
-      toast.error('Please enter an amount to buy');
+    }
+    if (!amountPay) {
+      toast.error("Please enter an amount to buy");
       return;
-    };
+    }
+
+    const actionText = payIsSol ? "Buying" : "Selling";
+    const toastId = toast.loading(`${actionText} ${token.symbol}...`);
     setIsBuying(true);
-    try{
+    // Track created transaction id across try/catch to update status on failure
+    let createdTransactionId: string | null = null;
+
+    try {
       const connection = new Connection(getRpcSOLEndpoint());
-      const amountInLamports = parseFloat(amountPay);
-      
+      const amountNum = parseFloat(amountPay);
       const swapParams = {
-        baseMint: address, // Token mint address
-        signer: publicKey.toString(), // User's wallet address
-        amount: amountInLamports, // Amount in lamports
-        slippageBps: 50, // 0.5% slippage tolerance (50 basis points)
-        swapBaseForQuote: false, // false means buying tokens with SOL (quote for base)
-        computeUnitPriceMicroLamports: 100000, // Optional: compute unit price (100k micro-lamports)
+        baseMint: address,
+        signer: publicKey.toString(),
+        amount: amountNum,
+        slippageBps: 50,
+        swapBaseForQuote: !payIsSol,
+        computeUnitPriceMicroLamports: 100000,
       };
 
       const result = await Swap(swapParams);
-      
-      const serializedDeployTx = result.data.transaction;
-      const swapTxBuffer = Buffer.from(serializedDeployTx, "base64");
-      const swapTransaction = Transaction.from(swapTxBuffer);
-      const signatureDeployToken = await sendTransaction(
-        swapTransaction,
-        connection,
-        {
-          skipPreflight: false,
-          preflightCommitment: 'processed'
-        }
-      );
-
-      await connection.confirmTransaction(signatureDeployToken, 'confirmed');
 
       if (result.success) {
-        toast.success(`Successfully bought ${token.symbol}! ${amountReceive} ${token.symbol}`);
-        console.log('Swap Transaction Signature:', signatureDeployToken);
-        // Refresh token data after successful swap
+        const serializedDeployTx = result.data.transaction;
+        const swapTxBuffer = Buffer.from(serializedDeployTx, "base64");
+        const swapTransaction = Transaction.from(swapTxBuffer);
+        const signatureDeployToken = await sendTransaction(swapTransaction, connection, {
+          skipPreflight: false,
+          preflightCommitment: "processed",
+        });
+
+        // Create a pending transaction record after obtaining signature
+        try {
+          const action: "BUY" | "SELL" = payIsSol ? "BUY" : "SELL";
+          const baseToken = payIsSol ? "So11111111111111111111111111111111111111112" : address;
+          const quoteToken = payIsSol ? address : "So11111111111111111111111111111111111111112";
+          const amountIn = amountNum;
+          const amountOutNum = amountReceive ? parseFloat(`${amountReceive}`) : 0;
+          const pricePerToken = amountOutNum > 0 ? amountIn / amountOutNum : 0;
+
+          const created = await createTransaction({
+            userAddress: publicKey.toString(),
+            txHash: signatureDeployToken,
+            action,
+            baseToken,
+            quoteToken,
+            amountIn,
+            amountOut: amountOutNum,
+            pricePerToken,
+            slippageBps: 50,
+            fee: 0,
+            feeToken: "SOL",
+            status: "pending",
+            chain: "solana",
+            poolAddress: address,
+          });
+          createdTransactionId = created.id;
+        } catch (e) {
+          console.error("Error creating transaction record:", e);
+        }
+
+        await connection.confirmTransaction(signatureDeployToken, "confirmed");
+
+        // Update transaction status to success
+        if (createdTransactionId) {
+          try {
+            await updateTransactionStatus(createdTransactionId, "success");
+          } catch (e) {
+            console.error("Error updating transaction status to success:", e);
+          }
+        }
+
+        toast.dismiss(toastId);
+        const receiveSymbol = payIsSol ? token.symbol : "SOL";
+        toast.success(`Successfully ${payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${amountReceive} ${receiveSymbol}`);
+        console.log("Swap Transaction Signature:", signatureDeployToken);
         await fetchTokenData();
-        // Clear input fields
         setAmountPay(null);
         setAmountReceive(null);
+        // Refresh server components to refetch transactions list
+        // router.refresh();
       } else {
-        toast.error('Swap failed. Please try again.');
+        toast.error("Swap failed. Please try again.");
       }
-    }catch(error){
-      console.error('Error buying token:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to execute swap. Please try again.');
-    }finally{
+    } catch (error) {
+      console.error("Error buying token:", error);
+      // If we already created a transaction record, mark it failed
+      try {
+        if (createdTransactionId) {
+          await updateTransactionStatus(createdTransactionId, "failed");
+        }
+      } catch (e) {
+        console.error("Error updating transaction status to failed:", e);
+      }
+      toast.dismiss(toastId);
+      toast.error(error instanceof Error ? error.message : "Failed to execute swap. Please try again.");
+    } finally {
       setIsBuying(false);
     }
-  }
+  };
+
 
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] max-h-[850px]">
@@ -237,17 +307,36 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
-                    value={amountPay || '0.00'}
-                    onChange={(e) => handleAmountPayChange(e.target.value)}
+                    value={amountPay || ''}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/,/g, '');
+                      if (/^\d*\.?\d*$/.test(raw)) {
+                        setAmountPay(raw);
+                        handleAmountPayChange(raw);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (amountPay) {
+                        setAmountPay(
+                          parseFloat(amountPay).toLocaleString('en-US', {
+                            maximumFractionDigits: 6,
+                          })
+                        );
+                      }
+                    }}
+                    inputMode="decimal"
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
                   />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
-                        <img src="/logos/solana_light.svg" alt="Solana" className="w-full h-full" />
-                        <span>SOL</span>
-                        <div className="relative w-4 h-4 mr-5">
+                        <div className="w-6 h-6">
+                          <img src={payIsSol ? "/logos/solana_light.svg" : token.metadata.tokenUri} alt={payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
+                        </div>
+                        <span>{payIsSol ? 'SOL' : token.symbol}</span>
+                        <div className="relative w-4 h-4">
                           <ChevronDown className="h-4 w-4 text-gray-500" />
                         </div>
                       </button>
@@ -257,6 +346,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                         <DropdownMenuItem
                           key={option.name}
                           className="cursor-pointer hover:bg-gray-100"
+                          onClick={() => setPayIsSol(option.name === 'SOL')}
                         >
                           <div className="flex items-center gap-2">
                             <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
@@ -282,20 +372,20 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
                     <div className="h-6 w-6">
-                      <img src={token.metadata.tokenUri} alt={token.name} className="w-6 h-6 rounded-full" />
+                      <img src={payIsSol ? token.metadata.tokenUri : "/logos/solana_light.svg"} alt={payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
-                    <span className="text-lg">{token.symbol}</span>
+                    <span className="text-lg">{payIsSol ? token.symbol : 'SOL'}</span>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500 mt-1">-</div>
               </div>
 
               <Button
-                onClick={handleBuy}
+                onClick={handleBuyAndSell}
                 disabled={isBuying || !publicKey || !amountPay}
                 className={`w-full ${publicKey && !isBuying ? "bg-red-500 hover:bg-red-600 cursor-pointer": "bg-red-300 hover:bg-red-200 cursor-not-allowed"} text-white font-medium py-6 rounded-lg mb-4`}
               >
-                Buy ${token.symbol || 'CURATE'}
+                {payIsSol ? `Buy ${token.symbol || 'POTLAUNCH'}` : `Sell ${token.symbol || 'POTLAUNCH'}`}
               </Button>
             </div>
           </TabsContent>

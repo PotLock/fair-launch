@@ -321,7 +321,7 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
         return (
             <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
+                    <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
                     {/* <Button 
                         className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
                         onClick={()=>onAddLiquidity(true)}  
@@ -345,7 +345,7 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
         return (
             <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
+                    <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
                     {/* <Button 
                         className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
                         onClick={()=>onAddLiquidity(true)}  
@@ -370,7 +370,7 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
     return (
         <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-medium mb-4">Liquidity Pools</h2>
+                <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
                 {/* <Button 
                     className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
                     onClick={()=>onAddLiquidity(true)}  

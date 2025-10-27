@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, integer, boolean, timestamp, decimal, jsonb, uuid, varchar, numeric } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
 export const launchpadEnum = pgEnum("launchpad", ["potlaunch", "cookedpad"]);
@@ -244,3 +244,23 @@ export const tokenTransactionsRelations = relations(tokenTransactions, ({ one })
     references: [tokens.id],
   }),
 }));
+
+export const transactions = pgTable("transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 64 }).notNull(),
+  txHash: varchar("tx_hash", { length: 128 }),
+  action: varchar("action", { length: 10 }).notNull(), // "BUY" | "SELL"
+  baseToken: varchar("base_token", { length: 64 }).notNull(), // e.g. SOL
+  quoteToken: varchar("quote_token", { length: 64 }).notNull(), // e.g. USDC
+  amountIn: numeric("amount_in", { precision: 30, scale: 10 }).notNull(),
+  amountOut: numeric("amount_out", { precision: 30, scale: 10 }).notNull(),
+  pricePerToken: numeric("price_per_token", { precision: 30, scale: 10 }),
+  slippageBps: numeric("slippage_bps", { precision: 10, scale: 2 }).default("50"), // basis points
+  fee: numeric("fee", { precision: 30, scale: 10 }).default("0"),
+  feeToken: varchar("fee_token", { length: 64 }).default("SOL"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending | success | failed
+  chain: varchar("chain", { length: 32 }).default("solana"),
+  poolAddress: varchar("pool_address", { length: 128 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

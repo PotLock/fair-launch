@@ -117,7 +117,7 @@ export default function LaunchStatus({ data }: LaunchStatusProps) {
 
     return (
         <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
-            <h2 className="text-2xl font-semibold mb-4">Launch Status</h2>
+            <h2 className="text-2xl font-medium mb-4">Launch Status</h2>
 
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                 <div 

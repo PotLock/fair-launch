@@ -85,6 +85,272 @@ Creates a new token with integrated DBC configuration.
 }
 ```
 
+### Transactions Routes (`/api/transactions`)
+
+#### Create Transaction
+POST `/api/transactions`
+
+Creates a transaction record for user activity (BUY/SELL) on a pool.
+
+Request Body:
+```json
+{
+  "userAddress": "11111111111111111111111111111112",
+  "txHash": "5o7wV...abc123",
+  "action": "BUY",
+  "baseToken": "SOL",
+  "quoteToken": "USDC",
+  "amountIn": 10.5,
+  "amountOut": 0.42,
+  "pricePerToken": 25.0,
+  "slippageBps": 50,
+  "fee": 0.001,
+  "feeToken": "SOL",
+  "status": "pending",
+  "chain": "solana",
+  "poolAddress": "So11111111111111111111111111111111111111112"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    "userAddress": "11111111111111111111111111111112",
+    "txHash": "5o7wV...abc123",
+    "action": "BUY",
+    "baseToken": "SOL",
+    "quoteToken": "USDC",
+    "amountIn": "10.5",
+    "amountOut": "0.42",
+    "pricePerToken": "25.0",
+    "slippageBps": "50",
+    "fee": "0.001",
+    "feeToken": "SOL",
+    "status": "pending",
+    "chain": "solana",
+    "poolAddress": "So11111111111111111111111111111111111111112",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### List Transactions
+GET `/api/transactions`
+
+Returns transactions optionally filtered by user and attributes.
+
+Query Parameters:
+- `userAddress` (optional): Filter by user address
+- `action` (optional): `BUY` or `SELL`
+- `baseToken` (optional): e.g., `SOL`
+- `quoteToken` (optional): e.g., `USDC`
+- `status` (optional): `pending`, `success`, or `failed`
+- `chain` (optional): e.g., `solana`
+
+Examples:
+```bash
+# List all transactions
+curl "http://localhost:3001/api/transactions"
+
+# Filter by user address
+curl "http://localhost:3001/api/transactions?userAddress=11111111111111111111111111111112"
+
+# Filter by action
+curl "http://localhost:3001/api/transactions?action=BUY"
+
+# Filter by status
+curl "http://localhost:3001/api/transactions?status=success"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transactions": [
+    {
+      "id": "uuid-here",
+      "userAddress": "11111111111111111111111111111112",
+      "txHash": "5o7wV...abc123",
+      "action": "BUY",
+      "baseToken": "SOL",
+      "quoteToken": "USDC",
+      "amountIn": "10.5",
+      "amountOut": "0.42",
+      "pricePerToken": "25.0",
+      "slippageBps": "50",
+      "fee": "0.001",
+      "feeToken": "SOL",
+      "status": "success",
+      "chain": "solana",
+      "poolAddress": "So11111111111111111111111111111111111111112",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Get Transactions by User Address
+GET `/api/transactions/user/:address`
+
+Example:
+```bash
+curl "http://localhost:3001/api/transactions/user/11111111111111111111111111111112"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transactions": [
+    {
+      "id": "uuid-here",
+      "userAddress": "11111111111111111111111111111112",
+      "txHash": "5o7wV...abc123",
+      "action": "BUY",
+      "baseToken": "SOL",
+      "quoteToken": "USDC",
+      "amountIn": "10.5",
+      "amountOut": "0.42",
+      "pricePerToken": "25.0",
+      "slippageBps": "50",
+      "fee": "0.001",
+      "feeToken": "SOL",
+      "status": "success",
+      "chain": "solana",
+      "poolAddress": "So11111111111111111111111111111111111111112",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Get Transactions by Token Address (base or quote)
+GET `/api/transactions/token/:address`
+
+Example:
+```bash
+curl "http://localhost:3001/api/transactions/token/So11111111111111111111111111111111111111112"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transactions": [
+    {
+      "id": "uuid-here",
+      "userAddress": "11111111111111111111111111111112",
+      "txHash": "5o7wV...abc123",
+      "action": "SELL",
+      "baseToken": "USDC",
+      "quoteToken": "SOL",
+      "amountIn": "100",
+      "amountOut": "4",
+      "pricePerToken": "25.0",
+      "slippageBps": "50",
+      "fee": "0.002",
+      "feeToken": "SOL",
+      "status": "pending",
+      "chain": "solana",
+      "poolAddress": "So11111111111111111111111111111111111111112",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Get Transaction by ID
+GET `/api/transactions/:id`
+
+Example:
+```bash
+curl "http://localhost:3001/api/transactions/uuid-here"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    "userAddress": "11111111111111111111111111111112",
+    "txHash": "5o7wV...abc123",
+    "action": "SELL",
+    "baseToken": "SOL",
+    "quoteToken": "USDC",
+    "amountIn": "5.0",
+    "amountOut": "0.20",
+    "pricePerToken": "25.0",
+    "slippageBps": "50",
+    "fee": "0.0005",
+    "feeToken": "SOL",
+    "status": "pending",
+    "chain": "solana",
+    "poolAddress": "So11111111111111111111111111111111111111112",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### Update Transaction Status
+PATCH `/api/transactions/:id/status`
+
+Request Body:
+```json
+{
+  "status": "success"
+}
+```
+
+Examples:
+```bash
+# Update status to success
+curl -X PATCH \
+  -H "Content-Type: application/json" \
+  -d '{"status":"success"}' \
+  "http://localhost:3001/api/transactions/uuid-here/status"
+
+# Update status to failed
+curl -X PATCH \
+  -H "Content-Type: application/json" \
+  -d '{"status":"failed"}' \
+  "http://localhost:3001/api/transactions/uuid-here/status"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    "userAddress": "11111111111111111111111111111112",
+    "txHash": "5o7wV...abc123",
+    "action": "SELL",
+    "baseToken": "SOL",
+    "quoteToken": "USDC",
+    "amountIn": "5.0",
+    "amountOut": "0.20",
+    "pricePerToken": "25.0",
+    "slippageBps": "50",
+    "fee": "0.0005",
+    "feeToken": "SOL",
+    "status": "success",
+    "chain": "solana",
+    "poolAddress": "So11111111111111111111111111111111111111112",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
 #### Get All Tokens
 **GET** `/api/tokens`
 

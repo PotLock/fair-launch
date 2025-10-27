@@ -9,14 +9,14 @@ import ExploreTokenCard from "@/components/ExploreTokenCard";
 import { Token } from "@/types/api";
 import { useState, useMemo } from "react";
 import { TAG_OPTIONS, TAG_ICONS } from "@/components/modal/TagsSelectModal";
+import { useTokens } from "@/hooks/useSWR";
 
-interface TokenSearchProps {
-  initialTokens: Token[];
-}
+
 
 type TimeRangeType = "all" | "24h" | "7d" | "30d" | "90d" | "custom";
 
-export default function TokenSearch({ initialTokens }: TokenSearchProps) {
+export default function TokenSearch() {
+  const { tokens, isLoading, error } = useTokens();
   const {
     searchQuery,
     setSearchQuery,
@@ -81,8 +81,8 @@ export default function TokenSearch({ initialTokens }: TokenSearchProps) {
     }
   };
 
-  const getFilteredInitialTokens = useMemo(() => {
-    let filtered = [...initialTokens];
+  const getFilteredTokens = useMemo(() => {
+    let filtered = [...tokens];
 
     if (tag) {
       filtered = filtered.filter(token => 
@@ -99,7 +99,7 @@ export default function TokenSearch({ initialTokens }: TokenSearchProps) {
     }
 
     return filtered;
-  }, [initialTokens, tag, timeRange, selectedTimeRange]);
+  }, [tokens, tag, timeRange, selectedTimeRange]);
 
   const getFilteredSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -117,7 +117,7 @@ export default function TokenSearch({ initialTokens }: TokenSearchProps) {
     return filtered;
   }, [searchResults, timeRange, searchQuery, selectedTimeRange]);
 
-  const displayTokens = searchQuery.trim() ? getFilteredSearchResults : getFilteredInitialTokens;
+  const displayTokens = searchQuery.trim() ? getFilteredSearchResults : getFilteredTokens;
 
   return (
     <>
@@ -234,7 +234,7 @@ export default function TokenSearch({ initialTokens }: TokenSearchProps) {
       </div>
       
       {
-        isSearching ? (
+        isSearching || isLoading ? (
           <div className="text-center">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(6)].map((_, index) => (

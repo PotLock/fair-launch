@@ -12,6 +12,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NoTokensFound } from "@/components/NoTokensFound";
 import { useRouter } from "next/navigation";
+import { useUserTokens } from "@/hooks/useSWR";
 
 interface MyTokensClientProps {
   solPrice: number;
@@ -20,9 +21,6 @@ interface MyTokensClientProps {
 export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensClientProps) {
     const { publicKey } = useWallet();
     const router = useRouter()
-    const [listTokens, setListTokens] = useState<Token[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [solPrice, setSolPrice] = useState<number>(initialSolPrice)
     const [portfolioValue, setPortfolioValue] = useState<number>(0)
     
@@ -44,34 +42,11 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
         setSolPrice(solPrice || 0)
     },[])   
 
-    const fetchUserTokens = useCallback(async () => {
-        if (!publicKey) {
-            setListTokens([]);
-            setLoading(false);
-            return;
-        }
-
-        try {
-            setLoading(true);
-            setError(null);
-            const tokens = await getUserTokens(publicKey.toBase58());
-            setListTokens(tokens);
-        } catch (error) {
-            console.error('Error fetching user tokens:', error);
-            setError('Failed to load your tokens. Please try again.');
-            setListTokens([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [publicKey]);
+    const { tokens: listTokens, isLoading: loading, error, refresh: refreshTokens } = useUserTokens(publicKey?.toBase58());
 
     useEffect(() => {
         fetchSolPrice();
     }, [fetchSolPrice]);
-
-    useEffect(() => {
-        fetchUserTokens();
-    }, [fetchUserTokens]);
 
     // Determine which tokens to display
     const displayTokens = searchQuery.trim() && !isSearching ? searchResults : listTokens;

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getTokenByMint, getPopularTokens } from "@/lib/api";
+import { getTokenByMint, getPopularTokens, getTransactionsByToken } from "@/lib/api";
 import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";
@@ -9,6 +9,8 @@ import LaunchStatusData from "@/components/token/LaunchStatusData";
 import { LaunchConditions } from "@/components/token/LaunchConditions";
 import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
 import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
+import Transactions from "@/components/token/Transactions";
+import { getSolPrice } from "@/lib/sol";
 
 // Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
@@ -61,7 +63,6 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
         const title = `${token.name} (${token.symbol}) | POTLAUNCH`;
         const description = token.description || `Discover ${token.name} (${token.symbol}) on POTLAUNCH. Trade, explore, and learn about this token.`;
         const imageUrl = token.metadata.tokenUri || "/logo.png";
-        const bannerUrl = token.metadata.bannerUri || "/hero.png";
         
         // Create structured data for better SEO
         const structuredData = {
@@ -123,12 +124,6 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 siteName: "PotLaunch",
                 images: [
                     {
-                        url: bannerUrl,
-                        width: 1200,
-                        height: 630,
-                        alt: `${token.name} banner image`,
-                    },
-                    {
                         url: imageUrl,
                         width: 400,
                         height: 400,
@@ -142,7 +137,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 creator: "@potlaunch",
                 title,
                 description,
-                images: [bannerUrl],
+                images: [imageUrl],
             },
             alternates: {
                 canonical: `https://potlaunch.com/token/${address}`,
@@ -181,9 +176,8 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
 export default async function TokenDetailPage({ params }: { params: Promise<{ address: string }> }) {
     const { address } = await params;
     const token = await getTokenByMint(address);
-    // console.log(token);
     const launchConditionsData = token ? await fetchLaunchConditionsData(token) : null;
-
+    const solPrice = await getSolPrice();
 
     if (!token) {
         return (
@@ -249,7 +243,7 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                 {/* <TradingInterface token={token} address={address} /> */}
 
                 <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1">
-                    <h2 className="text-2xl font-semibold mb-4">Description</h2>
+                    <h2 className="text-2xl font-medium mb-4">Description</h2>
                     <p className="text-gray-600 text-sm">
                         {token.description}
                     </p>
@@ -268,6 +262,13 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
 
                 <LiquidityPoolsWrapper 
                     token={token}
+                />
+
+                <Transactions 
+                    tokenAddress={address}
+                    tokenSymbol={token.symbol}
+                    tokenImage={token.metadata.tokenUri}
+                    solPrice={solPrice || 0}
                 />
             </div>
             <TradingInterface token={token} address={address} />

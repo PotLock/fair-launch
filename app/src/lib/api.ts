@@ -1,7 +1,7 @@
-import { Token, CreateToken, SwapParams, SwapResponse } from '@/types/api';
+import { Token, CreateToken, SwapParams, SwapResponse, Transaction, TransactionCreateRequest, TransactionStatus } from '@/types/api';
 import { PoolState, PoolConfig } from '@/types/pool';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function createToken(tokenData: CreateToken) {
   try {
@@ -465,3 +465,117 @@ export async function uploadMetadata(metadata: {
   }
 }
 
+// Transactions API
+export async function createTransaction(payload: TransactionCreateRequest): Promise<Transaction> {
+  try {
+    const response = await fetch(`${API_URL}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.transaction || result.data;
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    throw new Error('Failed to create transaction');
+  }
+}
+
+export async function listTransactions(options?: {
+  userAddress?: string;
+  action?: 'BUY' | 'SELL';
+  baseToken?: string;
+  quoteToken?: string;
+  status?: 'pending' | 'success' | 'failed';
+  chain?: string;
+}): Promise<Transaction[]> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.userAddress) params.append('userAddress', options.userAddress);
+    if (options?.action) params.append('action', options.action);
+    if (options?.baseToken) params.append('baseToken', options.baseToken);
+    if (options?.quoteToken) params.append('quoteToken', options.quoteToken);
+    if (options?.status) params.append('status', options.status);
+    if (options?.chain) params.append('chain', options.chain);
+
+    const url = params.toString()
+      ? `${API_URL}/api/transactions?${params.toString()}`
+      : `${API_URL}/api/transactions`;
+
+    const response = await fetch(url, { next: { revalidate: 10 } });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.transactions || result.data || [];
+  } catch (error) {
+    console.error('Error listing transactions:', error);
+    throw new Error('Failed to list transactions');
+  }
+}
+
+export async function getTransactionsByUser(address: string): Promise<Transaction[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/transactions/user/${address}`, {
+      next: { revalidate: 10 }
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.transactions || result.data || [];
+  } catch (error) {
+    console.error('Error getting transactions by user:', error);
+    throw new Error('Failed to get transactions by user');
+  }
+}
+
+export async function getTransactionsByToken(address: string): Promise<Transaction[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/transactions/token/${address}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.transactions || result.data || [];
+  } catch (error) {
+    console.error('Error getting transactions by token:', error);
+    throw new Error('Failed to get transactions by token');
+  }
+}
+
+export async function updateTransactionStatus(id: string, status: TransactionStatus): Promise<Transaction> {
+  try {
+    const response = await fetch(`${API_URL}/api/transactions/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.transaction || result.data;
+  } catch (error) {
+    console.error('Error updating transaction status:', error);
+    throw new Error('Failed to update transaction status');
+  }
+}

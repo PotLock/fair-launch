@@ -121,9 +121,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TokenPage() {
-  const tokensResponse = await getTokens();
-  const tokens = tokensResponse.data || [];
-
   return (
     <div className="min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -132,7 +129,7 @@ export default async function TokenPage() {
           Discover and participate in token launches. Support projects you believe in.
         </p>
         
-        <TokenSearch initialTokens={tokens} />
+        <TokenSearch />
       </div>
     </div>
   );

@@ -80,62 +80,12 @@ export function formatMarketCap(marketCap: number): string {
 }
 
 
-// Token price calculation utilities
-export function calculateTokenPrice(sqrtPrice: string): number {
-  try {
-    // Validate input
-    if (!sqrtPrice || sqrtPrice === "00" || sqrtPrice === "0") {
-      return 0;
-    }
-
-    // Convert hex string to decimal
-    const sqrtPriceDecimal = parseInt(sqrtPrice, 16);
-    
-    // Check if conversion was successful
-    if (isNaN(sqrtPriceDecimal) || sqrtPriceDecimal === 0) {
-      return 0;
-    }
-    
-    // Apply the DBC formula: price = (sqrtPrice / 2^64)^2
-    const price = Math.pow(sqrtPriceDecimal / Math.pow(2, 64), 2);
-    
-    // Handle edge cases
-    if (!isFinite(price) || price < 0) {
-      return 0;
-    }
-    
-    return price;
-  } catch (error) {
-    console.error('Error calculating token price:', error);
-    return 0;
-  }
-}
-
 export function formatTokenPrice(price: number): string {
   if (price === 0) return '0';
   if (price < 0.000001) return price.toExponential(2);
   if (price < 0.01) return price.toFixed(6);
   if (price < 1) return price.toFixed(4);
   return price.toFixed(2);
-}
-
-export function calculateMarketCap(price: number, totalSupply: string, decimals: number): number {
-  try {
-    const supply = parseFloat(totalSupply);
-    
-    // Calculate market cap
-    const marketCap = price * supply;
-    
-    // Handle edge cases
-    if (!isFinite(marketCap) || marketCap < 0) {
-      return 0;
-    }
-    
-    return marketCap;
-  } catch (error) {
-    console.error('Error calculating market cap:', error);
-    return 0;
-  }
 }
 
 export const hexToNumber = (hex: string) => (!hex || hex === "00" ? 0 : parseInt(hex, 16));
@@ -195,3 +145,22 @@ export function formatNumberInput(value: string): string {
   
   return decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
 }
+
+export function timeAgo(timestamp: string): string {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diff = Math.floor((now.getTime() - then.getTime()) / 1000); // seconds
+
+  if (diff < 60) return `${diff} second${diff !== 1 ? "s" : ""} ago`;
+  const mins = Math.floor(diff / 60);
+  if (mins < 60) return `${mins} minute${mins !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years !== 1 ? "s" : ""} ago`;
+}
+
