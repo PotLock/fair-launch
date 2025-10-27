@@ -61,7 +61,20 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let next = value;
+    // Limit token symbol to max 5 characters
+    if (field === 'tokenSymbol') {
+      next = value.slice(0, 5);
+    }
+    // Enforce numeric-only for supply
+    if (field === 'tokenSupply') {
+      next = value.replace(/[^\d]/g, '');
+    }
+    // Enforce numeric-only for decimal and max 2 digits (0-99)
+    if (field === 'decimal') {
+      next = value.replace(/[^\d]/g, '').slice(0, 2);
+    }
+    setFormData(prev => ({ ...prev, [field]: next }));
   };
 
   const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
@@ -217,8 +230,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
 
     const decimals = Number(formData.decimal);
-    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 9) {
-      toast.error('Token decimals must be an integer between 0 and 9');
+    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 99) {
+      toast.error('Token decimals must be an integer between 0 and 99');
       return;
     }
     
@@ -549,6 +562,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 placeholder="Token Symbol"
                 value={formData.tokenSymbol.toUpperCase()}
                 onChange={(e) => handleInputChange('tokenSymbol', e.target.value)}
+                maxLength={5}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
               />
             </div>
@@ -561,6 +575,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={formData.tokenSupply}
                 onChange={(e) => handleInputChange('tokenSupply', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
@@ -572,6 +588,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]{1,2}"
+                maxLength={2}
                 value={formData.decimal}
                 onChange={(e) => handleInputChange('decimal', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"

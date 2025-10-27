@@ -60,7 +60,24 @@ export default function TokenInfo({
   const progressPercentage = (currentStep / totalSteps) * 100;
 
   const handleInputChange = (field: keyof TokenInfoData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let next: string | number = value;
+    // Limit token symbol to max 5 characters
+    if (field === 'symbol') {
+      next = value.slice(0, 5);
+    }
+    // Enforce numeric-only for total token supply (positive integer)
+    if (field === 'totalTokenSupply') {
+      const digits = value.replace(/[^\d]/g, '');
+      next = digits ? Number(digits) : 0;
+    }
+    // Enforce numeric-only for decimals and max 2 digits (0-99)
+    if (field === 'tokenBaseDecimal' || field === 'tokenQuoteDecimal') {
+      const digits = value.replace(/[^\d]/g, '').slice(0, 2);
+      let num = digits ? Number(digits) : 0;
+      if (num > 99) num = 99;
+      next = num;
+    }
+    setFormData(prev => ({ ...prev, [field]: next as any }));
   };
 
   const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
@@ -198,6 +215,7 @@ export default function TokenInfo({
                   placeholder="Token Symbol"
                   value={formData.symbol.toUpperCase()}
                   onChange={(e) => handleInputChange('symbol', e.target.value)}
+                  maxLength={5}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 />
               </div>
@@ -411,6 +429,7 @@ export default function TokenInfo({
                 onChange={(e) => handleInputChange('totalTokenSupply', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 min="1"
+                step="1"
                 required
               />
             </div>
@@ -420,29 +439,31 @@ export default function TokenInfo({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Token Base Decimal
                 </label>
-                <input
-                  type="number"
-                  placeholder="6"
-                  value={formData.tokenBaseDecimal}
-                  onChange={(e) => handleInputChange('tokenBaseDecimal', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
-                  min="0"
-                  max="18"
-                />
+              <input
+                type="number"
+                placeholder="6"
+                value={formData.tokenBaseDecimal}
+                onChange={(e) => handleInputChange('tokenBaseDecimal', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                min="0"
+                max="99"
+                step="1"
+              />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Token Quote Decimal
                 </label>
-                <input
-                  type="number"
-                  placeholder="6"
-                  value={formData.tokenQuoteDecimal}
-                  onChange={(e) => handleInputChange('tokenQuoteDecimal', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
-                  min="0"
-                  max="18"
-                />
+              <input
+                type="number"
+                placeholder="6"
+                value={formData.tokenQuoteDecimal}
+                onChange={(e) => handleInputChange('tokenQuoteDecimal', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                min="0"
+                max="99"
+                step="1"
+              />
               </div>
             </div>
           </div>
