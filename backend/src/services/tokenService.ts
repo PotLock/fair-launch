@@ -20,6 +20,7 @@ import type {
   TokenWithRelations,
   DbcConfigWithRelations,
   CleanTokenResponse,
+  UpdateTokenRequest,
 } from '../types';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getRpcSOLEndpoint } from '../lib/sol';
@@ -387,6 +388,70 @@ export class TokenService {
     } catch (error) {
       console.error('Error deleting token:', error);
       throw new Error('Failed to delete token');
+    }
+  }
+
+  async updateToken(id: string, updates: UpdateTokenRequest): Promise<CleanTokenResponse> {
+    try {
+      if (!id || id.trim() === '') {
+        throw new Error('Token ID is required');
+      }
+
+      const values: any = {};
+      if (updates.name !== undefined) values.name = updates.name;
+      if (updates.symbol !== undefined) values.symbol = updates.symbol;
+      if (updates.description !== undefined) values.description = updates.description;
+      if (updates.totalSupply !== undefined) values.totalSupply = updates.totalSupply;
+      if (updates.decimals !== undefined) values.decimals = parseInt(updates.decimals, 10);
+      if (updates.mintAddress !== undefined) values.mintAddress = updates.mintAddress;
+      if (updates.owner !== undefined) values.owner = updates.owner;
+      if (updates.launchpad !== undefined) values.launchpad = updates.launchpad;
+      if (updates.tags !== undefined) values.tags = updates.tags;
+      if (updates.active !== undefined) values.active = updates.active;
+
+      // Always update updatedAt
+      values.updatedAt = new Date();
+
+      const [updated] = await db
+        .update(tokens)
+        .set(values)
+        .where(eq(tokens.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new Error('Token not found');
+      }
+
+      // Return full clean token with relations
+      const token = await db.query.tokens.findFirst({
+        where: eq(tokens.id, id),
+        with: {
+          metadata: true,
+          dbcConfig: {
+            with: {
+              buildCurveParams: true,
+              lockedVestingParams: true,
+              baseFeeParams: {
+                with: {
+                  feeSchedulerParams: true,
+                  rateLimiterParams: true,
+                }
+              },
+              migrationFee: true,
+              migratedPoolFee: true,
+            }
+          }
+        },
+      });
+
+      if (!token) {
+        throw new Error('Token not found');
+      }
+
+      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+    } catch (error) {
+      console.error('Error updating token:', error);
+      throw new Error(error instanceof Error ? error.message : 'Failed to update token');
     }
   }
 

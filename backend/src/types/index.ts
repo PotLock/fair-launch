@@ -186,6 +186,20 @@ export const CreateTokenSchema = z.object({
   tokenConfig: TokenConfigSchema,
 });
 
+// Update Token Schema (partial updates)
+export const UpdateTokenSchema = z.object({
+  name: z.string().min(1).optional(),
+  symbol: z.string().min(1).optional(),
+  description: z.string().optional(),
+  totalSupply: z.string().optional(),
+  decimals: z.string().regex(/^\d+$/).optional(),
+  mintAddress: z.string().min(1).optional(),
+  owner: z.string().min(1).optional(),
+  launchpad: z.enum(['potlaunch', 'cookedpad']).optional(),
+  tags: z.array(z.string()).optional(),
+  active: z.boolean().optional(),
+});
+
 
 // Schema for DBC Config Request
 export const DbcConfigRequestSchema = z.object({
@@ -472,6 +486,7 @@ export interface CleanBaseFeeParamsResponse extends Omit<BaseFeeParamsEntity, 'i
 
 // Request/Response Types
 export type CreateTokenRequest = z.infer<typeof CreateTokenSchema>;
+export type UpdateTokenRequest = z.infer<typeof UpdateTokenSchema>;
 export type DbcConfigRequestType = z.infer<typeof DbcConfigRequestSchema>;
 export type DeployTokenRequestType = z.infer<typeof DeployTokenRequestSchema>;
 export type TokenConfig = z.infer<typeof TokenConfigSchema>;

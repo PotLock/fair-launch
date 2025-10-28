@@ -1,4 +1,3 @@
-import { z } from 'zod';
 export interface Metadata {
     name: string;
     symbol: string;

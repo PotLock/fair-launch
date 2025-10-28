@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { TokenService } from '../services/tokenService';
-import { CreateTokenSchema } from '../types';
+import { CreateTokenSchema, UpdateTokenSchema } from '../types';
 import { z } from 'zod';
 
 const app = new Hono();
@@ -353,6 +353,29 @@ app.delete('/:id', async (c) => {
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
     }, 500);
+  }
+});
+
+// Update token by ID (partial update)
+app.patch('/:id', zValidator('json', UpdateTokenSchema), async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!id || id.trim() === '') {
+      return c.json({ success: false, message: 'Token ID is required' }, 400);
+    }
+
+    const payload = c.req.valid('json');
+    const updated = await tokenService.updateToken(id, payload);
+    return c.json({ success: true, data: updated, message: 'Token updated successfully' });
+  } catch (error) {
+    console.error('Error in update token route:', error);
+    if (error instanceof z.ZodError) {
+      return c.json({ success: false, message: 'Validation error: ' + error.errors.map(e => e.message).join(', ') }, 400);
+    }
+    if (error instanceof Error && error.message === 'Token not found') {
+      return c.json({ success: false, message: 'Token not found' }, 404);
+    }
+    return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
   }
 });
 
