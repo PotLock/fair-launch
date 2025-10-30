@@ -4,10 +4,6 @@ import {
   getPoolStateByMint,
   getTokenHolders 
 } from "@/lib/api";
-import { 
-  formatTokenPrice, 
-  formatMarketCap 
-} from "@/utils";
 import { getSolPrice } from "@/lib/sol";
 import LaunchStatus from "./LaunchStatus";
 

@@ -1,4 +1,4 @@
-import { type DbcConfig, LaunchClient} from "@cookedbusiness/halfbaked-sdk";
+import { ApiClient, type DbcConfig, LaunchClient} from "@cookedbusiness/halfbaked-sdk";
 import { Connection, Keypair, PublicKey, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "../lib/sol";
 import type { DbcConfigRequest, DeployTokenRequest, SwapTokenRequest } from "../types";
@@ -11,10 +11,12 @@ import Decimal from 'decimal.js'
 export class HalfbakService {
     private launchClient: LaunchClient;
     private connection: Connection;
+    private apiClient: ApiClient;
 
     constructor() {
         this.connection = new Connection(getRpcSOLEndpoint());
         this.launchClient = new LaunchClient(this.connection);
+        this.apiClient = new ApiClient()
     }
 
     async createDbcConfig(dbcConfigRequest: DbcConfigRequest) {
@@ -110,6 +112,28 @@ export class HalfbakService {
         baseMint: swapRequest.baseMint.toBase58(),
         transaction: serializedTx,
       };
+    }
+
+    async whiteListToken(tokenAddress: string){
+      const result = await this.apiClient.whitelistCookedpadToken(tokenAddress);
+      if(!result){
+        return {
+          success: false,
+          message: 'Failed to whitelist token',
+        }
+      }
+      return result
+    }
+
+    async unWhitelistToken(tokenAddress: string){
+      const result = await this.apiClient.unwhitelistCookedpadToken(tokenAddress);
+      if(!result){
+        return {
+          success: false,
+          message: 'Failed to unwhitelist token',
+        }
+      }
+      return result
     }
 
     async getPoolStateByMintAddress(mintAddress: string){

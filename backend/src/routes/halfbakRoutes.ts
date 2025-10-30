@@ -103,6 +103,58 @@ app.post('/deploy-token', zValidator('json', DeployTokenRequestSchema), async (c
   }
 });
 
+// WhiteList Token
+app.post('/whitelist', zValidator('json', z.object({ tokenAddress: z.string().min(1) })), async (c) => {
+  try {
+    const requestData = c.req.valid('json');
+    const result = await halfbakService.whiteListToken(requestData.tokenAddress);
+    return c.json({
+      success: true,
+      data: result
+    }, 201);
+  } catch (error) {
+    console.error('Error in whitelist token route:', error);
+    
+    if (error instanceof Error) {
+      return c.json({
+        success: false,
+        message: error.message
+      }, 400);
+    }
+    
+    return c.json({
+      success: false,
+      message: 'Internal server error'
+    }, 500);
+  }
+});
+
+// UnWhiteList Token
+app.post('/unwhitelist', zValidator('json', z.object({ tokenAddress: z.string().min(1) })), async (c) => {
+  try {
+    const requestData = c.req.valid('json');
+    const result = await halfbakService.unWhitelistToken(requestData.tokenAddress);
+    return c.json({
+      success: true,
+      data: result
+    }, 201);
+  } catch (error) {
+    console.error('Error in unwhitelist token route:', error);
+    
+    if (error instanceof Error) {
+      return c.json({
+        success: false,
+        message: error.message
+      }, 400);
+    }
+    
+    return c.json({
+      success: false,
+      message: 'Internal server error'
+    }, 500);
+  }
+});
+
 // Add Swap Route
 app.post('/swap', zValidator('json', SwapTokenRequestSchema), async (c) => {
   try {

@@ -8,10 +8,8 @@ import transactionRoutes from './src/routes/transactionRoutes';
 
 const app = new Hono();
 
-// Middleware
 app.use(cors());
 
-// Health check
 app.get('/', (c) => {
   return c.json({
     message: 'POTLAUNCH Backend API',
@@ -20,13 +18,12 @@ app.get('/', (c) => {
   });
 });
 
-// Routes
 app.route('/api/tokens', tokenRoutes);
 app.route('/api/ipfs', ipfsRoutes);
 app.route('/api/halfbak', halfbakRoutes);
 app.route('/api/transactions', transactionRoutes);
 
-// Error handling
+
 app.onError((err, c) => {
   console.error('Server error:', err);
   return c.json({
