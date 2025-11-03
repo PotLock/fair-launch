@@ -43,6 +43,13 @@
       "when": 1761596530137,
       "tag": "0005_slimy_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762020221473,
+      "tag": "0006_lowly_cyclops",
+      "breakpoints": true
     }
   ]
 }

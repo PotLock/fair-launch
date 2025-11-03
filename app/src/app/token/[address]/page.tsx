@@ -267,7 +267,6 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                 <Transactions 
                     tokenAddress={address}
                     tokenSymbol={token.symbol}
-                    tokenImage={token.metadata.tokenUri}
                     solPrice={solPrice || 0}
                 />
             </div>

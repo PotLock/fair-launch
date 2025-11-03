@@ -76,11 +76,11 @@ export const WalletButton: React.FC = () => {
       <div className="flex flex-col gap-2">
         <Button 
           variant="default" 
-          className="shadow-none text-black flex items-center space-x-2 bg-white border border-gray-200 hover:text-black cursor-pointer hover:bg-gray-50"
+          className="shadow-none text-white flex items-center space-x-2 bg-red-500 border border-red-500 hover:text-white cursor-pointer hover:bg-red-600"
           onClick={() => setIsSidebarOpen(true)}
         >
           <User className="w-4 h-4" />
-          <span className='text-black'>{getButtonText()}</span>
+          <span className='text-white'>{getButtonText()}</span>
         </Button>
         
         <SignInModal
@@ -104,7 +104,7 @@ export const WalletButton: React.FC = () => {
     <div className="flex flex-col gap-2">
       <button
         onClick={handleWalletButtonClick}
-        className="w-full bg-white border border-gray-200 px-4 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+        className="w-full bg-red-500 border border-red-500 text-white px-4 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 transition-colors cursor-pointer"
       >
         {getButtonText()}
       </button>

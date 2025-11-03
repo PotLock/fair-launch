@@ -1,28 +1,48 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { copyToClipboard, timeAgo } from "@/utils";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { useTransactions } from "@/hooks/useSWR";
+import { TransactionAction } from "@/types/api";
 
 interface TransactionsProps {
     tokenAddress: string;
     tokenSymbol: string;
-    tokenImage: string;
     solPrice: number;
 }
 
-export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, solPrice }: TransactionsProps) {
-    const [isExpanded, setIsExpanded] = useState(true);
+export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: TransactionsProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
     const { transactions, isLoading, error } = useTransactions(tokenAddress);
 
-    // Calculate pagination
-    const totalPages = Math.ceil(transactions.length / itemsPerPage);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [tokenAddress]);
+
+    const totalPages = Math.ceil((transactions?.length || 0) / itemsPerPage) || 1;
+
+    const paginatedTransactions = useMemo(() => {
+        if (!transactions || transactions.length === 0) return [];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return transactions.slice(startIndex, endIndex);
+    }, [transactions, currentPage, itemsPerPage]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, transactions?.length || 0);
+
+    const handlePreviousPage = () => {
+        setCurrentPage((prev) => Math.max(1, prev - 1));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+    };
 
     return (
         <Card className="w-full max-w-7xl mx-auto p-5 flex flex-col gap-5 shadow-none">
@@ -32,7 +52,8 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
                 <Button
                     variant="ghost"
                     size="icon"
-                    disabled={currentPage === 1}
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1 || isLoading}
                     className="text-slate-500 hover:text-slate-700 disabled:text-slate-300"
                 >
                     <ChevronLeft className="w-5 h-5" />
@@ -43,7 +64,8 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
                 <Button
                     variant="ghost"
                     size="icon"
-                    disabled={currentPage === totalPages}
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages || isLoading}
                     className="text-slate-500 hover:text-slate-700 disabled:text-slate-300"
                 >
                     <ChevronRight className="w-5 h-5" />
@@ -67,17 +89,17 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
                         </th>
                         <th className="px-4 py-4 text-left">
                             <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>ACTION</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
                             <span>By</span>
                             </div>
                         </th>
                         <th className="px-4 py-4 text-left">
                             <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
                             <span>AMOUNT</span>
-                            </div>
-                        </th>
-                        <th className="px-4 py-4 text-left">
-                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
-                            <span>TOKEN</span>
                             </div>
                         </th>
                         <th className="px-4 py-4 text-left">
@@ -89,14 +111,31 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
                 </thead>
 
                 <tbody>
-                    {transactions.length > 0 ? (
-                        transactions.map((transfer) => (
+                    {isLoading ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                                Loading transactions...
+                            </td>
+                        </tr>
+                    ) : error ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-red-500">
+                                Error loading transactions
+                            </td>
+                        </tr>
+                    ) : paginatedTransactions.length > 0 ? (
+                        paginatedTransactions.map((transfer) => (
                         <tr key={transfer.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
                             <td className="px-4 py-4">
                                 <Link href={`https://solscan.io/tx/${transfer.txHash}?cluster=devnet`} target="_blank" className="text-blue-600 font-mono text-xs truncate max-w-xs">{transfer.txHash.slice(0, 10)+'...'}</Link>
                             </td>
                             <td className="px-4 py-4">
                                 <span className="text-slate-700 font-mono text-xs font-medium">{timeAgo(transfer.createdAt)}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                                <div className="flex items-center gap-2">
+                                    <span className={`${transfer.action === TransactionAction.BUY ? 'text-green-600' : 'text-red-600'} font-mono text-sm font-medium`}>{transfer.action}</span>
+                                </div>
                             </td>
                             <td className="px-4 py-4">
                                 <div className="flex items-center gap-2">
@@ -110,27 +149,19 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
                                 </div>
                             </td>
                             <td className="px-4 py-4">
-                                <span className="text-slate-900 font-mono text-xs font-medium">{Number(transfer.amountIn).toFixed(5)} SOL</span>
+                                <span className="text-slate-900 font-mono text-xs font-medium">{Number(transfer.amountIn).toFixed(3)} {transfer.action === TransactionAction.BUY ? "SOL" : tokenSymbol}</span>
                             </td>
                             <td className="px-4 py-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full overflow-hidden">
-                                        <img src={tokenImage} alt={tokenSymbol} className="w-full h-full rounded-full" />
-                                    </div>
-                                    <span className="text-slate-900 text-xs font-medium">{tokenSymbol}</span>
-                                </div>
-                            </td>
-                            <td className="px-4 py-4">
-                                <span className="text-slate-900 font-mono text-xs font-medium">${(Number(transfer.amountIn) * solPrice).toFixed(3)}</span>
+                                <span className="text-slate-900 font-mono text-xs font-medium">${transfer.action === TransactionAction.BUY ? (Number(transfer.amountIn) * solPrice).toFixed(3) : (Number(transfer.amountOut) * solPrice).toFixed(3)}</span>
                             </td>
                         </tr>
                     ))
                     ) : (
-                    <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                        No transfers match the selected filters
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                                No transfers match the selected filters
+                            </td>
+                        </tr>
                     )}
                 </tbody>
                 </table>
@@ -138,7 +169,11 @@ export default function Transactions({ tokenAddress, tokenSymbol, tokenImage, so
 
             <div className="mt-6 text-xs text-slate-500 flex items-center justify-between">
                 <span>
-                    Showing {transactions.length} of {transactions.length} transfers
+                    {transactions?.length > 0 ? (
+                        `Showing ${startIndex} - ${endIndex} of ${transactions.length} transfers`
+                    ) : (
+                        "No transfers found"
+                    )}
                 </span>
                 <span>
                     Page {currentPage} of {totalPages}

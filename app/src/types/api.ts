@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface Metadata {
     name: string;
     symbol: string;
@@ -242,8 +244,32 @@ export interface SwapResponse {
 }
 
 // Transactions API Types
-export type TransactionAction = 'BUY' | 'SELL';
-export type TransactionStatus = 'pending' | 'success' | 'failed';
+export enum TransactionAction {
+  BUY = 'BUY',
+  SELL = 'SELL',
+  BRIDGE = 'BRIDGE',
+  DEPLOY = 'DEPLOY',
+}
+
+export enum TransactionStatus {
+  PENDING = 'pending',
+  SUCCESS = 'success',
+  FAILED = 'failed',
+}
+
+export enum TransactionChain {
+  SOLANA = 'SOLANA',
+  ETHEREUM = 'ETHEREUM',
+  NEAR = 'NEAR',
+  BASE = 'BASE',
+  ARBITRUM = 'ARBITRUM',
+  BNB = 'BNB',
+  BITCOIN = 'BITCOIN',
+}
+
+export const TransactionActionEnum = z.enum(['BUY', 'SELL', 'BRIDGE', 'DEPLOY']);
+export const TransactionStatusEnum = z.enum(['pending', 'success', 'failed']);
+export const TransactionChainEnum = z.enum(['SOLANA', 'ETHEREUM', 'NEAR', 'BASE', 'ARBITRUM', 'BNB', 'BITCOIN']);
 
 // Request payload for creating a transaction
 export interface TransactionCreateRequest {
@@ -259,7 +285,7 @@ export interface TransactionCreateRequest {
   fee: number;
   feeToken: string;
   status: TransactionStatus;
-  chain: string;
+  chain: TransactionChain;
   poolAddress: string;
 }
 
@@ -278,7 +304,7 @@ export interface Transaction {
   fee: string | number;
   feeToken: string;
   status: TransactionStatus;
-  chain: string;
+  chain: TransactionChain;
   poolAddress: string;
   createdAt: string;
   updatedAt: string;

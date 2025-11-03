@@ -26,7 +26,6 @@ interface BridgeDeployModalProps {
     bridgeAddress: string[];
     token: Token;
     currentPrice: number;
-    refetchBridgeAddress: () => Promise<void>;
 }
 
 interface Chain {
@@ -41,15 +40,6 @@ interface Chain {
 
 const deploymentOptions = [
     {
-        name: "Ethereum",
-        logo: "/chains/ethereum.svg",
-        description: "Deploy to Ethereum mainnet.",
-        availableDexes: "Uniswap V3, SushiSwap",
-        cost: "0.015",
-        estimatedTime: "2-5 minutes",
-        disabled: true
-    },
-    {
         name: "NEAR",
         logo: "/chains/near-dark.svg",
         description: "Deploy to Near mainnet.",
@@ -57,10 +47,19 @@ const deploymentOptions = [
         cost: "3.25 NEAR",
         estimatedTime: "1-3 minutes",
         disabled: false
+    },
+    {
+        name: "Ethereum",
+        logo: "/chains/ethereum.svg",
+        description: "Deploy to Ethereum mainnet.",
+        availableDexes: "Uniswap V3, SushiSwap",
+        cost: "0.015",
+        estimatedTime: "2-5 minutes",
+        disabled: true
     }
 ];
 
-export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, currentPrice, refetchBridgeAddress }: BridgeDeployModalProps) {
+export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, currentPrice }: BridgeDeployModalProps) {
     const defaultTab = bridgeAddress && bridgeAddress.length > 0 ? "bridge" : "create";
     const [activeTab, setActiveTab] = useState<"bridge" | "create">(defaultTab);
     const [selectedOption, setSelectedOption] = useState<typeof deploymentOptions[number] | null>(null);
@@ -165,7 +164,6 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
             // Step 4: Finalizing deployment (100%)
             setDeploymentProgress(100);
             await new Promise(resolve => setTimeout(resolve, 1000));
-            await refetchBridgeAddress()
             setShowProcessingModal(false);
             setShowSuccessModal(true);
         } catch (error) {
@@ -198,9 +196,8 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setShowBridgeProcessingModal(true);
     };
 
-    const handleBridgeProcessingComplete = (transactionHash: string, transactionHashNear: string) => {
+    const handleBridgeProcessingComplete = (transactionHash: string) => {
         setBridgeTransactionHash(transactionHash);
-        setBridgeTransactionHashNear(transactionHashNear);
         setShowBridgeProcessingModal(false);
         setShowBridgeSuccessModal(true);
     };

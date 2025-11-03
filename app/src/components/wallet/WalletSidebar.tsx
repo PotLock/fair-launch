@@ -216,7 +216,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({
                             <Button
                             variant="outline"
                             size="sm"
-                            className="text-sm border-gray-300 hover:bg-gray-50 cursor-pointer"
+                            className="text-sm border-gray-300 hover:bg-gray-50 hover:text-gray-500 cursor-pointer"
                             onClick={() => {
                                 onClose();
                                 onConnectAnother?.();

@@ -2,6 +2,7 @@ import { db } from '../../db/connection';
 import { transactions } from '../../db/schema';
 import { and, eq, or } from 'drizzle-orm';
 import type { CreateTransactionRequest, TransactionQueryRequest, TransactionEntity } from '../types';
+import { TransactionStatus, TransactionChain } from '../types';
 
 export class TransactionService {
   async createTransaction(data: CreateTransactionRequest): Promise<TransactionEntity> {
@@ -17,8 +18,8 @@ export class TransactionService {
       slippageBps: (data.slippageBps ?? 50).toString(),
       fee: (data.fee ?? 0).toString(),
       feeToken: data.feeToken ?? 'SOL',
-      status: data.status ?? 'pending',
-      chain: data.chain ?? 'solana',
+      status: data.status ?? TransactionStatus.PENDING,
+      chain: data.chain ?? TransactionChain.SOLANA,
       poolAddress: data.poolAddress,
     }).returning();
 
@@ -62,14 +63,14 @@ export class TransactionService {
     const rows = await db.query.transactions.findMany({
       where: and(
         or(eq(transactions.baseToken, tokenAddress), eq(transactions.quoteToken, tokenAddress)),
-        eq(transactions.status, 'success')
+        eq(transactions.status, TransactionStatus.SUCCESS)
       ),
       orderBy: (transactions, { desc }) => [desc(transactions.createdAt)],
     });
     return rows as unknown as TransactionEntity[];
   }
 
-  async updateTransactionStatus(id: string, status: 'pending' | 'success' | 'failed'): Promise<TransactionEntity | null> {
+  async updateTransactionStatus(id: string, status: TransactionStatus): Promise<TransactionEntity | null> {
     const [updated] = await db
       .update(transactions)
       .set({ status, updatedAt: new Date() })

@@ -21,13 +21,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
     
     // Extract data from props
     const { bridgeTokenAddresses, solPrice, poolConfig, poolState, tokenPrice } = data;
-    
-    // Placeholder function for refetching bridge addresses
-    // In RSC pattern, this should be handled by the parent component
-    const refetchBridgeAddress = async () => {
-        // This will be handled by the parent component in RSC pattern
-        console.log('Refetch bridge addresses - handled by parent component');
-    };
+
 
     const parseBridgedAddresses = (addresses: string[]) => {
         return addresses.map(address => {
@@ -233,7 +227,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                     </div>
                     <button 
                         onClick={() => setIsBridgeModalOpen(true)}
-                        className="flex items-center text-xs gap-2 px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center text-xs gap-2 px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                         <Plus className="w-3 h-3" />
                         Bridge / Deploy
@@ -339,7 +333,6 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                 bridgeAddress={bridgeTokenAddresses}
                 token={token}
                 currentPrice={tokenPrice}
-                refetchBridgeAddress={refetchBridgeAddress}
             />
         </Card>
     );

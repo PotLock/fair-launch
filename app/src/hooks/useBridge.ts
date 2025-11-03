@@ -13,7 +13,8 @@ import {
   SolanaBridgeClient,
   NetworkType,
   MPCSignature,
-  EvmBridgeClient
+  EvmBridgeClient,
+  normalizeAmount
 } from 'omni-bridge-sdk';
 import { SOL_PRIVATE_KEY } from '../configs/env.config';
 import useAnchorProvider from '@/hooks/useAnchorProvider';
@@ -30,8 +31,32 @@ export const useBridge = () => {
   const { address: evmAddress, isConnected: evmConnected } = useAccount(); 
   const { data: walletClient } = useWalletClient();
 
+
+  const ensureSolana = async () => {
+    if (!anchorProvider?.providerProgram) {
+      throw new Error("Anchor provider not available. Please ensure your wallet is connected.");
+    }
+    return new SolanaBridgeClient(anchorProvider.providerProgram as any);
+  };
+
+  const ensureNear = async () => {
+    if (!nearWalletSelector) {
+      throw new Error("NEAR wallet not connected");
+    }
+    return new NearWalletSelectorBridgeClient(await nearWalletSelector);
+  };
+
+  const ensureEth = async () => {
+    if(!evmAddress && !evmConnected || !walletClient){
+      throw new Error('Please connect your EVM wallet first');
+    }
+    const provider = new ethers.BrowserProvider(walletClient.transport);
+    const evmWallet = await provider.getSigner();
+    return new EvmBridgeClient(evmWallet, ChainKind.Eth);
+  };
+
   // Bridge from Solana to NEAR
-  const transferToken = useCallback(async (
+  const transferToken = async (
     network: NetworkType,
     fromChain: ChainKind,
     toChain: ChainKind,
@@ -39,25 +64,25 @@ export const useBridge = () => {
     addressToken: string,
     amount: bigint,
     recipientAddress: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ) => {
     try {
-
       // 1. Set network type (10%)
-      onProgress?.(10);
       setNetwork(network);
+      onProgress?.(10);
 
       // 2. Initialize API (20%)
-      onProgress?.(20);
       const api = new OmniBridgeAPI();
+      onProgress?.(20);
 
       // 3. Create addresses and get fees (30%)
-      onProgress?.(30);
       const sender = omniAddress(fromChain, senderAddress);
       const recipient = omniAddress(toChain, recipientAddress);
       const token = omniAddress(fromChain, addressToken);
+      onProgress?.(40);
 
-      const fee = await api.getFee(sender, recipient, token);
+      const fee = await api.getFee(sender, recipient, token, amount);
+      onProgress?.(50);
 
       console.log("amount", amount)
       const transfer = {
@@ -68,125 +93,20 @@ export const useBridge = () => {
         recipient,
       };
 
-      // 4. Execute transfer transaction (50%)
-      onProgress?.(50);
-      let result;
-      if(fromChain == ChainKind.Sol){
-        if (!anchorProvider?.providerProgram) {
-          throw new Error('Anchor provider not available. Please ensure your wallet is connected.');
-        }
-        result = await omniTransfer(anchorProvider.providerProgram as any,transfer)
-        console.log('result', result);
-      }
-
-      if (!result) {
-        throw new Error('Failed to initiate transfer');
-      }
-
-      // 5. Waiting for logMetadata (70%)
+      const solClient = await ensureSolana();
       onProgress?.(70);
-      console.log("Waiting 60 seconds for logMetadata to complete on chain...")
-      await new Promise(resolve => setTimeout(resolve, 80000))
 
-      // 6. Get Wormhole VAA and monitor status (85%)
-      onProgress?.(85);
-      let vaa: string | undefined;
-      if (typeof result === 'string') {
-        // If result is a transaction hash, get VAA
-        vaa = await getVaa(result, "Testnet");
-        console.log('Wormhole VAA:', vaa);
-      }
-
-      // Monitor status with progress updates
-      let transferData: Transfer | undefined;
-      const maxRetries = 20;
-      const retryDelay = 3000; // 3 seconds
-
-      for (let i = 0; i < maxRetries; i++) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        
-        // Update progress during monitoring (85% to 95%)
-        const monitoringProgress = 85 + Math.floor((i / maxRetries) * 10);
-        onProgress?.(monitoringProgress);
-        
-        try {
-          if (typeof result === 'string') {
-            // Wait for transaction to be indexed
-            const transfers = await api.findOmniTransfers({
-              transaction_id: result,
-            });
-            if (transfers.length > 0 && transfers[0].id) {
-              const transferResults = await api.getTransfer({
-                originChain: transfers[0].id.origin_chain,
-                originNonce: transfers[0].id.origin_nonce,
-              });
-              if (transferResults.length > 0) {
-                transferData = transferResults[0];
-                break;
-              }
-            }
-          } else {
-            // Handle non-string transfer events
-            const originNonce = (result as any).transfer_message?.origin_nonce;
-            if (originNonce) {
-              const transferResults = await api.getTransfer({
-                originChain: 'Sol' as Chain,
-                originNonce: originNonce,
-              });
-              if (transferResults.length > 0) {
-                transferData = transferResults[0];
-                break;
-              }
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to fetch transfer (attempt ${i + 1}/${maxRetries}):`, err);
-          continue;
-        }
-      }
-
-      if (!transferData) {
-        throw new Error('Failed to fetch transfer data after multiple retries');
-      }
-
-      // 7. Get transfer status and complete (100%)
+      const tx = await solClient.initTransfer(transfer);
       onProgress?.(100);
-      const status = await api.getTransferStatus(
-        transferData?.id ? {
-          originChain: transferData.id.origin_chain,
-          originNonce: transferData.id.origin_nonce,
-        } : { transactionHash: result.toString() }
-      );
 
-      console.log('transferData', transferData)
-      console.log(`Transfer status: ${status}`);
-      let txFromChain;
-      let txToChain;
-      if(fromChain == ChainKind.Sol){
-        txFromChain = result.toString()
-      }
-      if(fromChain == ChainKind.Near){
-        txToChain = transferData.finalised?.NearReceipt?.transaction_hash
-      }
-      if(toChain == ChainKind.Sol){
-        txToChain = transferData.finalised?.NearReceipt?.transaction_hash
-      }
-
-      return {
-        transferData,
-        status,
-        vaa,
-        txFromChain,
-        txToChain
-      };
+      return tx;
     } catch (error) {
       console.error('Bridge error:', error);
       throw error
     } 
-  }, [publicKey, sendTransaction, connected]);
+  }
 
-
-  const deployToken = useCallback(async (
+  const deployToken = async (
     network: NetworkType,
     fromChain: ChainKind,
     toChain: ChainKind,
@@ -196,36 +116,10 @@ export const useBridge = () => {
       const secretKey = bs58.decode(SOL_PRIVATE_KEY || "");
       const payer = Keypair.fromSecretKey(secretKey);
       setNetwork(network);
-      
 
-      // --- Utility functions ---
-      const ensureAnchor = () => {
-        if (!anchorProvider?.providerProgram) {
-          throw new Error("Anchor provider not available. Please ensure your wallet is connected.");
-        }
-        return new SolanaBridgeClient(anchorProvider.providerProgram as any);
-      };
-  
-      const ensureNear = async () => {
-        if (!nearWalletSelector) {
-          throw new Error("NEAR wallet not connected");
-        }
-        return new NearWalletSelectorBridgeClient(await nearWalletSelector as any);
-      };
-
-      const ensureEth = async () => {
-        if(!evmAddress && !evmConnected || !walletClient){
-          throw new Error('Please connect your EVM wallet first');
-        }
-        const provider = new ethers.BrowserProvider(walletClient.transport);
-        const evmWallet = await provider.getSigner();
-  
-        return new EvmBridgeClient(evmWallet, ChainKind.Eth)
-      }
-  
       // --- Deploy from Solana ---
       const deployFromSol = async () => {
-        const solClient = ensureAnchor();
+        const solClient = await ensureSolana();
         const mintAddress = omniAddress(ChainKind.Sol, tokenAddress);
   
         console.log("Starting logMetadata...");
@@ -256,7 +150,7 @@ export const useBridge = () => {
         const sig = new MPCSignature(signature.big_r, signature.s, signature.recovery_id);
         let result;
         if (toChain === ChainKind.Sol) {
-          const solClient = ensureAnchor();
+          const solClient = await ensureSolana();
           
           console.log("metadata_payload", metadata_payload)
           result = await solClient.deployToken(sig, metadata_payload);
@@ -283,7 +177,7 @@ export const useBridge = () => {
       console.error("Error deploying token:", error.message || error);
       throw error;
     }
-  }, [anchorProvider, nearWalletSelector]);  
+  }  
 
 
   return {

@@ -131,7 +131,6 @@ export const getTokenBalanceOnSOL = async (tokenMintAddress: string, walletAddre
 }
 
 
-
 /**
  * Get all tokens for a Solana account
  * @param walletAddress - The wallet address to get tokens for

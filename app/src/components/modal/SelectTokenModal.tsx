@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { formatNumberToCurrency } from "@/utils";
 
@@ -105,43 +104,22 @@ export const SelectTokenModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[509px] p-5">
-        <DialogHeader className="flex flex-row items-center justify-between pb-5">
+      <DialogContent className="sm:max-w-[509px] p-5 border-none">
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-base font-medium text-gray-700">
             Select {modalType === 'from' ? 'From' : 'To'} Token
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full bg-gray-100 p-1">
-              <TabsTrigger 
-                value="potlaunch" 
-                className="flex-1 text-sm font-medium"
-              >
-                POTLAUNCH Tokens
-              </TabsTrigger>
-              <TabsTrigger 
-                value="my-tokens" 
-                className="flex-1 text-sm font-medium"
-              >
-                My Tokens
-              </TabsTrigger>
-              <TabsTrigger 
-                value="lookup" 
-                className="flex-1 text-sm font-medium"
-              >
-                Lookup by Address
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="relative mt-3">
+          <div className="flex flex-col">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search by token name, token symbol or address"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white border-gray-200 text-sm"
+                className="pl-10 bg-white border-gray-200 text-sm shadow-none outline-none"
               />
             </div>
 
@@ -175,7 +153,7 @@ export const SelectTokenModal = ({
                 </div>
               )}
             </div>
-          </Tabs>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

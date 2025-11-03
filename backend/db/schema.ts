@@ -2,6 +2,9 @@ import { pgTable, pgEnum, text, integer, boolean, timestamp, decimal, jsonb, uui
 import { relations, sql } from 'drizzle-orm';
 
 export const launchpadEnum = pgEnum("launchpad", ["potlaunch", "cookedpad"]);
+export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL", "BRIDGE", "DEPLOY"]);
+export const transactionStatusEnum = pgEnum("transaction_status", ["pending", "success", "failed"]);
+export const transactionChainEnum = pgEnum("transaction_chain", ["SOLANA", "ETHEREUM", "NEAR", "BASE", "ARBITRUM", "BNB", "BITCOIN"]);
 
 // Main tokens table
 export const tokens = pgTable('tokens', {
@@ -249,7 +252,7 @@ export const transactions = pgTable("transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userAddress: varchar("user_address", { length: 64 }).notNull(),
   txHash: varchar("tx_hash", { length: 128 }),
-  action: varchar("action", { length: 10 }).notNull(), // "BUY" | "SELL"
+  action: transactionActionEnum("action").notNull(), // "BUY" | "SELL" | "BRIDGE" | "DEPLOY"
   baseToken: varchar("base_token", { length: 64 }).notNull(), // e.g. SOL
   quoteToken: varchar("quote_token", { length: 64 }).notNull(), // e.g. USDC
   amountIn: numeric("amount_in", { precision: 30, scale: 10 }).notNull(),
@@ -258,8 +261,8 @@ export const transactions = pgTable("transactions", {
   slippageBps: numeric("slippage_bps", { precision: 10, scale: 2 }).default("50"), // basis points
   fee: numeric("fee", { precision: 30, scale: 10 }).default("0"),
   feeToken: varchar("fee_token", { length: 64 }).default("SOL"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending | success | failed
-  chain: varchar("chain", { length: 32 }).default("solana"),
+  status: transactionStatusEnum("status").default("pending"), // pending | success | failed
+  chain: transactionChainEnum("chain").default("SOLANA"), // SOLANA | ETHEREUM | NEAR | BASE | ARBITRUM | BNB | BITCOIN
   poolAddress: varchar("pool_address", { length: 128 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

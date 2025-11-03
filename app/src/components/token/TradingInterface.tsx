@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Token } from "@/types/api";
+import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
 import { ChevronDown, Copy, Download, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -183,7 +183,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
 
         // Create a pending transaction record after obtaining signature
         try {
-          const action: "BUY" | "SELL" = payIsSol ? "BUY" : "SELL";
+          const action: TransactionAction = payIsSol ? TransactionAction.BUY : TransactionAction.SELL;
           const baseToken = payIsSol ? "So11111111111111111111111111111111111111112" : address;
           const quoteToken = payIsSol ? address : "So11111111111111111111111111111111111111112";
           const amountIn = amountNum;
@@ -202,8 +202,8 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
             slippageBps: 50,
             fee: 0,
             feeToken: "SOL",
-            status: "pending",
-            chain: "solana",
+            status: TransactionStatus.PENDING,
+            chain: TransactionChain.SOLANA,
             poolAddress: address,
           });
           createdTransactionId = created.id;
@@ -216,7 +216,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         // Update transaction status to success
         if (createdTransactionId) {
           try {
-            await updateTransactionStatus(createdTransactionId, "success");
+            await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS);
           } catch (e) {
             console.error("Error updating transaction status to success:", e);
           }
@@ -239,7 +239,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
       // If we already created a transaction record, mark it failed
       try {
         if (createdTransactionId) {
-          await updateTransactionStatus(createdTransactionId, "failed");
+          await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
         }
       } catch (e) {
         console.error("Error updating transaction status to failed:", e);

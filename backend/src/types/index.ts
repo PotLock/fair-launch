@@ -235,8 +235,32 @@ export const SwapTokenRequestSchema = z.object({
 });
 
 // Transactions Schemas
-export const TransactionActionEnum = z.enum(['BUY', 'SELL']);
+export enum TransactionAction {
+  BUY = 'BUY',
+  SELL = 'SELL',
+  BRIDGE = 'BRIDGE',
+  DEPLOY = 'DEPLOY',
+}
+
+export enum TransactionStatus {
+  PENDING = 'pending',
+  SUCCESS = 'success',
+  FAILED = 'failed',
+}
+
+export enum TransactionChain {
+  SOLANA = 'SOLANA',
+  ETHEREUM = 'ETHEREUM',
+  NEAR = 'NEAR',
+  BASE = 'BASE',
+  ARBITRUM = 'ARBITRUM',
+  BNB = 'BNB',
+  BITCOIN = 'BITCOIN',
+}
+
+export const TransactionActionEnum = z.enum(['BUY', 'SELL', 'BRIDGE', 'DEPLOY']);
 export const TransactionStatusEnum = z.enum(['pending', 'success', 'failed']);
+export const TransactionChainEnum = z.enum(['SOLANA', 'ETHEREUM', 'NEAR', 'BASE', 'ARBITRUM', 'BNB', 'BITCOIN']);
 
 export const CreateTransactionSchema = z.object({
   userAddress: z.string().min(1, 'User address is required'),
@@ -251,7 +275,7 @@ export const CreateTransactionSchema = z.object({
   fee: z.number().min(0).optional(),
   feeToken: z.string().optional(),
   status: TransactionStatusEnum.optional(),
-  chain: z.string().optional(),
+  chain: TransactionChainEnum.optional(),
   poolAddress: z.string().optional(),
 });
 
@@ -261,7 +285,7 @@ export const TransactionQuerySchema = z.object({
   baseToken: z.string().optional(),
   quoteToken: z.string().optional(),
   status: TransactionStatusEnum.optional(),
-  chain: z.string().optional(),
+  chain: TransactionChainEnum.optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
 });
@@ -417,7 +441,7 @@ export interface TransactionEntity {
   id: string;
   userAddress: string;
   txHash: string | null;
-  action: 'BUY' | 'SELL';
+  action: TransactionAction;
   baseToken: string;
   quoteToken: string;
   amountIn: string;
@@ -426,8 +450,8 @@ export interface TransactionEntity {
   slippageBps: string; // stored as numeric in DB
   fee: string;
   feeToken: string;
-  status: 'pending' | 'success' | 'failed';
-  chain: string;
+  status: TransactionStatus;
+  chain: TransactionChain;
   poolAddress: string | null;
   createdAt: Date;
   updatedAt: Date;

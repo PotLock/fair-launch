@@ -131,7 +131,7 @@ export function InputBridge({
                     />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="flex items-center gap-2 px-2 py-2 bg-[#F4F4F5] h-auto">
+                            <Button variant="outline" className="flex items-center gap-2 px-2 py-2 bg-gray-50 h-auto border border-gray-200 shadow-none hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
                                 {selectedChain ? (
                                     <>
                                         <img 
@@ -169,12 +169,12 @@ export function InputBridge({
                 </div>
                 <div className="flex justify-between items-center w-full">
                     <span className="text-xs text-gray-600">${amount && formatNumberToCurrency(Number(amount) * selectedChain.price)}</span>
-                    <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-600">
+                    <div className="flex items-center justify-end gap-2 text-xs text-gray-600">
                         <span>{formatNumberToCurrency(Number(balanceToken))}</span>
                         <Button 
                             size="sm" 
                             variant="outline" 
-                            className="h-7 px-2"
+                            className="h-6 px-2 border border-gray-200 bg-white hover:text-red-500 hover:border-red-500 hover:bg-white shadow-none cursor-pointer text-xs"
                             onClick={handleHalfToken}
                             disabled={!balanceToken || disabled}
                         >
@@ -183,7 +183,7 @@ export function InputBridge({
                         <Button 
                             size="sm" 
                             variant="outline" 
-                            className="h-7 px-2"
+                            className="h-6 px-2 border border-gray-200 bg-white hover:text-red-500 hover:border-red-500 hover:bg-white shadow-none cursor-pointer text-xs"
                             onClick={handleMaxToken}
                             disabled={!balanceToken || disabled}
                         >

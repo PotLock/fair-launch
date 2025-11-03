@@ -141,7 +141,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-none">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-center flex-1">

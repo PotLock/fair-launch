@@ -27,7 +27,7 @@ interface BridgeTokensProps {
     chains: Chain[];
     onClose: () => void;
     onBridgeProcessingStart: (amount: string, fromChain: string, toChain: string) => void;
-    onBridgeProcessingComplete: (transactionHash: string, transactionHashNear: string) => void;
+    onBridgeProcessingComplete: (transactionHash: string) => void;
     onBridgeSuccessClose: () => void;
     onBridgeError: () => void;
     onBridgeProgress?: (progress: number) => void;
@@ -115,7 +115,7 @@ export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, o
             setAmount('0');
             
             // Notify parent component to show success modal with transaction hashes
-            onBridgeProcessingComplete(result?.txFromChain || '', result?.txToChain || '');
+            onBridgeProcessingComplete(result||'');
         } catch (error) {
             console.error(error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -168,14 +168,14 @@ export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, o
                 <Button
                     variant="outline"
                     onClick={onClose}
-                    className="px-6"
+                    className="px-6 cursor-pointer border border-gray-200 shadow-none hover:text-gray-600 hover:bg-gray-100 bg-gray-50"
                     disabled={isTransferring}
                 >
                     Cancel
                 </Button>
                 <Button
                     onClick={handleBridgeToken}
-                    className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                    className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                     disabled={isTransferring}
                 >
                     {isTransferring ? "Bridging..." : "Bridge Tokens"}

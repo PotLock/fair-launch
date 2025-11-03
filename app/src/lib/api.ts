@@ -1,4 +1,4 @@
-import { Token, CreateToken, SwapParams, SwapResponse, Transaction, TransactionCreateRequest, TransactionStatus } from '@/types/api';
+import { Token, CreateToken, SwapParams, SwapResponse, Transaction, TransactionCreateRequest, TransactionStatus, TransactionAction, TransactionChain } from '@/types/api';
 import { PoolState, PoolConfig } from '@/types/pool';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -490,11 +490,11 @@ export async function createTransaction(payload: TransactionCreateRequest): Prom
 
 export async function listTransactions(options?: {
   userAddress?: string;
-  action?: 'BUY' | 'SELL';
+  action?: TransactionAction;
   baseToken?: string;
   quoteToken?: string;
-  status?: 'pending' | 'success' | 'failed';
-  chain?: string;
+  status?: TransactionStatus;
+  chain?: TransactionChain;
 }): Promise<Transaction[]> {
   try {
     const params = new URLSearchParams();
