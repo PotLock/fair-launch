@@ -22,7 +22,7 @@ interface Chain {
     explorerUrl: string;
 }
 
-interface BridgeTokensProps {
+interface BridgeTokensComponentProps {
     token: Token;
     chains: Chain[];
     onClose: () => void;
@@ -33,7 +33,7 @@ interface BridgeTokensProps {
     onBridgeProgress?: (progress: number) => void;
 }
 
-export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, onBridgeProcessingComplete, onBridgeError, onBridgeProgress}: BridgeTokensProps){
+export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessingStart, onBridgeProcessingComplete, onBridgeError, onBridgeProgress}: BridgeTokensComponentProps){
     const [amount, setAmount] = useState<string|null>(null);
     const [isTransferring, setIsTransferring] = useState(false);
 
@@ -44,6 +44,9 @@ export function BridgeTokens({token, chains, onClose, onBridgeProcessingStart, o
     const { signedAccountId } = useWalletSelector();
     const { connected, publicKey } = useWallet();
     const { transferToken } = useBridge();
+
+    // Get bridge transactions for the current user
+    const userAddress = publicKey?.toString() || signedAccountId || '';
 
     const handleFromChainChange = (chain: Chain) => {
         setSelectedFromChain(chain);

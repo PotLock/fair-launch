@@ -1,6 +1,7 @@
-import { Token, Transaction } from '@/types/api';
+import { Token, Transaction, TransactionAction } from '@/types/api';
 import useSWR from 'swr';
 import { API_URL } from '@/lib/api';
+import { getPurchasedTokens } from '@/lib/api';
 
 const fetcher = async (url: string) => {
     const response = await fetch(url);
@@ -63,13 +64,67 @@ export function useUserTokens(address?: string) {
         shouldFetch ? `${API_URL}/api/tokens/address/${address}` : null,
         fetcher,
         {
-            refreshInterval: 10000, 
+            refreshInterval: 10000,
             revalidateOnFocus: true
         }
     );
 
     return {
         tokens: data?.data || [],
+        isLoading,
+        error,
+        refresh: mutate,
+    };
+}
+
+export function useTransactionBridge(address?: string): {
+    transactions: Transaction[];
+    isLoading: boolean;
+    error: Error | null;
+} {
+    const shouldFetch = !!address;
+    const { data, error, isLoading } = useSWR(
+        shouldFetch ? `${API_URL}/api/transactions/user/${address}` : null,
+        fetcher,
+        { refreshInterval: 1000 } // auto refetch every 1s
+    );
+
+    const allTransactions = data?.transactions || data?.data || [];
+
+    // Filter only BRIDGE and DEPLOY transactions
+    const filteredTransactions = allTransactions.filter(
+        (tx: Transaction) =>
+            tx.action === TransactionAction.BRIDGE ||
+            tx.action === TransactionAction.DEPLOY
+    );
+
+    return {
+        transactions: filteredTransactions,
+        isLoading,
+        error,
+    };
+}
+
+export function usePurchasedTokens(address?: string): {
+    tokens: Token[];
+    isLoading: boolean;
+    error: Error | null;
+    refresh: () => Promise<Token[] | undefined>;
+} {
+    const shouldFetch = !!address;
+    const { data, error, isLoading, mutate } = useSWR(
+        shouldFetch ? ['purchasedTokens', address] : null,
+        async ([, addr]: [string, string]) => {
+            return await getPurchasedTokens(addr);
+        },
+        {
+            refreshInterval: 10000,
+            revalidateOnFocus: true,
+        }
+    );
+
+    return {
+        tokens: data || [],
         isLoading,
         error,
         refresh: mutate,

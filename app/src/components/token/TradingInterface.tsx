@@ -41,8 +41,8 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [isBuying, setIsBuying] = useState<boolean>(false);
-  const [amountPay, setAmountPay] = useState<string | null>(null);
-  const [amountReceive, setAmountReceive] = useState<string | null>(null);
+  const [amountPay, setAmountPay] = useState<string>('');
+  const [amountReceive, setAmountReceive] = useState<string>('');
   const [baseReserve, setBaseReserve] = useState<number>(0);
   const [quoteReserve, setQuoteReserve] = useState<number>(0);
   const [payIsSol, setPayIsSol] = useState<boolean>(true);
@@ -114,14 +114,14 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
     setAmountPay(value);
     // Allow clearing the input without auto-filling 0.00
     if (value.trim() === '') {
-      setAmountReceive(null);
+      setAmountReceive('');
       return;
     }
 
     const amountPayNum = parseFloat(value);
 
     if (!baseReserve || !quoteReserve || isNaN(amountPayNum) || amountPayNum <= 0) {
-      setAmountReceive(null);
+      setAmountReceive('');
       return;
     }
     // Constant product formula
@@ -147,7 +147,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
       toast.error("Please connect your wallet to buy tokens");
       return;
     }
-    if (!amountPay) {
+    if (!amountPay || amountPay.trim() === '') {
       toast.error("Please enter an amount to buy");
       return;
     }
@@ -187,7 +187,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
           const baseToken = payIsSol ? "So11111111111111111111111111111111111111112" : address;
           const quoteToken = payIsSol ? address : "So11111111111111111111111111111111111111112";
           const amountIn = amountNum;
-          const amountOutNum = amountReceive ? parseFloat(`${amountReceive}`) : 0;
+          const amountOutNum = amountReceive && amountReceive.trim() !== '' ? parseFloat(`${amountReceive}`) : 0;
           const pricePerToken = amountOutNum > 0 ? amountIn / amountOutNum : 0;
 
           const created = await createTransaction({
@@ -227,8 +227,8 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         toast.success(`Successfully ${payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${amountReceive} ${receiveSymbol}`);
         console.log("Swap Transaction Signature:", signatureDeployToken);
         await fetchTokenData();
-        setAmountPay(null);
-        setAmountReceive(null);
+        setAmountPay('');
+        setAmountReceive('');
         // Refresh server components to refetch transactions list
         // router.refresh();
       } else {
@@ -307,7 +307,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
-                    value={amountPay || ''}
+                    value={amountPay}
                     onChange={(e) => {
                       const raw = e.target.value.replace(/,/g, '');
                       if (/^\d*\.?\d*$/.test(raw)) {
@@ -365,7 +365,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input 
                     type="text" 
-                    value={amountReceive || '0.00'}
+                    value={amountReceive || ''}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none" 
                     placeholder="0.00"
                     disabled
@@ -382,7 +382,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
 
               <Button
                 onClick={handleBuyAndSell}
-                disabled={isBuying || !publicKey || !amountPay}
+                disabled={isBuying || !publicKey || !amountPay || amountPay.trim() === ''}
                 className={`w-full ${publicKey && !isBuying ? "bg-red-500 hover:bg-red-600 cursor-pointer": "bg-red-300 hover:bg-red-200 cursor-not-allowed"} text-white font-medium py-6 rounded-lg mb-4`}
               >
                 {payIsSol ? `Buy ${token.symbol || 'POTLAUNCH'}` : `Sell ${token.symbol || 'POTLAUNCH'}`}

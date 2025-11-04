@@ -70,10 +70,10 @@ export class TransactionService {
     return rows as unknown as TransactionEntity[];
   }
 
-  async updateTransactionStatus(id: string, status: TransactionStatus): Promise<TransactionEntity | null> {
+  async updateTransactionStatus(id: string, txHash: string ,status: 'pending' | 'success' | 'failed'): Promise<TransactionEntity | null> {
     const [updated] = await db
       .update(transactions)
-      .set({ status, updatedAt: new Date() })
+      .set({ txHash, status, updatedAt: new Date() })
       .where(eq(transactions.id, id))
       .returning();
 

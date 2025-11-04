@@ -558,12 +558,12 @@ export async function getTransactionsByToken(address: string): Promise<Transacti
   }
 }
 
-export async function updateTransactionStatus(id: string, status: TransactionStatus): Promise<Transaction> {
+export async function updateTransactionStatus(id: string ,status: TransactionStatus, hash?: string): Promise<Transaction> {
   try {
     const response = await fetch(`${API_URL}/api/transactions/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ txHash: hash ,status }),
       cache: 'no-store',
     });
 
@@ -577,5 +577,25 @@ export async function updateTransactionStatus(id: string, status: TransactionSta
   } catch (error) {
     console.error('Error updating transaction status:', error);
     throw new Error('Failed to update transaction status');
+  }
+}
+
+// Return tokens a user has purchased by inspecting BUY transactions
+export async function getPurchasedTokens(address: string): Promise<Token[]> {
+  try {
+    const transactions = await getTransactionsByUser(address);
+    const buyTxs = transactions.filter((t) => t.action === TransactionAction.BUY);
+    const mints = Array.from(
+      new Set(
+        buyTxs
+          .map((t) => t.quoteToken)
+          .filter((m): m is string => typeof m === 'string' && m.length > 0)
+      )
+    );
+    const tokens = await Promise.all(mints.map((mint) => getTokenByMint(mint)));
+    return tokens.filter((t): t is Token => Boolean(t));
+  } catch (error) {
+    console.error('Error getting purchased tokens:', error);
+    return [];
   }
 }

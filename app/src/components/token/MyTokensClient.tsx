@@ -7,12 +7,11 @@ import { useEffect, useState, useCallback } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Token } from "@/types/api";
 import { getSolPrice } from "@/lib/sol";
-import { getUserTokens } from "@/lib/api";
 import { useSearch } from "@/hooks/useSearch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NoTokensFound } from "@/components/NoTokensFound";
 import { useRouter } from "next/navigation";
-import { useUserTokens } from "@/hooks/useSWR";
+import { useUserTokens, usePurchasedTokens } from "@/hooks/useSWR";
 
 interface MyTokensClientProps {
   solPrice: number;
@@ -43,14 +42,18 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     },[])   
 
     const { tokens: listTokens, isLoading: loading, error, refresh: refreshTokens } = useUserTokens(publicKey?.toBase58());
+    const { tokens: purchasedTokens, isLoading: loadingPurchased, error: errorPurchased } = usePurchasedTokens(publicKey?.toBase58());
+
+    const [activeTab, setActiveTab] = useState<'created' | 'purchased'>('created');
 
     useEffect(() => {
         fetchSolPrice();
     }, [fetchSolPrice]);
 
     // Determine which tokens to display
-    const displayTokens = searchQuery.trim() && !isSearching ? searchResults : listTokens;
-    const displayError = searchQuery.trim() ? searchError : error;
+    const sourceTokens = activeTab === 'created' ? listTokens : purchasedTokens;
+    const displayTokens = searchQuery.trim() && !isSearching ? searchResults : sourceTokens;
+    const displayError = searchQuery.trim() ? searchError : (activeTab === 'created' ? error : errorPurchased);
     
     // Calculate portfolio statistics
     const totalTokens = displayTokens?.length || 0;
@@ -76,7 +79,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
         );
     }
 
-    if (loading) {
+    if (loading || loadingPurchased) {
         return (
             <div className="min-h-screen py-10 w-full">
                 <div className="max-w-7xl mx-auto px-4 w-full">
@@ -200,7 +203,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                                 titleSize="text-[2rem]"
                                 subTitleSize="text-base"
                             />
-                            {!searchQuery.trim() && (
+                            {!searchQuery.trim() && activeTab === 'created' && (
                                 <button
                                     onClick={()=>router.push("/create")}
                                     className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
@@ -258,6 +261,22 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-2 mb-4 border-b border-gray-200 w-full">
+                    <button
+                        onClick={() => setActiveTab('created')}
+                        className={`px-6 py-3 ${activeTab === 'created' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer`}
+                    >
+                        Created
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('purchased')}
+                        className={`px-6 py-3 ${activeTab === 'purchased' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer`}
+                    >
+                        Purchased
+                    </button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 mb-8">

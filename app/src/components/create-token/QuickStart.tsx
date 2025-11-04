@@ -1,5 +1,7 @@
 "use client"
 
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -116,6 +118,26 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
           </div>
         </div>
 
+        <div className="px-4">
+          <div className="w-full mb-10 border border-red-500 bg-[#DD3345] rounded-xl px-3 py-2 sm:px-5 sm:py-3">
+            <div className="flex flex-row justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-white/40">
+                  <img src="/images/thunder.png" alt="Tip" className="w-12 h-12" />
+                </div>
+                <div>
+                  <p className="text-base sm:text-lg font-semibold text-white">Mint on NEAR</p>
+                  <p className="text-xs sm:text-sm text-gray-200">Quickly mint, create, and list your tokens on NEAR.</p>
+                </div>
+              </div>
+              <Link href={"https://sale.potlaunch.com/"} target="_blank" className="group flex flex-row gap-2 items-center text-white transition-colors">
+                <span className="text-white text-sm group-hover:underline group-hover:opacity-90">Get Started</span>
+                <ChevronRight className="text-white h-4 w-5 transition-transform group-hover:translate-x-0.5"/>
+              </Link>
+            </div>
+          </div>
+          <div className="h-0.5 w-full bg-gray-100 mb-5"/>
+        </div>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4">
           <button onClick={()=>router.push("/")} className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50/10 transition-colors cursor-pointer">
             Cancel

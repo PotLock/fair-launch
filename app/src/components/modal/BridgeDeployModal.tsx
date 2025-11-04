@@ -10,7 +10,7 @@ import { Token } from "@/types/api";
 import { useWalletContext } from "@/contexts/WalletProviderContext";
 import { useAccount } from 'wagmi';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
-import { BridgeTokens } from "@/components/token/BridgeTokens";
+import { BridgeTokensComponent } from "@/components/token/BridgeTokensComponent";
 import { NEAR_NETWORK, SOL_NETWORK } from "@/configs/env.config";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner"
@@ -321,7 +321,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                         </TabsList>
 
                         <TabsContent value="bridge" className="mt-6">
-                            <BridgeTokens
+                            <BridgeTokensComponent
                                 token={token}
                                 chains={chains}
                                 onClose={onClose}

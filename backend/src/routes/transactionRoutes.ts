@@ -81,11 +81,11 @@ app.get('/token/:address', async (c) => {
 });
 
 // Update transaction status by ID
-app.patch('/:id/status', zValidator('json', z.object({ status: TransactionStatusEnum })), async (c) => {
+app.patch('/:id/status', zValidator('json', z.object({ txHash: z.string().optional() ,status: TransactionStatusEnum })), async (c) => {
   try {
     const id = c.req.param('id');
-    const { status } = c.req.valid('json');
-    const updated = await transactionService.updateTransactionStatus(id, status);
+    const { status, txHash } = c.req.valid('json');
+    const updated = await transactionService.updateTransactionStatus(id, txHash || '',status);
     if (!updated) {
       return c.json({ success: false, error: 'Transaction not found' }, 404);
     }

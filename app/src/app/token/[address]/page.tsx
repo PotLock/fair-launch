@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getTokenByMint, getPopularTokens, getTransactionsByToken } from "@/lib/api";
+import { getTokenByMint, getPopularTokens } from "@/lib/api";
 import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
 import Link from "next/link";

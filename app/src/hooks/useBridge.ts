@@ -25,7 +25,6 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { ethers } from 'ethers';
 
 export const useBridge = () => {
-  const { publicKey, sendTransaction, connected } = useWallet();
   const anchorProvider = useAnchorProvider()
   const { walletSelector: nearWalletSelector } = useWalletSelector()
   const { address: evmAddress, isConnected: evmConnected } = useAccount(); 
@@ -36,7 +35,7 @@ export const useBridge = () => {
     if (!anchorProvider?.providerProgram) {
       throw new Error("Anchor provider not available. Please ensure your wallet is connected.");
     }
-    return new SolanaBridgeClient(anchorProvider.providerProgram as any);
+    return new SolanaBridgeClient(anchorProvider.providerProgram);
   };
 
   const ensureNear = async () => {
@@ -113,6 +112,9 @@ export const useBridge = () => {
     tokenAddress: string
   ) => {
     try {
+      console.log("tokenAddress", tokenAddress)
+      console.log("fromChain", fromChain)
+      console.log("toChain", toChain)
       const secretKey = bs58.decode(SOL_PRIVATE_KEY || "");
       const payer = Keypair.fromSecretKey(secretKey);
       setNetwork(network);
@@ -121,49 +123,60 @@ export const useBridge = () => {
       const deployFromSol = async () => {
         const solClient = await ensureSolana();
         const mintAddress = omniAddress(ChainKind.Sol, tokenAddress);
-  
+
         console.log("Starting logMetadata...");
-        const txHash = await solClient.logMetadata(mintAddress, payer);
-        console.log("logMetadata txHash:", txHash);
-  
-        console.log("Waiting for VAA...");
-        await new Promise(resolve => setTimeout(resolve, 80000)); // TODO: replace with polling
-  
-        const vaa = await getVaa(txHash, network === "testnet" ? "Testnet" : "Mainnet");
-        console.log("VAA retrieved:", vaa);
-  
-        let result;
-        if (toChain === ChainKind.Near) {
-          const nearClient = await ensureNear();
-          result = await nearClient.deployToken(ChainKind.Sol, vaa);
+        try {
+          const txHash = await solClient.logMetadata(mintAddress, payer);
+          console.log("logMetadata txHash:", txHash);
+
+          console.log("Waiting for VAA...");
+          await new Promise(resolve => setTimeout(resolve, 80000)); // TODO: replace with polling
+
+          const vaa = await getVaa(txHash, network === "testnet" ? "Testnet" : "Mainnet");
+          console.log("VAA retrieved:", vaa);
+
+          let result;
+          if (toChain === ChainKind.Near) {
+            const nearClient = await ensureNear();
+            result = await nearClient.deployToken(ChainKind.Sol, vaa);
+          }
+
+          return { result };
+        } catch (error: any) {
+          // Check if error is due to transaction already being processed
+          const errorMessage = error?.message || error?.toString() || '';
+          if (errorMessage.includes('already been processed')) {
+            console.log("Token metadata already logged on Solana - treating as success");
+            // Token already deployed, this is not an error
+            throw new Error('Token already deployed');
+          }
+          throw error;
         }
-  
-        return { vaa, result };
       };
-  
+
       // --- Deploy from Near ---
       const deployFromNear = async () => {
         const nearClient = await ensureNear();
         const token = omniAddress(ChainKind.Near, tokenAddress);
-  
+
         const { signature, metadata_payload } = await nearClient.logMetadata(token);
         const sig = new MPCSignature(signature.big_r, signature.s, signature.recovery_id);
         let result;
         if (toChain === ChainKind.Sol) {
           const solClient = await ensureSolana();
-          
+
           console.log("metadata_payload", metadata_payload)
           result = await solClient.deployToken(sig, metadata_payload);
         }
-  
+
         if(toChain == ChainKind.Eth){
           const ethClient = await ensureEth();
           result = await ethClient.deployToken(sig,metadata_payload);
         }
 
-        return { result };
+        return { result: result?.txHash };
       };
-  
+
       // --- Main flow ---
       if (fromChain === ChainKind.Sol) {
         return await deployFromSol();
@@ -172,9 +185,15 @@ export const useBridge = () => {
         return await deployFromNear();
       }
       throw new Error("Invalid chain");
-  
+
     } catch (error: any) {
-      console.error("Error deploying token:", error.message || error);
+      const errorMessage = error?.message || error?.toString() || '';
+      console.error("Error deploying token:", errorMessage);
+
+      // Re-throw with better error message
+      if (errorMessage.includes('already deployed') || errorMessage.includes('already been processed')) {
+        throw new Error('Token already deployed');
+      }
       throw error;
     }
   }  
