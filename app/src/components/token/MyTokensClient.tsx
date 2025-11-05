@@ -6,12 +6,14 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Token } from "@/types/api";
-import { getSolPrice } from "@/lib/sol";
+import { getSolPrice, getTokenBalanceOnSOL } from "@/lib/sol";
 import { useSearch } from "@/hooks/useSearch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NoTokensFound } from "@/components/NoTokensFound";
 import { useRouter } from "next/navigation";
 import { useUserTokens, usePurchasedTokens } from "@/hooks/useSWR";
+import { getPoolStateByMint } from "@/lib/api";
+import { calculateTokenPrice, formatNumberToCurrency } from "@/utils";
 
 interface MyTokensClientProps {
   solPrice: number;
@@ -39,25 +41,61 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     const fetchSolPrice = useCallback(async () => {
         const solPrice = await getSolPrice()
         setSolPrice(solPrice || 0)
-    },[])   
+    },[])
 
     const { tokens: listTokens, isLoading: loading, error, refresh: refreshTokens } = useUserTokens(publicKey?.toBase58());
     const { tokens: purchasedTokens, isLoading: loadingPurchased, error: errorPurchased } = usePurchasedTokens(publicKey?.toBase58());
 
     const [activeTab, setActiveTab] = useState<'created' | 'purchased'>('created');
 
+    // Calculate portfolio value
+    const calculatePortfolioValue = useCallback(async () => {
+        if (!publicKey || !solPrice) return;
+
+        try {
+            const allTokens = [...listTokens, ...purchasedTokens];
+            let totalValue = 0;
+
+            for (const token of allTokens) {
+                try {
+                    // Get user's balance
+                    const balance = await getTokenBalanceOnSOL(token.mintAddress, publicKey.toBase58());
+
+                    if (balance > 0) {
+                        // Get current price
+                        const poolState = await getPoolStateByMint(token.mintAddress);
+                        const priceData = calculateTokenPrice(poolState, solPrice);
+
+                        // Calculate value
+                        const tokenValue = balance * priceData.priceInUsd;
+                        totalValue += tokenValue;
+                    }
+                } catch (error) {
+                    console.error(`Error calculating value for token ${token.mintAddress}:`, error);
+                }
+            }
+
+            setPortfolioValue(totalValue);
+        } catch (error) {
+            console.error('Error calculating portfolio value:', error);
+        }
+    }, [publicKey, solPrice, listTokens, purchasedTokens]);
+
     useEffect(() => {
         fetchSolPrice();
     }, [fetchSolPrice]);
 
-    // Determine which tokens to display
+    useEffect(() => {
+        if (listTokens.length > 0 || purchasedTokens.length > 0) {
+            calculatePortfolioValue();
+        }
+    }, [listTokens, purchasedTokens, calculatePortfolioValue]);
+
     const sourceTokens = activeTab === 'created' ? listTokens : purchasedTokens;
     const displayTokens = searchQuery.trim() && !isSearching ? searchResults : sourceTokens;
     const displayError = searchQuery.trim() ? searchError : (activeTab === 'created' ? error : errorPurchased);
     
-    // Calculate portfolio statistics
     const totalTokens = displayTokens?.length || 0;
-    // For now, assuming all tokens are trading since there's no status field
     const tradingTokens = totalTokens;
 
     if (!publicKey) {
@@ -187,7 +225,6 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                     <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
                     
                     {searchQuery.trim() && isSearching ? (
-                        // Show skeleton when searching
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
                             {[...Array(6)].map((_, index) => (
                                 <TokenCardSkeleton key={index} />
@@ -236,7 +273,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                                 </div>
                                 <div className="flex flex-col gap-3">
                                     <div className="text-3xl font-bold text-[#15803D]">
-                                        ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        ${formatNumberToCurrency(portfolioValue)}
                                     </div>
                                     <div className="text-sm font-medium text-[#71717A]">
                                         Total portfolio value
@@ -339,12 +376,10 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
                     {searchQuery.trim() && isSearching ? (
-                        // Show skeleton when searching
                         [...Array(6)].map((_, index) => (
                             <TokenCardSkeleton key={index} />
                         ))
                     ) : searchQuery.trim() && !isSearching && searchResults.length === 0 ? (
-                        // Show NoTokensFound when search has no results
                         <div className="col-span-full flex flex-col items-center justify-center text-center">
                             <NoTokensFound 
                                 searchQuery={searchQuery} 

@@ -72,19 +72,11 @@ export default function ExploreTokenCard({
                 getPoolStateByMint(mint),
                 getPoolConfigByMint(mint)
             ]);
-            const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
-            const migrationBaseThreshold = hexToNumber(poolConfig?.migrationBaseThreshold);
-            
-            // Convert quoteReserve to number for curve progress calculation
-            const quoteReserveNumber = hexToNumber(pool?.account?.quoteReserve);
-            const curveProgress = migrationQuoteThreshold > 0
-                ? quoteReserveNumber / migrationQuoteThreshold
-                : 0;
-            
+
             // Convert hex values to numbers
-            const quote = hexToNumber(pool?.account?.quoteReserve);
-            const base = hexToNumber(pool?.account?.baseReserve);
-            const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply);
+            const quote = hexToNumber(pool?.account?.quoteReserve) / Math.pow(10, 9);
+            const base = hexToNumber(pool?.account?.baseReserve) / Math.pow(10, 9);
+            const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply) / Math.pow(10, decimals);
 
             // Calculate price: quote / base (in SOL)
             const price = base > 0 ? quote / base : 0;
@@ -92,7 +84,7 @@ export default function ExploreTokenCard({
             // Calculate total supply: preMigrationTokenSupply + baseReserve
             const totalSupplyCalc = preMigrationTokenSupply + base;
             
-            // Calculate circulating supply: totalSupply - base (tokens NOT in pool)
+            // Calculate circulating supply: totalSupply - base
             const circulating = totalSupplyCalc - base;
             
             // Calculate market cap: price * circulating

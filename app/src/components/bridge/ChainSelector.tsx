@@ -2,14 +2,17 @@ import { ChevronDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ChainType } from "@/types/bridge.types";
 import { CHAINS, AVAILABLE_CHAINS } from "@/constants/bridge.constants";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChainSelectorProps {
     selectedChain: ChainType;
     onChainChange: (chain: ChainType) => void;
     label?: string;
+    disabledChains?: ChainType[];
+    disabledTooltips?: Partial<Record<ChainType, string>>;
 }
 
-export const ChainSelector = ({ selectedChain, onChainChange, label }: ChainSelectorProps) => {
+export const ChainSelector = ({ selectedChain, onChainChange, label, disabledChains = [], disabledTooltips = {} }: ChainSelectorProps) => {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild className="border-none">
@@ -33,26 +36,45 @@ export const ChainSelector = ({ selectedChain, onChainChange, label }: ChainSele
                 </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44 bg-white border border-gray-100">
-                {AVAILABLE_CHAINS.map((chain) => (
-                    <DropdownMenuItem
-                        key={chain}
-                        onSelect={(e) => {
-                            e.preventDefault();
-                            onChainChange(chain);
-                        }}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                    >
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center">
-                            <img
-                                src={CHAINS[chain].icon}
-                                alt={CHAINS[chain].name}
-                                className="w-full h-full rounded-full"
-                            />
-                        </div>
-                        <span className="text-sm">{CHAINS[chain].name}</span>
-                        {selectedChain === chain && <Check className="w-4 h-4 ml-auto text-green-600" />}
-                    </DropdownMenuItem>
-                ))}
+                {AVAILABLE_CHAINS.map((chain) => {
+                    const isDisabled = disabledChains.includes(chain);
+                    const tooltipText = disabledTooltips[chain];
+
+                    const item = (
+                        <DropdownMenuItem
+                            key={chain}
+                            onSelect={(e) => {
+                                e.preventDefault();
+                                if (isDisabled) return;
+                                onChainChange(chain);
+                            }}
+                            className={`flex items-center gap-2 ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50"}`}
+                        >
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center">
+                                <img
+                                    src={CHAINS[chain].icon}
+                                    alt={CHAINS[chain].name}
+                                    className="w-full h-full rounded-full"
+                                />
+                            </div>
+                            <span className="text-sm">{CHAINS[chain].name}</span>
+                            {selectedChain === chain && <Check className="w-4 h-4 ml-auto text-green-600" />}
+                        </DropdownMenuItem>
+                    );
+
+                    return tooltipText && isDisabled ? (
+                        <Tooltip key={chain}>
+                            <TooltipTrigger asChild>
+                                {item}
+                            </TooltipTrigger>
+                            <TooltipContent className="border border-gray-200/60">
+                                {tooltipText}
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        item
+                    );
+                })}
             </DropdownMenuContent>
         </DropdownMenu>
     );

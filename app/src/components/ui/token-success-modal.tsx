@@ -1,5 +1,6 @@
 "use client"
 
+import Link from 'next/link';
 import React from 'react';
 
 interface TokenSuccessModalProps {
@@ -71,9 +72,11 @@ export default function TokenSuccessModal({
           {mintAddress && (
             <div className="bg-gray-50 rounded-lg p-3 mb-6">
               <p className="text-xs text-gray-500 mb-1">Token Address:</p>
-              <p className="text-xs font-mono text-gray-700 break-all">
-                {mintAddress}
-              </p>
+              <Link href={`https://solscan.io/token/${mintAddress}?cluster=devnet`} target='_blank'>
+                <p className="text-xs font-mono text-gray-700 break-all">
+                  {mintAddress}
+                </p>
+              </Link>
             </div>
           )}
 

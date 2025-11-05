@@ -91,7 +91,7 @@ export function useTransactionBridge(address?: string): {
 
     const allTransactions = data?.transactions || data?.data || [];
 
-    // Filter only BRIDGE and DEPLOY transactions
+
     const filteredTransactions = allTransactions.filter(
         (tx: Transaction) =>
             tx.action === TransactionAction.BRIDGE ||

@@ -77,6 +77,39 @@ export default function TokenInfo({
       if (num > 99) num = 99;
       next = num;
     }
+    // Normalize socials
+    if (field === 'twitter') {
+      const raw = String(value)
+        .replace(/^https?:\/\//, '')
+        .replace(/^x\.com\//, '')
+        .replace(/^twitter\.com\//, '');
+      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
+      next = username ? `https://x.com/${username}` : '';
+    }
+
+    if (field === 'telegram') {
+      const raw = String(value)
+        .replace(/^https?:\/\//, '')
+        .replace(/^t\.me\//, '')
+        .replace(/^telegram\.me\//, '')
+        .replace(/^telegram\.org\//, '');
+      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
+      next = handle.length >= 5 ? `https://t.me/${handle}` : '';
+    }
+
+    if (field === 'website') {
+      const trimmed = String(value).trim().replace(/\s+/g, '');
+      const withoutProto = trimmed.replace(/^https?:\/\//, '');
+      const candidate = `https://${withoutProto}`;
+      try {
+        // eslint-disable-next-line no-new
+        new URL(candidate);
+        next = candidate.slice(0, 2048);
+      } catch {
+        next = '';
+      }
+    }
+
     setFormData(prev => ({ ...prev, [field]: next as any }));
   };
 

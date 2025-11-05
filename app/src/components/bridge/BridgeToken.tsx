@@ -222,6 +222,11 @@ export default function BridgeToken() {
     };
 
     const handleBridge = async () => {
+        if(!publicKey){
+            toast.error("Please connect wallet Solana")
+            return
+        }
+
         if (!amount || parseFormattedNumber(amount) <= 0) {
             toast.error('Please enter a valid amount');
             return;
@@ -250,7 +255,7 @@ export default function BridgeToken() {
 
         try {
             // Get user address
-            const userAddress = getWalletAddress(fromChain) || '';
+            const userAddress = publicKey.toBase58();
             const amountValue = parseFormattedNumber(amount);
 
             // Create pending transaction before starting bridge
@@ -311,6 +316,7 @@ export default function BridgeToken() {
             if (transactionId) {
                 await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, result);
             }
+            setAmount('')
 
             setShowBridgeProcessingModal(false);
             setShowBridgeSuccessModal(true);
@@ -335,6 +341,11 @@ export default function BridgeToken() {
     };
 
     const handleDeployToken = async () => {
+        if(!publicKey){
+            toast.error("Please connect wallet Solana")
+            return
+        }
+
         if (!selectedToken) {
             toast.error('Please select a token');
             return;
@@ -352,7 +363,7 @@ export default function BridgeToken() {
 
         try {
             // Get user address
-            const userAddress = getWalletAddress(fromChain) || '';
+            const userAddress = publicKey.toBase58();
 
             // Create pending transaction before starting deployment
             const transactionPayload = {
@@ -470,7 +481,7 @@ export default function BridgeToken() {
             if (transactionId) {
                 await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
             }
-
+            setAmount('')
             setShowDeployProcessingModal(false);
             setShowDeploySuccessModal(true);
             setIsTokenDeployedOnTargetChain(true);
@@ -545,6 +556,8 @@ export default function BridgeToken() {
                                             onChainChange={setFromChain}
                                             walletAddress={getWalletAddress(fromChain)}
                                             label="Select source chain"
+                                            disabledChains={["ethereum"]}
+                                            disabledTooltips={{ ethereum: "Coming soon" }}
                                         />
 
                                         <TokenInput
@@ -585,6 +598,8 @@ export default function BridgeToken() {
                                             onChainChange={setToChain}
                                             walletAddress={getWalletAddress(toChain)}
                                             label="Select destination chain"
+                                            disabledChains={["ethereum"]}
+                                            disabledTooltips={{ ethereum: "Coming soon" }}
                                         />
 
                                         <TokenInput

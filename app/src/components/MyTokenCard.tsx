@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PublicKey } from "@solana/web3.js";
-import { formatNumberToCurrency } from "@/utils";
+import { formatNumberToCurrency, calculateTokenPrice, formatPriceChange, calculatePriceChangePercentage } from "@/utils";
 import { getTokenBalanceOnSOL } from "@/lib/sol";
 import { useRouter } from "next/navigation";
+import { getPoolStateByMint, getOldestPriceFromTransactions } from "@/lib/api";
 
 interface MyTokenCardProps {
     id: string;
@@ -37,17 +38,37 @@ export function MyTokenCard({
     actionButton,
     className
 }: MyTokenCardProps){
-    const [currentPrice, setCurrentPrice] = useState<number|null>(null)
+    const [currentPrice, setCurrentPrice] = useState<number>(0)
+    const [priceChange24h, setPriceChange24h] = useState<number>(0)
     const [balance, setBalance] = useState<number>(0)
+    const [isLoadingPrice, setIsLoadingPrice] = useState<boolean>(true)
 
     const fetchBalanceToken = useCallback(async()=>{
         const balance = await getTokenBalanceOnSOL(mint, user?.toBase58() || '')
         setBalance(balance)
     },[mint, user])
 
+    const fetchTokenPrice = useCallback(async () => {
+        try {
+            setIsLoadingPrice(true)
+            const poolState = await getPoolStateByMint(mint)
+            const priceData = calculateTokenPrice(poolState, solPrice)
+            setCurrentPrice(priceData.priceInSol)
+
+            setPriceChange24h(0)
+        } catch (error) {
+            console.error('Error fetching token price:', error)
+            setCurrentPrice(0)
+            setPriceChange24h(0)
+        } finally {
+            setIsLoadingPrice(false)
+        }
+    }, [mint, solPrice])
+
     useEffect(() => {
         fetchBalanceToken()
-    }, [fetchBalanceToken])
+        fetchTokenPrice()
+    }, [fetchBalanceToken, fetchTokenPrice])
 
     const router = useRouter()
 
@@ -60,7 +81,7 @@ export function MyTokenCard({
         }
     };
 
-    const value = balance * (Number(currentPrice || 0) * solPrice)
+    const value = balance * currentPrice * solPrice || 0
 
     return (
         <motion.div
@@ -115,22 +136,36 @@ export function MyTokenCard({
                         <span className="font-bold text-gray-900">{formatNumberToCurrency(balance)} {symbol}</span>
                         <span className="text-gray-500 text-xs">Your Balance</span>
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">${formatNumberToCurrency(value)}</span>
+                        {isLoadingPrice ? (
+                            <span className="font-bold">...</span>
+                        ) : (
+                            <span className="font-bold text-gray-900">${formatNumberToCurrency(value)}</span>
+                        )}
                         <span className="text-gray-500 text-xs">Value</span>
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
                         className="text-center flex flex-col"
                     >
-                        <span className="font-bold text-gray-900">0%</span>
+                        {isLoadingPrice ? (
+                            <span className="font-bold">...</span>
+                        ) : (
+                            <span className={`font-bold ${
+                                priceChange24h > 0 ? 'text-green-600' :
+                                priceChange24h < 0 ? 'text-red-600' :
+                                'text-gray-900'
+                            }`}>
+                                {formatPriceChange(priceChange24h)}
+                            </span>
+                        )}
                         <span className="text-gray-500 text-xs">24h Change</span>
                     </motion.div>
                 </div>

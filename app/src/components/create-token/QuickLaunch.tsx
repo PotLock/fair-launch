@@ -62,18 +62,54 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   const handleInputChange = (field: string, value: string) => {
     let next = value;
-    // Limit token symbol to max 5 characters
+    
     if (field === 'tokenSymbol') {
       next = value.slice(0, 5);
     }
-    // Enforce numeric-only for supply
+
     if (field === 'tokenSupply') {
       next = value.replace(/[^\d]/g, '');
     }
-    // Enforce numeric-only for decimal and max 2 digits (0-99)
+
     if (field === 'decimal') {
       next = value.replace(/[^\d]/g, '').slice(0, 2);
     }
+    // Normalize social inputs
+    if (field === 'twitterUrl') {
+      const raw = value
+        .replace(/^https?:\/\//, '')
+        .replace(/^x\.com\//, '')
+        .replace(/^twitter\.com\//, '');
+      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
+      next = username ? `https://x.com/${username}` : 'x.com/';
+    }
+
+    if (field === 'telegramUrl') {
+      const raw = value
+        .replace(/^https?:\/\//, '')
+        .replace(/^t\.me\//, '')
+        .replace(/^telegram\.me\//, '')
+        .replace(/^telegram\.org\//, '');
+      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
+      // Telegram handles are 5-32 chars. If <5, keep editable placeholder
+      next = handle.length >= 5 ? `https://t.me/${handle}` : 't.me/';
+    }
+
+    if (field === 'websiteUrl') {
+      // Trim spaces and prevent whitespace
+      const trimmed = value.trim().replace(/\s+/g, '');
+      // Ensure https:// prefix once
+      const withoutProto = trimmed.replace(/^https?:\/\//, '');
+      const candidate = `https://${withoutProto}`;
+      try {
+        // eslint-disable-next-line no-new
+        new URL(candidate);
+        next = candidate.slice(0, 2048);
+      } catch {
+        next = 'https://';
+      }
+    }
+
     setFormData(prev => ({ ...prev, [field]: next }));
   };
 

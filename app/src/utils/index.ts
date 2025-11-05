@@ -1,3 +1,4 @@
+import { PoolState } from "@/types/pool";
 import { toast } from "sonner";
 
 export const formatNumberToCurrency = (x: number): string => {
@@ -82,7 +83,7 @@ export function formatMarketCap(marketCap: number): string {
 
 export function formatTokenPrice(price: number): string {
   if (price === 0) return '0';
-  if (price < 0.000001) return price.toExponential(2);
+  if (price < 0.000001) return formatTinyPrice(price);
   if (price < 0.01) return price.toFixed(6);
   if (price < 1) return price.toFixed(4);
   return price.toFixed(2);
@@ -162,5 +163,39 @@ export function timeAgo(timestamp: string): string {
   if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
   const years = Math.floor(months / 12);
   return `${years} year${years !== 1 ? "s" : ""} ago`;
+}
+
+export interface TokenPriceData {
+  priceInSol: number;
+  priceInUsd: number;
+}
+
+// Calculate token price from pool state
+export function calculateTokenPrice(poolState: PoolState, solPrice: number): TokenPriceData {
+  if (!poolState?.account) {
+    return { priceInSol: 0, priceInUsd: 0 };
+  }
+
+  const quote = hexToNumber(poolState.account.quoteReserve) / Math.pow(10, 9);
+  const base = hexToNumber(poolState.account.baseReserve) / Math.pow(10, 9);
+
+  // Calculate price: quote / base (in SOL)
+  const priceInSol = base > 0 ? quote / base : 0;
+  const priceInUsd = priceInSol * solPrice;
+
+  return { priceInSol, priceInUsd };
+}
+
+// Format percentage change with color indicator
+export function formatPriceChange(change: number): string {
+  if (change === 0) return '0%';
+  const sign = change > 0 ? '+' : '';
+  return `${sign}${change.toFixed(2)}%`;
+}
+
+// Calculate percentage change between two prices
+export function calculatePriceChangePercentage(currentPrice: number, previousPrice: number): number {
+  if (previousPrice === 0) return 0;
+  return ((currentPrice - previousPrice) / previousPrice) * 100;
 }
 

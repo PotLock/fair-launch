@@ -249,11 +249,11 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     </p>
                 </Card>
                 
-                <LaunchStatusData 
+                {/* <LaunchStatusData 
                     mint={token.mintAddress}
                     totalSupply={token.totalSupply}
                     decimals={token.decimals}
-                />
+                /> */}
 
                 <LaunchConditions 
                     token={token}

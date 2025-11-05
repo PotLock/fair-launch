@@ -1,5 +1,3 @@
-import { useCallback } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { Keypair } from '@solana/web3.js';
 import {  
   ChainKind, 
@@ -159,13 +157,38 @@ export const useBridge = () => {
         const nearClient = await ensureNear();
         const token = omniAddress(ChainKind.Near, tokenAddress);
 
+        console.log("=== Pre-logMetadata Debug Info ===");
+        console.log("Raw token address:", tokenAddress);
+        console.log("OmniAddress token:", token);
+
         const { signature, metadata_payload } = await nearClient.logMetadata(token);
         const sig = new MPCSignature(signature.big_r, signature.s, signature.recovery_id);
+
+        console.log("=== Post-logMetadata Debug Info ===");
+        console.log("Signature:", {
+          big_r: signature.big_r,
+          s: signature.s,
+          recovery_id: signature.recovery_id
+        });
+        console.log("Metadata payload:", JSON.stringify(metadata_payload, null, 2));
+        console.log("Metadata payload.token:", metadata_payload.token);
+        console.log("Metadata payload.name:", metadata_payload.name);
+        console.log("Metadata payload.symbol:", metadata_payload.symbol);
+        console.log("Metadata payload.decimals:", metadata_payload.decimals);
+
         let result;
         if (toChain === ChainKind.Sol) {
           const solClient = await ensureSolana();
 
-          console.log("metadata_payload", metadata_payload)
+          console.log("=== Attempting Solana Deployment ===");
+          console.log("Network:", network);
+          console.log("From chain:", fromChain);
+          console.log("To chain:", toChain);
+          console.log("Token address input:", tokenAddress);
+          console.log("OmniAddress token:", token);
+          console.log("Metadata payload:", JSON.stringify(metadata_payload, null, 2));
+          console.log("Signature:", sig);
+
           result = await solClient.deployToken(sig, metadata_payload);
         }
 

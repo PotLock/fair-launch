@@ -9,9 +9,11 @@ interface ChainSectionProps {
     onChainChange: (chain: ChainType) => void;
     walletAddress?: string;
     label: string;
+    disabledChains?: ChainType[];
+    disabledTooltips?: Partial<Record<ChainType, string>>;
 }
 
-export const ChainSection = ({ chain, onChainChange, walletAddress, label }: ChainSectionProps) => {
+export const ChainSection = ({ chain, onChainChange, walletAddress, label, disabledChains, disabledTooltips }: ChainSectionProps) => {
     const getExplorerUrl = () => {
         if (!walletAddress) return "#";
 
@@ -32,6 +34,8 @@ export const ChainSection = ({ chain, onChainChange, walletAddress, label }: Cha
                 selectedChain={chain}
                 onChainChange={onChainChange}
                 label={label}
+                disabledChains={disabledChains}
+                disabledTooltips={disabledTooltips}
             />
             {walletAddress && (
                 <a

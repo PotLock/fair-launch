@@ -599,3 +599,71 @@ export async function getPurchasedTokens(address: string): Promise<Token[]> {
     return [];
   }
 }
+
+export async function getAveragePriceFromTransactions(
+  mint: string,
+  hoursAgo: number = 24
+): Promise<number | null> {
+  try {
+    const transactions = await getTransactionsByToken(mint);
+
+    if (!transactions || transactions.length === 0) {
+      return null;
+    }
+
+    const now = new Date();
+    const timeThreshold = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+
+    const recentTransactions = transactions.filter(tx => {
+      const txDate = new Date(tx.createdAt);
+      return txDate >= timeThreshold;
+    });
+
+    if (recentTransactions.length === 0) {
+      return null;
+    }
+
+    const totalPrice = recentTransactions.reduce((sum, tx) => {
+      return sum + Number(tx.pricePerToken);
+    }, 0);
+
+    return totalPrice / recentTransactions.length;
+  } catch (error) {
+    console.error('Error calculating average price from transactions:', error);
+    return null;
+  }
+}
+
+export async function getOldestPriceFromTransactions(
+  mint: string,
+  hoursAgo: number = 24
+): Promise<number | null> {
+  try {
+    const transactions = await getTransactionsByToken(mint);
+
+    if (!transactions || transactions.length === 0) {
+      return null;
+    }
+
+    const now = new Date();
+    const timeThreshold = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+
+    const oldTransactions = transactions.filter(tx => {
+      const txDate = new Date(tx.createdAt);
+      return txDate >= timeThreshold;
+    });
+
+    if (oldTransactions.length === 0) {
+      return null;
+    }
+
+    oldTransactions.sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return Number(oldTransactions[0].pricePerToken);
+  } catch (error) {
+    console.error('Error getting oldest price from transactions:', error);
+    return null;
+  }
+}

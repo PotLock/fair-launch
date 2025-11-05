@@ -112,7 +112,6 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
 
   const handleAmountPayChange = (value: string) => {
     setAmountPay(value);
-    // Allow clearing the input without auto-filling 0.00
     if (value.trim() === '') {
       setAmountReceive('');
       return;
@@ -131,13 +130,13 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
       const newQuote = quoteReserve + amountPayNum;
       const newBase = k / newQuote;
       const deltaBase = baseReserve - newBase;
-      setAmountReceive(deltaBase.toFixed(3));
+      setAmountReceive(deltaBase.toFixed(4));
     } else {
       // Paying token -> receive SOL
       const newBase = baseReserve + amountPayNum;
       const newQuote = k / newBase;
       const deltaQuote = quoteReserve - newQuote;
-      setAmountReceive(deltaQuote.toFixed(3));
+      setAmountReceive(deltaQuote.toFixed(4));
     }
   };
 
@@ -155,12 +154,12 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
     const actionText = payIsSol ? "Buying" : "Selling";
     const toastId = toast.loading(`${actionText} ${token.symbol}...`);
     setIsBuying(true);
-    // Track created transaction id across try/catch to update status on failure
     let createdTransactionId: string | null = null;
 
     try {
       const connection = new Connection(getRpcSOLEndpoint());
-      const amountNum = parseFloat(amountPay);
+      const amountNum = parseFloat(amountPay.replace(/,/g, ''));
+
       const swapParams = {
         baseMint: address,
         signer: publicKey.toString(),
@@ -176,12 +175,12 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         const serializedDeployTx = result.data.transaction;
         const swapTxBuffer = Buffer.from(serializedDeployTx, "base64");
         const swapTransaction = Transaction.from(swapTxBuffer);
-        const signatureDeployToken = await sendTransaction(swapTransaction, connection, {
+        const signatureSwap = await sendTransaction(swapTransaction, connection, {
           skipPreflight: false,
           preflightCommitment: "processed",
         });
 
-        // Create a pending transaction record after obtaining signature
+
         try {
           const action: TransactionAction = payIsSol ? TransactionAction.BUY : TransactionAction.SELL;
           const baseToken = payIsSol ? "So11111111111111111111111111111111111111112" : address;
@@ -192,7 +191,7 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
 
           const created = await createTransaction({
             userAddress: publicKey.toString(),
-            txHash: signatureDeployToken,
+            txHash: signatureSwap,
             action,
             baseToken,
             quoteToken,
@@ -211,12 +210,12 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
           console.error("Error creating transaction record:", e);
         }
 
-        await connection.confirmTransaction(signatureDeployToken, "confirmed");
+        await connection.confirmTransaction(signatureSwap, "confirmed");
 
         // Update transaction status to success
         if (createdTransactionId) {
           try {
-            await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS);
+            await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
           } catch (e) {
             console.error("Error updating transaction status to success:", e);
           }
@@ -225,12 +224,10 @@ export function TradingInterface({ token, address }: TradingInterfaceProps) {
         toast.dismiss(toastId);
         const receiveSymbol = payIsSol ? token.symbol : "SOL";
         toast.success(`Successfully ${payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${amountReceive} ${receiveSymbol}`);
-        console.log("Swap Transaction Signature:", signatureDeployToken);
+        console.log("Swap Transaction Signature:", signatureSwap);
         await fetchTokenData();
         setAmountPay('');
         setAmountReceive('');
-        // Refresh server components to refetch transactions list
-        // router.refresh();
       } else {
         toast.error("Swap failed. Please try again.");
       }
