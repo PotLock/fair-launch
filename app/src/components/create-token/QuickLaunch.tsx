@@ -5,15 +5,16 @@ import { toast } from "sonner";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { uploadImage, createToken, requestDBCConfig, requestDeployToken } from "@/lib/api";
+import { uploadImage, createToken, requestDBCConfig, requestDeployToken, Swap, createTransaction, updateTransactionStatus } from "@/lib/api";
 import { getDBCConfig } from "@/configs/dbc.config";
 import { useRouter } from "next/navigation";
-import { CreateToken, DBCConfig, TokenConfig as TokenConfigType } from "@/types/api";
+import { CreateToken, DBCConfig, TokenConfig as TokenConfigType, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
 import URLInput from "@/components/ui/url-input";
 import { TagsSelectModal, TAG_ICONS } from "@/components/modal/TagsSelectModal";
+import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
 
 interface QuickLaunchProps {
   onCancel: () => void;
@@ -43,6 +44,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   // State for tags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+  // State for buy token modal
+  const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
+  const [buyAmount, setBuyAmount] = useState<string>("0");
 
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
@@ -270,7 +275,28 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Token decimals must be an integer between 0 and 99');
       return;
     }
+
+    // Show buy token modal
+    setIsBuyTokenModalOpen(true);
+  }
+
+  const handleBuyTokenConfirm = (amount: string) => {
+    setBuyAmount(amount);
+    executeDeployment(amount);
+  };
+
+  const handleBuyTokenSkip = () => {
+    setBuyAmount("0");
+    executeDeployment("0");
+  };
+
+  const executeDeployment = async (purchaseAmount: string) => {
     
+    if(!publicKey){
+      toast.error("Please connect wallet solana")
+      return
+    }
+
     setIsDeploying(true);
     setDeploymentStep(1);
     setDeploymentProgress(0);
@@ -441,6 +467,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         telegram: sanitizedTelegram,
       };
 
+      const totalSupply = Number(formData.tokenSupply);
+      const decimals = Number(formData.decimal);
+
       const dbcConfigData = getDBCConfig(publicKey, formData.tokenName, formData.tokenSymbol, metadata);
 
       const tokenConfig: TokenConfigType = {
@@ -472,11 +501,123 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       await createToken(createTokenPayload);
 
       console.log('✅ Deploy transaction confirmed:', signatureDeployToken);
-      
+
+      // Handle token purchase if amount > 0
+      if (parseFloat(purchaseAmount) > 0) {
+        let createdTransactionId: string | null = null;
+        
+        try {
+
+          setDeploymentStep(7);
+          setDeploymentProgress(92);
+          toast.loading('Waiting for token to load on-chain...', {
+            id: 'deployment-progress'
+          });
+
+          const waitTime = 10000; // 10 seconds
+          const startTime = Date.now();
+          const interval = 1000; // Update every second
+
+          while (Date.now() - startTime < waitTime) {
+            const elapsed = Date.now() - startTime;
+            const progress = 92 + Math.floor((elapsed / waitTime) * 3); // Progress from 92% to 95%
+            setDeploymentProgress(Math.min(progress, 95));
+            await new Promise(resolve => setTimeout(resolve, interval));
+          }
+
+          setDeploymentProgress(95);
+          toast.loading('Purchasing tokens...', {
+            id: 'deployment-progress'
+          });
+
+          const swapParams = {
+            baseMint: deployResult.data.baseMint,
+            signer: publicKey.toString(),
+            amount: parseFloat(purchaseAmount),
+            slippageBps: 50, // 0.5% slippage
+            swapBaseForQuote: false, // Buying tokens with SOL
+            computeUnitPriceMicroLamports: 100000,
+          };
+
+          const swapResult = await Swap(swapParams);
+
+          if (swapResult.success) {
+            const serializedSwapTx = swapResult.data.transaction;
+            const swapTxBuffer = Buffer.from(serializedSwapTx, "base64");
+            const swapTransaction = Transaction.from(swapTxBuffer);
+
+            const signatureSwap = await sendTransaction(
+              swapTransaction,
+              connection,
+              {
+                skipPreflight: false,
+                preflightCommitment: 'processed'
+              }
+            );
+
+            // Create transaction record
+            try {
+              const amountIn = parseFloat(purchaseAmount);
+              const baseToken = "So11111111111111111111111111111111111111112"; // SOL
+              const quoteToken = deployResult.data.baseMint;
+
+              const created = await createTransaction({
+                userAddress: publicKey.toString(),
+                txHash: signatureSwap,
+                action: TransactionAction.BUY,
+                baseToken,
+                quoteToken,
+                amountIn,
+                amountOut: 0, // Will be updated after transaction confirmation if needed
+                pricePerToken: 0, // Will be calculated if needed
+                slippageBps: 50,
+                fee: 0,
+                feeToken: "SOL",
+                status: TransactionStatus.PENDING,
+                chain: TransactionChain.SOLANA,
+                poolAddress: deployResult.data.baseMint,
+              });
+              createdTransactionId = created.id;
+            } catch (e) {
+              console.error("Error creating transaction record:", e);
+            }
+
+            await connection.confirmTransaction(signatureSwap, 'confirmed');
+
+            // Update transaction status to success
+            if (createdTransactionId) {
+              try {
+                await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
+              } catch (e) {
+                console.error("Error updating transaction status to success:", e);
+              }
+            }
+
+            console.log('✅ Token purchase confirmed:', signatureSwap);
+            toast.success(`Successfully purchased ${purchaseAmount} SOL worth of ${formData.tokenSymbol}!`);
+          }
+        } catch (purchaseError) {
+          console.error('❌ Error purchasing tokens:', purchaseError);
+          
+          // If we already created a transaction record, mark it failed
+          if (createdTransactionId) {
+            try {
+              await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
+            } catch (e) {
+              console.error("Error updating transaction status to failed:", e);
+            }
+          }
+          
+          toast.warning('Token deployed successfully, but purchase failed', {
+            description: 'You can still buy tokens manually from the token page.'
+          });
+        }
+      }
+
       // Complete deployment
       setDeploymentProgress(100);
       toast.dismiss('deployment-progress');
-      
+
       // Store token data for success modal
       setCreatedTokenData({
         name: formData.tokenName,
@@ -484,7 +625,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         mintAddress: deployResult.data.baseMint,
         logoUrl: logoUrl || undefined
       });
-      
+
       // Show success modal
       setShowSuccessModal(true);
       
@@ -872,6 +1013,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         onOpenChange={setIsTagsModalOpen}
         value={selectedTags}
         onConfirm={(tags) => setSelectedTags(tags)}
+      />
+
+      <BuyTokenModal
+        open={isBuyTokenModalOpen}
+        onOpenChange={setIsBuyTokenModalOpen}
+        tokenSymbol={formData.tokenSymbol || "TOKEN"}
+        tokenLogo={logoUrl || undefined}
+        onConfirm={handleBuyTokenConfirm}
+        onSkip={handleBuyTokenSkip}
       />
     </>
   );
