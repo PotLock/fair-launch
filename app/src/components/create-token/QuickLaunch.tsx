@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
@@ -17,7 +17,7 @@ import { TagsSelectModal, TAG_ICONS } from "@/components/modal/TagsSelectModal";
 import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
 
 interface QuickLaunchProps {
-  onCancel: () => void;
+  onCancel?: () => void;
 }
 
 export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
@@ -30,9 +30,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     tokenSupply: "1000000000",
     decimal: "6",
     description: "",
-    twitterUrl: "x.com/",
-    websiteUrl: "https://",
-    telegramUrl: "t.me/"
+    twitterUrl: "",
+    websiteUrl: "",
+    telegramUrl: ""
   });
 
   // State for image uploads
@@ -47,13 +47,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   // State for buy token modal
   const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
-  const [buyAmount, setBuyAmount] = useState<string>("0");
 
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [deploymentStartTime, setDeploymentStartTime] = useState<number | undefined>(undefined);
   const [createdTokenData, setCreatedTokenData] = useState<{
     name: string;
     symbol: string;
@@ -65,9 +65,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     let next = value;
-    
+
     if (field === 'tokenSymbol') {
       next = value.slice(0, 5);
     }
@@ -81,44 +81,24 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
     // Normalize social inputs
     if (field === 'twitterUrl') {
-      const raw = value
-        .replace(/^https?:\/\//, '')
-        .replace(/^x\.com\//, '')
-        .replace(/^twitter\.com\//, '');
-      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
-      next = username ? `https://x.com/${username}` : 'x.com/';
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     if (field === 'telegramUrl') {
-      const raw = value
-        .replace(/^https?:\/\//, '')
-        .replace(/^t\.me\//, '')
-        .replace(/^telegram\.me\//, '')
-        .replace(/^telegram\.org\//, '');
-      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
-      // Telegram handles are 5-32 chars. If <5, keep editable placeholder
-      next = handle.length >= 5 ? `https://t.me/${handle}` : 't.me/';
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     if (field === 'websiteUrl') {
-      // Trim spaces and prevent whitespace
-      const trimmed = value.trim().replace(/\s+/g, '');
-      // Ensure https:// prefix once
-      const withoutProto = trimmed.replace(/^https?:\/\//, '');
-      const candidate = `https://${withoutProto}`;
-      try {
-        // eslint-disable-next-line no-new
-        new URL(candidate);
-        next = candidate.slice(0, 2048);
-      } catch {
-        next = 'https://';
-      }
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     setFormData(prev => ({ ...prev, [field]: next }));
-  };
+  }, []);
 
-  const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
+  const handleImageUpload = useCallback(async (type: 'logo' | 'banner', file: File) => {
     if (!file) {
       console.error('No file provided for upload');
       return;
@@ -142,7 +122,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
-        
+
         if (type === 'logo') {
           setLogoUrl(imageUrl);
           toast.success('Logo uploaded successfully!');
@@ -163,36 +143,36 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         setIsUploadingBanner(false);
       }
     }
-  };
+  }, []);
 
-  const handleFileUpload = (type: 'logo' | 'banner') => {
+  const handleFileUpload = useCallback((type: 'logo' | 'banner') => {
     const inputRef = type === 'logo' ? logoInputRef : bannerInputRef;
     inputRef.current?.click();
-  };
+  }, []);
 
-  const handleFileChange = (type: 'logo' | 'banner', event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((type: 'logo' | 'banner', event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files;
     if (file) {
       handleImageUpload(type, file[0]);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleImageDrop = (type: 'logo' | 'banner', e: React.DragEvent) => {
+  const handleImageDrop = useCallback((type: 'logo' | 'banner', e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       handleImageUpload(type, file);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-  };
+  }, []);
 
-  const getStepMessage = (step: number): string => {
+  const getStepMessage = useCallback((step: number): string => {
     const messages = [
       "Preparing Configuration",
-      "Sending Configuration", 
+      "Sending Configuration",
       "Confirming Configuration",
       "Deploying Token",
       "Sending Deployment Transaction",
@@ -200,9 +180,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       "Saving Details"
     ];
     return messages[step - 1] || "Processing...";
-  };
+  }, []);
 
-  const getStepSubMessage = (step: number): string => {
+  const getStepSubMessage = useCallback((step: number): string => {
     const subMessages = [
       "Setting up token parameters",
       "Submitting configuration transaction",
@@ -213,32 +193,45 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       "Storing token information"
     ];
     return subMessages[step - 1] || "Please wait...";
-  };
+  }, []);
 
-  const sanitizeUrl = (value: string, placeholders: string[]) => {
+  const sanitizeUrl = useCallback((value: string, type: 'twitter' | 'telegram' | 'website') => {
     if (!value) return undefined;
     const trimmed = value.trim();
-    if (!trimmed || placeholders.includes(trimmed)) {
-      return undefined;
+
+    if (type === 'twitter') {
+      // Extract username from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(x\.com|twitter\.com)\//, '');
+      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
+      return username ? `https://x.com/${username}` : undefined;
     }
 
-    // If the value already starts with the prefix, return as is
-    if (placeholders.some(placeholder => trimmed.startsWith(placeholder))) {
-      return trimmed;
+    if (type === 'telegram') {
+      // Extract handle from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(t\.me|telegram\.me|telegram\.org)\//, '');
+      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
+      return handle.length >= 5 ? `https://t.me/${handle}` : undefined;
     }
 
-    // For website URLs, try to add https:// if not present
-    if (placeholders.includes('https://')) {
+    if (type === 'website') {
+      // Ensure valid URL format
+      if (!trimmed) return undefined;
+      const withoutProto = trimmed.replace(/^https?:\/\//, '');
+      if (!withoutProto) return undefined;
       try {
-        return new URL(`https://${trimmed}`).toString();
+        const url = new URL(`https://${withoutProto}`);
+        return url.toString();
       } catch {
         return undefined;
       }
     }
 
-    // For other URLs, return the full value
     return trimmed;
-  };
+  }, []);
 
   const handleDeployToken = async () => {
     if(!publicKey){
@@ -263,6 +256,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Token logo is required');
       return;
     }
+    if (!bannerUrl) {
+      toast.error('Token banner is required');
+      return;
+    }
 
     const totalSupply = Number(formData.tokenSupply);
     if (!Number.isFinite(totalSupply) || totalSupply <= 0 || !Number.isInteger(totalSupply)) {
@@ -281,12 +278,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   }
 
   const handleBuyTokenConfirm = (amount: string) => {
-    setBuyAmount(amount);
     executeDeployment(amount);
   };
 
   const handleBuyTokenSkip = () => {
-    setBuyAmount("0");
     executeDeployment("0");
   };
 
@@ -300,7 +295,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     setIsDeploying(true);
     setDeploymentStep(1);
     setDeploymentProgress(0);
-    
+    setDeploymentStartTime(Date.now());
+
     try {
       console.log('🚀 Starting token deployment...');
       console.log('Wallet public key:', publicKey.toString());
@@ -452,9 +448,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         id: 'deployment-progress'
       });
 
-      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, ['https://']);
-      const sanitizedTwitter = sanitizeUrl(formData.twitterUrl, ['x.com/']);
-      const sanitizedTelegram = sanitizeUrl(formData.telegramUrl, ['t.me/']);
+      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, 'website');
+      const sanitizedTwitter = sanitizeUrl(formData.twitterUrl, 'twitter');
+      const sanitizedTelegram = sanitizeUrl(formData.telegramUrl, 'telegram');
 
       const metadata = {
         name: formData.tokenName,
@@ -663,13 +659,14 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       setIsNavigating(false);
       setDeploymentStep(1);
       setDeploymentProgress(0);
+      setDeploymentStartTime(undefined);
     }
   }
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setCreatedTokenData(null);
-    onCancel(); // Close the entire create token flow
+    onCancel?.();
   };
 
   const handleViewToken = () => {
@@ -684,12 +681,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     <>
       <TokenCreationModal
         isVisible={isDeploying}
-        currentStep={deploymentStep}
-        totalSteps={7}
         stepMessage={getStepMessage(deploymentStep)}
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={logoUrl || undefined}
+        startTime={deploymentStartTime}
       />
       <TokenSuccessModal
         isVisible={showSuccessModal}
@@ -863,8 +859,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                       <img src="/icons/add-image.svg" alt="Add Image" />
                     )}
                   </div>
-                  <h4 className="text-gray-700 mb-1 font-medium text-sm">Token Logo</h4>
+                  <h4 className="text-gray-700 mb-1 font-medium text-sm">
+                    Token Logo <strong className="text-red-500">*</strong>
+                  </h4>
                   <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  <p className="text-xs text-gray-400 mt-1">Recommended: 512x512px</p>
                 </div>
               )}
             </div>
@@ -896,8 +895,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                       <img src="/icons/add-image.svg" alt="Add Image" />
                     )}
                   </div>
-                  <h4 className="font-medium text-gray-700 mb-1 text-sm">Banner image</h4>
+                  <h4 className="font-medium text-gray-700 mb-1 text-sm">
+                    Banner image <strong className="text-red-500">*</strong>
+                  </h4>
                   <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  <p className="text-xs text-gray-400 mt-1">Recommended: 1500x500px</p>
                 </div>
               )}
             </div>

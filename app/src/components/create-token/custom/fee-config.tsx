@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
 interface FeeConfigProps {
@@ -34,11 +34,11 @@ const baseFeeModes = [
   { value: "2", label: "Custom Scheduler" }
 ];
 
-export default function FeeConfig({ 
-  onNext, 
+export default function FeeConfig({
+  onNext,
   onBack,
-  onCancel, 
-  currentStep = 3, 
+  onCancel,
+  currentStep = 3,
   totalSteps = 7,
   initialData
 }: FeeConfigProps) {
@@ -52,13 +52,16 @@ export default function FeeConfig({
     },
   });
 
-  const progressPercentage = (currentStep / totalSteps) * 100;
+  const progressPercentage = useMemo(() =>
+    (currentStep / totalSteps) * 100,
+    [currentStep, totalSteps]
+  );
 
-  const handleInputChange = (field: keyof FeeConfigData, value: string) => {
+  const handleInputChange = useCallback((field: keyof FeeConfigData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleSchedulerChange = (field: keyof FeeConfigData['feeSchedulerParam'], value: string) => {
+  const handleSchedulerChange = useCallback((field: keyof FeeConfigData['feeSchedulerParam'], value: string) => {
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({
       ...prev,
@@ -67,14 +70,22 @@ export default function FeeConfig({
         [field]: numValue
       }
     }));
-  };
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     onNext(formData);
-  };
+  }, [formData, onNext]);
 
-  const isSchedulerMode = formData.baseFeeMode !== "0";
+  const isSchedulerMode = useMemo(() =>
+    formData.baseFeeMode !== "0",
+    [formData.baseFeeMode]
+  );
+
+  const feePreview = useMemo(() => ({
+    startingFeePercent: (formData.feeSchedulerParam.startingFeeBps / 100).toFixed(2),
+    endingFeePercent: (formData.feeSchedulerParam.endingFeeBps / 100).toFixed(2),
+  }), [formData.feeSchedulerParam.startingFeeBps, formData.feeSchedulerParam.endingFeeBps]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -225,11 +236,11 @@ export default function FeeConfig({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Starting Fee:</span>
-                  <span className="text-sm font-medium">{(formData.feeSchedulerParam.startingFeeBps / 100).toFixed(2)}%</span>
+                  <span className="text-sm font-medium">{feePreview.startingFeePercent}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Ending Fee:</span>
-                  <span className="text-sm font-medium">{(formData.feeSchedulerParam.endingFeeBps / 100).toFixed(2)}%</span>
+                  <span className="text-sm font-medium">{feePreview.endingFeePercent}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Duration:</span>

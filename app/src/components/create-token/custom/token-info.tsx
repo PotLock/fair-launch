@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { uploadImage } from '@/lib/api';
@@ -30,10 +30,10 @@ export interface TokenInfoData {
   tags?: string[];
 }
 
-export default function TokenInfo({ 
-  onNext, 
-  onCancel, 
-  currentStep = 1, 
+export default function TokenInfo({
+  onNext,
+  onCancel,
+  currentStep = 1,
   totalSteps = 7,
   initialData
 }: TokenInfoProps) {
@@ -57,9 +57,12 @@ export default function TokenInfo({
   const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
-  const progressPercentage = (currentStep / totalSteps) * 100;
+  const progressPercentage = useMemo(() =>
+    (currentStep / totalSteps) * 100,
+    [currentStep, totalSteps]
+  );
 
-  const handleInputChange = (field: keyof TokenInfoData, value: string) => {
+  const handleInputChange = useCallback((field: keyof TokenInfoData, value: string) => {
     let next: string | number = value;
     // Limit token symbol to max 5 characters
     if (field === 'symbol') {
@@ -77,43 +80,23 @@ export default function TokenInfo({
       if (num > 99) num = 99;
       next = num;
     }
-    // Normalize socials
+    // Allow free editing for social fields
     if (field === 'twitter') {
-      const raw = String(value)
-        .replace(/^https?:\/\//, '')
-        .replace(/^x\.com\//, '')
-        .replace(/^twitter\.com\//, '');
-      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
-      next = username ? `https://x.com/${username}` : '';
+      next = value;
     }
 
     if (field === 'telegram') {
-      const raw = String(value)
-        .replace(/^https?:\/\//, '')
-        .replace(/^t\.me\//, '')
-        .replace(/^telegram\.me\//, '')
-        .replace(/^telegram\.org\//, '');
-      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
-      next = handle.length >= 5 ? `https://t.me/${handle}` : '';
+      next = value;
     }
 
     if (field === 'website') {
-      const trimmed = String(value).trim().replace(/\s+/g, '');
-      const withoutProto = trimmed.replace(/^https?:\/\//, '');
-      const candidate = `https://${withoutProto}`;
-      try {
-        // eslint-disable-next-line no-new
-        new URL(candidate);
-        next = candidate.slice(0, 2048);
-      } catch {
-        next = '';
-      }
+      next = value;
     }
 
     setFormData(prev => ({ ...prev, [field]: next as any }));
-  };
+  }, []);
 
-  const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
+  const handleImageUpload = useCallback(async (type: 'logo' | 'banner', file: File) => {
     if (!file) {
       console.error('No file provided for upload');
       return;
@@ -137,7 +120,7 @@ export default function TokenInfo({
 
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
-        
+
         if (type === 'logo') {
           setFormData(prev => ({ ...prev, logo: imageUrl }));
           toast.success('Logo uploaded successfully!');
@@ -158,42 +141,116 @@ export default function TokenInfo({
         setIsUploadingBanner(false);
       }
     }
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent, field: 'logo' | 'banner') => {
+  const handleDragOver = useCallback((e: React.DragEvent, field: 'logo' | 'banner') => {
     e.preventDefault();
     setDragOver(field);
-  };
+  }, []);
 
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDragOver(null);
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent, field: 'logo' | 'banner') => {
+  const handleDrop = useCallback((e: React.DragEvent, field: 'logo' | 'banner') => {
     e.preventDefault();
     setDragOver(null);
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       handleImageUpload(field, files[0]);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'banner') => {
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'banner') => {
     const files = e.target.files;
     if (files && files.length > 0) {
       handleImageUpload(field, files[0]);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.name && formData.symbol) {
-      onNext(formData);
+  const sanitizeUrl = useCallback((value: string | undefined, type: 'twitter' | 'telegram' | 'website'): string | undefined => {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+
+    if (type === 'twitter') {
+      // Extract username from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(x\.com|twitter\.com)\//, '');
+      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
+      return username ? `https://x.com/${username}` : undefined;
     }
-  };
 
-  const isFormValid = formData.name.trim() !== '' && formData.symbol.trim() !== '' && formData.totalTokenSupply > 0;
+    if (type === 'telegram') {
+      // Extract handle from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(t\.me|telegram\.me|telegram\.org)\//, '');
+      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
+      return handle.length >= 5 ? `https://t.me/${handle}` : undefined;
+    }
+
+    if (type === 'website') {
+      // Ensure valid URL format
+      if (!trimmed) return undefined;
+      const withoutProto = trimmed.replace(/^https?:\/\//, '');
+      if (!withoutProto) return undefined;
+      try {
+        const url = new URL(`https://${withoutProto}`);
+        return url.toString();
+      } catch {
+        return undefined;
+      }
+    }
+
+    return trimmed;
+  }, []);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast.error('Token name is required');
+      return;
+    }
+    if (!formData.symbol.trim()) {
+      toast.error('Token symbol is required');
+      return;
+    }
+    if (!formData.logo) {
+      toast.error('Token logo is required');
+      return;
+    }
+    if (!formData.banner) {
+      toast.error('Token banner is required');
+      return;
+    }
+    if (formData.totalTokenSupply <= 0) {
+      toast.error('Token supply must be greater than 0');
+      return;
+    }
+
+    // Sanitize social URLs before passing to next step
+    const sanitizedData = {
+      ...formData,
+      website: sanitizeUrl(formData.website, 'website'),
+      twitter: sanitizeUrl(formData.twitter, 'twitter'),
+      telegram: sanitizeUrl(formData.telegram, 'telegram'),
+    };
+
+    onNext(sanitizedData);
+  }, [formData, onNext, sanitizeUrl]);
+
+  const isFormValid = useMemo(() =>
+    formData.name.trim() !== '' &&
+    formData.symbol.trim() !== '' &&
+    formData.totalTokenSupply > 0 &&
+    formData.logo !== '' &&
+    formData.banner !== '',
+    [formData.name, formData.symbol, formData.totalTokenSupply, formData.logo, formData.banner]
+  );
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center">
@@ -347,8 +404,11 @@ export default function TokenInfo({
                         <img src="/icons/add-image.svg" alt="Add Image" />
                       )}
                     </div>
-                    <h4 className="text-gray-700 mb-1 font-medium text-sm">Token Logo</h4>
+                    <h4 className="text-gray-700 mb-1 font-medium text-sm">
+                      Token Logo <strong className="text-red-500">*</strong>
+                    </h4>
                     <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                    <p className="text-xs text-gray-400 mt-1">Recommended: 512x512px</p>
                   </div>
                 )}
                 <input
@@ -388,8 +448,11 @@ export default function TokenInfo({
                         <img src="/icons/add-image.svg" alt="Add Image" />
                       )}
                     </div>
-                    <h4 className="font-medium text-gray-700 mb-1 text-sm">Banner image</h4>
+                    <h4 className="font-medium text-gray-700 mb-1 text-sm">
+                      Banner image <strong className="text-red-500">*</strong>
+                    </h4>
                     <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                    <p className="text-xs text-gray-400 mt-1">Recommended: 1500x500px</p>
                   </div>
                 )}
                 <input

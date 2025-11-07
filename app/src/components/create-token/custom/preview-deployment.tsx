@@ -39,6 +39,7 @@ export default function PreviewDeployment({
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [deploymentStartTime, setDeploymentStartTime] = useState<number | undefined>(undefined);
   const [createdTokenData, setCreatedTokenData] = useState<{
     name: string;
     symbol: string;
@@ -229,7 +230,8 @@ export default function PreviewDeployment({
     setIsDeploying(true);
     setDeploymentStep(1);
     setDeploymentProgress(0);
-    
+    setDeploymentStartTime(Date.now());
+
     try {
       console.log('🚀 Starting custom token deployment...');
       console.log('Wallet public key:', publicKey.toString());
@@ -576,6 +578,7 @@ export default function PreviewDeployment({
       setIsNavigating(false);
       setDeploymentStep(1);
       setDeploymentProgress(0);
+      setDeploymentStartTime(undefined);
     }
   };
 
@@ -597,12 +600,11 @@ export default function PreviewDeployment({
     <>
       <TokenCreationModal
         isVisible={isDeploying}
-        currentStep={deploymentStep}
-        totalSteps={7}
         stepMessage={getStepMessage(deploymentStep)}
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={formData.tokenInfo?.logo || undefined}
+        startTime={deploymentStartTime}
       />
       <TokenSuccessModal
         isVisible={showSuccessModal}

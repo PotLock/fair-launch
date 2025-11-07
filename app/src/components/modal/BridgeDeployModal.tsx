@@ -19,6 +19,10 @@ import { getNearBalance } from "@/lib/near";
 import { useBridge } from "@/hooks/useBridge";
 import { formatNumberWithCommas } from "@/utils";
 import { ChainKind } from "omni-bridge-sdk";
+import { MIN_BALANCE, MIN_TARGET_BALANCE } from "@/constants/bridge.constants";
+import { getAllBridgeTokens } from "@/lib/omni-bridge";
+import { createTransaction, updateTransactionStatus } from "@/lib/api";
+import { TransactionAction, TransactionStatus, TransactionChain } from "@/types/bridge.types";
 
 interface BridgeDeployModalProps {
     isOpen: boolean;
@@ -53,8 +57,8 @@ const deploymentOptions = [
         logo: "/chains/ethereum.svg",
         description: "Deploy to Ethereum mainnet.",
         availableDexes: "Uniswap V3, SushiSwap",
+        estimatedTime: "1-3 minutes",
         cost: "0.015",
-        estimatedTime: "2-5 minutes",
         disabled: true
     }
 ];
@@ -68,6 +72,9 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     const [showProcessingModal, setShowProcessingModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [deploymentProgress, setDeploymentProgress] = useState(0);
+    const [deploymentStartTime, setDeploymentStartTime] = useState<number>(0);
+    const [deploymentElapsedTime, setDeploymentElapsedTime] = useState<string>('0s');
+    const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<string>('Calculating...');
 
     // BridgeTokens modal states
     const [showBridgeProcessingModal, setShowBridgeProcessingModal] = useState(false);
@@ -93,6 +100,35 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setActiveTab(newDefaultTab);
     }, [bridgeAddress]);
 
+    // Track elapsed time during deployment
+    useEffect(() => {
+        if (showProcessingModal && deploymentStartTime > 0) {
+            const interval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - deploymentStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                setDeploymentElapsedTime(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+
+                // Calculate estimated time remaining based on progress
+                if (deploymentProgress > 0 && deploymentProgress < 100) {
+                    const totalEstimatedTime = (elapsed / deploymentProgress) * 100;
+                    const remaining = Math.ceil(totalEstimatedTime - elapsed);
+                    const remainingMinutes = Math.floor(remaining / 60);
+                    const remainingSeconds = remaining % 60;
+                    setEstimatedTimeRemaining(
+                        remainingMinutes > 0
+                            ? `~${remainingMinutes}m ${remainingSeconds}s remaining`
+                            : `~${remainingSeconds}s remaining`
+                    );
+                } else if (deploymentProgress >= 100) {
+                    setEstimatedTimeRemaining('Completed');
+                }
+            }, 1000);
+
+            return () => clearInterval(interval);
+        }
+    }, [showProcessingModal, deploymentStartTime, deploymentProgress]);
+
     const handleOptionSelect = (option: typeof deploymentOptions[number]) => {
         if (option.disabled) {
             return; // Don't allow selection of disabled options
@@ -106,10 +142,27 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setShowConfirmModal(true);
     };
 
+    const checkBalance = (
+        chain: "sol" | "near" | "eth",
+        balance: number,
+        minRequired: number
+    ) => {
+        if (balance < minRequired) {
+            toast.error(
+                `Insufficient balance to deploy token, balance need >= ${minRequired} ${chain.toUpperCase()}`
+            );
+            return false;
+        }
+        return true;
+    };
+
     const handleDeploy = async () => {
         setShowConfirmModal(false);
         setShowProcessingModal(true);
         setDeploymentProgress(0);
+        setDeploymentStartTime(Date.now());
+        setDeploymentElapsedTime('0s');
+        setEstimatedTimeRemaining('Calculating...');
 
         if (!isSolanaConnected || !solanaPublicKey) {
             toast.error('Please connect your Solana wallet first');
@@ -133,43 +186,144 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
             }
         }
 
+        let transactionId: string | null = null;
+
         try {
+            // Get user address
+            const userAddress = solanaPublicKey;
+
+            // Create pending transaction before starting deployment
+            const transactionPayload = {
+                userAddress,
+                txHash: '', // Will be updated later when we have the actual tx hash
+                action: TransactionAction.DEPLOY,
+                baseToken: token?.mintAddress,
+                quoteToken: '', // Not applicable for deploy
+                amountIn: 0, // Not applicable for deploy
+                amountOut: 0, // Not applicable for deploy
+                pricePerToken: 0, // Not applicable for deploy
+                slippageBps: 0,
+                fee: 0,
+                feeToken: 'SOL',
+                status: TransactionStatus.PENDING,
+                chain: TransactionChain.SOLANA,
+                poolAddress: '', // Not applicable for deploy
+            };
+
+            const createdTransaction = await createTransaction(transactionPayload);
+            transactionId = createdTransaction.id;
+
             // Step 1: Starting deployment process (10%)
             setDeploymentProgress(10);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Step 1.5: Check if token is already deployed (20%)
+            setDeploymentProgress(20);
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
+            const chainToken = ChainKind.Sol;
+
+            const bridgedAddresses = await getAllBridgeTokens(token?.mintAddress, chainToken, network);
+
+            if (bridgedAddresses && bridgedAddresses.length > 0) {
+                const targetChain = selectedOption?.name.toLowerCase();
+                const alreadyDeployed = bridgedAddresses.some(addr => {
+                    const [chain] = addr.split(':');
+                    return chain === targetChain;
+                });
+
+                if (alreadyDeployed) {
+                    // Token already deployed - show success immediately
+                    setDeploymentProgress(100);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // Update transaction status to success
+                    if (transactionId) {
+                        await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
+                    }
+
+                    setShowProcessingModal(false);
+                    setShowSuccessModal(true);
+                    toast.success('Token already deployed and ready for bridging!');
+                    return;
+                }
+            }
 
             // Step 2: Check balances (30%)
             setDeploymentProgress(30);
-            const solBalance = await getSolBalance(solanaPublicKey || '')
-            
-            if(solBalance < 0.0001){
-                toast.error('Insufficient balance to deploy token, balance need >= 0.0001 SOL');
+            const solBalance = await getSolBalance(solanaPublicKey || '');
+
+            if (!checkBalance("sol", Number(solBalance), MIN_BALANCE.sol)) {
+                // Update transaction to failed
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                }
                 setShowProcessingModal(false);
                 return;
             }
 
-            const nearBalance = await getNearBalance(signedAccountId || '')
-        
-            if(Number(nearBalance) < 3){
-                toast.error('Insufficient balance to deploy token, balance need >= 3 NEAR');
+            const nearBalance = await getNearBalance(signedAccountId || '');
+
+            if (!checkBalance("near", Number(nearBalance), MIN_TARGET_BALANCE.near)) {
+                // Update transaction to failed
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                }
                 setShowProcessingModal(false);
                 return;
             }
 
             // Step 3: Deploying token (60%)
             setDeploymentProgress(60);
-            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet"
-            await deployToken(network,ChainKind.Sol,ChainKind.Near,token?.mintAddress);
+            const txDeployToken = await deployToken(network, ChainKind.Sol, ChainKind.Near, token?.mintAddress);
 
             // Step 4: Finalizing deployment (100%)
             setDeploymentProgress(100);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Update transaction status to success
+            if (transactionId) {
+                await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+            }
+
             setShowProcessingModal(false);
             setShowSuccessModal(true);
-        } catch (error) {
-            console.error(error);
-            toast.error('Deployment failed. Please try again.');
-            setShowProcessingModal(false);
+            toast.success('Deploy token successfully');
+
+        } catch (error: any) {
+            console.error("Deploy token error:", error);
+
+            // Check if error is due to token already being deployed
+            const errorMessage = error?.message || error?.toString() || '';
+            if (errorMessage.includes('already been processed') || errorMessage.includes('already deployed')) {
+                // Treat as success - token is already deployed
+                setDeploymentProgress(100);
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Update transaction status to success
+                if (transactionId) {
+                    try {
+                        await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
+                    } catch (updateError) {
+                        console.error('Error updating transaction status:', updateError);
+                    }
+                }
+
+                setShowProcessingModal(false);
+                setShowSuccessModal(true);
+                toast.success('Token already deployed and ready for bridging!');
+            } else {
+                // Update transaction status to failed
+                if (transactionId) {
+                    try {
+                        await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                    } catch (updateError) {
+                        console.error('Error updating transaction status:', updateError);
+                    }
+                }
+
+                toast.error('Deploy token failed. Please try again.');
+                setShowProcessingModal(false);
+            }
         }
     };
 
@@ -180,6 +334,9 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setShowSuccessModal(false);
         setSelectedOption(null);
         setDeploymentProgress(0);
+        setDeploymentStartTime(0);
+        setDeploymentElapsedTime('0s');
+        setEstimatedTimeRemaining('Calculating...');
     };
 
     const handleBridgeNow = () => {
@@ -305,7 +462,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         <>
             {/* Main Modal */}
             <Dialog open={shouldShowMainModal} onOpenChange={onClose}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[95vh] overflow-y-hidde [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[95vh] overflow-y-hidde [&>button]:hidden border-none">
                     <DialogHeader className="flex flex-row items-center justify-between">
                         <DialogTitle className="text-xl font-semibold">
                             Deploy Bridge Contract
@@ -421,13 +578,12 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     {
                         activeTab === "create" && (
                             <div className="flex justify-end gap-3 mt-3">
-                                <Button
-                                    variant="outline"
+                                <button
                                     onClick={onClose}
-                                    className="px-6"
+                                    className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                                 >
                                     Cancel
-                                </Button>
+                                </button>
                             </div>
                         )
                     }
@@ -436,7 +592,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Review Modal */}
             <Dialog open={showReviewModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Create {token?.symbol} on {selectedOption?.name} for Bridging
@@ -470,33 +626,34 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             <span className="text-sm text-gray-600">Contract Type:</span>
                             <span className="text-sm font-medium">ERC-20 Compatible</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Estimated Time:</span>
-                            <span className="text-sm font-medium">{selectedOption?.estimatedTime}</span>
-                        </div>
                     </Card>
 
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                            <strong>Note:</strong> Deployment time varies based on network conditions. Actual time will be displayed during deployment.
+                        </p>
+                    </div>
+
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleContinue}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
                             Continue
-                        </Button>
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Confirm Deploy Modal */}
             <Dialog open={showConfirmModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Confirm Deploy to {selectedOption?.name}
@@ -526,33 +683,34 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             <span className="text-sm text-gray-600">Fee:</span>
                             <span className="text-sm font-medium">{selectedOption?.cost}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Estimated Time:</span>
-                            <span className="text-sm font-medium">{selectedOption?.estimatedTime}</span>
-                        </div>
                     </Card>
 
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                            <strong>Note:</strong> Deployment time varies based on network conditions. You'll see real-time progress during deployment.
+                        </p>
+                    </div>
+
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleDeploy}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
-                            Deploy Tokens
-                        </Button>
+                            Deploy Token
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Processing Modal */}
             <Dialog open={showProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {token?.symbol} to {selectedOption?.name}
@@ -593,7 +751,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Success Modal */}
             <Dialog open={showSuccessModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {token?.symbol} to {selectedOption?.name}
@@ -664,26 +822,25 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     </div>
 
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleBridgeNow}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
                             Bridge Now
-                        </Button>
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Bridge Processing Modal */}
             <Dialog open={showBridgeProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {token?.symbol} from {bridgeFromChain} to {bridgeToChain}
@@ -728,7 +885,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Bridge Success Modal */}
             <Dialog open={showBridgeSuccessModal} onOpenChange={handleBridgeSuccessClose}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {token?.symbol} from {bridgeFromChain} to {bridgeToChain}
@@ -838,13 +995,12 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     </div>
 
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
+                        <button
                             onClick={handleBridgeSuccessClose}
-                            className="px-6"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
-                            Close
-                        </Button>
+                            Continue
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
