@@ -3,7 +3,7 @@
 import { MyTokenCard } from "@/components/MyTokenCard";
 import { TokenCardSkeleton } from "@/components/TokenCardSkeleton";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Token } from "@/types/api";
 import { getSolPrice, getTokenBalanceOnSOL } from "@/lib/sol";
@@ -14,16 +14,20 @@ import { useRouter } from "next/navigation";
 import { useUserTokens, usePurchasedTokens } from "@/hooks/useSWR";
 import { getPoolStateByMint } from "@/lib/api";
 import { calculateTokenPrice, formatNumberToCurrency } from "@/utils";
+import { TAG_ICONS, TAG_OPTIONS } from "@/components/modal/TagsSelectModal";
 
 interface MyTokensClientProps {
-  solPrice: number;
+    solPrice: number;
 }
+
+type TimeRangeType = "all" | "24h" | "7d" | "30d" | "90d" | "custom";
 
 export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensClientProps) {
     const { publicKey } = useWallet();
     const router = useRouter()
     const [solPrice, setSolPrice] = useState<number>(initialSolPrice)
     const [portfolioValue, setPortfolioValue] = useState<number>(0)
+    const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRangeType>("all");
     
     // Use the search hook with owner filter
     const {
@@ -32,11 +36,68 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
         searchResults,
         isSearching,
         error: searchError,
-        clearSearch
+        tag,
+        setTag,
+        timeRange,
+        setTimeRange,
+        clearSearch,
+        clearFilters: clearSearchFilters
     } = useSearch({ 
         owner: publicKey?.toBase58(),
         debounceMs: 500 
     });
+
+    const handleTimeRangeChange = useCallback((range: TimeRangeType) => {
+        setSelectedTimeRange(range);
+
+        if (range === "all") {
+            setTimeRange(undefined);
+        } else {
+            const date = new Date();
+            if (range === "24h") {
+                date.setHours(date.getHours() - 24);
+            } else if (range === "7d") {
+                date.setDate(date.getDate() - 7);
+            } else if (range === "30d") {
+                date.setDate(date.getDate() - 30);
+            } else if (range === "90d") {
+                date.setDate(date.getDate() - 90);
+            }
+            setTimeRange(date.toISOString());
+        }
+    }, [setTimeRange]);
+
+    const handleTagChange = useCallback((selectedTag: string) => {
+        if (tag === selectedTag) {
+            setTag(undefined);
+        } else {
+            setTag(selectedTag);
+        }
+    }, [tag, setTag]);
+
+    const getTimeRangeLabel = useCallback((range: TimeRangeType): string => {
+        switch (range) {
+            case "24h":
+                return "24 Hours";
+            case "7d":
+                return "7 Days";
+            case "30d":
+                return "30 Days";
+            case "90d":
+                return "90 Days";
+            case "custom":
+                return "Custom";
+            default:
+                return "All Time";
+        }
+    }, []);
+
+    const handleClearFilters = useCallback(() => {
+        setSelectedTimeRange("all");
+        setTag(undefined);
+        setTimeRange(undefined);
+        clearSearchFilters();
+    }, [clearSearchFilters, setTag, setTimeRange]);
 
     const fetchSolPrice = useCallback(async () => {
         const solPrice = await getSolPrice()
@@ -91,11 +152,50 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
         }
     }, [listTokens, purchasedTokens, calculatePortfolioValue]);
 
-    const sourceTokens = activeTab === 'created' ? listTokens : purchasedTokens;
-    const displayTokens = searchQuery.trim() && !isSearching ? searchResults : sourceTokens;
+    const sourceTokens = useMemo(() => (
+        activeTab === 'created' ? listTokens : purchasedTokens
+    ), [activeTab, listTokens, purchasedTokens]);
+
+    const filteredTokens = useMemo(() => {
+        let filtered = [...sourceTokens];
+
+        if (tag) {
+            filtered = filtered.filter(token =>
+                token.tags && token.tags.some((t: string) => t.toLowerCase() === tag.toLowerCase())
+            );
+        }
+
+        if (timeRange) {
+            const filterDate = new Date(timeRange);
+            filtered = filtered.filter((token: Token) => {
+                const tokenDate = new Date(token.createdAt);
+                return tokenDate.getTime() >= filterDate.getTime();
+            });
+        }
+
+        return filtered;
+    }, [sourceTokens, tag, timeRange]);
+
+    const filteredSearchResults = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+
+        let filtered = [...searchResults];
+
+        if (timeRange) {
+            const filterDate = new Date(timeRange);
+            filtered = filtered.filter(token => {
+                const tokenDate = new Date(token.createdAt);
+                return tokenDate.getTime() >= filterDate.getTime();
+            });
+        }
+
+        return filtered;
+    }, [searchResults, timeRange, searchQuery]);
+
+    const displayTokens = searchQuery.trim() && !isSearching ? filteredSearchResults : filteredTokens;
     const displayError = searchQuery.trim() ? searchError : (activeTab === 'created' ? error : errorPurchased);
     
-    const totalTokens = displayTokens?.length || 0;
+    const totalTokens = displayTokens.length;
     const tradingTokens = totalTokens;
 
     if (!publicKey) {
@@ -316,7 +416,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                     </button>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 mb-8">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4">
                     <div className="flex-1">
                         <div className="relative">
                             <input
@@ -341,38 +441,121 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                             )}
                         </div>
                     </div>
-                    
-                    <div className="relative">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild className="w-28">
-                                <button
-                                    className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-28 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    <span>Filter</span>
-                                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-40">
-                                <DropdownMenuItem textValue="all" className="hover:bg-gray-100 cursor-pointer">
-                                    Filter
-                                </DropdownMenuItem>
-                                <DropdownMenuItem textValue="trading" className="hover:bg-gray-100 cursor-pointer">
-                                    Trading
-                                </DropdownMenuItem>
-                                <DropdownMenuItem textValue="presale" className="hover:bg-gray-100 cursor-pointer">
-                                    Presale
-                                </DropdownMenuItem>
-                                <DropdownMenuItem textValue="ended" className="hover:bg-gray-100 cursor-pointer">
-                                    Ended
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+
+                    <div className="flex gap-2">
+                        <div className="relative">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
+                                    <button
+                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <span>{getTimeRangeLabel(selectedTimeRange)}</span>
+                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-40 bg-white">
+                                    <DropdownMenuItem
+                                        textValue="all"
+                                        className="hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleTimeRangeChange("all")}
+                                    >
+                                        All Time
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        textValue="24h"
+                                        className="hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleTimeRangeChange("24h")}
+                                    >
+                                        24 Hours
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        textValue="7d"
+                                        className="hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleTimeRangeChange("7d")}
+                                    >
+                                        7 Days
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        textValue="30d"
+                                        className="hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleTimeRangeChange("30d")}
+                                    >
+                                        30 Days
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        textValue="90d"
+                                        className="hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleTimeRangeChange("90d")}
+                                    >
+                                        90 Days
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+
+                        <div className="relative">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
+                                    <button
+                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <span className="capitalize">
+                                            {tag ? `${TAG_ICONS[tag] ?? ""} ${tag}` : "Tags"}
+                                        </span>
+                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-48 bg-white">
+                                    {TAG_OPTIONS.map((option) => (
+                                        <DropdownMenuItem
+                                            key={option}
+                                            textValue={option}
+                                            className={`hover:bg-gray-100 cursor-pointer ${tag === option ? "bg-blue-50" : ""}`}
+                                            onClick={() => handleTagChange(option)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span>{TAG_ICONS[option]}</span>
+                                                <span className="capitalize">{option}</span>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
-                    
-                    <button className="bg-[#DD3345] hover:bg-[#C02A3A] text-white px-9 py-2.5 rounded-md font-medium transition-colors duration-200 flex items-center justify-center">
-                        Search
-                    </button>
                 </div>
+
+                {(selectedTimeRange !== "all" || tag) && (
+                    <div className="flex flex-wrap items-center gap-2 mb-6">
+                        {selectedTimeRange !== "all" && (
+                            <button
+                                onClick={() => handleTimeRangeChange("all")}
+                                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
+                            >
+                                <span>{getTimeRangeLabel(selectedTimeRange)}</span>
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                        {tag && (
+                            <button
+                                onClick={() => setTag(undefined)}
+                                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
+                            >
+                                <span className="capitalize flex items-center gap-2">
+                                    <span>{TAG_ICONS[tag]}</span>
+                                    <span>{tag}</span>
+                                </span>
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                        <button
+                            onClick={handleClearFilters}
+                            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-600 transition hover:bg-gray-100 cursor-pointer"
+                        >
+                            Clear all
+                        </button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
                     {searchQuery.trim() && isSearching ? (

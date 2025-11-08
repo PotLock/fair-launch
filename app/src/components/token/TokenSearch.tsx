@@ -6,17 +6,15 @@ import { useSearch } from "@/hooks/useSearch";
 import { TokenCardSkeleton } from "@/components/TokenCardSkeleton";
 import { NoTokensFound } from "@/components/NoTokensFound";
 import ExploreTokenCard from "@/components/ExploreTokenCard";
-import { Token } from "@/types/api";
 import { useState, useMemo } from "react";
 import { TAG_OPTIONS, TAG_ICONS } from "@/components/modal/TagsSelectModal";
 import { useTokens } from "@/hooks/useSWR";
 
 
-
 type TimeRangeType = "all" | "24h" | "7d" | "30d" | "90d" | "custom";
 
 export default function TokenSearch() {
-  const { tokens, isLoading, error } = useTokens();
+  const { tokens, isLoading } = useTokens();
   const {
     searchQuery,
     setSearchQuery,
@@ -26,8 +24,7 @@ export default function TokenSearch() {
     setTag,
     timeRange,
     setTimeRange,
-    clearSearch,
-    clearFilters
+    clearSearch
   } = useSearch({ debounceMs: 500 });
 
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRangeType>("all");
@@ -79,6 +76,12 @@ export default function TokenSearch() {
       default:
         return "All Time";
     }
+  };
+
+  const clearFilters = () => {
+    setSelectedTimeRange("all");
+    setTimeRange(undefined);
+    setTag(undefined);
   };
 
   const getFilteredTokens = useMemo(() => {
@@ -153,7 +156,7 @@ export default function TokenSearch() {
             {/* Time Range Filter */}
             <div className="relative">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild className="w-36">
+                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
                   <button
                     className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
@@ -204,7 +207,7 @@ export default function TokenSearch() {
             {/* Tags Filter */}
             <div className="relative">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild className="w-36">
+                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
                   <button
                     className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
@@ -231,6 +234,39 @@ export default function TokenSearch() {
             </div>
           </div>
         </div>
+        { (selectedTimeRange !== "all" || tag) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedTimeRange !== "all" && (
+              <button
+                onClick={() => handleTimeRangeChange("all")}
+                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100"
+              >
+                <span>{getTimeRangeLabel(selectedTimeRange)}</span>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {tag && (
+              <button
+                onClick={() => setTag(undefined)}
+                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100"
+              >
+                <span className="capitalize flex items-center gap-2">
+                  <span>{TAG_ICONS[tag]}</span>
+                  <span>{tag}</span>
+                </span>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {(selectedTimeRange !== "all" || tag) && (
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-600 transition hover:bg-gray-100 cursor-pointer"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
       </div>
       
       {

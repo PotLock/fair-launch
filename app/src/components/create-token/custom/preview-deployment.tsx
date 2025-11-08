@@ -5,14 +5,15 @@ import { toast } from "sonner";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { createToken, requestDBCConfig, requestDeployToken } from "@/lib/api";
+import { createToken, requestDBCConfig, requestDeployToken, Swap, createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { CreateToken, TokenConfig as TokenConfigType } from "@/types/api";
+import { CreateToken, TokenConfig as TokenConfigType, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { CustomMintData } from '@/types/token';
 import { Progress } from '@/components/ui/progress';
 import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
+import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
 
 interface PreviewDeploymentProps {
   onBack: () => void;
@@ -38,6 +39,7 @@ export default function PreviewDeployment({
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [deploymentStartTime, setDeploymentStartTime] = useState<number | undefined>(undefined);
   const [createdTokenData, setCreatedTokenData] = useState<{
     name: string;
     symbol: string;
@@ -45,7 +47,90 @@ export default function PreviewDeployment({
     logoUrl?: string;
   } | null>(null);
 
+  // State for buy token modal
+  const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
+
   const progressPercentage = (currentStep / totalSteps) * 100;
+
+  const extractErrorMessage = (error: unknown): string => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message || 'Unknown error';
+    if (typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  };
+
+  const getFriendlyDeploymentError = (error: unknown) => {
+    const rawMessage = extractErrorMessage(error);
+    const normalized = rawMessage.toLowerCase();
+
+    if (!rawMessage || normalized === 'unknown error') {
+      return {
+        title: 'Deployment failed',
+        description: 'Something went wrong during deployment. Please try again.'
+      };
+    }
+
+    if (normalized.includes('user rejected') || normalized.includes('user denied') || normalized.includes('transaction cancelled')) {
+      return {
+        title: 'Transaction rejected',
+        description: 'You rejected the transaction in your wallet. Please approve it to continue.'
+      };
+    }
+
+    if (normalized.includes('insufficient funds') || normalized.includes('insufficient sol') || normalized.includes('lamports')) {
+      return {
+        title: 'Insufficient SOL balance',
+        description: 'Your wallet does not have enough SOL to cover fees. Please top up and try again.'
+      };
+    }
+
+    if (normalized.includes('simulation failed') || normalized.includes('instruction error')) {
+      return {
+        title: 'Simulation failed',
+        description: 'The transaction simulation failed. Double-check your token details or try again in a few moments.'
+      };
+    }
+
+    if (normalized.includes('blockhash not found') || normalized.includes('expired') || normalized.includes('block height exceeded')) {
+      return {
+        title: 'Transaction expired',
+        description: 'The transaction took too long and expired. Please try submitting again.'
+      };
+    }
+
+    if (normalized.includes('already in use')) {
+      return {
+        title: 'Duplicate configuration',
+        description: 'A similar deployment was recently submitted. Adjust your configuration and try again.'
+      };
+    }
+
+    if (normalized.includes('network request failed') || normalized.includes('failed to fetch') || normalized.includes('rpc')) {
+      return {
+        title: 'Network error',
+        description: 'Unable to reach the Solana RPC. Check your internet connection and try again.'
+      };
+    }
+
+    if (normalized.includes('custom program error')) {
+      return {
+        title: 'Program error',
+        description: 'The deployment program returned an error. Please wait a moment or adjust your configuration.'
+      };
+    }
+
+    return {
+      title: 'Deployment failed',
+      description: rawMessage
+    };
+  };
 
   // Build custom DBC config from form data
   const buildCustomDBCConfig = () => {
@@ -181,7 +266,7 @@ export default function PreviewDeployment({
     }
 
     const tokenInfo = formData.tokenInfo;
-    
+
     // Validate required fields
     if (!tokenInfo.name.trim()) {
       toast.error('Token name is required');
@@ -200,10 +285,30 @@ export default function PreviewDeployment({
       return;
     }
 
+    // Show buy token modal
+    setIsBuyTokenModalOpen(true);
+  };
+
+  const handleBuyTokenConfirm = (amount: string) => {
+    executeDeployment(amount);
+  };
+
+  const handleBuyTokenSkip = () => {
+    executeDeployment("0");
+  };
+
+  const executeDeployment = async (purchaseAmount: string) => {
+    if (!publicKey || !formData.tokenInfo) {
+      return;
+    }
+
+    const tokenInfo = formData.tokenInfo;
+
     setIsDeploying(true);
     setDeploymentStep(1);
     setDeploymentProgress(0);
-    
+    setDeploymentStartTime(Date.now());
+
     try {
       console.log('🚀 Starting custom token deployment...');
       console.log('Wallet public key:', publicKey.toString());
@@ -222,7 +327,7 @@ export default function PreviewDeployment({
         metadata: {
           name: tokenInfo.name,
           symbol: tokenInfo.symbol.toUpperCase(),
-          description: tokenInfo.description,
+          description: tokenInfo.description || '',
           imageUri: tokenInfo.logo,
           bannerUri: tokenInfo.banner || undefined,
           website: tokenInfo.website || undefined,
@@ -302,7 +407,7 @@ export default function PreviewDeployment({
         metadata: {
           name: tokenInfo.name,
           symbol: tokenInfo.symbol.toUpperCase(),
-          description: tokenInfo.description,
+          description: tokenInfo.description || '',
           imageUri: tokenInfo.logo,
           bannerUri: tokenInfo.banner || undefined,
           website: tokenInfo.website || undefined,
@@ -372,7 +477,7 @@ export default function PreviewDeployment({
       const createTokenPayload: CreateToken = {
         name: tokenInfo.name,
         symbol: tokenInfo.symbol.toUpperCase(),
-        description: tokenInfo.description,
+        description: tokenInfo.description || '',
         totalSupply: tokenInfo.totalTokenSupply.toString(),
         decimals: tokenInfo.tokenBaseDecimal.toString(),
         mintAddress: deployResult.data.baseMint,
@@ -388,11 +493,123 @@ export default function PreviewDeployment({
       await createToken(createTokenPayload);
 
       console.log('✅ Deploy transaction confirmed:', signatureDeployToken);
-      
+
+      // Handle token purchase if amount > 0
+      if (parseFloat(purchaseAmount) > 0) {
+        let createdTransactionId: string | null = null;
+        
+        try {
+
+          setDeploymentStep(7);
+          setDeploymentProgress(92);
+          toast.loading('Waiting for token to load on-chain...', {
+            id: 'deployment-progress'
+          });
+
+          const waitTime = 10000; // 10 seconds
+          const startTime = Date.now();
+          const interval = 1000; // Update every second
+
+          while (Date.now() - startTime < waitTime) {
+            const elapsed = Date.now() - startTime;
+            const progress = 92 + Math.floor((elapsed / waitTime) * 3); // Progress from 92% to 95%
+            setDeploymentProgress(Math.min(progress, 95));
+            await new Promise(resolve => setTimeout(resolve, interval));
+          }
+
+          setDeploymentProgress(95);
+          toast.loading('Purchasing tokens...', {
+            id: 'deployment-progress'
+          });
+
+          const swapParams = {
+            baseMint: deployResult.data.baseMint,
+            signer: publicKey.toString(),
+            amount: parseFloat(purchaseAmount),
+            slippageBps: 50, // 0.5% slippage
+            swapBaseForQuote: false, // Buying tokens with SOL
+            computeUnitPriceMicroLamports: 100000,
+          };
+
+          const swapResult = await Swap(swapParams);
+
+          if (swapResult.success) {
+            const serializedSwapTx = swapResult.data.transaction;
+            const swapTxBuffer = Buffer.from(serializedSwapTx, "base64");
+            const swapTransaction = Transaction.from(swapTxBuffer);
+
+            const signatureSwap = await sendTransaction(
+              swapTransaction,
+              connection,
+              {
+                skipPreflight: false,
+                preflightCommitment: 'processed'
+              }
+            );
+
+            // Create transaction record
+            try {
+              const amountIn = parseFloat(purchaseAmount);
+              const baseToken = "So11111111111111111111111111111111111111112"; // SOL
+              const quoteToken = deployResult.data.baseMint;
+
+              const created = await createTransaction({
+                userAddress: publicKey.toString(),
+                txHash: signatureSwap,
+                action: TransactionAction.BUY,
+                baseToken,
+                quoteToken,
+                amountIn,
+                amountOut: 0, // Will be updated after transaction confirmation if needed
+                pricePerToken: 0, // Will be calculated if needed
+                slippageBps: 50,
+                fee: 0,
+                feeToken: "SOL",
+                status: TransactionStatus.PENDING,
+                chain: TransactionChain.SOLANA,
+                poolAddress: deployResult.data.baseMint,
+              });
+              createdTransactionId = created.id;
+            } catch (e) {
+              console.error("Error creating transaction record:", e);
+            }
+
+            await connection.confirmTransaction(signatureSwap, 'confirmed');
+
+            // Update transaction status to success
+            if (createdTransactionId) {
+              try {
+                await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
+              } catch (e) {
+                console.error("Error updating transaction status to success:", e);
+              }
+            }
+
+            console.log('✅ Token purchase confirmed:', signatureSwap);
+            toast.success(`Successfully purchased ${purchaseAmount} SOL worth of ${tokenInfo.symbol}!`);
+          }
+        } catch (purchaseError) {
+          console.error('❌ Error purchasing tokens:', purchaseError);
+          
+          // If we already created a transaction record, mark it failed
+          if (createdTransactionId) {
+            try {
+              await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
+            } catch (e) {
+              console.error("Error updating transaction status to failed:", e);
+            }
+          }
+          
+          toast.warning('Token deployed successfully, but purchase failed', {
+            description: 'You can still buy tokens manually from the token page.'
+          });
+        }
+      }
+
       // Complete deployment
       setDeploymentProgress(100);
       toast.dismiss('deployment-progress');
-      
+
       // Store token data for success modal
       setCreatedTokenData({
         name: tokenInfo.name,
@@ -400,7 +617,7 @@ export default function PreviewDeployment({
         mintAddress: deployResult.data.baseMint,
         logoUrl: tokenInfo.logo || undefined
       });
-      
+
       // Show success modal
       setShowSuccessModal(true);
       
@@ -408,36 +625,16 @@ export default function PreviewDeployment({
       console.error('❌ Error during custom token deployment:', error);
       
       toast.dismiss('deployment-progress');
-      
-      if (error instanceof Error) {
-        if (error.message.includes('User rejected')) {
-          toast.error('Transaction was rejected by user', {
-            description: 'Please try again and approve the transaction in your wallet.'
-          });
-        } else if (error.message.includes('Insufficient funds')) {
-          toast.error('Insufficient SOL balance for transaction', {
-            description: 'Please add more SOL to your wallet and try again.'
-          });
-        } else if (error.message.includes('Simulation failed')) {
-          toast.error('Transaction simulation failed', {
-            description: 'Please check your inputs and try again.'
-          });
-        } else {
-          toast.error(`Deployment failed: ${error.message}`, {
-            description: 'Please check your inputs and try again.'
-          });
-        }
-      } else {
-        toast.error('An unexpected error occurred during deployment', {
-          description: 'Please try again or contact support if the issue persists.'
-        });
-      }
-      throw error;
+      const friendlyError = getFriendlyDeploymentError(error);
+      toast.error(friendlyError.title, {
+        description: friendlyError.description
+      });
     } finally {
       setIsDeploying(false);
       setIsNavigating(false);
       setDeploymentStep(1);
       setDeploymentProgress(0);
+      setDeploymentStartTime(undefined);
     }
   };
 
@@ -459,12 +656,11 @@ export default function PreviewDeployment({
     <>
       <TokenCreationModal
         isVisible={isDeploying}
-        currentStep={deploymentStep}
-        totalSteps={7}
         stepMessage={getStepMessage(deploymentStep)}
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={formData.tokenInfo?.logo || undefined}
+        startTime={deploymentStartTime}
       />
       <TokenSuccessModal
         isVisible={showSuccessModal}
@@ -475,11 +671,21 @@ export default function PreviewDeployment({
         onClose={handleSuccessModalClose}
         onViewToken={handleViewToken}
       />
-      <LoadingOverlay 
+      <LoadingOverlay
         isVisible={isNavigating}
         message="Redirecting to your token..."
         subMessage="Please wait while we take you to your token page"
       />
+
+      <BuyTokenModal
+        open={isBuyTokenModalOpen}
+        onOpenChange={setIsBuyTokenModalOpen}
+        tokenSymbol={formData.tokenInfo?.symbol || "TOKEN"}
+        tokenLogo={formData.tokenInfo?.logo || undefined}
+        onConfirm={handleBuyTokenConfirm}
+        onSkip={handleBuyTokenSkip}
+      />
+
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">

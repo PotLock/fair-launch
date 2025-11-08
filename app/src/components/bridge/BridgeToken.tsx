@@ -166,7 +166,8 @@ export default function BridgeToken() {
         if (selectedToken) {
             const chainToken = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
             const addressTokenBridged = await getAllBridgeTokens(selectedToken.mint, chainToken, 'testnet')
-
+            console.log("addressTokenBridged", addressTokenBridged)
+            console.log("chainToken", chainToken)
             if (addressTokenBridged && addressTokenBridged.length > 0) {
                 const targetChainAddress = addressTokenBridged.find(addr => {
                     const [chain] = addr.split(':');

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
@@ -20,11 +20,11 @@ export interface LiquidityData {
   creatorLockedLpPercentage: number;
 }
 
-export default function Liquidity({ 
-  onNext, 
+export default function Liquidity({
+  onNext,
   onBack,
-  onCancel, 
-  currentStep = 5, 
+  onCancel,
+  currentStep = 5,
   totalSteps = 7,
   initialData
 }: LiquidityProps) {
@@ -35,26 +35,45 @@ export default function Liquidity({
     creatorLockedLpPercentage: initialData?.creatorLockedLpPercentage || 0,
   });
 
-  const progressPercentage = (currentStep / totalSteps) * 100;
+  const progressPercentage = useMemo(() =>
+    (currentStep / totalSteps) * 100,
+    [currentStep, totalSteps]
+  );
 
-  const handleInputChange = (field: keyof LiquidityData, value: string) => {
+  const handleInputChange = useCallback((field: keyof LiquidityData, value: string) => {
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({ ...prev, [field]: numValue }));
-  };
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     onNext(formData);
-  };
+  }, [formData, onNext]);
 
-  // Calculate totals and validation
-  const totalLpPercentage = formData.partnerLpPercentage + formData.creatorLpPercentage;
-  const isLpValid = totalLpPercentage <= 100;
-  
-  const partnerUnlockedLp = formData.partnerLpPercentage * (100 - formData.partnerLockedLpPercentage) / 100;
-  const partnerLockedLp = formData.partnerLpPercentage * formData.partnerLockedLpPercentage / 100;
-  const creatorUnlockedLp = formData.creatorLpPercentage * (100 - formData.creatorLockedLpPercentage) / 100;
-  const creatorLockedLp = formData.creatorLpPercentage * formData.creatorLockedLpPercentage / 100;
+  // Memoize liquidity calculations
+  const liquidityCalculations = useMemo(() => {
+    const totalLpPercentage = formData.partnerLpPercentage + formData.creatorLpPercentage;
+    const isLpValid = totalLpPercentage <= 100;
+
+    const partnerUnlockedLp = formData.partnerLpPercentage * (100 - formData.partnerLockedLpPercentage) / 100;
+    const partnerLockedLp = formData.partnerLpPercentage * formData.partnerLockedLpPercentage / 100;
+    const creatorUnlockedLp = formData.creatorLpPercentage * (100 - formData.creatorLockedLpPercentage) / 100;
+    const creatorLockedLp = formData.creatorLpPercentage * formData.creatorLockedLpPercentage / 100;
+
+    return {
+      totalLpPercentage,
+      isLpValid,
+      partnerUnlockedLp,
+      partnerLockedLp,
+      creatorUnlockedLp,
+      creatorLockedLp
+    };
+  }, [
+    formData.partnerLpPercentage,
+    formData.creatorLpPercentage,
+    formData.partnerLockedLpPercentage,
+    formData.creatorLockedLpPercentage
+  ]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -122,18 +141,18 @@ export default function Liquidity({
             {/* Total LP Validation */}
             <div className={cn(
               "p-4 rounded-lg mt-2",
-              isLpValid ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+              liquidityCalculations.isLpValid ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
             )}>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total LP Distribution:</span>
                 <span className={cn(
                   "text-sm font-bold",
-                  isLpValid ? "text-green-700" : "text-red-700"
+                  liquidityCalculations.isLpValid ? "text-green-700" : "text-red-700"
                 )}>
-                  {totalLpPercentage.toFixed(1)}%
+                  {liquidityCalculations.totalLpPercentage.toFixed(1)}%
                 </span>
               </div>
-              {!isLpValid && (
+              {!liquidityCalculations.isLpValid && (
                 <p className="text-xs text-red-600 mt-1">
                   Total LP percentage cannot exceed 100%
                 </p>
@@ -190,11 +209,11 @@ export default function Liquidity({
                 <div className="ml-4 space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Unlocked:</span>
-                    <span className="font-medium">{partnerUnlockedLp.toFixed(1)}%</span>
+                    <span className="font-medium">{liquidityCalculations.partnerUnlockedLp.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Locked:</span>
-                    <span className="font-medium">{partnerLockedLp.toFixed(1)}%</span>
+                    <span className="font-medium">{liquidityCalculations.partnerLockedLp.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
@@ -208,11 +227,11 @@ export default function Liquidity({
                 <div className="ml-4 space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Unlocked:</span>
-                    <span className="font-medium">{creatorUnlockedLp.toFixed(1)}%</span>
+                    <span className="font-medium">{liquidityCalculations.creatorUnlockedLp.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Locked:</span>
-                    <span className="font-medium">{creatorLockedLp.toFixed(1)}%</span>
+                    <span className="font-medium">{liquidityCalculations.creatorLockedLp.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
@@ -221,11 +240,11 @@ export default function Liquidity({
               <div className="pt-2 border-t border-blue-200">
                 <div className="flex justify-between text-sm font-medium">
                   <span>Total Unlocked LP:</span>
-                  <span>{(partnerUnlockedLp + creatorUnlockedLp).toFixed(1)}%</span>
+                  <span>{(liquidityCalculations.partnerUnlockedLp + liquidityCalculations.creatorUnlockedLp).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between text-sm font-medium">
                   <span>Total Locked LP:</span>
-                  <span>{(partnerLockedLp + creatorLockedLp).toFixed(1)}%</span>
+                  <span>{(liquidityCalculations.partnerLockedLp + liquidityCalculations.creatorLockedLp).toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -262,11 +281,11 @@ export default function Liquidity({
             </svg>
             Back
           </button>
-          <button 
+          <button
             type="submit"
-            disabled={!isLpValid}
+            disabled={!liquidityCalculations.isLpValid}
             className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
-              !isLpValid
+              !liquidityCalculations.isLpValid
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                 : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
             }`}

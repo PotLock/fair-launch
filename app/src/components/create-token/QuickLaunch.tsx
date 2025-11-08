@@ -1,22 +1,23 @@
 "use client"
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { uploadImage, createToken, requestDBCConfig, requestDeployToken } from "@/lib/api";
+import { uploadImage, createToken, requestDBCConfig, requestDeployToken, Swap, createTransaction, updateTransactionStatus } from "@/lib/api";
 import { getDBCConfig } from "@/configs/dbc.config";
 import { useRouter } from "next/navigation";
-import { CreateToken, DBCConfig, TokenConfig as TokenConfigType } from "@/types/api";
+import { CreateToken, DBCConfig, TokenConfig as TokenConfigType, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
 import URLInput from "@/components/ui/url-input";
 import { TagsSelectModal, TAG_ICONS } from "@/components/modal/TagsSelectModal";
+import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
 
 interface QuickLaunchProps {
-  onCancel: () => void;
+  onCancel?: () => void;
 }
 
 export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
@@ -29,9 +30,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     tokenSupply: "1000000000",
     decimal: "6",
     description: "",
-    twitterUrl: "x.com/",
-    websiteUrl: "https://",
-    telegramUrl: "t.me/"
+    twitterUrl: "",
+    websiteUrl: "",
+    telegramUrl: ""
   });
 
   // State for image uploads
@@ -44,11 +45,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
+  // State for buy token modal
+  const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
+
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [deploymentStep, setDeploymentStep] = useState<number>(1);
   const [deploymentProgress, setDeploymentProgress] = useState<number>(0);
+  const [deploymentStartTime, setDeploymentStartTime] = useState<number | undefined>(undefined);
   const [createdTokenData, setCreatedTokenData] = useState<{
     name: string;
     symbol: string;
@@ -60,9 +65,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     let next = value;
-    
+
     if (field === 'tokenSymbol') {
       next = value.slice(0, 5);
     }
@@ -76,44 +81,24 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
     // Normalize social inputs
     if (field === 'twitterUrl') {
-      const raw = value
-        .replace(/^https?:\/\//, '')
-        .replace(/^x\.com\//, '')
-        .replace(/^twitter\.com\//, '');
-      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
-      next = username ? `https://x.com/${username}` : 'x.com/';
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     if (field === 'telegramUrl') {
-      const raw = value
-        .replace(/^https?:\/\//, '')
-        .replace(/^t\.me\//, '')
-        .replace(/^telegram\.me\//, '')
-        .replace(/^telegram\.org\//, '');
-      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
-      // Telegram handles are 5-32 chars. If <5, keep editable placeholder
-      next = handle.length >= 5 ? `https://t.me/${handle}` : 't.me/';
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     if (field === 'websiteUrl') {
-      // Trim spaces and prevent whitespace
-      const trimmed = value.trim().replace(/\s+/g, '');
-      // Ensure https:// prefix once
-      const withoutProto = trimmed.replace(/^https?:\/\//, '');
-      const candidate = `https://${withoutProto}`;
-      try {
-        // eslint-disable-next-line no-new
-        new URL(candidate);
-        next = candidate.slice(0, 2048);
-      } catch {
-        next = 'https://';
-      }
+      // Allow free editing - just store what user types
+      next = value;
     }
 
     setFormData(prev => ({ ...prev, [field]: next }));
-  };
+  }, []);
 
-  const handleImageUpload = async (type: 'logo' | 'banner', file: File) => {
+  const handleImageUpload = useCallback(async (type: 'logo' | 'banner', file: File) => {
     if (!file) {
       console.error('No file provided for upload');
       return;
@@ -137,7 +122,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
-        
+
         if (type === 'logo') {
           setLogoUrl(imageUrl);
           toast.success('Logo uploaded successfully!');
@@ -158,36 +143,36 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         setIsUploadingBanner(false);
       }
     }
-  };
+  }, []);
 
-  const handleFileUpload = (type: 'logo' | 'banner') => {
+  const handleFileUpload = useCallback((type: 'logo' | 'banner') => {
     const inputRef = type === 'logo' ? logoInputRef : bannerInputRef;
     inputRef.current?.click();
-  };
+  }, []);
 
-  const handleFileChange = (type: 'logo' | 'banner', event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((type: 'logo' | 'banner', event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files;
     if (file) {
       handleImageUpload(type, file[0]);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleImageDrop = (type: 'logo' | 'banner', e: React.DragEvent) => {
+  const handleImageDrop = useCallback((type: 'logo' | 'banner', e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       handleImageUpload(type, file);
     }
-  };
+  }, [handleImageUpload]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-  };
+  }, []);
 
-  const getStepMessage = (step: number): string => {
+  const getStepMessage = useCallback((step: number): string => {
     const messages = [
       "Preparing Configuration",
-      "Sending Configuration", 
+      "Sending Configuration",
       "Confirming Configuration",
       "Deploying Token",
       "Sending Deployment Transaction",
@@ -195,9 +180,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       "Saving Details"
     ];
     return messages[step - 1] || "Processing...";
-  };
+  }, []);
 
-  const getStepSubMessage = (step: number): string => {
+  const getStepSubMessage = useCallback((step: number): string => {
     const subMessages = [
       "Setting up token parameters",
       "Submitting configuration transaction",
@@ -208,32 +193,125 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       "Storing token information"
     ];
     return subMessages[step - 1] || "Please wait...";
-  };
+  }, []);
 
-  const sanitizeUrl = (value: string, placeholders: string[]) => {
+  const sanitizeUrl = useCallback((value: string, type: 'twitter' | 'telegram' | 'website') => {
     if (!value) return undefined;
     const trimmed = value.trim();
-    if (!trimmed || placeholders.includes(trimmed)) {
-      return undefined;
+
+    if (type === 'twitter') {
+      // Extract username from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(x\.com|twitter\.com)\//, '');
+      const username = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
+      return username ? `https://x.com/${username}` : undefined;
     }
 
-    // If the value already starts with the prefix, return as is
-    if (placeholders.some(placeholder => trimmed.startsWith(placeholder))) {
-      return trimmed;
+    if (type === 'telegram') {
+      // Extract handle from various formats
+      const raw = trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^(t\.me|telegram\.me|telegram\.org)\//, '');
+      const handle = raw.replace(/[^A-Za-z0-9_]/g, '').slice(0, 32);
+      return handle.length >= 5 ? `https://t.me/${handle}` : undefined;
     }
 
-    // For website URLs, try to add https:// if not present
-    if (placeholders.includes('https://')) {
+    if (type === 'website') {
+      // Ensure valid URL format
+      if (!trimmed) return undefined;
+      const withoutProto = trimmed.replace(/^https?:\/\//, '');
+      if (!withoutProto) return undefined;
       try {
-        return new URL(`https://${trimmed}`).toString();
+        const url = new URL(`https://${withoutProto}`);
+        return url.toString();
       } catch {
         return undefined;
       }
     }
 
-    // For other URLs, return the full value
     return trimmed;
-  };
+  }, []);
+
+  const extractErrorMessage = useCallback((error: unknown): string => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message || 'Unknown error';
+    if (typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }, []);
+
+  const getFriendlyDeploymentError = useCallback((error: unknown) => {
+    const rawMessage = extractErrorMessage(error);
+    const normalized = rawMessage.toLowerCase();
+
+    if (!rawMessage || normalized === 'unknown error') {
+      return {
+        title: 'Deployment failed',
+        description: 'Something went wrong during deployment. Please try again.'
+      };
+    }
+
+    if (normalized.includes('user rejected') || normalized.includes('user denied') || normalized.includes('transaction cancelled')) {
+      return {
+        title: 'Transaction rejected',
+        description: 'You rejected the transaction in your wallet. Please approve it to continue.'
+      };
+    }
+
+    if (normalized.includes('insufficient funds') || normalized.includes('insufficient sol') || normalized.includes('lamports')) {
+      return {
+        title: 'Insufficient SOL balance',
+        description: 'Your wallet does not have enough SOL to cover fees. Please top up and try again.'
+      };
+    }
+
+    if (normalized.includes('simulation failed') || normalized.includes('instruction error')) {
+      return {
+        title: 'Simulation failed',
+        description: 'The transaction simulation failed. Double-check your token details or try again in a few moments.'
+      };
+    }
+
+    if (normalized.includes('blockhash not found') || normalized.includes('expired') || normalized.includes('block height exceeded')) {
+      return {
+        title: 'Transaction expired',
+        description: 'The transaction took too long and expired. Please try submitting again.'
+      };
+    }
+
+    if (normalized.includes('already in use')) {
+      return {
+        title: 'Duplicate token symbol',
+        description: 'A token with similar configuration was recently deployed. Please modify the token details and retry.'
+      };
+    }
+
+    if (normalized.includes('network request failed') || normalized.includes('failed to fetch') || normalized.includes('rpc')) {
+      return {
+        title: 'Network error',
+        description: 'Unable to reach the Solana RPC. Check your internet connection and try again.'
+      };
+    }
+
+    if (normalized.includes('custom program error')) {
+      return {
+        title: 'Program error',
+        description: 'The deployment program returned an error. Please wait a moment or adjust your configuration.'
+      };
+    }
+
+    return {
+      title: 'Deployment failed',
+      description: rawMessage
+    };
+  }, [extractErrorMessage]);
 
   const handleDeployToken = async () => {
     if(!publicKey){
@@ -258,6 +336,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Token logo is required');
       return;
     }
+    if (!bannerUrl) {
+      toast.error('Token banner is required');
+      return;
+    }
 
     const totalSupply = Number(formData.tokenSupply);
     if (!Number.isFinite(totalSupply) || totalSupply <= 0 || !Number.isInteger(totalSupply)) {
@@ -270,11 +352,31 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Token decimals must be an integer between 0 and 99');
       return;
     }
+
+    // Show buy token modal
+    setIsBuyTokenModalOpen(true);
+  }
+
+  const handleBuyTokenConfirm = (amount: string) => {
+    executeDeployment(amount);
+  };
+
+  const handleBuyTokenSkip = () => {
+    executeDeployment("0");
+  };
+
+  const executeDeployment = async (purchaseAmount: string) => {
     
+    if(!publicKey){
+      toast.error("Please connect wallet solana")
+      return
+    }
+
     setIsDeploying(true);
     setDeploymentStep(1);
     setDeploymentProgress(0);
-    
+    setDeploymentStartTime(Date.now());
+
     try {
       console.log('🚀 Starting token deployment...');
       console.log('Wallet public key:', publicKey.toString());
@@ -426,9 +528,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         id: 'deployment-progress'
       });
 
-      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, ['https://']);
-      const sanitizedTwitter = sanitizeUrl(formData.twitterUrl, ['x.com/']);
-      const sanitizedTelegram = sanitizeUrl(formData.telegramUrl, ['t.me/']);
+      const sanitizedWebsite = sanitizeUrl(formData.websiteUrl, 'website');
+      const sanitizedTwitter = sanitizeUrl(formData.twitterUrl, 'twitter');
+      const sanitizedTelegram = sanitizeUrl(formData.telegramUrl, 'telegram');
 
       const metadata = {
         name: formData.tokenName,
@@ -440,6 +542,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         twitter: sanitizedTwitter,
         telegram: sanitizedTelegram,
       };
+
+      const totalSupply = Number(formData.tokenSupply);
+      const decimals = Number(formData.decimal);
 
       const dbcConfigData = getDBCConfig(publicKey, formData.tokenName, formData.tokenSymbol, metadata);
 
@@ -472,11 +577,123 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       await createToken(createTokenPayload);
 
       console.log('✅ Deploy transaction confirmed:', signatureDeployToken);
-      
+
+      // Handle token purchase if amount > 0
+      if (parseFloat(purchaseAmount) > 0) {
+        let createdTransactionId: string | null = null;
+        
+        try {
+
+          setDeploymentStep(7);
+          setDeploymentProgress(92);
+          toast.loading('Waiting for token to load on-chain...', {
+            id: 'deployment-progress'
+          });
+
+          const waitTime = 10000; // 10 seconds
+          const startTime = Date.now();
+          const interval = 1000; // Update every second
+
+          while (Date.now() - startTime < waitTime) {
+            const elapsed = Date.now() - startTime;
+            const progress = 92 + Math.floor((elapsed / waitTime) * 3); // Progress from 92% to 95%
+            setDeploymentProgress(Math.min(progress, 95));
+            await new Promise(resolve => setTimeout(resolve, interval));
+          }
+
+          setDeploymentProgress(95);
+          toast.loading('Purchasing tokens...', {
+            id: 'deployment-progress'
+          });
+
+          const swapParams = {
+            baseMint: deployResult.data.baseMint,
+            signer: publicKey.toString(),
+            amount: parseFloat(purchaseAmount),
+            slippageBps: 50, // 0.5% slippage
+            swapBaseForQuote: false, // Buying tokens with SOL
+            computeUnitPriceMicroLamports: 100000,
+          };
+
+          const swapResult = await Swap(swapParams);
+
+          if (swapResult.success) {
+            const serializedSwapTx = swapResult.data.transaction;
+            const swapTxBuffer = Buffer.from(serializedSwapTx, "base64");
+            const swapTransaction = Transaction.from(swapTxBuffer);
+
+            const signatureSwap = await sendTransaction(
+              swapTransaction,
+              connection,
+              {
+                skipPreflight: false,
+                preflightCommitment: 'processed'
+              }
+            );
+
+            // Create transaction record
+            try {
+              const amountIn = parseFloat(purchaseAmount);
+              const baseToken = "So11111111111111111111111111111111111111112"; // SOL
+              const quoteToken = deployResult.data.baseMint;
+
+              const created = await createTransaction({
+                userAddress: publicKey.toString(),
+                txHash: signatureSwap,
+                action: TransactionAction.BUY,
+                baseToken,
+                quoteToken,
+                amountIn,
+                amountOut: 0, // Will be updated after transaction confirmation if needed
+                pricePerToken: 0, // Will be calculated if needed
+                slippageBps: 50,
+                fee: 0,
+                feeToken: "SOL",
+                status: TransactionStatus.PENDING,
+                chain: TransactionChain.SOLANA,
+                poolAddress: deployResult.data.baseMint,
+              });
+              createdTransactionId = created.id;
+            } catch (e) {
+              console.error("Error creating transaction record:", e);
+            }
+
+            await connection.confirmTransaction(signatureSwap, 'confirmed');
+
+            // Update transaction status to success
+            if (createdTransactionId) {
+              try {
+                await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
+              } catch (e) {
+                console.error("Error updating transaction status to success:", e);
+              }
+            }
+
+            console.log('✅ Token purchase confirmed:', signatureSwap);
+            toast.success(`Successfully purchased ${purchaseAmount} SOL worth of ${formData.tokenSymbol}!`);
+          }
+        } catch (purchaseError) {
+          console.error('❌ Error purchasing tokens:', purchaseError);
+          
+          // If we already created a transaction record, mark it failed
+          if (createdTransactionId) {
+            try {
+              await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
+            } catch (e) {
+              console.error("Error updating transaction status to failed:", e);
+            }
+          }
+          
+          toast.warning('Token deployed successfully, but purchase failed', {
+            description: 'You can still buy tokens manually from the token page.'
+          });
+        }
+      }
+
       // Complete deployment
       setDeploymentProgress(100);
       toast.dismiss('deployment-progress');
-      
+
       // Store token data for success modal
       setCreatedTokenData({
         name: formData.tokenName,
@@ -484,7 +701,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         mintAddress: deployResult.data.baseMint,
         logoUrl: logoUrl || undefined
       });
-      
+
       // Show success modal
       setShowSuccessModal(true);
       
@@ -492,43 +709,23 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       console.error('❌ Error during token deployment:', error);
       
       toast.dismiss('deployment-progress');
-      
-      if (error instanceof Error) {
-        if (error.message.includes('User rejected')) {
-          toast.error('Transaction was rejected by user', {
-            description: 'Please try again and approve the transaction in your wallet.'
-          });
-        } else if (error.message.includes('Insufficient funds')) {
-          toast.error('Insufficient SOL balance for transaction', {
-            description: 'Please add more SOL to your wallet and try again.'
-          });
-        } else if (error.message.includes('Simulation failed')) {
-          toast.error('Transaction simulation failed', {
-            description: 'Please check your inputs and try again.'
-          });
-        } else {
-          toast.error(`Deployment failed: ${error.message}`, {
-            description: 'Please check your inputs and try again.'
-          });
-        }
-      } else {
-        toast.error('An unexpected error occurred during deployment', {
-          description: 'Please try again or contact support if the issue persists.'
-        });
-      }
-      throw error;
+      const friendlyError = getFriendlyDeploymentError(error);
+      toast.error(friendlyError.title, {
+        description: friendlyError.description
+      });
     } finally {
       setIsDeploying(false);
       setIsNavigating(false);
       setDeploymentStep(1);
       setDeploymentProgress(0);
+      setDeploymentStartTime(undefined);
     }
   }
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setCreatedTokenData(null);
-    onCancel(); // Close the entire create token flow
+    onCancel?.();
   };
 
   const handleViewToken = () => {
@@ -543,12 +740,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     <>
       <TokenCreationModal
         isVisible={isDeploying}
-        currentStep={deploymentStep}
-        totalSteps={7}
         stepMessage={getStepMessage(deploymentStep)}
         subMessage={getStepSubMessage(deploymentStep)}
         progress={deploymentProgress}
         tokenLogo={logoUrl || undefined}
+        startTime={deploymentStartTime}
       />
       <TokenSuccessModal
         isVisible={showSuccessModal}
@@ -722,8 +918,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                       <img src="/icons/add-image.svg" alt="Add Image" />
                     )}
                   </div>
-                  <h4 className="text-gray-700 mb-1 font-medium text-sm">Token Logo</h4>
+                  <h4 className="text-gray-700 mb-1 font-medium text-sm">
+                    Token Logo <strong className="text-red-500">*</strong>
+                  </h4>
                   <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  <p className="text-xs text-gray-400 mt-1">Recommended: 512x512px</p>
                 </div>
               )}
             </div>
@@ -755,8 +954,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                       <img src="/icons/add-image.svg" alt="Add Image" />
                     )}
                   </div>
-                  <h4 className="font-medium text-gray-700 mb-1 text-sm">Banner image</h4>
+                  <h4 className="font-medium text-gray-700 mb-1 text-sm">
+                    Banner image <strong className="text-red-500">*</strong>
+                  </h4>
                   <p className="text-xs sm:text-sm text-gray-500">Drop your image here or browse</p>
+                  <p className="text-xs text-gray-400 mt-1">Recommended: 1500x500px</p>
                 </div>
               )}
             </div>
@@ -872,6 +1074,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         onOpenChange={setIsTagsModalOpen}
         value={selectedTags}
         onConfirm={(tags) => setSelectedTags(tags)}
+      />
+
+      <BuyTokenModal
+        open={isBuyTokenModalOpen}
+        onOpenChange={setIsBuyTokenModalOpen}
+        tokenSymbol={formData.tokenSymbol || "TOKEN"}
+        tokenLogo={logoUrl || undefined}
+        onConfirm={handleBuyTokenConfirm}
+        onSkip={handleBuyTokenSkip}
       />
     </>
   );

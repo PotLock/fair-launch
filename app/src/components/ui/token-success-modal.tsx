@@ -28,22 +28,13 @@ export default function TokenSuccessModal({
     <div className="fixed inset-0 bg-black/60 bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
         <div className="text-center">
-          {/* Success Icon */}
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-          
           {/* Token Logo */}
           {tokenLogo && (
             <div className="flex justify-center mb-4">
               <img 
                 src={tokenLogo} 
                 alt="Token Logo" 
-                className="h-12 w-12 rounded-full object-cover"
+                className="h-14 w-14 rounded-full object-cover"
                 onError={(e) => {
                   // Fallback to default icon if image fails to load
                   const target = e.currentTarget as HTMLImageElement;
@@ -73,7 +64,7 @@ export default function TokenSuccessModal({
             <div className="bg-gray-50 rounded-lg p-3 mb-6">
               <p className="text-xs text-gray-500 mb-1">Token Address:</p>
               <Link href={`https://solscan.io/token/${mintAddress}?cluster=devnet`} target='_blank'>
-                <p className="text-xs font-mono text-gray-700 break-all">
+                <p className="text-xs font-mono text-gray-700 break-all underline">
                   {mintAddress}
                 </p>
               </Link>
@@ -84,13 +75,13 @@ export default function TokenSuccessModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Close
             </button>
             <button 
               onClick={onViewToken}
-              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center cursor-pointer"
             >
               View Token
               <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">

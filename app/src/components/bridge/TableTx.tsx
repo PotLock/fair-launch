@@ -52,7 +52,7 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
 
     return (
         <TableRow className="hover:bg-gray-50">
-            <TableCell className="text-sm text-gray-600">{timeAgo(transaction.createdAt)}</TableCell>
+            <TableCell className="text-sm text-gray-600" style={{paddingLeft: "20px"}}>{timeAgo(transaction.createdAt)}</TableCell>
             <TableCell className="text-sm font-medium text-gray-900">{transaction.action}</TableCell>
             <TableCell className={`text-sm font-medium ${getStatusColor(transaction.status)} flex items-center gap-1`}>
                 {transaction.status.toUpperCase()}
@@ -73,7 +73,7 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 )}
             </TableCell>
             <TableCell className="text-sm text-gray-600">{getAmount(transaction)}</TableCell>
-            <TableCell className="text-right">
+            <TableCell className="text-right" style={{paddingRight: "20px"}}>
                 <div className="flex gap-2 justify-end">
                     {transaction.txHash && (
                         <a

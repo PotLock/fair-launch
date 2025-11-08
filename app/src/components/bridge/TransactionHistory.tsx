@@ -16,7 +16,7 @@ interface TransactionHistoryProps {
     transactions: Transaction[];
 }
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 10;
 
 export const TransactionHistory = ({ transactions }: TransactionHistoryProps) => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -80,18 +80,18 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
                     <Table className="border-separate border-spacing-y-0">
                         <TableHeader className="bg-gray-50 hover:bg-gray-50 rounded-t-xl">
                             <TableRow className="hover:bg-gray-50">
-                                <TableHead className="text-xs font-medium text-gray-900">DATE &amp; TIME</TableHead>
+                                <TableHead className="text-xs font-medium text-gray-900" style={{paddingLeft: "20px"}}>DATE &amp; TIME</TableHead>
                                 <TableHead className="text-xs font-medium text-gray-900">ACTION</TableHead>
                                 <TableHead className="text-xs font-medium text-gray-900">STATUS</TableHead>
                                 <TableHead className="text-xs font-medium text-gray-900">TOKEN</TableHead>
                                 <TableHead className="text-xs font-medium text-gray-900">AMOUNT</TableHead>
-                                <TableHead className="text-xs font-medium text-gray-900 text-right">HASH</TableHead>
+                                <TableHead className="text-xs font-medium text-gray-900 text-right" style={{paddingRight: "20px"}}>HASH</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {transactions.length === 0 ? (
                                 <TableRow className="hover:bg-white">
-                                    <TableCell colSpan={6} className="py-10">
+                                    <TableCell colSpan={6} className="py-10" style={{padding: "20px"}}>
                                         <div className="text-center">
                                             <div className="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
                                                 <img src="/icons/empty.svg" alt="empty" className="w-full h-full" />

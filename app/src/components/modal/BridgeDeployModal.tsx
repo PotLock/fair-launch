@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { BadgeCheck, Check } from "lucide-react";
@@ -19,6 +18,10 @@ import { getNearBalance } from "@/lib/near";
 import { useBridge } from "@/hooks/useBridge";
 import { formatNumberWithCommas } from "@/utils";
 import { ChainKind } from "omni-bridge-sdk";
+import { MIN_BALANCE, MIN_TARGET_BALANCE } from "@/constants/bridge.constants";
+import { getAllBridgeTokens } from "@/lib/omni-bridge";
+import { createTransaction, listTransactions, updateTransactionStatus } from "@/lib/api";
+import { TransactionAction, TransactionStatus, TransactionChain } from "@/types/bridge.types";
 
 interface BridgeDeployModalProps {
     isOpen: boolean;
@@ -38,15 +41,36 @@ interface Chain {
     explorerUrl: string;
 }
 
-const deploymentOptions = [
+interface DeploymentOption {
+    name: string;
+    logo: string;
+    description: string;
+    availableDexes: string;
+    cost: string;
+    disabled: boolean;
+    chain: TransactionChain;
+}
+
+interface DeploymentEstimateStats {
+    averageMs: number;
+    medianMs: number;
+    p90Ms: number;
+    sampleSize: number;
+}
+
+type IntervalTimer = ReturnType<typeof setInterval>;
+
+const FALLBACK_DEPLOYMENT_ESTIMATE_MS = 90_000;
+
+const deploymentOptions: DeploymentOption[] = [
     {
         name: "NEAR",
         logo: "/chains/near-dark.svg",
         description: "Deploy to Near mainnet.",
         availableDexes: "RHEA Finance",
         cost: "3.25 NEAR",
-        estimatedTime: "1-3 minutes",
-        disabled: false
+        disabled: false,
+        chain: TransactionChain.NEAR
     },
     {
         name: "Ethereum",
@@ -54,20 +78,115 @@ const deploymentOptions = [
         description: "Deploy to Ethereum mainnet.",
         availableDexes: "Uniswap V3, SushiSwap",
         cost: "0.015",
-        estimatedTime: "2-5 minutes",
-        disabled: true
+        disabled: true,
+        chain: TransactionChain.ETHEREUM
     }
 ];
+
+const formatDuration = (ms: number) => {
+    if (!ms || !Number.isFinite(ms)) {
+        return "Calculating...";
+    }
+    const totalSeconds = Math.max(0, Math.round(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes > 0) {
+        return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+    }
+    return `${seconds}s`;
+};
+
+const getPercentileValue = (sortedValues: number[], percentile: number) => {
+    if (!sortedValues.length) {
+        return 0;
+    }
+    if (sortedValues.length === 1) {
+        return sortedValues[0];
+    }
+    const clampedPercentile = Math.min(Math.max(percentile, 0), 1);
+    const index = Math.round((sortedValues.length - 1) * clampedPercentile);
+    return sortedValues[Math.min(sortedValues.length - 1, Math.max(0, index))];
+};
+
+const extractErrorMessage = (error: unknown): string => {
+    if (!error) {
+        return 'Unknown error';
+    }
+    if (typeof error === 'string') {
+        return error;
+    }
+    if (error instanceof Error) {
+        return error.message || 'Unknown error';
+    }
+    if (typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+        return (error as any).message;
+    }
+    try {
+        return JSON.stringify(error);
+    } catch {
+        return 'Unknown error';
+    }
+};
+
+const getFriendlyErrorMessage = (rawMessage: string, context: 'deploy' | 'bridge'): string => {
+    const message = rawMessage?.toLowerCase() || '';
+
+    const baseMessages = {
+        deploy: 'Chúng tôi không thể triển khai token. Vui lòng thử lại.',
+        bridge: 'Chúng tôi không thể bridge token. Vui lòng thử lại.'
+    } as const;
+
+    if (!message) {
+        return baseMessages[context];
+    }
+
+    if (message.includes('user rejected') || message.includes('user denied')) {
+        return 'Bạn đã từ chối giao dịch trên ví. Hãy xác nhận lại nếu muốn tiếp tục.';
+    }
+
+    if (message.includes('insufficient') && message.includes('fund')) {
+        return 'Số dư trong ví không đủ để hoàn tất giao dịch. Vui lòng nạp thêm token gốc (gas).';
+    }
+
+    if (message.includes('insufficient') && message.includes('balance')) {
+        return 'Số dư của bạn không đủ cho giao dịch này. Vui lòng kiểm tra lại số lượng.';
+    }
+
+    if (message.includes('time') && message.includes('out')) {
+        return 'Giao dịch đã hết thời gian chờ. Kiểm tra kết nối mạng và thử lại.';
+    }
+
+    if (message.includes('network request failed') || message.includes('failed to fetch')) {
+        return 'Không thể kết nối tới máy chủ. Kiểm tra kết nối internet hoặc RPC.';
+    }
+
+    if (message.includes('already being processed') || message.includes('already been processed')) {
+        return 'Giao dịch đã được xử lý trước đó.';
+    }
+
+    if (message.includes('simulation failed')) {
+        return 'Mô phỏng giao dịch thất bại. Vui lòng thử lại sau vài giây hoặc điều chỉnh thông số.';
+    }
+
+    return rawMessage || baseMessages[context];
+};
 
 export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, currentPrice }: BridgeDeployModalProps) {
     const defaultTab = bridgeAddress && bridgeAddress.length > 0 ? "bridge" : "create";
     const [activeTab, setActiveTab] = useState<"bridge" | "create">(defaultTab);
-    const [selectedOption, setSelectedOption] = useState<typeof deploymentOptions[number] | null>(null);
+    const [selectedOption, setSelectedOption] = useState<DeploymentOption | null>(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showProcessingModal, setShowProcessingModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [deploymentProgress, setDeploymentProgress] = useState(0);
+    const [deploymentStartTime, setDeploymentStartTime] = useState<number>(0);
+    const [deploymentElapsedTime, setDeploymentElapsedTime] = useState<string>('0s');
+    const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<string>('Calculating...');
+    const [deploymentEstimates, setDeploymentEstimates] = useState<Partial<Record<TransactionChain, DeploymentEstimateStats>>>({});
+    const [estimatesLoading, setEstimatesLoading] = useState(false);
+    const [estimatesError, setEstimatesError] = useState<string | null>(null);
+    const [selectedEstimateMs, setSelectedEstimateMs] = useState<number | null>(null);
 
     // BridgeTokens modal states
     const [showBridgeProcessingModal, setShowBridgeProcessingModal] = useState(false);
@@ -86,6 +205,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     const { 
         deployToken
     } = useBridge();
+    const deploymentProgressTimerRef = useRef<IntervalTimer | null>(null);
 
     // Update active tab when bridge address changes
     useEffect(() => {
@@ -93,12 +213,205 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setActiveTab(newDefaultTab);
     }, [bridgeAddress]);
 
+    useEffect(() => {
+        return () => {
+            if (deploymentProgressTimerRef.current) {
+                clearInterval(deploymentProgressTimerRef.current);
+                deploymentProgressTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    // Track elapsed time during deployment
+    useEffect(() => {
+        if (showProcessingModal && deploymentStartTime > 0) {
+            const interval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - deploymentStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                setDeploymentElapsedTime(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+
+                // Calculate estimated time remaining based on progress
+                if (deploymentProgress > 0 && deploymentProgress < 100) {
+                    const totalEstimatedTime = (elapsed / deploymentProgress) * 100;
+                    const remaining = Math.ceil(totalEstimatedTime - elapsed);
+                    const remainingMinutes = Math.floor(remaining / 60);
+                    const remainingSeconds = remaining % 60;
+                    setEstimatedTimeRemaining(
+                        remainingMinutes > 0
+                            ? `~${remainingMinutes}m ${remainingSeconds}s remaining`
+                            : `~${remainingSeconds}s remaining`
+                    );
+                } else if (deploymentProgress >= 100) {
+                    setEstimatedTimeRemaining('Completed');
+                }
+            }, 1000);
+
+            return () => clearInterval(interval);
+        }
+    }, [showProcessingModal, deploymentStartTime, deploymentProgress]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchDeploymentEstimates = async () => {
+            setEstimatesLoading(true);
+            setEstimatesError(null);
+            try {
+                const transactions = await listTransactions({
+                    action: TransactionAction.DEPLOY,
+                    status: TransactionStatus.SUCCESS
+                });
+
+                if (isCancelled) {
+                    return;
+                }
+
+                const durationsByChain: Partial<Record<TransactionChain, number[]>> = {};
+
+                transactions.forEach(tx => {
+                    if (tx.status !== TransactionStatus.SUCCESS || !tx.createdAt || !tx.updatedAt || !tx.chain) {
+                        return;
+                    }
+                    const createdAt = new Date(tx.createdAt).getTime();
+                    const updatedAt = new Date(tx.updatedAt).getTime();
+                    if (!Number.isFinite(createdAt) || !Number.isFinite(updatedAt)) {
+                        return;
+                    }
+                    const duration = updatedAt - createdAt;
+                    if (duration <= 0) {
+                        return;
+                    }
+                    if (!durationsByChain[tx.chain]) {
+                        durationsByChain[tx.chain] = [];
+                    }
+                    durationsByChain[tx.chain]!.push(duration);
+                });
+
+                const stats = Object.entries(durationsByChain).reduce(
+                    (acc, [chain, durations]) => {
+                        if (!durations || !durations.length) {
+                            return acc;
+                        }
+                        const sorted = [...durations].sort((a, b) => a - b);
+                        const averageMs = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
+                        const medianMs = sorted[Math.floor(sorted.length / 2)];
+                        const p90Ms = getPercentileValue(sorted, 0.9);
+                        acc[chain as TransactionChain] = {
+                            averageMs,
+                            medianMs,
+                            p90Ms,
+                            sampleSize: sorted.length
+                        };
+                        return acc;
+                    },
+                    {} as Partial<Record<TransactionChain, DeploymentEstimateStats>>
+                );
+
+                setDeploymentEstimates(stats);
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error('Failed to load deployment estimates', error);
+                    setEstimatesError('Không thể tải thời gian ước tính');
+                    setDeploymentEstimates({});
+                }
+            } finally {
+                if (!isCancelled) {
+                    setEstimatesLoading(false);
+                }
+            }
+        };
+
+        fetchDeploymentEstimates();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!selectedOption) {
+            setSelectedEstimateMs(null);
+            return;
+        }
+        const stats = deploymentEstimates[selectedOption.chain];
+        if (stats) {
+            const preferredEstimate = stats.p90Ms || stats.medianMs || stats.averageMs;
+            setSelectedEstimateMs(preferredEstimate ?? null);
+        } else {
+            setSelectedEstimateMs(null);
+        }
+    }, [selectedOption, deploymentEstimates]);
+
+    const stopDeploymentProgressTimer = useCallback(() => {
+        if (deploymentProgressTimerRef.current) {
+            clearInterval(deploymentProgressTimerRef.current);
+            deploymentProgressTimerRef.current = null;
+        }
+    }, []);
+
+    const getEstimateText = useCallback((chain?: TransactionChain) => {
+        if (!chain) {
+            return '—';
+        }
+        if (estimatesLoading) {
+            return 'Loading...';
+        }
+        const stats = deploymentEstimates[chain];
+        if (stats) {
+            const value = stats.p90Ms || stats.medianMs || stats.averageMs;
+            return value ? `~${formatDuration(value)}` : 'Calculating...';
+        }
+        if (estimatesError) {
+            return 'Unavailable';
+        }
+        return 'No historical data yet';
+    }, [deploymentEstimates, estimatesError, estimatesLoading]);
+
+    const renderEstimate = useCallback((chain: TransactionChain) => {
+        if (estimatesLoading) {
+            return (
+                <div className="text-right space-y-1">
+                    <div className="ml-auto h-2 w-16 rounded bg-gray-200 animate-pulse" />
+                    <div className="ml-auto h-2 w-24 rounded bg-gray-100 animate-pulse" />
+                </div>
+            );
+        }
+        const stats = deploymentEstimates[chain];
+        if (stats) {
+            return (
+                <div className="text-right space-y-0.5">
+                    <div className="text-xs font-medium text-gray-700">
+                        {getEstimateText(chain)}
+                    </div>
+                    <span className="block text-[10px] text-gray-400">
+                        {`Based on ${stats.sampleSize} ${stats.sampleSize === 1 ? 'deploy' : 'deploys'}`}
+                    </span>
+                </div>
+            );
+        }
+        if (estimatesError) {
+            return <span className="text-xs text-red-500">Estimate unavailable</span>;
+        }
+        return <span className="text-xs text-gray-400">No historical data yet</span>;
+    }, [deploymentEstimates, estimatesError, estimatesLoading, getEstimateText]);
+
     const handleOptionSelect = (option: typeof deploymentOptions[number]) => {
         if (option.disabled) {
             return; // Don't allow selection of disabled options
         }
         setSelectedOption(option);
         setShowReviewModal(true);
+        const stats = deploymentEstimates[option.chain];
+        if (stats) {
+            setSelectedEstimateMs(stats.p90Ms || stats.medianMs || stats.averageMs || null);
+        } else {
+            setSelectedEstimateMs(null);
+        }
     };
 
     const handleContinue = () => {
@@ -106,80 +419,240 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setShowConfirmModal(true);
     };
 
+    const checkBalance = (
+        chain: "sol" | "near" | "eth",
+        balance: number,
+        minRequired: number
+    ) => {
+        if (balance < minRequired) {
+            toast.error(
+                `Insufficient balance to deploy token, balance need >= ${minRequired} ${chain.toUpperCase()}`
+            );
+            return false;
+        }
+        return true;
+    };
+
     const handleDeploy = async () => {
         setShowConfirmModal(false);
         setShowProcessingModal(true);
         setDeploymentProgress(0);
+        setDeploymentElapsedTime('0s');
+        setEstimatedTimeRemaining('Calculating...');
+        setDeploymentStartTime(0);
+        stopDeploymentProgressTimer();
 
         if (!isSolanaConnected || !solanaPublicKey) {
             toast.error('Please connect your Solana wallet first');
             setShowProcessingModal(false);
+            setDeploymentStartTime(0);
+            setDeploymentProgress(0);
             return;
         }
 
-        if(selectedOption?.name === "NEAR"){
+        if(selectedOption?.chain === TransactionChain.NEAR){
             if(!signedAccountId){
                 toast.error('Please connect your NEAR wallet first');
                 setShowProcessingModal(false);
+                setDeploymentStartTime(0);
+                setDeploymentProgress(0);
                 return;
             }
         }
 
-        if(selectedOption?.name === "ETH"){
+        if(selectedOption?.chain === TransactionChain.ETHEREUM){
             if(!evmAddress){
                 toast.error('Please connect your EVM wallet first');
                 setShowProcessingModal(false);
+                setDeploymentStartTime(0);
+                setDeploymentProgress(0);
                 return;
             }
         }
 
+        let transactionId: string | null = null;
+        const deploymentStart = Date.now();
+        setDeploymentStartTime(deploymentStart);
+
         try {
+            // Get user address
+            const userAddress = solanaPublicKey;
+
+            // Create pending transaction before starting deployment
+            const transactionPayload = {
+                userAddress,
+                txHash: '', // Will be updated later when we have the actual tx hash
+                action: TransactionAction.DEPLOY,
+                baseToken: token?.mintAddress,
+                quoteToken: '', // Not applicable for deploy
+                amountIn: 0, // Not applicable for deploy
+                amountOut: 0, // Not applicable for deploy
+                pricePerToken: 0, // Not applicable for deploy
+                slippageBps: 0,
+                fee: 0,
+                feeToken: 'SOL',
+                status: TransactionStatus.PENDING,
+                chain: TransactionChain.SOLANA,
+                poolAddress: '', // Not applicable for deploy
+            };
+
+            const createdTransaction = await createTransaction(transactionPayload);
+            transactionId = createdTransaction.id;
+
             // Step 1: Starting deployment process (10%)
             setDeploymentProgress(10);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Step 1.5: Check if token is already deployed (20%)
+            setDeploymentProgress(20);
+            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
+            const chainToken = ChainKind.Sol;
+
+            const bridgedAddresses = await getAllBridgeTokens(token?.mintAddress, chainToken, network);
+
+            if (bridgedAddresses && bridgedAddresses.length > 0) {
+                const targetChain = selectedOption?.name.toLowerCase();
+                const alreadyDeployed = bridgedAddresses.some(addr => {
+                    const [chain] = addr.split(':');
+                    return chain === targetChain;
+                });
+
+                if (alreadyDeployed) {
+                    // Token already deployed - show success immediately
+                    setDeploymentProgress(100);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // Update transaction status to success
+                    if (transactionId) {
+                        await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
+                    }
+
+                    setShowProcessingModal(false);
+                    setShowSuccessModal(true);
+                    toast.success('Token already deployed and ready for bridging!');
+                    return;
+                }
+            }
 
             // Step 2: Check balances (30%)
             setDeploymentProgress(30);
-            const solBalance = await getSolBalance(solanaPublicKey || '')
-            
-            if(solBalance < 0.0001){
-                toast.error('Insufficient balance to deploy token, balance need >= 0.0001 SOL');
+            const solBalance = await getSolBalance(solanaPublicKey || '');
+
+            if (!checkBalance("sol", Number(solBalance), MIN_BALANCE.sol)) {
+                // Update transaction to failed
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                }
                 setShowProcessingModal(false);
                 return;
             }
 
-            const nearBalance = await getNearBalance(signedAccountId || '')
-        
-            if(Number(nearBalance) < 3){
-                toast.error('Insufficient balance to deploy token, balance need >= 3 NEAR');
+            const nearBalance = await getNearBalance(signedAccountId || '');
+
+            if (!checkBalance("near", Number(nearBalance), MIN_TARGET_BALANCE.near)) {
+                // Update transaction to failed
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                }
                 setShowProcessingModal(false);
                 return;
             }
 
             // Step 3: Deploying token (60%)
             setDeploymentProgress(60);
-            const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet"
-            await deployToken(network,ChainKind.Sol,ChainKind.Near,token?.mintAddress);
+            const estimatedDurationMs = selectedEstimateMs ?? FALLBACK_DEPLOYMENT_ESTIMATE_MS;
+            if (estimatedDurationMs) {
+                setEstimatedTimeRemaining(`~${formatDuration(estimatedDurationMs)}`);
+                const waitStart = Date.now();
+                stopDeploymentProgressTimer();
+                deploymentProgressTimerRef.current = setInterval(() => {
+                    setDeploymentProgress(prev => {
+                        if (prev >= 95) {
+                            return prev;
+                        }
+                        const elapsed = Date.now() - waitStart;
+                        const normalized = estimatedDurationMs > 0 ? elapsed / estimatedDurationMs : 0;
+                        const projected = 60 + Math.floor(Math.min(0.999, Math.max(0, normalized)) * 30);
+                        const nextValue = Math.min(95, projected);
+                        return nextValue > prev ? nextValue : prev;
+                    });
+                }, 1000);
+            }
+            const txDeployToken = await deployToken(network, ChainKind.Sol, ChainKind.Near, token?.mintAddress);
 
             // Step 4: Finalizing deployment (100%)
+            stopDeploymentProgressTimer();
             setDeploymentProgress(100);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Update transaction status to success
+            if (transactionId) {
+                await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+            }
+
             setShowProcessingModal(false);
             setShowSuccessModal(true);
-        } catch (error) {
-            console.error(error);
-            toast.error('Deployment failed. Please try again.');
-            setShowProcessingModal(false);
+            toast.success('Deploy token successfully');
+
+        } catch (error: any) {
+            stopDeploymentProgressTimer();
+            console.error("Deploy token error:", error);
+
+            // Check if error is due to token already being deployed
+            const errorMessage = error?.message || error?.toString() || '';
+            if (errorMessage.includes('already been processed') || errorMessage.includes('already deployed')) {
+                // Treat as success - token is already deployed
+                setDeploymentProgress(100);
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Update transaction status to success
+                if (transactionId) {
+                    try {
+                        await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
+                    } catch (updateError) {
+                        console.error('Error updating transaction status:', updateError);
+                    }
+                }
+
+                setShowProcessingModal(false);
+                setShowSuccessModal(true);
+                toast.success('Token already deployed and ready for bridging!');
+            } else {
+                // Update transaction status to failed
+                if (transactionId) {
+                    try {
+                        await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
+                    } catch (updateError) {
+                        console.error('Error updating transaction status:', updateError);
+                    }
+                }
+
+                const rawDeployError = extractErrorMessage(error);
+                const friendlyDeployError = getFriendlyErrorMessage(rawDeployError, 'deploy');
+                toast.error('Deploy token failed', {
+                    description: friendlyDeployError
+                });
+                setShowProcessingModal(false);
+                setDeploymentProgress(0);
+                setDeploymentStartTime(0);
+                setEstimatedTimeRemaining('Calculating...');
+                setDeploymentElapsedTime('0s');
+            }
         }
     };
 
     const handleCancel = () => {
+        stopDeploymentProgressTimer();
         setShowReviewModal(false);
         setShowConfirmModal(false);
         setShowProcessingModal(false);
         setShowSuccessModal(false);
         setSelectedOption(null);
+        setSelectedEstimateMs(null);
         setDeploymentProgress(0);
+        setDeploymentStartTime(0);
+        setDeploymentElapsedTime('0s');
+        setEstimatedTimeRemaining('Calculating...');
     };
 
     const handleBridgeNow = () => {
@@ -202,11 +675,15 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         setShowBridgeSuccessModal(true);
     };
 
-    const handleBridgeError = () => {
+    const handleBridgeError = (message?: string) => {
         setShowBridgeProcessingModal(false);
         setBridgeTransactionHash('');
         setBridgeTransactionHashNear('');
         setBridgeProgress(0);
+        const friendlyMessage = getFriendlyErrorMessage(message || 'Unknown error', 'bridge');
+        toast.error('Bridge token failed', {
+            description: friendlyMessage
+        });
     };
 
     const handleBridgeSuccessClose = () => {
@@ -305,7 +782,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         <>
             {/* Main Modal */}
             <Dialog open={shouldShowMainModal} onOpenChange={onClose}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[95vh] overflow-y-hidde [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg max-h-[95vh] overflow-y-hidde [&>button]:hidden border-none">
                     <DialogHeader className="flex flex-row items-center justify-between">
                         <DialogTitle className="text-xl font-semibold">
                             Deploy Bridge Contract
@@ -399,11 +876,9 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                                                     }`}>
                                                         {option.cost}
                                                     </div>
-                                                    <div className={`text-xs ${
-                                                        option.disabled ? 'text-gray-400' : 'text-gray-600'
-                                                    }`}>
-                                                        {option.estimatedTime}
-                                                    </div>
+                                                    {!option.disabled ? renderEstimate(option.chain) : (
+                                                        <span className="text-xs text-gray-400">Coming soon</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </TooltipTrigger>
@@ -421,13 +896,12 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     {
                         activeTab === "create" && (
                             <div className="flex justify-end gap-3 mt-3">
-                                <Button
-                                    variant="outline"
+                                <button
                                     onClick={onClose}
-                                    className="px-6"
+                                    className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                                 >
                                     Cancel
-                                </Button>
+                                </button>
                             </div>
                         )
                     }
@@ -436,7 +910,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Review Modal */}
             <Dialog open={showReviewModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Create {token?.symbol} on {selectedOption?.name} for Bridging
@@ -467,36 +941,43 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             <span className="text-sm font-medium">{selectedOption?.cost}</span>
                         </div>
                         <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Estimated Duration:</span>
+                            <span className="text-sm font-medium">
+                                {selectedOption ? getEstimateText(selectedOption.chain) : '—'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Contract Type:</span>
                             <span className="text-sm font-medium">ERC-20 Compatible</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Estimated Time:</span>
-                            <span className="text-sm font-medium">{selectedOption?.estimatedTime}</span>
-                        </div>
                     </Card>
 
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                            <strong>Note:</strong> Deployment time varies based on network conditions. Actual time will be displayed during deployment.
+                        </p>
+                    </div>
+
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleContinue}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
                             Continue
-                        </Button>
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Confirm Deploy Modal */}
             <Dialog open={showConfirmModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Confirm Deploy to {selectedOption?.name}
@@ -527,38 +1008,45 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             <span className="text-sm font-medium">{selectedOption?.cost}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Estimated Time:</span>
-                            <span className="text-sm font-medium">{selectedOption?.estimatedTime}</span>
+                            <span className="text-sm text-gray-600">Estimated Duration:</span>
+                            <span className="text-sm font-medium">
+                                {selectedOption ? getEstimateText(selectedOption.chain) : '—'}
+                            </span>
                         </div>
                     </Card>
 
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                            <strong>Note:</strong> Deployment time varies based on network conditions. You'll see real-time progress during deployment.
+                        </p>
+                    </div>
+
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleDeploy}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
-                            Deploy Tokens
-                        </Button>
+                            Deploy Token
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Processing Modal */}
             <Dialog open={showProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {token?.symbol} to {selectedOption?.name}
                         </DialogTitle>
                         <p className="text-sm text-gray-600 mt-2">
-                            Review the details before proceeding
+                            Track deployment progress
                         </p>
                     </DialogHeader>
 
@@ -584,8 +1072,26 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             {deploymentProgress}% complete
                         </p>
 
-                        <p className="text-sm text-gray-500">
-                            Please don't close this window. Deployment typically takes 2-5 minutes.
+                        <div className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-left space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Elapsed</span>
+                                <span className="text-xs font-semibold text-gray-700">{deploymentElapsedTime}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Estimated Remaining</span>
+                                <span className="text-xs font-semibold text-gray-700">
+                                    {deploymentProgress > 0 && deploymentProgress < 100
+                                        ? estimatedTimeRemaining
+                                        : (selectedEstimateMs
+                                            ? `~${formatDuration(selectedEstimateMs)}`
+                                            : (selectedOption ? getEstimateText(selectedOption.chain) : 'Calculating...'))}
+                                </span>
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-gray-500 mt-2">
+                            Please don't close this window. {selectedEstimateMs
+                                && selectedEstimateMs > 0 && `Current estimate: ~${formatDuration(selectedEstimateMs)}.`}
                         </p>
                     </div>
                 </DialogContent>
@@ -593,7 +1099,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Success Modal */}
             <Dialog open={showSuccessModal} onOpenChange={handleCancel}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {token?.symbol} to {selectedOption?.name}
@@ -653,7 +1159,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <BadgeCheck className="w-5 h-5 text-gray-600"/>
-                                    <span className="text-sm text-gray-700">Users can now bridge tokens between CURATE and {selectedOption?.name}</span>
+                                    <span className="text-sm text-gray-700">Users can now bridge tokens between {token.symbol} and {selectedOption?.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <BadgeCheck className="w-5 h-5 text-gray-600"/>
@@ -664,26 +1170,25 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     </div>
 
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            className="px-6"
+                        <button
+                            onClick={onClose}
+                            className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={handleBridgeNow}
-                            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
                             Bridge Now
-                        </Button>
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Bridge Processing Modal */}
             <Dialog open={showBridgeProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {token?.symbol} from {bridgeFromChain} to {bridgeToChain}
@@ -728,7 +1233,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
             {/* Bridge Success Modal */}
             <Dialog open={showBridgeSuccessModal} onOpenChange={handleBridgeSuccessClose}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden">
+                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {token?.symbol} from {bridgeFromChain} to {bridgeToChain}
@@ -838,13 +1343,12 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     </div>
 
                     <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outline"
+                        <button
                             onClick={handleBridgeSuccessClose}
-                            className="px-6"
+                            className="px-6 bg-red-500 text-white hover:bg-red-400 cursor-pointer border border-red-400 py-2 rounded-lg"
                         >
-                            Close
-                        </Button>
+                            Continue
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>

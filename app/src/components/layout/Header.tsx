@@ -1,12 +1,31 @@
 "use client"
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { WalletButton } from '../wallet/WalletButton';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Header() {
+    const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+    const [createDropdownOpen, setCreateDropdownOpen] = useState<boolean>(false);
+    const [mobileCreateDropdownOpen, setMobileCreateDropdownOpen] = useState<boolean>(false);
+
+    const isActive = (path: string) => {
+        switch (path) {
+            case '/token/bridge':
+            case '/token/me':
+                return pathname === path;
+            case '/token':
+                return pathname === '/token';
+            case '/create':
+                return pathname === path || pathname?.startsWith('/create/');
+            default:
+                return pathname === path;
+        }
+    };
+
     return (
         <header className="border-b border-gray-200 bg-white">
             <div className="xl:container mx-auto px-4 h-16 flex items-center justify-between">
@@ -18,17 +37,60 @@ export default function Header() {
                 </div>
                 <div className="flex items-center">
                     <nav className="hidden lg:flex items-center space-x-8 mr-10">
-                        <Link href="/token" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>Launchpad</span>
+                        <Link href="/token" className="relative pb-1 group">
+                            <span className={`text-sm ${isActive('/token') ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'}`}>
+                                Launchpad
+                            </span>
+                            <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-[#DD3345] transition-all ${isActive('/token') ? 'opacity-100' : 'opacity-0'}`}></span>
                         </Link>
-                        <Link href="/create" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>Create Token</span>
+                        <div
+                            className="relative"
+                            onMouseEnter={() => setCreateDropdownOpen(true)}
+                            onMouseLeave={() => setCreateDropdownOpen(false)}
+                        >
+                            <button
+                                className="relative pb-1 group flex items-center space-x-1 cursor-pointer"
+                            >
+                                <span className={`text-sm ${isActive('/create') ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'}`}>
+                                    Create Token
+                                </span>
+                                <ChevronDown className={`w-4 h-4 transition-transform ${createDropdownOpen ? 'rotate-180' : ''} ${isActive('/create') ? 'text-gray-900' : 'text-gray-600'}`} />
+                                <span className={`absolute bottom-0 left-0 right-6 h-0.5 bg-[#DD3345] transition-all ${isActive('/create') ? 'opacity-100' : 'opacity-0'}`}></span>
+                            </button>
+                            {createDropdownOpen && (
+                                <div className="absolute top-full mt-0.5 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                    <Link
+                                        href="/create"
+                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    >
+                                        Create Token
+                                    </Link>
+                                    <Link
+                                        href="/create/quick"
+                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    >
+                                        Quick Mint
+                                    </Link>
+                                    <Link
+                                        href="/create/custom"
+                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    >
+                                        Custom Token
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                        <Link href="/token/bridge" className="relative pb-1 group">
+                            <span className={`text-sm ${isActive('/token/bridge') ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'}`}>
+                                Bridge Tokens
+                            </span>
+                            <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-[#DD3345] transition-all ${isActive('/token/bridge') ? 'opacity-100' : 'opacity-0'}`}></span>
                         </Link>
-                        <Link href="/token/bridge" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>Bridge Tokens</span>
-                        </Link>
-                        <Link href="/token/me" className="text-gray-600 hover:text-gray-900">
-                            <span className='text-sm'>My Tokens</span>
+                        <Link href="/token/me" className="relative pb-1 group">
+                            <span className={`text-sm ${isActive('/token/me') ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'}`}>
+                                My Tokens
+                            </span>
+                            <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-[#DD3345] transition-all ${isActive('/token/me') ? 'opacity-100' : 'opacity-0'}`}></span>
                         </Link>
                     </nav>
 
@@ -71,9 +133,49 @@ export default function Header() {
                             <Link href="/token" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Launchpad
                             </Link>
-                            <Link href="/create" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
-                                Create Token
-                            </Link>
+                            <div>
+                                <button
+                                    onClick={() => setMobileCreateDropdownOpen(!mobileCreateDropdownOpen)}
+                                    className="text-gray-600 hover:text-gray-900 text-lg flex items-center justify-between w-full"
+                                >
+                                    <span>Create Token</span>
+                                    <ChevronDown className={`w-5 h-5 transition-transform ${mobileCreateDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {mobileCreateDropdownOpen && (
+                                    <div className="ml-4 mt-2 space-y-2">
+                                        <Link
+                                            href="/create"
+                                            className="block text-gray-600 hover:text-gray-900"
+                                            onClick={() => {
+                                                setMobileCreateDropdownOpen(false);
+                                                setSidebarOpen(false);
+                                            }}
+                                        >
+                                            Create Token
+                                        </Link>
+                                        <Link
+                                            href="/create/quick"
+                                            className="block text-gray-600 hover:text-gray-900"
+                                            onClick={() => {
+                                                setMobileCreateDropdownOpen(false);
+                                                setSidebarOpen(false);
+                                            }}
+                                        >
+                                            Quick Mint
+                                        </Link>
+                                        <Link
+                                            href="/create/custom"
+                                            className="block text-gray-600 hover:text-gray-900"
+                                            onClick={() => {
+                                                setMobileCreateDropdownOpen(false);
+                                                setSidebarOpen(false);
+                                            }}
+                                        >
+                                            Custom Token
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
                             <Link href="/token/bridge" className="text-gray-600 hover:text-gray-900 text-lg" onClick={() => setSidebarOpen(false)}>
                                 Bridge Tokens
                             </Link>

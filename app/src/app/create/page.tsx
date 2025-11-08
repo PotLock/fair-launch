@@ -48,6 +48,6 @@ export const metadata: Metadata = {
 
 export default function CreatePage() {
     return (
-        <CreateToken/>
+      <CreateToken/>
     )
 }

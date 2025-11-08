@@ -1,8 +1,8 @@
 import { Suspense } from "react";
-import ExploreTokenCard from "../ExploreTokenCard";
 import ExploreTokensLoading from "./ExploreTokensLoading";
 import { getTokens } from "@/lib/api";
 import { Token } from "@/types/api";
+import ExploreTokensCarousel from "./ExploreTokensCarousel";
 
 async function ExploreTokensContent() {
   try {
@@ -21,29 +21,7 @@ async function ExploreTokensContent() {
       );
     }
 
-    return (
-      <div className="flex gap-3">
-        {tokens.slice(0, 3).map((token) => (
-          <div key={token.id} className="flex-shrink-0 ex-card p-2" style={{ width: `calc((100% - 0.6rem) / 3)` }}>
-            <ExploreTokenCard  
-              id={token.id.toString()}
-              mint={token.mintAddress}
-              totalSupply={token.totalSupply}
-              banner={token.metadata.bannerUri}
-              avatar={token.metadata.tokenUri}
-              name={token.name}
-              symbol={token.symbol}
-              description={token.description}
-              decimals={token.decimals}
-              actionButton={{
-                text: `Buy $${token.symbol}`,
-                variant: 'presale' as const
-              }}
-            />
-          </div>
-        ))}
-      </div>
-    );
+    return <ExploreTokensCarousel tokens={tokens} />;
   } catch (error) {
     console.error('Error fetching tokens:', error);
     return (
@@ -58,38 +36,6 @@ async function ExploreTokensContent() {
   }
 }
 
-function ExploreTokensControls() {
-  return (
-    <div className="flex flex-row justify-between items-center mt-8 gap-4">
-      <a 
-        href="/token" 
-        className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors"
-      >
-        <span className="text-sm">Explore All</span>
-      </a>
-      
-      <div className='flex justify-center'>
-        <div className="border border-black max-w-[200px] flex rounded-full">
-          <button
-            className="h-8 md:h-10 w-8 md:w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm"
-          >
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            className="h-8 md:h-10 w-8 md:w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full"
-          >
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ExploreTokens() {
   return (
     <div className="pt-[68px] md:px-6">
@@ -102,7 +48,6 @@ export default function ExploreTokens() {
         <Suspense fallback={<ExploreTokensLoading />}>
           <ExploreTokensContent />
         </Suspense>
-        <ExploreTokensControls />
       </div>
     </div>
   );

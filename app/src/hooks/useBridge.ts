@@ -155,13 +155,40 @@ export const useBridge = () => {
       // --- Deploy from Near ---
       const deployFromNear = async () => {
         const nearClient = await ensureNear();
+
+        // Validate token address format for NEAR
+        if (!tokenAddress || tokenAddress.trim() === '') {
+          throw new Error('Invalid NEAR token address: address cannot be empty');
+        }
+
+        // NEAR account names must end with .testnet or .near (or be implicit account)
+        const isValidNearAccount = tokenAddress.endsWith('.testnet') ||
+                                   tokenAddress.endsWith('.near') ||
+                                   tokenAddress.length === 64; // implicit account
+
+        if (!isValidNearAccount) {
+          throw new Error(`Invalid NEAR token address format: ${tokenAddress}. Must end with .testnet, .near, or be a 64-character implicit account.`);
+        }
+
         const token = omniAddress(ChainKind.Near, tokenAddress);
 
         console.log("=== Pre-logMetadata Debug Info ===");
         console.log("Raw token address:", tokenAddress);
         console.log("OmniAddress token:", token);
 
-        const { signature, metadata_payload } = await nearClient.logMetadata(token);
+        let signature, metadata_payload;
+        try {
+          const result = await nearClient.logMetadata(token);
+          signature = result.signature;
+          metadata_payload = result.metadata_payload;
+        } catch (error: any) {
+          console.error("Error message:", error?.message);
+          console.error("Error stack:", error?.stack);
+          console.error("Full error:", JSON.stringify(error, null, 2));
+
+          throw error;
+        }
+
         const sig = new MPCSignature(signature.big_r, signature.s, signature.recovery_id);
 
         console.log("=== Post-logMetadata Debug Info ===");

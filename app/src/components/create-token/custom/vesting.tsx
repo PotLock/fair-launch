@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
 
 interface VestingProps {
@@ -20,11 +20,11 @@ export interface VestingData {
   cliffDurationFromMigrationTime: number;
 }
 
-export default function Vesting({ 
-  onNext, 
+export default function Vesting({
+  onNext,
   onBack,
-  onCancel, 
-  currentStep = 4, 
+  onCancel,
+  currentStep = 4,
   totalSteps = 7,
   initialData
 }: VestingProps) {
@@ -36,27 +36,47 @@ export default function Vesting({
     cliffDurationFromMigrationTime: initialData?.cliffDurationFromMigrationTime || 3*30*24*3600,
   });
 
-  const progressPercentage = (currentStep / totalSteps) * 100;
+  const progressPercentage = useMemo(() =>
+    (currentStep / totalSteps) * 100,
+    [currentStep, totalSteps]
+  );
 
-  const handleInputChange = (field: keyof VestingData, value: string) => {
+  const handleInputChange = useCallback((field: keyof VestingData, value: string) => {
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({ ...prev, [field]: numValue }));
-  };
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (formData.totalLockedVestingAmount > 0 && formData.numberOfVestingPeriod > 0) {
       onNext(formData);
     }
-  };
+  }, [formData, onNext]);
 
-  const isFormValid = formData.totalLockedVestingAmount > 0 && formData.numberOfVestingPeriod > 0;
+  const isFormValid = useMemo(() =>
+    formData.totalLockedVestingAmount > 0 && formData.numberOfVestingPeriod > 0,
+    [formData.totalLockedVestingAmount, formData.numberOfVestingPeriod]
+  );
 
-  // Calculate vesting schedule preview
-  const cliffPercentage = (formData.cliffUnlockAmount / formData.totalLockedVestingAmount) * 100;
-  const remainingAmount = formData.totalLockedVestingAmount - formData.cliffUnlockAmount;
-  const periodAmount = remainingAmount / formData.numberOfVestingPeriod;
-  const periodDuration = formData.totalVestingDuration / formData.numberOfVestingPeriod;
+  // Memoize vesting schedule calculations
+  const vestingSchedule = useMemo(() => {
+    const cliffPercentage = (formData.cliffUnlockAmount / formData.totalLockedVestingAmount) * 100;
+    const remainingAmount = formData.totalLockedVestingAmount - formData.cliffUnlockAmount;
+    const periodAmount = remainingAmount / formData.numberOfVestingPeriod;
+    const periodDuration = formData.totalVestingDuration / formData.numberOfVestingPeriod;
+
+    return {
+      cliffPercentage,
+      remainingAmount,
+      periodAmount,
+      periodDuration
+    };
+  }, [
+    formData.totalLockedVestingAmount,
+    formData.cliffUnlockAmount,
+    formData.numberOfVestingPeriod,
+    formData.totalVestingDuration
+  ]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -183,20 +203,20 @@ export default function Vesting({
                 <span className="text-sm text-gray-600">Cliff Period:</span>
                 <div className="text-right">
                   <div className="text-sm font-medium">{formData.cliffDurationFromMigrationTime} days</div>
-                  <div className="text-xs text-gray-500">{formData.cliffUnlockAmount.toLocaleString()} tokens ({cliffPercentage.toFixed(1)}%)</div>
+                  <div className="text-xs text-gray-500">{formData.cliffUnlockAmount.toLocaleString()} tokens ({vestingSchedule.cliffPercentage.toFixed(1)}%)</div>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Vesting Periods:</span>
                 <div className="text-right">
                   <div className="text-sm font-medium">{formData.numberOfVestingPeriod} periods</div>
-                  <div className="text-xs text-gray-500">{periodAmount.toLocaleString()} tokens per period</div>
+                  <div className="text-xs text-gray-500">{vestingSchedule.periodAmount.toLocaleString()} tokens per period</div>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Period Duration:</span>
                 <div className="text-right">
-                  <div className="text-sm font-medium">{periodDuration.toFixed(1)} days per period</div>
+                  <div className="text-sm font-medium">{vestingSchedule.periodDuration.toFixed(1)} days per period</div>
                   <div className="text-xs text-gray-500">Total: {formData.totalVestingDuration} days</div>
                 </div>
               </div>

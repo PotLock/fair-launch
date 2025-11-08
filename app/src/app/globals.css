@@ -375,15 +375,15 @@ body{
   }
 }
 
-table th {
+/* table th {
   padding: 0 20px;
-}
+} */
 
 thead:first-child th:first-child { border-top-left-radius: 10px; }
 thead:first-child th:last-child { border-top-right-radius: 10px; }
 
 
-td { 
+/* td { 
   padding: 15px 20px; 
   align-items: center;
-}
+} */

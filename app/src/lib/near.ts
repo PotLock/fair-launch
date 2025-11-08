@@ -1,7 +1,8 @@
 import { NEAR_NETWORK, TATUM_API_KEY } from "../configs/env.config";
 import { formatDecimal } from "@/utils";
 
-const URL_API = "https://api.coingecko.com/api/v3/simple/price?ids=near&vs_currencies=usd";
+const URL_API = "https://api.binance.com/api/v3/ticker/price?symbol=NEARUSDT";
+const FALLBACK_URL_API = "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=NEAR-USDT";
 
 interface PriceCache {
   price: number;
@@ -53,7 +54,7 @@ export const getNearPrice = async (): Promise<number | null> => {
     const res = await fetch(URL_API);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    const price = data.near.usd;
+    const price = parseFloat(data.price);
     
     nearPriceCache = {
       price,
@@ -61,7 +62,27 @@ export const getNearPrice = async (): Promise<number | null> => {
     };
     
     return price;
-  } catch (err) {
+  } catch (primaryError) {
+    try {
+      const fallbackRes = await fetch(FALLBACK_URL_API);
+      if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
+      const fallbackData = await fallbackRes.json();
+      const price = parseFloat(fallbackData?.data?.price);
+
+      if (Number.isNaN(price)) {
+        throw new Error('Fallback price parsing failed');
+      }
+
+      nearPriceCache = {
+        price,
+        timestamp: Date.now()
+      };
+
+      return price;
+    } catch (fallbackError) {
+      console.error('Error fetching NEAR price:', primaryError, fallbackError);
+    }
+    
     if (nearPriceCache && (Date.now() - nearPriceCache.timestamp) < CACHE_DURATION) {
       return nearPriceCache.price;
     }
@@ -105,7 +126,23 @@ export const getTokenBalanceOnNEAR = async (
       throw new Error(`RPC error: ${data.error.message}`);
     }
 
-    const result = JSON.parse(Buffer.from(data.result.result, 'base64').toString());
+    const rawResult = data?.result?.result;
+    if (!rawResult) {
+      throw new Error('RPC response missing result payload');
+    }
+
+    let decodedResult: string;
+    if (typeof rawResult === 'string') {
+      decodedResult = Buffer.from(rawResult, 'base64').toString();
+    } else if (Array.isArray(rawResult)) {
+      decodedResult = Buffer.from(rawResult).toString();
+    } else if (rawResult instanceof ArrayBuffer) {
+      decodedResult = Buffer.from(new Uint8Array(rawResult)).toString();
+    } else {
+      throw new Error('Unsupported result payload format');
+    }
+
+    const result = JSON.parse(decodedResult);
   
     const balance = Number(result) / (10**24)
 
