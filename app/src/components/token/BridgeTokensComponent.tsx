@@ -29,7 +29,7 @@ interface BridgeTokensComponentProps {
     onBridgeProcessingStart: (amount: string, fromChain: string, toChain: string) => void;
     onBridgeProcessingComplete: (transactionHash: string) => void;
     onBridgeSuccessClose: () => void;
-    onBridgeError: () => void;
+    onBridgeError: (errorMessage?: string) => void;
     onBridgeProgress?: (progress: number) => void;
 }
 
@@ -121,13 +121,11 @@ export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessin
             onBridgeProcessingComplete(result||'');
         } catch (error) {
             console.error(error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            // Extract only the main error message, not the full stack
+            const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
             const cleanMessage = errorMessage.includes(':') ? errorMessage.split(':').pop()?.trim() : errorMessage;
-            toast.error(`Bridge failed: ${cleanMessage}`);
             
-            // Notify parent component to close processing modal and show error
-            onBridgeError();
+            // Notify parent component with the clean error message
+            onBridgeError(cleanMessage);
         } finally {
             setIsTransferring(false);
         }

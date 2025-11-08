@@ -49,9 +49,88 @@ export default function PreviewDeployment({
 
   // State for buy token modal
   const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
-  const [buyAmount, setBuyAmount] = useState<string>("0");
 
   const progressPercentage = (currentStep / totalSteps) * 100;
+
+  const extractErrorMessage = (error: unknown): string => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message || 'Unknown error';
+    if (typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  };
+
+  const getFriendlyDeploymentError = (error: unknown) => {
+    const rawMessage = extractErrorMessage(error);
+    const normalized = rawMessage.toLowerCase();
+
+    if (!rawMessage || normalized === 'unknown error') {
+      return {
+        title: 'Deployment failed',
+        description: 'Something went wrong during deployment. Please try again.'
+      };
+    }
+
+    if (normalized.includes('user rejected') || normalized.includes('user denied') || normalized.includes('transaction cancelled')) {
+      return {
+        title: 'Transaction rejected',
+        description: 'You rejected the transaction in your wallet. Please approve it to continue.'
+      };
+    }
+
+    if (normalized.includes('insufficient funds') || normalized.includes('insufficient sol') || normalized.includes('lamports')) {
+      return {
+        title: 'Insufficient SOL balance',
+        description: 'Your wallet does not have enough SOL to cover fees. Please top up and try again.'
+      };
+    }
+
+    if (normalized.includes('simulation failed') || normalized.includes('instruction error')) {
+      return {
+        title: 'Simulation failed',
+        description: 'The transaction simulation failed. Double-check your token details or try again in a few moments.'
+      };
+    }
+
+    if (normalized.includes('blockhash not found') || normalized.includes('expired') || normalized.includes('block height exceeded')) {
+      return {
+        title: 'Transaction expired',
+        description: 'The transaction took too long and expired. Please try submitting again.'
+      };
+    }
+
+    if (normalized.includes('already in use')) {
+      return {
+        title: 'Duplicate configuration',
+        description: 'A similar deployment was recently submitted. Adjust your configuration and try again.'
+      };
+    }
+
+    if (normalized.includes('network request failed') || normalized.includes('failed to fetch') || normalized.includes('rpc')) {
+      return {
+        title: 'Network error',
+        description: 'Unable to reach the Solana RPC. Check your internet connection and try again.'
+      };
+    }
+
+    if (normalized.includes('custom program error')) {
+      return {
+        title: 'Program error',
+        description: 'The deployment program returned an error. Please wait a moment or adjust your configuration.'
+      };
+    }
+
+    return {
+      title: 'Deployment failed',
+      description: rawMessage
+    };
+  };
 
   // Build custom DBC config from form data
   const buildCustomDBCConfig = () => {
@@ -211,12 +290,10 @@ export default function PreviewDeployment({
   };
 
   const handleBuyTokenConfirm = (amount: string) => {
-    setBuyAmount(amount);
     executeDeployment(amount);
   };
 
   const handleBuyTokenSkip = () => {
-    setBuyAmount("0");
     executeDeployment("0");
   };
 
@@ -548,31 +625,10 @@ export default function PreviewDeployment({
       console.error('❌ Error during custom token deployment:', error);
       
       toast.dismiss('deployment-progress');
-      
-      if (error instanceof Error) {
-        if (error.message.includes('User rejected')) {
-          toast.error('Transaction was rejected by user', {
-            description: 'Please try again and approve the transaction in your wallet.'
-          });
-        } else if (error.message.includes('Insufficient funds')) {
-          toast.error('Insufficient SOL balance for transaction', {
-            description: 'Please add more SOL to your wallet and try again.'
-          });
-        } else if (error.message.includes('Simulation failed')) {
-          toast.error('Transaction simulation failed', {
-            description: 'Please check your inputs and try again.'
-          });
-        } else {
-          toast.error(`Deployment failed: ${error.message}`, {
-            description: 'Please check your inputs and try again.'
-          });
-        }
-      } else {
-        toast.error('An unexpected error occurred during deployment', {
-          description: 'Please try again or contact support if the issue persists.'
-        });
-      }
-      throw error;
+      const friendlyError = getFriendlyDeploymentError(error);
+      toast.error(friendlyError.title, {
+        description: friendlyError.description
+      });
     } finally {
       setIsDeploying(false);
       setIsNavigating(false);

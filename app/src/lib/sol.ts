@@ -3,7 +3,8 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
 
-const URL_API = "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd";
+const URL_API = "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT";
+const FALLBACK_URL_API = "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT";
 
 interface PriceCache {
   price: number;
@@ -34,7 +35,7 @@ export const getSolPrice = async (): Promise<number | null> => {
     const res = await fetch(URL_API);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    const price = data.solana.usd;
+    const price = parseFloat(data.price);
     
     // Update cache with new price
     solPriceCache = {
@@ -43,7 +44,27 @@ export const getSolPrice = async (): Promise<number | null> => {
     };
     
     return price;
-  } catch (err) { 
+  } catch (primaryError) { 
+    try {
+      const fallbackRes = await fetch(FALLBACK_URL_API);
+      if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
+      const fallbackData = await fallbackRes.json();
+      const price = parseFloat(fallbackData?.data?.price);
+
+      if (Number.isNaN(price)) {
+        throw new Error('Fallback price parsing failed');
+      }
+
+      solPriceCache = {
+        price,
+        timestamp: Date.now()
+      };
+
+      return price;
+    } catch (fallbackError) {
+      console.error('Error fetching SOL price:', primaryError, fallbackError);
+    }
+    
     if (solPriceCache && (Date.now() - solPriceCache.timestamp) < CACHE_DURATION) {
       return solPriceCache.price;
     }
@@ -181,7 +202,6 @@ export async function getAllTokens(walletAddress: string): Promise<TokenInfo[]> 
       });
     }
     
-    // Sort by balance (highest first)
     tokens.sort((a, b) => b.balance - a.balance);
     
     return tokens;
@@ -225,19 +245,28 @@ async function getTokenMetadata(mint: string): Promise<TokenMetadata | null> {
     const accountInfo = await connection.getAccountInfo(metadataPDA);
 
     if (!accountInfo?.data) {
-      throw new Error("No account data found");
+      console.warn(`Token metadata account not found for mint ${mint}`);
+      return null;
     }
     
     //@ts-ignore
     const metadata = deserializeMetadata(accountInfo);
     
-    const image = await fetch(metadata.uri);
-    const imageData = await image.json();
+    let imageUrl: string | undefined;
+    try {
+      const imageResponse = await fetch(metadata.uri);
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        imageUrl = imageData?.image;
+      }
+    } catch (fetchError) {
+      console.warn(`Unable to fetch metadata JSON for mint ${mint}`, fetchError);
+    }
     
     return {
       name: metadata.name.replace(/\0/g, ''),
       symbol: metadata.symbol.replace(/\0/g, ''),
-      image: imageData.image,
+      image: imageUrl,
       decimals: 0
     };
   } catch (error) {

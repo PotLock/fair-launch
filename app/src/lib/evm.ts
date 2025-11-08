@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { ALCHEMY_API_KEY, ETHERSCAN_API_KEY, EVM_NETWORK } from "../configs/env.config";
 
 const URL_API = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd";
+const FALLBACK_URL_API = "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=ETH-USDT";
 const SEPOLIA_ETHERSCAN_API_URL = "https://api-sepolia.etherscan.io/api";
 
 const ERC20_ABI = [
@@ -120,7 +121,27 @@ export const getEthPrice = async (): Promise<number | null> => {
     };
     
     return price;
-  } catch (err) {
+  } catch (primaryError) {
+    try {
+      const fallbackRes = await fetch(FALLBACK_URL_API);
+      if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
+      const fallbackData = await fallbackRes.json();
+      const price = parseFloat(fallbackData?.data?.price);
+
+      if (Number.isNaN(price)) {
+        throw new Error('Fallback price parsing failed');
+      }
+
+      ethPriceCache = {
+        price,
+        timestamp: Date.now()
+      };
+
+      return price;
+    } catch (fallbackError) {
+      console.error('Error fetching ETH price:', primaryError, fallbackError);
+    }
+    
     if (ethPriceCache && (Date.now() - ethPriceCache.timestamp) < CACHE_DURATION) {
       return ethPriceCache.price;
     }

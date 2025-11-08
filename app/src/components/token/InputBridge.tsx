@@ -99,7 +99,7 @@ export function InputBridge({
                     <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-1 relative">
                             <img src={token?.metadata.tokenUri} alt={token?.symbol} className="w-8 h-8 rounded-full" />
-                            <img src={selectedChain.logo} alt={selectedChain.name} className="w-3 h-3 rounded-full absolute -bottom-0.5 right-0" />
+                            <img src={selectedChain?.logo} alt={selectedChain.name} className="w-3 h-3 rounded-full absolute -bottom-0.5 right-0" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-medium">{token?.symbol}</span>
