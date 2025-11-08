@@ -1,0 +1,184 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { copyToClipboard, timeAgo } from "@/utils";
+import { Button } from "../ui/button";
+import Link from "next/link";
+import { useTransactions } from "@/hooks/useSWR";
+import { TransactionAction } from "@/types/api";
+
+interface TransactionsProps {
+    tokenAddress: string;
+    tokenSymbol: string;
+    solPrice: number;
+}
+
+export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: TransactionsProps) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+    const { transactions, isLoading, error } = useTransactions(tokenAddress);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [tokenAddress]);
+
+    const totalPages = Math.ceil((transactions?.length || 0) / itemsPerPage) || 1;
+
+    const paginatedTransactions = useMemo(() => {
+        if (!transactions || transactions.length === 0) return [];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return transactions.slice(startIndex, endIndex);
+    }, [transactions, currentPage, itemsPerPage]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, transactions?.length || 0);
+
+    const handlePreviousPage = () => {
+        setCurrentPage((prev) => Math.max(1, prev - 1));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+    };
+
+    return (
+        <Card className="w-full max-w-7xl mx-auto p-5 flex flex-col gap-5 shadow-none">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-medium mb-4">Transactions</h2>
+                <div className="flex items-center gap-4">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1 || isLoading}
+                    className="text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <span className="text-sm font-medium text-slate-600 min-w-20 text-center">
+                    {currentPage} / {totalPages}
+                </span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages || isLoading}
+                    className="text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                >
+                    <ChevronRight className="w-5 h-5" />
+                </Button>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full">
+                <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>HASH</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left relative">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>TIME</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>ACTION</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>By</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>AMOUNT</span>
+                            </div>
+                        </th>
+                        <th className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-medium uppercase tracking-wider">
+                            <span>USD</span>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {isLoading ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                                Loading transactions...
+                            </td>
+                        </tr>
+                    ) : error ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-red-500">
+                                Error loading transactions
+                            </td>
+                        </tr>
+                    ) : paginatedTransactions.length > 0 ? (
+                        paginatedTransactions.map((transfer) => (
+                        <tr key={transfer.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-4">
+                                <Link href={`https://solscan.io/tx/${transfer.txHash}?cluster=devnet`} target="_blank" className="text-blue-600 font-mono text-xs truncate max-w-xs">{transfer.txHash.slice(0, 10)+'...'}</Link>
+                            </td>
+                            <td className="px-4 py-4">
+                                <span className="text-slate-700 font-mono text-xs font-medium">{timeAgo(transfer.createdAt)}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                                <div className="flex items-center gap-2">
+                                    <span className={`${transfer.action === TransactionAction.BUY ? 'text-green-600' : 'text-red-600'} font-mono text-sm font-medium`}>{transfer.action}</span>
+                                </div>
+                            </td>
+                            <td className="px-4 py-4">
+                                <div className="flex items-center gap-2">
+                                <span className="text-slate-700 font-mono text-xs truncate max-w-xs">{transfer.userAddress.slice(0, 10)+'...'}</span>
+                                <button
+                                    onClick={() => copyToClipboard(transfer.userAddress)}
+                                    className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                >
+                                    <Copy className="w-3 h-3" />
+                                </button>
+                                </div>
+                            </td>
+                            <td className="px-4 py-4">
+                                <span className="text-slate-900 font-mono text-xs font-medium">{Number(transfer.amountIn).toFixed(3)} {transfer.action === TransactionAction.BUY ? "SOL" : tokenSymbol}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                                <span className="text-slate-900 font-mono text-xs font-medium">${transfer.action === TransactionAction.BUY ? (Number(transfer.amountIn) * solPrice).toFixed(3) : (Number(transfer.amountOut) * solPrice).toFixed(3)}</span>
+                            </td>
+                        </tr>
+                    ))
+                    ) : (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                                No transfers match the selected filters
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
+
+            <div className="mt-6 text-xs text-slate-500 flex items-center justify-between">
+                <span>
+                    {transactions?.length > 0 ? (
+                        `Showing ${startIndex} - ${endIndex} of ${transactions.length} transfers`
+                    ) : (
+                        "No transfers found"
+                    )}
+                </span>
+                <span>
+                    Page {currentPage} of {totalPages}
+                </span>
+            </div>
+        </Card>
+    );
+}

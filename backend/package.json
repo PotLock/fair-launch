@@ -1,7 +1,7 @@
 {
-  "name": "fair-launch-backend",
+  "name": "potlaunch-backend",
   "version": "1.0.0",
-  "description": "Backend for Fair Launch token platform",
+  "description": "Backend for PotLaunch token platform",
   "main": "index.ts",
   "scripts": {
     "dev": "bun run --watch index.ts",
@@ -9,12 +9,15 @@
     "test": "bun run src/tests/*.test.ts",
     "test:watch": "bun run --watch src/tests/*.test.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@cookedbusiness/halfbaked-sdk": "^1.2.8",
+    "@filebase/sdk": "^1.0.6",
     "@hono/node-server": "^1.8.2",
     "@hono/zod-validator": "^0.2.1",
+    "@meteora-ag/dynamic-bonding-curve-sdk": "^1.4.5",
+    "@solana/web3.js": "^1.98.4",
     "cors": "^2.8.5",
     "drizzle-orm": "^0.44.2",
     "hono": "^4.0.5",
@@ -22,11 +25,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
     "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.5",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
-  },
-  "packageManager": "pnpm@10.17.0+sha512.fce8a3dd29a4ed2ec566fb53efbb04d8c44a0f05bc6f24a73046910fb9c3ce7afa35a0980500668fa3573345bd644644fa98338fa168235c80f4aa17aa17fbef"
+  }
 }
