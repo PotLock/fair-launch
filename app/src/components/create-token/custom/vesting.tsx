@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
+import { InfoTooltip, DBC_TOOLTIPS } from '@/components/ui/info-tooltip';
 
 interface VestingProps {
   onNext: (data: VestingData) => void;
@@ -29,11 +30,11 @@ export default function Vesting({
   initialData
 }: VestingProps) {
   const [formData, setFormData] = useState<VestingData>({
-    totalLockedVestingAmount: initialData?.totalLockedVestingAmount || 20000,
-    numberOfVestingPeriod: initialData?.numberOfVestingPeriod || 9,
-    cliffUnlockAmount: initialData?.cliffUnlockAmount || 5000,
-    totalVestingDuration: initialData?.totalVestingDuration || 9*30*24*3600,
-    cliffDurationFromMigrationTime: initialData?.cliffDurationFromMigrationTime || 3*30*24*3600,
+    totalLockedVestingAmount: initialData?.totalLockedVestingAmount || 0,
+    numberOfVestingPeriod: initialData?.numberOfVestingPeriod || 0,
+    cliffUnlockAmount: initialData?.cliffUnlockAmount || 0,
+    totalVestingDuration: initialData?.totalVestingDuration || 0,
+    cliffDurationFromMigrationTime: initialData?.cliffDurationFromMigrationTime || 0,
   });
 
   const progressPercentage = useMemo(() =>
@@ -112,7 +113,11 @@ export default function Vesting({
             
             <div className="mb-3 sm:mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Locked Vesting Amount <strong className="text-red-500">*</strong>
+                <div className="flex items-center gap-1">
+                  <span>Total Locked Vesting Amount</span>
+                  <InfoTooltip content={DBC_TOOLTIPS.vesting.totalLockedVestingAmount} />
+                  <strong className="text-red-500">*</strong>
+                </div>
               </label>
               <input
                 type="number"
@@ -133,7 +138,10 @@ export default function Vesting({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliff Unlock Amount
+                  <div className="flex items-center gap-1">
+                    <span>Cliff Unlock Amount</span>
+                    <InfoTooltip content={DBC_TOOLTIPS.vesting.cliffUnlockAmount} />
+                  </div>
                 </label>
                 <input
                   type="number"
@@ -146,7 +154,12 @@ export default function Vesting({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliff Duration (Days)
+                  <div className="flex items-center gap-1">
+                    <span>Cliff Duration (Days)</span>
+                    <InfoTooltip
+                      content={`${DBC_TOOLTIPS.vesting.cliffDurationFromMigrationTime} This form captures duration in days.`}
+                    />
+                  </div>
                 </label>
                 <input
                   type="number"
@@ -167,7 +180,11 @@ export default function Vesting({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Vesting Periods <strong className="text-red-500">*</strong>
+                  <div className="flex items-center gap-1">
+                    <span>Number of Vesting Periods</span>
+                    <InfoTooltip content={DBC_TOOLTIPS.vesting.numberOfVestingPeriod} />
+                    <strong className="text-red-500">*</strong>
+                  </div>
                 </label>
                 <input
                   type="number"
@@ -181,7 +198,12 @@ export default function Vesting({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Vesting Duration (Days)
+                  <div className="flex items-center gap-1">
+                    <span>Total Vesting Duration (Days)</span>
+                    <InfoTooltip
+                      content={`${DBC_TOOLTIPS.vesting.totalVestingDuration} This form captures duration in days.`}
+                    />
+                  </div>
                 </label>
                 <input
                   type="number"

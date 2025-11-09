@@ -132,8 +132,8 @@ const getFriendlyErrorMessage = (rawMessage: string, context: 'deploy' | 'bridge
     const message = rawMessage?.toLowerCase() || '';
 
     const baseMessages = {
-        deploy: 'Chúng tôi không thể triển khai token. Vui lòng thử lại.',
-        bridge: 'Chúng tôi không thể bridge token. Vui lòng thử lại.'
+        deploy: 'We could not deploy the token. Please try again.',
+        bridge: 'We could not bridge the token. Please try again.'
     } as const;
 
     if (!message) {
@@ -141,31 +141,31 @@ const getFriendlyErrorMessage = (rawMessage: string, context: 'deploy' | 'bridge
     }
 
     if (message.includes('user rejected') || message.includes('user denied')) {
-        return 'Bạn đã từ chối giao dịch trên ví. Hãy xác nhận lại nếu muốn tiếp tục.';
+        return 'You rejected the transaction in your wallet. Please confirm again to continue.';
     }
 
     if (message.includes('insufficient') && message.includes('fund')) {
-        return 'Số dư trong ví không đủ để hoàn tất giao dịch. Vui lòng nạp thêm token gốc (gas).';
+        return 'Insufficient wallet balance to complete the transaction. Please add more native tokens (gas).';
     }
 
     if (message.includes('insufficient') && message.includes('balance')) {
-        return 'Số dư của bạn không đủ cho giao dịch này. Vui lòng kiểm tra lại số lượng.';
+        return 'Your balance is insufficient for this transaction. Please check the amount.';
     }
 
     if (message.includes('time') && message.includes('out')) {
-        return 'Giao dịch đã hết thời gian chờ. Kiểm tra kết nối mạng và thử lại.';
+        return 'Transaction timed out. Check your network connection and try again.';
     }
 
     if (message.includes('network request failed') || message.includes('failed to fetch')) {
-        return 'Không thể kết nối tới máy chủ. Kiểm tra kết nối internet hoặc RPC.';
+        return 'Cannot connect to server. Check your internet connection or RPC.';
     }
 
     if (message.includes('already being processed') || message.includes('already been processed')) {
-        return 'Giao dịch đã được xử lý trước đó.';
+        return 'Transaction has already been processed.';
     }
 
     if (message.includes('simulation failed')) {
-        return 'Mô phỏng giao dịch thất bại. Vui lòng thử lại sau vài giây hoặc điều chỉnh thông số.';
+        return 'Transaction simulation failed. Please try again in a few seconds or adjust parameters.';
     }
 
     return rawMessage || baseMessages[context];
@@ -316,7 +316,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
             } catch (error) {
                 if (!isCancelled) {
                     console.error('Failed to load deployment estimates', error);
-                    setEstimatesError('Không thể tải thời gian ước tính');
+                    setEstimatesError('Unable to load estimated time');
                     setDeploymentEstimates({});
                 }
             } finally {
