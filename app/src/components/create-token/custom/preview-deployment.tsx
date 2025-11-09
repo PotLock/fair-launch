@@ -14,6 +14,8 @@ import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
 import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
+import { NATIVE_MINT } from '@solana/spl-token';
+import { getSOLNetwork } from '@/utils/sol';
 
 interface PreviewDeploymentProps {
   onBack: () => void;
@@ -147,11 +149,31 @@ export default function PreviewDeployment({
     const authorityConfig = formData.authority;
 
     return {
-      quoteMint: "So11111111111111111111111111111111111111112", // SOL
+      quoteMint: tokenInfo?.tokenQuoteAddress || NATIVE_MINT.toString(), // Use custom address or default to SOL
       dbcConfig: {
         buildCurveMode: parseInt(dbcConfig.buildCurveMode),
-        percentageSupplyOnMigration: dbcConfig.percentageSupplyOnMigration,
-        migrationQuoteThreshold: dbcConfig.migrationQuoteThreshold,
+        // Mode 0: Build Curve
+        ...(parseInt(dbcConfig.buildCurveMode) === 0 && {
+          percentageSupplyOnMigration: dbcConfig.percentageSupplyOnMigration,
+          migrationQuoteThreshold: dbcConfig.migrationQuoteThreshold,
+        }),
+        // Mode 1: Market Cap Based
+        ...(parseInt(dbcConfig.buildCurveMode) === 1 && {
+          initialMarketCap: dbcConfig.initialMarketCap,
+          migrationMarketCap: dbcConfig.migrationMarketCap,
+        }),
+        // Mode 2: Two Segments
+        ...(parseInt(dbcConfig.buildCurveMode) === 2 && {
+          initialMarketCap: dbcConfig.initialMarketCap,
+          migrationMarketCap: dbcConfig.migrationMarketCap,
+          percentageSupplyOnMigration: dbcConfig.percentageSupplyOnMigration,
+        }),
+        // Mode 3: Liquidity Weights
+        ...(parseInt(dbcConfig.buildCurveMode) === 3 && {
+          initialMarketCap: dbcConfig.initialMarketCap,
+          migrationMarketCap: dbcConfig.migrationMarketCap,
+          liquidityWeights: dbcConfig.liquidityWeights,
+        }),
         totalTokenSupply: tokenInfo.totalTokenSupply,
         migrationOption: parseInt(dbcConfig.migrationOption),
         tokenBaseDecimal: tokenInfo.tokenBaseDecimal,
@@ -165,12 +187,21 @@ export default function PreviewDeployment({
         },
         baseFeeParams: {
           baseFeeMode: parseInt(feeConfig.baseFeeMode),
-          feeSchedulerParam: {
-            startingFeeBps: feeConfig.feeSchedulerParam.startingFeeBps,
-            endingFeeBps: feeConfig.feeSchedulerParam.endingFeeBps,
-            numberOfPeriod: feeConfig.feeSchedulerParam.numberOfPeriod,
-            totalDuration: feeConfig.feeSchedulerParam.totalDuration
-          }
+          ...(parseInt(feeConfig.baseFeeMode) === 2 ? {
+            rateLimiterParam: {
+              baseFeeBps: feeConfig.rateLimiterParam!.baseFeeBps,
+              feeIncrementBps: feeConfig.rateLimiterParam!.feeIncrementBps,
+              referenceAmount: feeConfig.rateLimiterParam!.referenceAmount,
+              maxLimiterDuration: feeConfig.rateLimiterParam!.maxLimiterDuration
+            }
+          } : {
+            feeSchedulerParam: {
+              startingFeeBps: feeConfig.feeSchedulerParam!.startingFeeBps,
+              endingFeeBps: feeConfig.feeSchedulerParam!.endingFeeBps,
+              numberOfPeriod: feeConfig.feeSchedulerParam!.numberOfPeriod,
+              totalDuration: feeConfig.feeSchedulerParam!.totalDuration
+            }
+          })
         },
         dynamicFeeEnabled: dbcConfig.dynamicFeeEnabled,
         activationType: parseInt(dbcConfig.activationType),
@@ -181,13 +212,20 @@ export default function PreviewDeployment({
         creatorLpPercentage: liquidityConfig.creatorLpPercentage,
         partnerLockedLpPercentage: liquidityConfig.partnerLockedLpPercentage,
         creatorLockedLpPercentage: liquidityConfig.creatorLockedLpPercentage,
-        creatorTradingFeePercentage: 50, // Default value
-        leftover: 0, // Default value
+        creatorTradingFeePercentage: liquidityConfig.creatorTradingFeePercentage,
+        leftover: liquidityConfig.leftover,
         tokenUpdateAuthority: parseInt(authorityConfig.tokenUpdateAuthority),
-        migrationFee: {
+        migrationFee: liquidityConfig.migrationFee || {
           feePercentage: 0,
           creatorFeePercentage: 0
         },
+        ...(dbcConfig.migratedPoolFee && {
+          migratedPoolFee: {
+            collectFeeMode: parseInt(dbcConfig.migratedPoolFee.collectFeeMode),
+            dynamicFee: parseInt(dbcConfig.migratedPoolFee.dynamicFee),
+            poolFeeBps: dbcConfig.migratedPoolFee.poolFeeBps
+          }
+        }),
         leftoverReceiver: authorityConfig.leftoverReceiver,
         feeClaimer: authorityConfig.feeClaimer
       },
@@ -755,6 +793,12 @@ export default function PreviewDeployment({
                     <span className="text-sm text-gray-600">Quote Decimal:</span>
                     <p className="font-medium">{formData.tokenInfo.tokenQuoteDecimal}</p>
                   </div>
+                  {formData.tokenInfo.tokenQuoteAddress && (
+                    <div className="sm:col-span-3">
+                      <span className="text-sm text-gray-600">Token Quote Address:</span>
+                      <p className="font-medium text-xs break-all">{formData.tokenInfo.tokenQuoteAddress}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -843,7 +887,7 @@ export default function PreviewDeployment({
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Network:</span>
-                <span className="font-medium">Solana Mainnet</span>
+                <span className="font-medium capitalize">{getSOLNetwork()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">RPC Endpoint:</span>

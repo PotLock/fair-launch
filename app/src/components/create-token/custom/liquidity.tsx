@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { InfoTooltip, DBC_TOOLTIPS } from '@/components/ui/info-tooltip';
 
 interface LiquidityProps {
   onNext: (data: LiquidityData) => void;
@@ -18,6 +19,13 @@ export interface LiquidityData {
   creatorLpPercentage: number;
   partnerLockedLpPercentage: number;
   creatorLockedLpPercentage: number;
+  creatorTradingFeePercentage: number;
+  leftover: number;
+  // Migration Fee (optional)
+  migrationFee?: {
+    feePercentage: number;
+    creatorFeePercentage: number;
+  };
 }
 
 export default function Liquidity({
@@ -33,6 +41,12 @@ export default function Liquidity({
     creatorLpPercentage: initialData?.creatorLpPercentage || 50,
     partnerLockedLpPercentage: initialData?.partnerLockedLpPercentage || 0,
     creatorLockedLpPercentage: initialData?.creatorLockedLpPercentage || 0,
+    creatorTradingFeePercentage: initialData?.creatorTradingFeePercentage || 50,
+    leftover: initialData?.leftover || 0,
+    migrationFee: initialData?.migrationFee || {
+      feePercentage: 0,
+      creatorFeePercentage: 0,
+    },
   });
 
   const progressPercentage = useMemo(() =>
@@ -43,6 +57,17 @@ export default function Liquidity({
   const handleInputChange = useCallback((field: keyof LiquidityData, value: string) => {
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({ ...prev, [field]: numValue }));
+  }, []);
+
+  const handleMigrationFeeChange = useCallback((field: 'feePercentage' | 'creatorFeePercentage', value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setFormData(prev => ({
+      ...prev,
+      migrationFee: {
+        ...prev.migrationFee!,
+        [field]: numValue
+      }
+    }));
   }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -106,11 +131,12 @@ export default function Liquidity({
           {/* LP Distribution */}
           <div className="mb-6 sm:mb-8">
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">LP Distribution</h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                   Partner LP Percentage
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.partnerLpPercentage} />
                 </label>
                 <input
                   type="number"
@@ -123,8 +149,9 @@ export default function Liquidity({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                   Creator LP Percentage
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.creatorLpPercentage} />
                 </label>
                 <input
                   type="number"
@@ -163,11 +190,12 @@ export default function Liquidity({
           {/* LP Locking */}
           <div className="mb-6 sm:mb-8">
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">LP Locking</h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                   Partner Locked LP Percentage
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.partnerLockedLpPercentage} />
                 </label>
                 <input
                   type="number"
@@ -180,8 +208,9 @@ export default function Liquidity({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                   Creator Locked LP Percentage
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.creatorLockedLpPercentage} />
                 </label>
                 <input
                   type="number"
@@ -192,6 +221,85 @@ export default function Liquidity({
                   min="0"
                   max="100"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Trading Fee & Leftover */}
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Trading Fee & Leftover</h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Creator Trading Fee Percentage (%)
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.creatorTradingFeePercentage} />
+                </label>
+                <input
+                  type="number"
+                  placeholder="50"
+                  value={formData.creatorTradingFeePercentage}
+                  onChange={(e) => handleInputChange('creatorTradingFeePercentage', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                  min="0"
+                  max="100"
+                />
+                <p className="text-xs text-gray-500 mt-1">0% = all fees go to partner</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Leftover Amount
+                  <InfoTooltip content={DBC_TOOLTIPS.lpDistribution.leftover} />
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.leftover}
+                  onChange={(e) => handleInputChange('leftover', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">Claimable after pool migrates</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Migration Fee */}
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Migration Fee (Optional)</h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Migration Fee Percentage (%)
+                  <InfoTooltip content={DBC_TOOLTIPS.migrationFee.feePercentage} />
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.migrationFee?.feePercentage || 0}
+                  onChange={(e) => handleMigrationFeeChange('feePercentage', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                  min="0"
+                  max="50"
+                />
+                <p className="text-xs text-gray-500 mt-1">Fee taken from migration threshold (0-50%)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Creator Migration Fee Percentage (%)
+                  <InfoTooltip content={DBC_TOOLTIPS.migrationFee.creatorFeePercentage} />
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.migrationFee?.creatorFeePercentage || 0}
+                  onChange={(e) => handleMigrationFeeChange('creatorFeePercentage', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                  min="0"
+                  max="100"
+                />
+                <p className="text-xs text-gray-500 mt-1">Creator's share of migration fee (0-100%)</p>
               </div>
             </div>
           </div>

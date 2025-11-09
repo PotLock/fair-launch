@@ -41,7 +41,7 @@ export default function Authority({
   initialData
 }: AuthorityProps) {
   const [formData, setFormData] = useState<AuthorityData>({
-    tokenUpdateAuthority: initialData?.tokenUpdateAuthority || "1",
+    tokenUpdateAuthority: initialData?.tokenUpdateAuthority || "0",
     leftoverReceiver: initialData?.leftoverReceiver || "",
     feeClaimer: initialData?.feeClaimer || "",
   });

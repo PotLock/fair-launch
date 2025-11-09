@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { InfoTooltip, DBC_TOOLTIPS } from '@/components/ui/info-tooltip';
 
 interface FeeConfigProps {
   onNext: (data: FeeConfigData) => void;
@@ -20,18 +21,24 @@ interface FeeConfigProps {
 
 export interface FeeConfigData {
   baseFeeMode: "0" | "1" | "2";
-  feeSchedulerParam: {
+  feeSchedulerParam?: {
     startingFeeBps: number;
     endingFeeBps: number;
     numberOfPeriod: number;
     totalDuration: number;
   };
+  rateLimiterParam?: {
+    baseFeeBps: number;
+    feeIncrementBps: number;
+    referenceAmount: number;
+    maxLimiterDuration: number;
+  };
 }
 
 const baseFeeModes = [
-  { value: "0", label: "Fixed Fee" },
-  { value: "1", label: "Linear Scheduler" },
-  { value: "2", label: "Custom Scheduler" }
+  { value: "0", label: "Linear Fee Scheduler", description: "Fees decrease linearly over time" },
+  { value: "1", label: "Exponential Fee Scheduler", description: "Fees decrease exponentially" },
+  { value: "2", label: "Rate Limiter", description: "Limits transaction rate with dynamically increasing fees" }
 ];
 
 export default function FeeConfig({
@@ -44,11 +51,17 @@ export default function FeeConfig({
 }: FeeConfigProps) {
   const [formData, setFormData] = useState<FeeConfigData>({
     baseFeeMode: initialData?.baseFeeMode || "0",
-    feeSchedulerParam: {
-      startingFeeBps: initialData?.feeSchedulerParam?.startingFeeBps || 100,
-      endingFeeBps: initialData?.feeSchedulerParam?.endingFeeBps || 100,
-      numberOfPeriod: initialData?.feeSchedulerParam?.numberOfPeriod || 10,
-      totalDuration: initialData?.feeSchedulerParam?.totalDuration || 3600,
+    feeSchedulerParam: initialData?.feeSchedulerParam || {
+      startingFeeBps: 100,
+      endingFeeBps: 100,
+      numberOfPeriod: 10,
+      totalDuration: 3600,
+    },
+    rateLimiterParam: initialData?.rateLimiterParam || {
+      baseFeeBps: 200,
+      feeIncrementBps: 200,
+      referenceAmount: 0,
+      maxLimiterDuration: 0,
     },
   });
 
@@ -61,12 +74,23 @@ export default function FeeConfig({
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleSchedulerChange = useCallback((field: keyof FeeConfigData['feeSchedulerParam'], value: string) => {
+  const handleSchedulerChange = useCallback((field: 'startingFeeBps' | 'endingFeeBps' | 'numberOfPeriod' | 'totalDuration', value: string) => {
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({
       ...prev,
       feeSchedulerParam: {
-        ...prev.feeSchedulerParam,
+        ...prev.feeSchedulerParam!,
+        [field]: numValue
+      }
+    }));
+  }, []);
+
+  const handleRateLimiterChange = useCallback((field: 'baseFeeBps' | 'feeIncrementBps' | 'referenceAmount' | 'maxLimiterDuration', value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setFormData(prev => ({
+      ...prev,
+      rateLimiterParam: {
+        ...prev.rateLimiterParam!,
         [field]: numValue
       }
     }));
@@ -78,14 +102,30 @@ export default function FeeConfig({
   }, [formData, onNext]);
 
   const isSchedulerMode = useMemo(() =>
-    formData.baseFeeMode !== "0",
+    ["0", "1"].includes(formData.baseFeeMode),
     [formData.baseFeeMode]
   );
 
-  const feePreview = useMemo(() => ({
-    startingFeePercent: (formData.feeSchedulerParam.startingFeeBps / 100).toFixed(2),
-    endingFeePercent: (formData.feeSchedulerParam.endingFeeBps / 100).toFixed(2),
-  }), [formData.feeSchedulerParam.startingFeeBps, formData.feeSchedulerParam.endingFeeBps]);
+  const isRateLimiterMode = useMemo(() =>
+    formData.baseFeeMode === "2",
+    [formData.baseFeeMode]
+  );
+
+  const feePreview = useMemo(() => {
+    if (isSchedulerMode && formData.feeSchedulerParam) {
+      return {
+        startingFeePercent: (formData.feeSchedulerParam.startingFeeBps / 100).toFixed(2),
+        endingFeePercent: (formData.feeSchedulerParam.endingFeeBps / 100).toFixed(2),
+      };
+    }
+    if (isRateLimiterMode && formData.rateLimiterParam) {
+      return {
+        baseFeePercent: (formData.rateLimiterParam.baseFeeBps / 100).toFixed(2),
+        maxFeePercent: ((formData.rateLimiterParam.baseFeeBps + formData.rateLimiterParam.feeIncrementBps) / 100).toFixed(2),
+      };
+    }
+    return null;
+  }, [formData, isSchedulerMode, isRateLimiterMode]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -95,7 +135,7 @@ export default function FeeConfig({
           Fee Configuration
         </h1>
         <p className="text-gray-600 text-lg">
-          Set up your token's fee structure and scheduling.
+          Configure fee structure and schedule for your token.
         </p>
       </div>
 
@@ -105,8 +145,8 @@ export default function FeeConfig({
           <span className="text-black font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-black font-medium">{Math.round(progressPercentage)}% Complete</span>
         </div>
-        <Progress 
-          value={progressPercentage} 
+        <Progress
+          value={progressPercentage}
           className="h-2"
           bgProgress="bg-red-500"
         />
@@ -118,13 +158,14 @@ export default function FeeConfig({
           {/* Base Fee Mode */}
           <div className="mb-6 sm:mb-8">
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Fee Mode</h3>
-            
+
             <div className="mb-3 sm:mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                 Base Fee Mode <strong className="text-red-500">*</strong>
+                <InfoTooltip content="Select how fees change over time" />
               </label>
               <DropdownMenu>
-                <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer">
+                <DropdownMenuTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base text-left flex justify-between items-center cursor-pointer bg-white">
                   {baseFeeModes.find(mode => mode.value === formData.baseFeeMode)?.label || 'Select mode'}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -135,24 +176,39 @@ export default function FeeConfig({
                     <DropdownMenuItem
                       key={mode.value}
                       onClick={() => handleInputChange('baseFeeMode', mode.value as "0" | "1" | "2")}
+                      className="cursor-pointer"
                     >
-                      {mode.label}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{mode.label}</span>
+                        <span className="text-xs text-gray-500">{mode.description}</span>
+                      </div>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {/* Mode Description */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-sm mb-2">
+                {baseFeeModes.find(m => m.value === formData.baseFeeMode)?.label}
+              </h4>
+              <p className="text-xs text-gray-700">
+                {baseFeeModes.find(m => m.value === formData.baseFeeMode)?.description}
+              </p>
+            </div>
           </div>
 
           {/* Fee Scheduler Parameters */}
-          {isSchedulerMode && (
+          {isSchedulerMode && formData.feeSchedulerParam && (
             <div className="mb-6 sm:mb-8">
               <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Fee Scheduler Parameters</h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Starting Fee (BPS)
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Starting Fee (BPS) <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.feeScheduler.startingFeeBps} />
                   </label>
                   <input
                     type="number"
@@ -160,13 +216,16 @@ export default function FeeConfig({
                     value={formData.feeSchedulerParam.startingFeeBps}
                     onChange={(e) => handleSchedulerChange('startingFeeBps', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
-                    min="0"
-                    max="10000"
+                    min="1"
+                    max="9900"
+                    required
                   />
+                  <p className="text-xs text-gray-500 mt-1">100 bps = 1%</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ending Fee (BPS)
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Ending Fee (BPS) <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.feeScheduler.endingFeeBps} />
                   </label>
                   <input
                     type="number"
@@ -174,16 +233,19 @@ export default function FeeConfig({
                     value={formData.feeSchedulerParam.endingFeeBps}
                     onChange={(e) => handleSchedulerChange('endingFeeBps', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
-                    min="0"
-                    max="10000"
+                    min="1"
+                    max="9900"
+                    required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Minimum 1 bps (0.01%)</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Periods
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Number of Periods <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.feeScheduler.numberOfPeriod} />
                   </label>
                   <input
                     type="number"
@@ -192,64 +254,171 @@ export default function FeeConfig({
                     onChange={(e) => handleSchedulerChange('numberOfPeriod', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                     min="1"
+                    required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Total Duration (Days)
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Total Duration <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.feeScheduler.totalDuration} />
                   </label>
                   <input
                     type="number"
-                    placeholder="30"
+                    placeholder="3600"
                     value={formData.feeSchedulerParam.totalDuration}
                     onChange={(e) => handleSchedulerChange('totalDuration', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                     min="1"
+                    required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Based on selected activation type</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Fee Information Cards */}
+          {/* Rate Limiter Parameters */}
+          {isRateLimiterMode && formData.rateLimiterParam && (
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Rate Limiter Parameters</h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Base Fee (BPS) <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.rateLimiter.baseFeeBps} />
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="200"
+                    value={formData.rateLimiterParam.baseFeeBps}
+                    onChange={(e) => handleRateLimiterChange('baseFeeBps', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="0"
+                    max="9900"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Phí cơ bản khi không vượt ngưỡng</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Fee Increment (BPS) <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.rateLimiter.feeIncrementBps} />
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="200"
+                    value={formData.rateLimiterParam.feeIncrementBps}
+                    onChange={(e) => handleRateLimiterChange('feeIncrementBps', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="0"
+                    max={9900 - formData.rateLimiterParam.baseFeeBps}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Phí tăng thêm khi vượt ngưỡng</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Reference Amount <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.rateLimiter.referenceAmount} />
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formData.rateLimiterParam.referenceAmount}
+                    onChange={(e) => handleRateLimiterChange('referenceAmount', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="0"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Ngưỡng kích hoạt fee increment</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    Max Limiter Duration <strong className="text-red-500">*</strong>
+                    <InfoTooltip content={DBC_TOOLTIPS.rateLimiter.maxLimiterDuration} />
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formData.rateLimiterParam.maxLimiterDuration}
+                    onChange={(e) => handleRateLimiterChange('maxLimiterDuration', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                    min="0"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Thời gian tối đa của limiter</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Information Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="font-semibold text-black mb-2">Fee Structure</h3>
               <p className="text-sm text-gray-600">
-                Fees are charged on transactions and help maintain liquidity. 
-                Consider market conditions when setting fee rates.
+                Phí được tính trên các giao dịch và giúp duy trì tính thanh khoản.
+                Cân nhắc điều kiện thị trường khi thiết lập mức phí.
               </p>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="font-semibold text-black mb-2">Scheduler Benefits</h3>
+              <h3 className="font-semibold text-black mb-2">
+                {isSchedulerMode ? "Scheduler Benefits" : "Rate Limiter Benefits"}
+              </h3>
               <p className="text-sm text-gray-600">
-                Fee scheduling allows gradual fee reduction over time, 
-                encouraging early adoption while maintaining sustainability.
+                {isSchedulerMode
+                  ? "Fee scheduling cho phép giảm phí dần theo thời gian, khuyến khích early adoption trong khi duy trì tính bền vững."
+                  : "Rate limiter giúp kiểm soát khối lượng giao dịch lớn bằng cách tăng phí khi vượt ngưỡng tham chiếu."
+                }
               </p>
             </div>
           </div>
 
           {/* Fee Preview */}
-          {isSchedulerMode && (
+          {feePreview && (
             <div className="bg-blue-50 p-6 rounded-lg mb-8">
-              <h3 className="font-semibold text-black mb-4">Fee Schedule Preview</h3>
+              <h3 className="font-semibold text-black mb-4">Fee Preview</h3>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Starting Fee:</span>
-                  <span className="text-sm font-medium">{feePreview.startingFeePercent}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Ending Fee:</span>
-                  <span className="text-sm font-medium">{feePreview.endingFeePercent}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Duration:</span>
-                  <span className="text-sm font-medium">{formData.feeSchedulerParam.totalDuration} days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Periods:</span>
-                  <span className="text-sm font-medium">{formData.feeSchedulerParam.numberOfPeriod}</span>
-                </div>
+                {isSchedulerMode && 'startingFeePercent' in feePreview && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Starting Fee:</span>
+                      <span className="text-sm font-medium">{feePreview.startingFeePercent}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Ending Fee:</span>
+                      <span className="text-sm font-medium">{feePreview.endingFeePercent}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Duration:</span>
+                      <span className="text-sm font-medium">{formData.feeSchedulerParam?.totalDuration}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Periods:</span>
+                      <span className="text-sm font-medium">{formData.feeSchedulerParam?.numberOfPeriod}</span>
+                    </div>
+                  </>
+                )}
+                {isRateLimiterMode && 'baseFeePercent' in feePreview && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Base Fee:</span>
+                      <span className="text-sm font-medium">{feePreview.baseFeePercent}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Max Fee (with increment):</span>
+                      <span className="text-sm font-medium">{feePreview.maxFeePercent}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Reference Amount:</span>
+                      <span className="text-sm font-medium">{formData.rateLimiterParam?.referenceAmount.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -257,7 +426,7 @@ export default function FeeConfig({
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 max-w-4xl mx-auto px-4">
-          <button 
+          <button
             type="button"
             onClick={onBack}
             className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50"
@@ -267,9 +436,9 @@ export default function FeeConfig({
             </svg>
             Back
           </button>
-          <button 
+          <button
             type="submit"
-            className="w-full sm:w-auto px-6 py-3 bg-red-500 text-white rounded-lg transition-colors hover:bg-red-600 flex items-center justify-center"
+            className="w-full sm:w-auto px-6 py-3 bg-red-500 text-white rounded-lg transition-colors hover:bg-red-600 flex items-center justify-center cursor-pointer"
           >
             Continue to Vesting
             <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">

@@ -6,6 +6,34 @@ import { Progress } from '@/components/ui/progress';
 import { uploadImage } from '@/lib/api';
 import URLInput from '@/components/ui/url-input';
 import { TagsSelectModal, TAG_ICONS } from '@/components/modal/TagsSelectModal';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+
+const TOKEN_QUOTE_OPTIONS = {
+  usdc: {
+    label: 'USDC',
+    address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    icon: '/tokens/usdc.svg'
+  },
+  usdt: {
+    label: 'USDT',
+    address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+    icon: '/tokens/usdt.png'
+  },
+  wsol: {
+    label: 'SOL',
+    address: 'So11111111111111111111111111111111111111112',
+    icon: '/chains/solana-dark.svg'
+  },
+  custom: {
+    label: 'Custom Token',
+    address: '',
+  },
+};
 
 interface TokenInfoProps {
   onNext: (data: TokenInfoData) => void;
@@ -27,6 +55,8 @@ export interface TokenInfoData {
   totalTokenSupply: number;
   tokenBaseDecimal: number;
   tokenQuoteDecimal: number;
+  tokenQuoteAddress?: string;
+  tokenQuoteType?: 'usdc' | 'usdt' | 'wsol' | 'custom';
   tags?: string[];
 }
 
@@ -49,6 +79,8 @@ export default function TokenInfo({
     totalTokenSupply: initialData?.totalTokenSupply || 1000000000,
     tokenBaseDecimal: initialData?.tokenBaseDecimal || 6,
     tokenQuoteDecimal: initialData?.tokenQuoteDecimal || 9,
+    tokenQuoteAddress: initialData?.tokenQuoteAddress || TOKEN_QUOTE_OPTIONS.wsol.address,
+    tokenQuoteType: initialData?.tokenQuoteType || 'wsol',
     tags: initialData?.tags || [],
   });
 
@@ -94,6 +126,15 @@ export default function TokenInfo({
     }
 
     setFormData(prev => ({ ...prev, [field]: next as any }));
+  }, []);
+
+  const handleQuoteTypeChange = useCallback((type: 'usdc' | 'usdt' | 'wsol' | 'custom') => {
+    const address = type === 'custom' ? '' : TOKEN_QUOTE_OPTIONS[type].address;
+    setFormData(prev => ({
+      ...prev,
+      tokenQuoteType: type,
+      tokenQuoteAddress: address
+    }));
   }, []);
 
   const handleImageUpload = useCallback(async (type: 'logo' | 'banner', file: File) => {
@@ -514,20 +555,112 @@ export default function TokenInfo({
           {/* Tokenomics */}
           <div className="mb-6 sm:mb-8">
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Tokenomics</h3>
-            <div className="space-y-2 mb-3 sm:mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Token Supply <strong className="text-red-500">*</strong>
-              </label>
-              <input
-                type="number"
-                placeholder="1000000"
-                value={formData.totalTokenSupply}
-                onChange={(e) => handleInputChange('totalTokenSupply', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
-                min="1"
-                step="1"
-                required
-              />
+            <div className='flex flex-row gap-2 justify-between'>
+              <div className="space-y-2 mb-3 sm:mb-4 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Total Token Supply <strong className="text-red-500">*</strong>
+                </label>
+                <input
+                  type="number"
+                  placeholder="1000000"
+                  value={formData.totalTokenSupply}
+                  onChange={(e) => handleInputChange('totalTokenSupply', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                  min="1"
+                  step="1"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2 mb-3 sm:mb-4 w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Token Quote Address
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base bg-white flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        {formData.tokenQuoteType !== 'custom' && TOKEN_QUOTE_OPTIONS[formData.tokenQuoteType || 'usdc'].icon && (
+                          <img
+                            src={TOKEN_QUOTE_OPTIONS[formData.tokenQuoteType || 'usdc'].icon}
+                            alt={TOKEN_QUOTE_OPTIONS[formData.tokenQuoteType || 'usdc'].label}
+                            className="w-5 h-5 shrink-0"
+                          />
+                        )}
+                        <span className="truncate">
+                          {formData.tokenQuoteType === 'custom'
+                            ? TOKEN_QUOTE_OPTIONS.custom.label
+                            : `${TOKEN_QUOTE_OPTIONS[formData.tokenQuoteType || 'usdc'].label}`
+                          }
+                        </span>
+                      </div>
+                      <svg className="w-4 h-4 ml-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => handleQuoteTypeChange('usdc')}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={TOKEN_QUOTE_OPTIONS.usdc.icon}
+                          alt={TOKEN_QUOTE_OPTIONS.usdc.label}
+                          className="w-5 h-5 shrink-0"
+                        />
+                        <span className="font-medium">{TOKEN_QUOTE_OPTIONS.usdc.label}</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleQuoteTypeChange('usdt')}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={TOKEN_QUOTE_OPTIONS.usdt.icon}
+                          alt={TOKEN_QUOTE_OPTIONS.usdt.label}
+                          className="w-5 h-5 shrink-0"
+                        />
+                        <span className="font-medium">{TOKEN_QUOTE_OPTIONS.usdt.label}</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleQuoteTypeChange('wsol')}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={TOKEN_QUOTE_OPTIONS.wsol.icon}
+                          alt={TOKEN_QUOTE_OPTIONS.wsol.label}
+                          className="w-5 h-5 shrink-0"
+                        />
+                        <span className="font-medium">{TOKEN_QUOTE_OPTIONS.wsol.label}</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleQuoteTypeChange('custom')}
+                      className="cursor-pointer"
+                    >
+                      <span className="font-medium">{TOKEN_QUOTE_OPTIONS.custom.label}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {formData.tokenQuoteType === 'custom' && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom token quote address"
+                    value={formData.tokenQuoteAddress}
+                    onChange={(e) => handleInputChange('tokenQuoteAddress', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base mt-2"
+                  />
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
