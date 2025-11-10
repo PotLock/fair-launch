@@ -1,0 +1,9 @@
+{
+  "buildCommand": "next build && yarn build:pagefind",
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "/:path*"
+    }
+  ]
+}
