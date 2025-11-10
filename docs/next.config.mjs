@@ -17,6 +17,7 @@ export default withNextra(
   withBundleAnalyzer({
     reactStrictMode: false,
     cleanDistDir: true,
+    output: 'standalone',
     experimental: {
       optimizePackageImports: ['@mantine/core', '@mantine/hooks'],
     },

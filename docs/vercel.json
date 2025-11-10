@@ -1,9 +1,5 @@
 {
-  "buildCommand": "next build && yarn build:pagefind",
-  "rewrites": [
-    {
-      "source": "/:path*",
-      "destination": "/:path*"
-    }
-  ]
+  "buildCommand": "yarn build",
+  "installCommand": "yarn install",
+  "framework": "nextjs"
 }
