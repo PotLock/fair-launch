@@ -1,0 +1,198 @@
+import { Callout, Steps, Tabs } from 'nextra/components'
+
+# Quick Start - For Developers
+
+<Callout type="info">
+Ready to build on POTLAUNCH? This guide will help you integrate token launches into your application.
+</Callout>
+
+## What You'll Need
+
+- Node.js 18+ installed
+- Solana wallet for testing
+- Basic knowledge of Solana and TypeScript
+- Devnet SOL for testing
+
+## Installation
+
+<Tabs items={['npm', 'yarn', 'pnpm']}>
+  <Tabs.Tab>
+  ```bash
+  npm install @potlaunch/sdk
+  ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+  ```bash
+  yarn add @potlaunch/sdk
+  ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+  ```bash
+  pnpm add @potlaunch/sdk
+  ```
+  </Tabs.Tab>
+</Tabs>
+
+## Quick Integration
+
+<Steps>
+
+### Initialize the SDK
+
+```typescript
+import { PotlaunchSDK } from '@potlaunch/sdk';
+import { Connection, PublicKey } from '@solana/web3.js';
+
+// Connect to Solana
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+
+// Initialize SDK
+const potlaunch = new PotlaunchSDK({
+  connection,
+  wallet: yourWalletAdapter,
+});
+```
+
+### Launch a Token
+
+```typescript
+// Create a new token launch
+const launch = await potlaunch.createLaunch({
+  name: 'My Token',
+  symbol: 'MTK',
+  description: 'An awesome token',
+  launchType: 'bonding-curve',
+  bondingCurveConfig: {
+    initialPrice: 0.001,
+    targetPrice: 1.0,
+    reserveRatio: 0.5,
+  },
+});
+
+console.log('Token launched:', launch.tokenAddress);
+```
+
+### Buy Tokens
+
+```typescript
+// Buy tokens from a launch
+const transaction = await potlaunch.buyTokens({
+  launchAddress: 'YOUR_LAUNCH_ADDRESS',
+  amount: 1000, // Amount in SOL
+  slippage: 0.5, // 0.5% slippage
+});
+
+await transaction.confirm();
+```
+
+### Query Launch Data
+
+```typescript
+// Get launch information
+const launchInfo = await potlaunch.getLaunchInfo('LAUNCH_ADDRESS');
+
+console.log('Current price:', launchInfo.currentPrice);
+console.log('Total raised:', launchInfo.totalRaised);
+console.log('Token supply:', launchInfo.tokenSupply);
+```
+
+</Steps>
+
+## SDK Features
+
+### Core Functionality
+
+- **Token Launch** - Create and configure token launches
+- **Trading** - Buy and sell tokens with bonding curve pricing
+- **Liquidity Management** - Handle DEX migrations and liquidity
+- **Cross-Chain Bridge** - Bridge tokens across chains
+
+### Advanced Features
+
+- **Event Subscriptions** - Listen to on-chain events
+- **Price Calculations** - Calculate prices before transactions
+- **Batch Operations** - Execute multiple operations efficiently
+- **Custom Configurations** - Fine-tune launch parameters
+
+## Example Projects
+
+### Basic Token Launcher
+
+```typescript
+import { PotlaunchSDK, BondingCurveType } from '@potlaunch/sdk';
+
+class TokenLauncher {
+  private sdk: PotlaunchSDK;
+
+  constructor(connection, wallet) {
+    this.sdk = new PotlaunchSDK({ connection, wallet });
+  }
+
+  async launch(tokenData) {
+    try {
+      const launch = await this.sdk.createLaunch({
+        ...tokenData,
+        launchType: BondingCurveType.LINEAR,
+      });
+      
+      return {
+        success: true,
+        tokenAddress: launch.tokenAddress,
+        launchAddress: launch.launchAddress,
+      };
+    } catch (error) {
+      console.error('Launch failed:', error);
+      return { success: false, error };
+    }
+  }
+}
+```
+
+## Testing
+
+### Using Devnet
+
+```typescript
+import { clusterApiUrl } from '@solana/web3.js';
+
+const connection = new Connection(clusterApiUrl('devnet'));
+
+const potlaunch = new PotlaunchSDK({
+  connection,
+  wallet: yourWallet,
+  network: 'devnet',
+});
+
+// Test token launch on devnet
+const testLaunch = await potlaunch.createLaunch({
+  name: 'Test Token',
+  symbol: 'TEST',
+  // ... other parameters
+});
+```
+
+## Next Steps
+
+<Callout type="success">
+Explore our comprehensive developer documentation for advanced integrations and best practices.
+</Callout>
+
+### Learn More
+
+- [POTLAUNCH SDK](/developer-guide/potlaunch-sdk) - Complete SDK reference
+- [Integrations Guide](/developer-guide/integrations-guide) - Integration patterns and examples
+- [Smart Contract API](/developer-guide/smart-contract-api) - Direct contract interactions
+- [Indexer Setup](/developer-guide/indexer-setup) - Set up data indexing
+
+### Resources
+
+- [GitHub Repository](https://github.com/PotLock/potlaunch) - Source code and examples
+- [API Documentation](https://docs.potlaunch.com/api) - REST API reference
+- [Smart Contract Docs](https://docs.potlaunch.com/contracts) - Contract specifications
+
+### Community
+
+- Join our developer Discord channel
+- Follow our GitHub for updates
+- Check out example projects and templates
+

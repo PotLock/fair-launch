@@ -1,0 +1,572 @@
+import { Callout, Steps } from 'nextra/components'
+
+# User Guide
+
+## Quick Launch Your Token on POTLAUNCH
+
+Get your token live in minutes with POTLAUNCH's Quick Mint feature. This guide will walk you through the fastest way to create and launch your token on Solana.
+
+<Callout type="info">
+Quick Mint is perfect for meme coins and simple token launches. If you need advanced features like custom tokenomics, vesting schedules, or bonding curves, check out the [Advanced Launch Settings](/user-guide/advanced-launch-settings) guide.
+</Callout>
+
+---
+
+## Overview
+
+POTLAUNCH offers two token creation methods:
+
+### Quick Mint (Recommended)
+- **Launch Time:** 2-5 minutes
+- **Best For:** Meme coins, simple tokens, quick launches
+- **Features:**
+  - Standard meme coin setup with proven defaults
+  - 1 billion token supply (6 decimals)
+  - All tokens mint directly to your wallet
+  - Skip complex tokenomics configuration
+
+### Custom Creation (Advanced)
+- **Launch Time:** 10-20 minutes
+- **Best For:** Projects requiring custom tokenomics
+- **Features:**
+  - Complete tokenomics customization
+  - Token allocations and vesting schedules
+  - Bonding curve and fee configuration
+  - Advanced authority and security settings
+
+**This guide covers Quick Mint.** For Custom Creation, see [Advanced Launch Settings](/user-guide/advanced-launch-settings).
+
+---
+
+## Getting Started
+
+<Steps>
+
+### Connect Your Wallet
+
+1. Visit [POTLAUNCH Create Page](https://potlaunch.com/create)
+2. Click **Connect Wallet** button in the top right
+3. Select your Solana wallet (Phantom, Solflare, etc.)
+4. Approve the connection request
+
+<Callout type="warning">
+Make sure you have enough SOL in your wallet for:
+- Token creation fees (~0.01-0.05 SOL)
+- Transaction fees
+- Initial liquidity (if applicable)
+</Callout>
+
+### Choose Quick Mint
+
+After connecting your wallet, you'll see two options:
+- **Quick Mint** (Recommended) - Simple, fast token creation
+- **Custom Creation** (Advanced) - Full control over tokenomics
+
+Click on the **Quick Mint** card to select it, then click **Continue to Token Creation**.
+
+### Fill in Token Information
+
+Now you'll enter your token's basic details:
+
+</Steps>
+
+---
+
+## Token Information
+
+### Required Fields
+
+#### Token Name
+- Enter your token's full name (e.g., "Dogecoin", "Pepe Token")
+- This is how your token will appear everywhere
+- Can be any length, but keep it memorable
+
+**Example:** `My Awesome Token`
+
+#### Token Symbol
+- Enter a 1-5 character ticker symbol (e.g., "DOGE", "PEPE")
+- Automatically converts to uppercase
+- Maximum 5 characters
+
+**Example:** `MAT`
+
+#### Token Logo
+Upload your token's logo image:
+1. Click the **Token Logo** upload area
+2. Select an image file (JPG, PNG, GIF)
+3. **Recommended size:** 512x512 pixels
+4. Wait for upload to complete
+
+<Callout type="tip">
+Use a square image with transparent background for best results. Your logo will be displayed on token listings, trading interfaces, and wallets.
+</Callout>
+
+#### Banner Image
+Upload a banner for your token page:
+1. Click the **Banner Image** upload area
+2. Select an image file (JPG, PNG, GIF)
+3. **Recommended size:** 1500x500 pixels
+4. Wait for upload to complete
+
+### Optional Fields (Recommended)
+
+#### Description
+- Describe your token's purpose or use case
+- Help potential investors understand your project
+- Can include emojis and formatting
+
+**Example:**
+```
+The ultimate meme token for the community! 🚀
+Join us on our mission to the moon.
+```
+
+#### Tags
+Categorize your token for better discoverability:
+1. Click **Add Tags** button
+2. Select relevant categories:
+   - Meme
+   - DeFi
+   - NFT
+   - Gaming
+   - Community
+   - And more...
+3. Multiple tags can be selected
+4. Click **Confirm** when done
+
+#### Social Links
+
+Add your project's social media (automatically formatted):
+
+**Website**
+- Enter your domain: `yourwebsite.com`
+- System adds `https://` automatically
+
+**X/Twitter**
+- Enter your username: `yourusername`
+- System adds `x.com/` prefix automatically
+
+**Telegram**
+- Enter your channel: `yourchannel`
+- System adds `t.me/` prefix automatically
+
+---
+
+## Quick Mint Defaults
+
+When you use Quick Mint, these settings are automatically configured:
+
+### Token Supply
+- **Total Supply:** 1,000,000,000 tokens (1 billion)
+- **Decimals:** 6 (standard for Solana tokens)
+- **Quote Token:** SOL (wrapped SOL)
+
+### Token Distribution
+- **100% to Creator:** All tokens mint directly to your connected wallet
+- **No Vesting:** All tokens immediately available
+- **No Locks:** Full control from day one
+
+### Token Standard
+- **Type:** SPL Token (Solana Program Library)
+- **Network:** Solana Mainnet
+- **Authority:** Creator wallet (you)
+
+### Fees
+- **Creation Fee:** Standard POTLAUNCH creation fee
+- **No Trading Fees:** Simple token, no bonding curve fees
+- **No Vesting Fees:** No vesting configured
+
+---
+
+## Review and Deploy
+
+<Steps>
+
+### Review Your Token Details
+
+Before deploying, review all information:
+
+**Token Information:**
+- ✅ Token Name is correct
+- ✅ Token Symbol is correct (max 5 chars)
+- ✅ Logo image uploaded and looks good
+- ✅ Banner image uploaded and looks good
+- ✅ Description is clear (if added)
+- ✅ Tags are relevant (if added)
+- ✅ Social links are correct (if added)
+
+**Token Settings:**
+- ✅ Supply: 1 billion tokens
+- ✅ Decimals: 6
+- ✅ All tokens to your wallet
+- ✅ Quote Token: SOL
+
+### Deploy Your Token
+
+1. Click the **Deploy Token** button
+2. Review the transaction details in your wallet
+3. Confirm you have enough SOL for fees
+4. Approve the transaction
+5. Wait for blockchain confirmation (usually 5-30 seconds)
+
+<Callout type="success">
+Congratulations! Your token is now live on Solana. You'll receive a confirmation with your token's mint address.
+</Callout>
+
+### After Deployment
+
+Once your token is deployed:
+
+1. **Token Address** - Copy and save your token's mint address
+2. **View Token** - Click to see your token page on POTLAUNCH
+3. **Share Link** - Share your token page with your community
+4. **Add to Wallet** - Import token to your wallet using the mint address
+
+</Steps>
+
+---
+
+## Managing Your Token
+
+### View Your Tokens
+
+Visit your token dashboard:
+- **My Tokens:** [https://potlaunch.com/token/me](https://potlaunch.com/token/me)
+- See all tokens you've created
+- Monitor holder count
+- Track total supply
+
+### Token Page
+
+Your token has a dedicated page showing:
+- Token name, symbol, and logo
+- Description and social links
+- Total supply and holders
+- Trading interface (if applicable)
+- Holder distribution
+
+### Share Your Token
+
+Get the word out about your token:
+
+1. **Copy Token Link**
+   - Format: `https://potlaunch.com/token/[YOUR_MINT_ADDRESS]`
+   - Share on social media
+
+2. **Share Mint Address**
+   - Let people add to their wallets
+   - Format: `[YOUR_MINT_ADDRESS]`
+
+3. **Promote on Socials**
+   - Post on X/Twitter with your social links
+   - Share in Telegram communities
+   - Engage with your community
+
+---
+
+## Adding Liquidity (Optional)
+
+After creating your token, you may want to add liquidity to enable trading:
+
+### Why Add Liquidity?
+
+- Enables others to buy/sell your token
+- Creates price discovery
+- Increases token utility
+- Builds trust with holders
+
+### How to Add Liquidity
+
+<Steps>
+
+### Choose a DEX
+
+Popular Solana DEXes:
+- **Raydium** - Most popular, high liquidity
+- **Orca** - User-friendly interface
+- **Meteora** - Dynamic liquidity pools
+
+### Prepare Your Tokens
+
+Make sure you have:
+- Your minted tokens in your wallet
+- SOL for liquidity pairing
+- Extra SOL for transaction fees
+
+### Create Liquidity Pool
+
+1. Go to your chosen DEX
+2. Find "Create Pool" or "Add Liquidity"
+3. Select your token and SOL
+4. Set initial price ratio
+5. Add liquidity amounts
+6. Confirm transaction
+
+<Callout type="warning">
+**Important:** When creating a liquidity pool:
+- Start with reasonable liquidity (don't put all tokens)
+- Set a fair initial price
+- Consider locking LP tokens to build trust
+- Understand impermanent loss risks
+</Callout>
+
+</Steps>
+
+---
+
+## Trading Your Token
+
+### Buying Tokens
+
+Anyone can buy your token if liquidity exists:
+
+1. Go to the token page on POTLAUNCH or a DEX
+2. Click **Buy** or **Swap**
+3. Enter amount to purchase
+4. Review price and slippage
+5. Approve transaction
+6. Tokens arrive in wallet
+
+### Selling Tokens
+
+Token holders can sell:
+
+1. Navigate to trading interface
+2. Click **Sell**
+3. Enter amount to sell
+4. Review price (may include slippage)
+5. Approve transaction
+6. SOL arrives in wallet
+
+### Understanding Slippage
+
+- **Slippage** = Difference between expected and actual price
+- **Higher slippage** = Less liquidity or larger trade
+- **Recommended:** Start with 1-5% slippage
+- **Adjust** if transaction fails
+
+---
+
+## Best Practices
+
+### Before Launch
+
+1. **Complete All Fields**
+   - Fill in description and tags
+   - Add all social links
+   - Use high-quality images
+
+2. **Prepare Marketing**
+   - Build community before launch
+   - Create social media accounts
+   - Plan announcement posts
+
+3. **Have a Plan**
+   - Decide on liquidity strategy
+   - Plan token distribution
+   - Prepare for community questions
+
+### After Launch
+
+1. **Add Liquidity Quickly**
+   - Don't delay enabling trading
+   - Start with reasonable amounts
+   - Consider LP token locking
+
+2. **Engage Community**
+   - Respond to questions
+   - Provide regular updates
+   - Build trust through transparency
+
+3. **Promote Responsibly**
+   - Don't make price promises
+   - Focus on community building
+   - Be honest about utility and goals
+
+### Long-term Success
+
+1. **Deliver Value**
+   - If promised utility, build it
+   - Keep community engaged
+   - Regular communication
+
+2. **Build Trust**
+   - Transparent operations
+   - Responsive to community
+   - Honest about challenges
+
+3. **Grow Organically**
+   - Quality over quantity
+   - Sustainable growth
+   - Long-term thinking
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Upload Failed**
+- File too large (max 5MB)
+- Unsupported format (use JPG, PNG, GIF)
+- Poor internet connection
+- **Solution:** Compress image, check format, retry upload
+
+**Transaction Failed**
+- Insufficient SOL for fees
+- Wallet not connected
+- Network congestion
+- **Solution:** Add SOL, reconnect wallet, increase fee, retry
+
+**Token Not Showing**
+- Blockchain confirmation pending
+- Wallet cache issue
+- Need to manually import
+- **Solution:** Wait 1-2 minutes, refresh, import via mint address
+
+**Can't Add Liquidity**
+- Don't have tokens in wallet
+- Insufficient SOL
+- Wrong DEX network
+- **Solution:** Verify token balance, add SOL, check network
+
+### Getting Help
+
+Need assistance?
+
+- **Documentation:** Check this guide and [FAQ](/faq)
+- **Discord:** Join [POTLAUNCH Discord](https://discord.gg/potlaunch)
+- **Support:** Email support@potlaunch.com
+- **X/Twitter:** Follow [@potlaunch](https://x.com/potlaunch)
+
+---
+
+## Security Tips
+
+### Wallet Security
+
+1. **Never Share Seed Phrase**
+   - Keep it private and secure
+   - Write it down offline
+   - Never screenshot or type online
+
+2. **Use Hardware Wallet**
+   - For large amounts
+   - Maximum security
+   - Ledger or similar
+
+3. **Verify Transactions**
+   - Always review before signing
+   - Check addresses carefully
+   - Confirm amounts
+
+### Project Security
+
+1. **Use Official Links**
+   - Verify POTLAUNCH domain
+   - Don't click suspicious links
+   - Bookmark official site
+
+2. **Beware of Scams**
+   - No one will DM you first for "support"
+   - Don't share wallet credentials
+   - Verify before connecting wallet
+
+3. **Smart Contract Risks**
+   - Understand token creation risks
+   - Start with small amounts for testing
+   - Research before investing heavily
+
+---
+
+## Frequently Asked Questions
+
+### How much does it cost to create a token?
+
+Quick Mint costs approximately:
+- **Creation Fee:** 0.01-0.05 SOL (varies)
+- **Transaction Fees:** ~0.001 SOL
+- **Total:** Usually less than 0.1 SOL
+
+### Can I change token details after creation?
+
+With Quick Mint:
+- **Can Change:** Social links, description (off-chain metadata)
+- **Cannot Change:** Token name, symbol, supply, decimals (on-chain)
+- **Recommendation:** Double-check everything before deploying
+
+### Do all tokens go to my wallet?
+
+Yes! With Quick Mint:
+- 100% of supply mints to your connected wallet
+- No vesting or locks
+- Immediate full control
+- You decide distribution
+
+### How do I enable trading?
+
+To enable trading:
+1. Create liquidity pool on a DEX
+2. Pair your token with SOL
+3. Set initial price
+4. Add liquidity
+5. Others can now trade
+
+### What happens if I lose my wallet?
+
+If you lose access to your wallet:
+- You lose control of your tokens
+- Cannot update token authority
+- Tokens in wallet are inaccessible
+- **Prevention:** Backup seed phrase securely
+
+### Can I use Quick Mint for serious projects?
+
+Quick Mint is great for:
+- Meme coins
+- Community tokens
+- Simple utility tokens
+- Experimental projects
+
+Consider Custom Creation for:
+- Projects with investors
+- Complex tokenomics needed
+- Vesting schedules required
+- Bonding curve mechanisms
+
+---
+
+## Next Steps
+
+### Learn More
+
+- **Advanced Features:** [Advanced Launch Settings](/user-guide/advanced-launch-settings)
+- **Developer Docs:** [POTLAUNCH SDK](/developer-guide/potlaunch-sdk)
+- **Tokenomics:** [Understanding Bonding Curves](/concepts/bonding-curves)
+
+### Get Involved
+
+- **Join Discord:** [POTLAUNCH Community](https://discord.gg/potlaunch)
+- **Follow on X:** [@potlaunch](https://x.com/potlaunch)
+- **Explore Tokens:** [Token Launchpad](https://potlaunch.com)
+
+### Upgrade to Custom
+
+Ready for advanced features?
+- Custom tokenomics
+- Vesting schedules
+- Bonding curves
+- Fee configuration
+- Authority controls
+
+Check out [Advanced Launch Settings](/user-guide/advanced-launch-settings) to learn more.
+
+---
+
+<Callout type="success">
+Ready to launch? Visit [potlaunch.com/create](https://potlaunch.com/create) and select **Quick Mint** to get started in minutes!
+</Callout>
+
+---
+
+**Remember:** Token creation is just the beginning. Success requires community building, transparent communication, and delivering on your promises. Good luck with your token launch on POTLAUNCH!

@@ -1,0 +1,531 @@
+import { Callout, Steps } from 'nextra/components'
+
+# Token Lifecycle
+
+<Callout type="info">
+Every token launched on POTLAUNCH follows a predictable lifecycle from creation through graduation to free market trading. Understanding this lifecycle helps creators optimize their launches and participants make informed decisions.
+</Callout>
+
+## Lifecycle Overview
+
+```
+Creation → Bonding Curve → Graduation → DEX Trading → Multi-Chain
+```
+
+Each phase has specific characteristics, requirements, and outcomes that affect token value and accessibility.
+
+## Phase 1: Creation & Initialization
+
+### Pre-Launch Preparation
+
+Before launching, creators prepare the essential components:
+
+**Token Design:**
+- Token name and symbol
+- Total supply allocation
+- Visual identity (logo, colors)
+- Brand narrative and messaging
+
+**Launch Strategy:**
+- Target market cap
+- Pricing curve selection
+- Initial price point
+- Graduation criteria
+
+**Community Building:**
+- Social media presence
+- Community channels (Discord, Telegram)
+- Marketing materials
+- Roadmap and vision
+
+### Launch Transaction
+
+<Steps>
+
+### Token Mint Creation
+```typescript
+// Simplified flow
+const tokenMint = await createTokenMint({
+  name: "My Token",
+  symbol: "MTK",
+  decimals: 9,
+  supply: 1_000_000_000,
+  mintAuthority: null, // Permanently revoked
+  freezeAuthority: null, // Permanently revoked
+});
+```
+
+### Metadata Upload
+```typescript
+// Upload to decentralized storage
+const metadata = await uploadMetadata({
+  name: tokenMint.name,
+  symbol: tokenMint.symbol,
+  description: "Token description",
+  image: "ipfs://...",
+  properties: {
+    category: "Utility",
+    tags: ["DeFi", "Launch"],
+  },
+});
+```
+
+### Bonding Curve Initialization
+```typescript
+// Create bonding curve contract
+const bondingCurve = await initializeBondingCurve({
+  tokenMint: tokenMint.address,
+  curveType: CurveType.EXPONENTIAL,
+  initialPrice: 0.001, // SOL
+  targetMarketCap: 100_000, // SOL
+  fees: {
+    buy: 100, // 1%
+    sell: 100, // 1%
+  },
+});
+```
+
+### Initial Liquidity Provision
+```typescript
+// Creator provides initial liquidity
+await provideLiquidity({
+  curve: bondingCurve.address,
+  solAmount: 10, // Initial 10 SOL
+});
+```
+
+</Steps>
+
+**Post-Launch State:**
+- ✅ Token minted and verified
+- ✅ Bonding curve active
+- ✅ Trading enabled
+- ✅ Metadata published
+- ⏳ Waiting for first traders
+
+## Phase 2: Bonding Curve Trading
+
+### Initial Trading Phase
+
+**Characteristics:**
+- Price determined by bonding curve
+- Continuous liquidity available
+- No order books required
+- Instant trade execution
+
+**Price Discovery:**
+
+```typescript
+// Price increases as supply is purchased
+function calculatePrice(soldSupply: number): number {
+  // Example: Exponential curve
+  const BASE_PRICE = 0.001;
+  const GROWTH_RATE = 1.5;
+  
+  return BASE_PRICE * Math.pow(1 + soldSupply / 1000000, GROWTH_RATE);
+}
+```
+
+**Example Price Progression:**
+
+| Supply Sold | Price (SOL) | Market Cap (SOL) |
+|------------|-------------|------------------|
+| 0% | 0.001 | 1,000 |
+| 10% | 0.005 | 5,000 |
+| 25% | 0.015 | 15,000 |
+| 50% | 0.050 | 50,000 |
+| 75% | 0.150 | 150,000 |
+| 90% | 0.500 | 500,000 |
+
+### Growth Metrics
+
+**Key Performance Indicators:**
+
+```typescript
+interface GrowthMetrics {
+  // Trading Activity
+  tradingVolume24h: number;
+  numberOfTrades: number;
+  uniqueTraders: number;
+  buyVolume: number;
+  sellVolume: number;
+  
+  // Community Growth
+  holderCount: number;
+  averageHoldingSize: number;
+  whaleConcentration: number; // % held by top 10
+  
+  // Price Performance
+  priceChange24h: number;
+  allTimeHigh: number;
+  allTimeLow: number;
+  volatilityIndex: number;
+  
+  // Progression
+  marketCapCurrent: number;
+  graduationProgress: number; // 0-100%
+  estimatedTimeToGraduation: number; // hours
+}
+```
+
+### Trading Dynamics
+
+**Buy Pressure:**
+- Early buyers get lower prices
+- Price increases with each purchase
+- Creates upward momentum
+- Rewards early supporters
+
+**Sell Pressure:**
+- Sellers get current bonding curve price
+- Price decreases with each sale
+- Natural profit-taking
+- Market self-regulation
+
+**Reserve Accumulation:**
+
+```typescript
+// Reserve grows with each trade
+interface ReserveState {
+  totalReserve: number; // Total SOL in reserve
+  fromBuys: number; // SOL from buy trades
+  fromFees: number; // SOL from trading fees
+  forDEX: number; // SOL allocated for DEX migration
+  forPlatform: number; // Platform fee accumulation
+}
+```
+
+### Community Milestones
+
+**Typical Milestones:**
+
+<Steps>
+
+### First 100 Holders
+- Community foundation established
+- Initial price discovery complete
+- Social channels active
+- Basic liquidity present
+
+### $10K Market Cap
+- Sustainable trading volume
+- Community growth accelerating
+- External attention starting
+- First DEX listings discussed
+
+### $50K Market Cap
+- Significant holder base
+- Daily trading volume healthy
+- Graduation approaching
+- Marketing campaigns launching
+
+### $100K Market Cap (Graduation)
+- Graduation criteria met
+- Community fully established
+- Major holder distribution
+- Ready for DEX migration
+
+</Steps>
+
+## Phase 3: Graduation
+
+### Graduation Criteria
+
+**Requirements:**
+
+```typescript
+interface GraduationRequirements {
+  // Market Metrics
+  minimumMarketCap: 100_000, // SOL
+  minimumVolume: 10_000, // SOL total volume
+  minimumTrades: 100, // number of trades
+  
+  // Time Metrics
+  minimumAge: 86400, // 24 hours (seconds)
+  
+  // Community Metrics
+  minimumHolders: 50, // unique holders
+  maximumWhaleConcentration: 30, // % max for top holder
+  
+  // Liquidity Metrics
+  minimumLiquidity: 10, // SOL in reserve
+}
+```
+
+### Graduation Process
+
+<Steps>
+
+### Eligibility Check
+```typescript
+async function checkGraduationEligibility(): Promise<GraduationStatus> {
+  const metrics = await getTokenMetrics();
+  const requirements = GRADUATION_REQUIREMENTS;
+  
+  return {
+    eligible: (
+      metrics.marketCap >= requirements.minimumMarketCap &&
+      metrics.volume >= requirements.minimumVolume &&
+      metrics.trades >= requirements.minimumTrades &&
+      metrics.age >= requirements.minimumAge &&
+      metrics.holders >= requirements.minimumHolders
+    ),
+    progress: calculateProgress(metrics, requirements),
+    missingRequirements: identifyMissingRequirements(metrics, requirements),
+  };
+}
+```
+
+### Liquidity Migration
+```typescript
+// Extract liquidity from bonding curve
+async function migrateLiquidity(): Promise<MigrationResult> {
+  // 1. Disable bonding curve trading
+  await disableBondingCurve();
+  
+  // 2. Calculate DEX allocation
+  const reserve = await getReserveBalance();
+  const dexAllocation = {
+    sol: reserve * 0.9, // 90% to DEX
+    tokens: calculateTokenAmount(reserve * 0.9),
+  };
+  
+  // 3. Create DEX pool
+  const pool = await createRaydiumPool(dexAllocation);
+  
+  // 4. Burn LP tokens (permanent lock)
+  await burnLPTokens(pool.lpMint);
+  
+  return {
+    poolAddress: pool.address,
+    lpTokensBurned: pool.lpSupply,
+    liquidityLocked: true,
+  };
+}
+```
+
+### Post-Graduation Setup
+```typescript
+// Finalize graduation
+async function finalizeGraduation(): Promise<void> {
+  // 1. Update token metadata
+  await updateTokenMetadata({
+    graduated: true,
+    graduationDate: Date.now(),
+    dexPool: poolAddress,
+    bondingCurveDisabled: true,
+  });
+  
+  // 2. Notify community
+  await sendGraduationNotifications();
+  
+  // 3. Update listings
+  await updateTokenListings();
+  
+  // 4. Enable cross-chain bridge
+  await enableBridging();
+}
+```
+
+</Steps>
+
+**Post-Graduation State:**
+- ✅ Trading on Raydium/Meteora
+- ✅ Liquidity permanently locked
+- ✅ Free market price discovery
+- ✅ Cross-chain bridging enabled
+- ✅ Community fully autonomous
+
+## Phase 4: DEX Trading
+
+### Free Market Trading
+
+**Characteristics:**
+- Order book-based trading
+- Market-determined prices
+- Increased liquidity
+- Professional trading tools
+
+**DEX Features:**
+- Limit orders
+- Stop losses
+- Advanced charts
+- API access
+- Trading bots
+
+### Liquidity Management
+
+**Permanent Liquidity Lock:**
+
+```typescript
+interface LiquidityLock {
+  poolAddress: PublicKey;
+  lpTokensMinted: number;
+  lpTokensBurned: number; // All LP tokens burned
+  liquidityValue: {
+    sol: number,
+    tokens: number,
+  };
+  lockType: 'PERMANENT'; // Cannot be unlocked
+  lockDate: Date;
+}
+```
+
+**Benefits:**
+- No rug pull risk
+- Permanent liquidity
+- Price stability
+- Community confidence
+
+### Price Dynamics
+
+**Market Forces:**
+
+1. **Supply & Demand**
+   - Buy pressure increases price
+   - Sell pressure decreases price
+   - Natural market equilibrium
+
+2. **External Factors**
+   - Market sentiment
+   - Broader crypto trends
+   - Platform developments
+   - Partnership announcements
+
+3. **Trading Volume**
+   - Higher volume = more liquidity
+   - Tighter spreads
+   - Better price discovery
+
+## Phase 5: Multi-Chain Expansion
+
+### Cross-Chain Bridging
+
+**Supported Networks:**
+
+```typescript
+interface BridgeConfiguration {
+  sourceChain: 'SOLANA';
+  supportedDestinations: [
+    'NEAR',
+    'ETHEREUM', // Coming soon
+    'BASE', // Coming soon
+    'POLYGON', // Coming soon
+  ];
+  bridgeFee: 0.001; // 0.1%
+  estimatedTime: 30; // seconds
+}
+```
+
+### Bridge Process
+
+<Steps>
+
+### Lock Tokens on Source Chain
+```typescript
+// User locks tokens on Solana
+const lockTx = await bridgeContract.lockTokens({
+  amount: 1000,
+  destinationChain: 'NEAR',
+  recipient: nearAddress,
+});
+```
+
+### Mint Wrapped Tokens
+```typescript
+// Wrapped tokens minted on destination
+const wrappedToken = await destChain.mintWrapped({
+  sourceChain: 'SOLANA',
+  sourceToken: tokenMint,
+  amount: 1000,
+  recipient: nearAddress,
+});
+```
+
+### Cross-Chain Trading
+```typescript
+// Trade on destination chain DEXs
+await destChainDEX.trade({
+  tokenIn: wrappedToken,
+  tokenOut: destChainUSDC,
+  amount: 500,
+});
+```
+
+### Bridge Back (Optional)
+```typescript
+// Burn wrapped tokens and unlock on Solana
+const unlockTx = await bridgeContract.unlockTokens({
+  wrappedAmount: 500,
+  destinationChain: 'SOLANA',
+  recipient: solanaAddress,
+});
+```
+
+</Steps>
+
+### Multi-Chain Benefits
+
+**For Holders:**
+- Access to multiple DEXs
+- Increased liquidity pools
+- More trading pairs
+- Broader market access
+
+**For Projects:**
+- Expanded user base
+- Multiple ecosystems
+- Increased visibility
+- Greater adoption potential
+
+## Lifecycle Management Tools
+
+### For Creators
+
+**Dashboard Features:**
+```typescript
+interface CreatorDashboard {
+  // Launch Status
+  currentPhase: LifecyclePhase;
+  timeInPhase: number;
+  progressToNextPhase: number;
+  
+  // Metrics
+  holders: number;
+  volume: number;
+  marketCap: number;
+  
+  // Tools
+  updateMetadata(): void;
+  announceUpdate(): void;
+  viewAnalytics(): AnalyticsData;
+  manageCommunity(): CommunityTools;
+}
+```
+
+### For Traders
+
+**Trading Tools:**
+```typescript
+interface TradingTools {
+  // Price Tracking
+  currentPrice: number;
+  priceChart: ChartData[];
+  priceAlerts: PriceAlert[];
+  
+  // Analytics
+  tradingVolume: VolumeData;
+  priceHistory: HistoricalData[];
+  holderDistribution: DistributionData;
+  
+  // Trading
+  executeTrade(): Promise<Transaction>;
+  setPriceAlert(): void;
+  viewPortfolio(): Portfolio;
+}
+```
+
+<Callout type="success">
+Ready to launch your token? Start with our [Token Launch Guide](/user-guide/token-launch-guide) or explore [Advanced Launch Settings](/user-guide/advanced-launch-settings).
+</Callout>
+

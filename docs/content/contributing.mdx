@@ -1,0 +1,656 @@
+import { Callout, Steps } from 'nextra/components'
+
+# Contributing to POTLAUNCH
+
+<Callout type="success">
+We welcome contributions from everyone! Whether you're fixing bugs, improving documentation, or adding new features, your help makes POTLAUNCH better for the entire community.
+</Callout>
+
+## Ways to Contribute
+
+### 🐛 Report Bugs
+
+Help us identify and fix issues:
+
+- [GitHub Issues](https://github.com/PotLock/potlaunch/issues) - Report bugs
+- [Bug Bounty](/security/bug-bounty) - Security vulnerabilities
+- Discord #bug-reports - Community discussion
+
+### 💡 Suggest Features
+
+Share your ideas:
+
+- [GitHub Discussions](https://github.com/PotLock/potlaunch/discussions) - Feature discussions
+- Discord #feature-requests - Community voting
+- [Feedback Form](https://potlaunch.com/feedback) - Structured suggestions
+
+### 📝 Improve Documentation
+
+Help others learn:
+
+- Fix typos and errors
+- Add examples and tutorials
+- Translate documentation
+- Create video guides
+
+### 💻 Write Code
+
+Contribute to the codebase:
+
+- Fix bugs
+- Implement features
+- Optimize performance
+- Write tests
+
+### 🎨 Design & UX
+
+Improve the user experience:
+
+- UI/UX improvements
+- Design mockups
+- Accessibility enhancements
+- User flow optimization
+
+### 🧪 Test & Review
+
+Quality assurance:
+
+- Test new features
+- Review pull requests
+- Report edge cases
+- Validate fixes
+
+## Getting Started
+
+### Prerequisites
+
+**Required:**
+- Node.js 18+
+- Git
+- Rust & Cargo (for contracts)
+- Solana CLI
+
+**Recommended:**
+- Anchor Framework
+- TypeScript experience
+- Solana development experience
+- React/Next.js knowledge
+
+### Development Setup
+
+<Steps>
+
+### Fork the Repository
+
+1. Visit [github.com/PotLock/potlaunch](https://github.com/PotLock/potlaunch)
+2. Click "Fork" in the top right
+3. Clone your fork:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/potlaunch.git
+cd potlaunch
+```
+
+### Install Dependencies
+
+```bash
+# Install Node dependencies
+npm install
+
+# Install Rust dependencies (for contracts)
+cd contracts
+cargo build
+
+# Return to root
+cd ..
+```
+
+### Configure Environment
+
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your settings
+# - RPC_URL: Solana RPC endpoint
+# - NETWORK: devnet or mainnet-beta
+# - etc.
+```
+
+### Run Development Server
+
+```bash
+# Start frontend
+npm run dev
+
+# In another terminal, start backend
+cd backend
+npm run dev
+
+# In another terminal, build contracts
+cd contracts
+anchor build
+```
+
+### Verify Setup
+
+```bash
+# Run tests
+npm test
+
+# Check linting
+npm run lint
+
+# Type check
+npm run type-check
+```
+
+</Steps>
+
+## Contribution Workflow
+
+### 1. Pick an Issue
+
+**Find something to work on:**
+
+- Browse [Good First Issues](https://github.com/PotLock/potlaunch/labels/good%20first%20issue)
+- Check [Help Wanted](https://github.com/PotLock/potlaunch/labels/help%20wanted)
+- Look at [Feature Requests](https://github.com/PotLock/potlaunch/labels/enhancement)
+
+**Claim the issue:**
+- Comment "I'd like to work on this"
+- Wait for approval from maintainers
+- Ask questions if unclear
+
+### 2. Create a Branch
+
+```bash
+# Update your fork
+git checkout main
+git pull upstream main
+
+# Create feature branch
+git checkout -b feature/your-feature-name
+
+# Or bug fix branch
+git checkout -b fix/bug-description
+```
+
+**Branch naming conventions:**
+- `feature/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation
+- `refactor/` - Code refactoring
+- `test/` - Test additions/fixes
+
+### 3. Make Your Changes
+
+**Code Guidelines:**
+
+```typescript
+// ✅ Good: Clear, documented code
+/**
+ * Calculate bonding curve price for given supply
+ * @param supply Current token supply
+ * @param config Curve configuration
+ * @returns Price in lamports
+ */
+function calculatePrice(supply: number, config: CurveConfig): number {
+  const { initialPrice, exponent } = config;
+  return initialPrice * Math.pow(supply / 1e9, exponent);
+}
+
+// ❌ Bad: Unclear, undocumented
+function calc(s: number, c: any): number {
+  return c.ip * Math.pow(s / 1e9, c.e);
+}
+```
+
+**Testing:**
+
+```typescript
+// Always include tests
+describe('calculatePrice', () => {
+  it('returns initial price for zero supply', () => {
+    const price = calculatePrice(0, {
+      initialPrice: 1000,
+      exponent: 1.5,
+    });
+    expect(price).toBe(1000);
+  });
+  
+  it('increases price with supply', () => {
+    const config = { initialPrice: 1000, exponent: 1.5 };
+    const price1 = calculatePrice(1e8, config);
+    const price2 = calculatePrice(2e8, config);
+    expect(price2).toBeGreaterThan(price1);
+  });
+});
+```
+
+**Documentation:**
+
+```typescript
+// Document complex logic
+/**
+ * Graduates token to DEX when criteria are met
+ * 
+ * Process:
+ * 1. Verify graduation eligibility
+ * 2. Extract liquidity from bonding curve
+ * 3. Create DEX pool on Raydium
+ * 4. Burn LP tokens for permanent lock
+ * 5. Update launch state
+ * 
+ * @param launchState Launch state PDA
+ * @throws {NotEligibleError} If graduation criteria not met
+ * @throws {InsufficientLiquidityError} If reserve too low
+ */
+async function graduateToDex(launchState: PublicKey): Promise<void> {
+  // Implementation
+}
+```
+
+### 4. Commit Your Changes
+
+**Commit message format:**
+
+```bash
+# Format: <type>(<scope>): <description>
+
+# Examples:
+git commit -m "feat(launch): add logarithmic bonding curve"
+git commit -m "fix(trading): correct price calculation precision"
+git commit -m "docs(sdk): add usage examples"
+git commit -m "test(curve): add edge case tests"
+```
+
+**Commit types:**
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation
+- `style` - Code style (formatting)
+- `refactor` - Code refactoring
+- `test` - Adding tests
+- `chore` - Maintenance tasks
+
+### 5. Push and Create PR
+
+```bash
+# Push to your fork
+git push origin feature/your-feature-name
+
+# Create pull request on GitHub
+# Fill in the PR template
+```
+
+**PR Title Format:**
+```
+[Type] Brief description
+
+Examples:
+[Feature] Add logarithmic bonding curve support
+[Fix] Correct price calculation in edge cases
+[Docs] Improve SDK installation instructions
+```
+
+**PR Description Template:**
+
+```markdown
+## Description
+Brief description of changes
+
+## Motivation
+Why is this change needed?
+
+## Changes
+- Change 1
+- Change 2
+- Change 3
+
+## Testing
+How was this tested?
+
+## Screenshots
+(if applicable)
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] No breaking changes
+- [ ] Follows code style
+- [ ] PR title follows format
+```
+
+### 6. Review Process
+
+**What to expect:**
+
+1. **Automated Checks**
+   - Linting
+   - Type checking
+   - Tests
+   - Build verification
+
+2. **Code Review**
+   - Maintainer review
+   - Feedback and suggestions
+   - Request for changes (if needed)
+
+3. **Approval**
+   - At least 1 maintainer approval
+   - All checks passing
+   - No conflicts with main
+
+4. **Merge**
+   - Squash and merge
+   - Deployed to staging
+   - Released in next version
+
+**Responding to feedback:**
+
+```markdown
+# Good responses:
+
+"Good catch! I've updated the logic as you suggested."
+
+"That's a great point. I've added tests for that case."
+
+"I'm not sure I understand. Could you elaborate on X?"
+
+# Keep discussion constructive and professional
+```
+
+## Code Standards
+
+### TypeScript/JavaScript
+
+```typescript
+// Use TypeScript strict mode
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
+
+// Prefer const over let
+const config = loadConfig();
+let mutableState = initialState;
+
+// Use descriptive names
+const bondingCurvePrice = calculatePrice(supply);
+// Not: const p = calc(s);
+
+// Document complex types
+interface LaunchConfiguration {
+  /** Token mint public key */
+  tokenMint: PublicKey;
+  /** Bonding curve type */
+  curveType: 'linear' | 'exponential' | 'logarithmic';
+  /** Initial price in lamports */
+  initialPrice: number;
+}
+```
+
+### Rust/Anchor
+
+```rust
+// Follow Rust conventions
+use anchor_lang::prelude::*;
+
+/// Launch state account
+#[account]
+pub struct LaunchState {
+    /// Token mint address
+    pub token_mint: Pubkey,
+    /// Creator address
+    pub creator: Pubkey,
+    /// Current sold supply
+    pub sold_supply: u64,
+    /// State bump seed
+    pub bump: u8,
+}
+
+// Use descriptive error messages
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Slippage tolerance exceeded")]
+    SlippageExceeded,
+    #[msg("Not eligible for graduation")]
+    NotEligible,
+}
+
+// Document public functions
+/// Calculate bonding curve price
+/// 
+/// # Arguments
+/// * `supply` - Current token supply
+/// * `config` - Curve configuration
+/// 
+/// # Returns
+/// Price in lamports
+pub fn calculate_price(supply: u64, config: &CurveConfig) -> Result<u64> {
+    // Implementation
+}
+```
+
+### Testing Standards
+
+```typescript
+// Unit tests
+describe('PriceCalculator', () => {
+  // Group related tests
+  describe('calculatePrice', () => {
+    // Descriptive test names
+    it('should return initial price for zero supply', () => {
+      // Arrange
+      const calculator = new PriceCalculator(config);
+      
+      // Act
+      const price = calculator.calculatePrice(0);
+      
+      // Assert
+      expect(price).toBe(config.initialPrice);
+    });
+    
+    // Test edge cases
+    it('should handle maximum supply', () => {
+      const price = calculator.calculatePrice(MAX_SUPPLY);
+      expect(price).toBeLessThan(config.maxPrice);
+    });
+  });
+});
+
+// Integration tests
+describe('Token Launch Flow', () => {
+  it('should complete full launch lifecycle', async () => {
+    // Initialize
+    const launch = await initializeLaunch(params);
+    
+    // Trade
+    await buyTokens(launch, 1000);
+    
+    // Graduate
+    await graduateToDex(launch);
+    
+    // Verify
+    const state = await getLaunchState(launch);
+    expect(state.graduated).toBe(true);
+  });
+});
+```
+
+## Documentation Guidelines
+
+### Code Comments
+
+```typescript
+// ✅ Good: Explain WHY, not WHAT
+// Use floating point to avoid precision loss in large calculations
+const price = Number(priceInLamports) / LAMPORTS_PER_SOL;
+
+// ❌ Bad: Stating the obvious
+// Divide price by lamports per sol
+const price = priceInLamports / LAMPORTS_PER_SOL;
+```
+
+### API Documentation
+
+```typescript
+/**
+ * Purchases tokens from a bonding curve launch
+ * 
+ * @param launchAddress - Public key of the launch state account
+ * @param amountSol - Amount of SOL to spend (in lamports)
+ * @param maxSlippage - Maximum acceptable slippage (in basis points)
+ * @returns Transaction signature
+ * 
+ * @throws {SlippageExceededError} If price impact exceeds maxSlippage
+ * @throws {InsufficientLiquidityError} If not enough tokens available
+ * 
+ * @example
+ * ```typescript
+ * // Buy tokens with 1 SOL, max 0.5% slippage
+ * const tx = await buyTokens(
+ *   launchAddress,
+ *   1_000_000_000, // 1 SOL
+ *   50 // 0.5%
+ * );
+ * ```
+ */
+async function buyTokens(
+  launchAddress: PublicKey,
+  amountSol: number,
+  maxSlippage: number
+): Promise<string> {
+  // Implementation
+}
+```
+
+### README & Guides
+
+- Use clear, concise language
+- Include code examples
+- Add screenshots/diagrams when helpful
+- Link to related documentation
+- Keep up to date with code changes
+
+## Community Guidelines
+
+### Code of Conduct
+
+We are committed to providing a welcoming and inclusive environment:
+
+**Do:**
+- ✅ Be respectful and professional
+- ✅ Give constructive feedback
+- ✅ Help newcomers
+- ✅ Celebrate others' contributions
+- ✅ Learn from mistakes
+
+**Don't:**
+- ❌ Harass or discriminate
+- ❌ Use offensive language
+- ❌ Spam or troll
+- ❌ Share others' private information
+- ❌ Engage in disruptive behavior
+
+### Communication Channels
+
+**GitHub**
+- Issues: Bug reports, feature requests
+- Discussions: Ideas, questions, polls
+- Pull Requests: Code contributions
+
+**Discord**
+- #contributors: Contributor coordination
+- #development: Technical discussions
+- #help: Get help with setup
+
+**Twitter**
+- [@PotLock_](https://twitter.com/PotLock_): Updates and announcements
+
+## Recognition
+
+### Contributor Tiers
+
+**🌟 Core Contributors**
+- Regular meaningful contributions
+- Maintain parts of codebase
+- Help with code review
+- Mentor new contributors
+
+**💎 Major Contributors**
+- Significant feature additions
+- Major bug fixes
+- Substantial documentation
+- Active community support
+
+**🎖️ Contributors**
+- Any merged contribution
+- Bug reports with fixes
+- Documentation improvements
+- Community assistance
+
+### Hall of Fame
+
+Top contributors are recognized:
+
+- Listed in CONTRIBUTORS.md
+- Special Discord role
+- Mentioned in release notes
+- Invited to contributor calls
+- Early access to features
+
+### Rewards
+
+**Bounties**
+- Feature bounties (announced)
+- Bug bounties ([program](/security/bug-bounty))
+- Documentation bounties
+
+**Swag**
+- Contributor t-shirts
+- Stickers
+- Limited edition items
+
+**Tokens**
+- Future governance tokens
+- Community rewards
+- Special allocations
+
+## Resources
+
+### Documentation
+
+- [User Guide](/user-guide/intro)
+- [Developer Guide](/developer-guide/potlaunch-sdk)
+- [Smart Contract API](/developer-guide/smart-contract-api)
+
+### Development
+
+- [GitHub Repository](https://github.com/PotLock/potlaunch)
+- [Solana Docs](https://docs.solana.com)
+- [Anchor Book](https://book.anchor-lang.com)
+
+### Community
+
+- [Discord](https://discord.gg/potlock)
+- [Twitter](https://twitter.com/PotLock_)
+- [Website](https://potlaunch.com)
+
+## Questions?
+
+Need help getting started?
+
+- Ask in Discord #contributors
+- Email: dev@potlaunch.com
+- Check [FAQ](/faq-troubleshooting)
+
+<Callout type="success">
+**Ready to contribute?** Pick an issue and get started! We're excited to work with you. 🚀
+</Callout>
+

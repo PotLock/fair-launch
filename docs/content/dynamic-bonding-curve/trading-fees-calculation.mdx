@@ -1,0 +1,145 @@
+# Trading Fees Calculation
+
+DBC Pools earn a trading fee from traders when they perform a swap. The fees can be collected in two ways:
+
+- Quote only
+- Quote + Base
+
+DBC fees can be fee shared between the launchpad partner and the token pool creator.
+
+## Total Trading Fee
+
+The total swap fee (f_s) will have two components:
+
+1. **A base fee** (f_b)
+2. **A variable fee** (f_v)
+
+The **total swap fee** is calculated as:
+
+```
+f_s = f_b + f_v
+```
+
+The variable fee (f_v) is a function of real-time price volatility. The fee rate will be applied to the swap amount in each liquidity bin and distributed proportionally to the LPs in that bin. LPs can claim these fees whenever they are available.
+
+## Base Fee
+
+The base fee of a pool can be configured by the pool creator in the following ways:
+
+- **Fixed Base Fee**: A fixed fee that is applied to the swap amount.
+- **Fee Scheduler**: A fee decay mechanism that reduces the fee over time.
+- **Rate Limiter**: A fee that increases with the swap amount to deter large swaps.
+
+### Fixed Base Fee
+
+A fixed base fee is a constant fee that is applied to all swaps regardless of the swap amount or time.
+
+```
+f_b = constant
+```
+
+### Fee Scheduler
+
+The Fee Scheduler is a time-based fee decay mechanism that allows the base fee to decrease over time. This is useful for protecting the pool during the initial launch phase when volatility is high.
+
+The fee scheduler can be configured in two modes:
+
+#### Linear Decay
+
+The base fee decreases linearly over time:
+
+```
+f_b(t) = f_start - (f_start - f_end) × (t / T)
+```
+
+where:
+- **f_start**: The initial fee at launch
+- **f_end**: The final fee after decay
+- **t**: Time elapsed since launch
+- **T**: Total decay period
+
+#### Exponential Decay
+
+The base fee decreases exponentially over time:
+
+```
+f_b(t) = f_end + (f_start - f_end) × r^(t/p)
+```
+
+where:
+- **r**: Reduction factor (0 < r < 1)
+- **p**: Period frequency
+
+### Rate Limiter
+
+The Rate Limiter is an amount-based fee mechanism that increases the fee for larger swaps to deter snipers and protect smaller retail traders.
+
+```
+f_rate_limiter = min(f_max, f_base + (swap_amount / reference_amount) × fee_increment)
+```
+
+where:
+- **f_max**: Maximum fee cap
+- **f_base**: Base fee before rate limiting
+- **swap_amount**: The amount being swapped
+- **reference_amount**: The reference amount for calculating the fee increment
+- **fee_increment**: The fee increase per unit of swap amount
+
+## Dynamic Fee (Variable Fee)
+
+The dynamic fee is an optional component that adjusts based on real-time market volatility. This helps protect LPs during periods of high volatility while keeping fees competitive during stable periods.
+
+```
+f_v = (v_a × variable_fee_control) / 10000
+```
+
+where:
+- **v_a**: Volatility Accumulator
+- **variable_fee_control**: Multiplier that determines how much volatility affects fees
+
+### Volatility Accumulator
+
+The Volatility Accumulator tracks recent price movements to measure market volatility:
+
+```
+v_a = min(v_max, v_r + Δp × 10000)
+```
+
+where:
+- **Max Volatility Accumulator** (v_max): A cap on the volatility measure to prevent fees from becoming excessively high
+- **Volatility Reference** (v_r): A decayed value of the volatility accumulator
+- **Price Change** (Δp): The price change since the last reference update, measured in "bins"
+
+#### Price Change
+
+The price change is calculated based on the change in the square root of the price.
+
+```
+Δp = (√(p_c / p_r) - 1) / s × 2
+```
+
+where p_c is current price and p_r is reference price.
+
+#### Volatility Decay
+
+To ensure that the dynamic fee reflects recent volatility, the Volatility Reference decays over time.
+
+```
+v_r = v_a × R / 10000
+```
+
+The decay mechanism is based on the time elapsed since the last significant trade:
+
+- If elapsed time < filter period: No change. This ignores very high-frequency trades.
+- If filter period ≤ elapsed time < decay period: The volatility reference is reduced.
+- If elapsed time ≥ decay period: The volatility reference is reset to 0. This happens if there are no significant trades for an extended period.
+
+## Max Dynamic Fee on DBC for Typescript SDK Build Curve functions
+
+If you use any of the `buildCurve` helper functions in the DBC Typescript SDK, the max dynamic fee on DBC when toggled `true` is less than or equals to 20% of the Base Fee.
+
+Example:
+- Base Fee = 1%
+- Dynamic Fee = 0.2%
+- Total Trading/LP Fee = 1.2%
+

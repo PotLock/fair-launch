@@ -1,0 +1,15 @@
+:root {
+    color-scheme: light dark;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: light-dark(#333b3c, #efefec);;
+}

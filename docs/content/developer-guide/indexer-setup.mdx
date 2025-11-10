@@ -1,0 +1,695 @@
+# Indexer Setup
+
+Learn how to set up and configure the PotLaunch indexer to track token launches, transactions, and on-chain events.
+
+## Overview
+
+The PotLaunch indexer is a backend service that monitors blockchain events and stores token information, transactions, and metadata in a PostgreSQL database. It provides a RESTful API for querying indexed data.
+
+### Architecture
+
+```
+┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Solana RPC     │────▶│   Backend    │────▶│ PostgreSQL  │
+│  Blockchain     │     │   Indexer    │     │  Database   │
+└─────────────────┘     └──────────────┘     └─────────────┘
+         │                      │                     │
+         │                      │                     │
+         ▼                      ▼                     ▼
+   On-chain Events        REST API           Indexed Data
+   - Token Creation      - Query tokens       - Tokens
+   - Transactions        - Search             - Metadata
+   - Pool Updates        - Statistics         - Transactions
+                                              - DBC Configs
+```
+
+### Key Features
+
+- **Real-time Indexing**: Monitors Solana blockchain for token events
+- **Transaction Tracking**: Records buy/sell transactions with full details
+- **Token Metadata**: Stores and indexes token metadata via IPFS
+- **DBC Configuration**: Manages Dynamic Bonding Curve parameters
+- **Multi-Launchpad Support**: Supports potlaunch and cookedpad
+- **RESTful API**: Query indexed data via HTTP endpoints
+
+## Prerequisites
+
+Before setting up the indexer, ensure you have:
+
+- **Node.js 18+** or **Bun runtime**
+- **PostgreSQL 14+** database
+- **Solana RPC endpoint** (Mainnet or Devnet)
+- **Filebase account** (for IPFS storage)
+- **Git** for cloning the repository
+
+## Installation
+
+### Step 1: Clone Repository
+
+```bash
+git clone https://github.com/PotLock/potlaunch.git
+cd potlaunch/backend
+```
+
+### Step 2: Install Dependencies
+
+Using Bun (recommended):
+```bash
+bun install
+```
+
+Using npm:
+```bash
+npm install
+```
+
+### Step 3: Configure Environment
+
+Create environment configuration:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file with your configuration:
+
+```env
+# Database Connection
+DATABASE_URL=postgresql://username:password@localhost:5432/potlaunch
+
+# Solana RPC
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+# Or use a premium RPC for better performance:
+# SOLANA_RPC_URL=https://rpc.helius.xyz/?api-key=YOUR_KEY
+
+# IPFS Storage (Filebase)
+FILEBASE_API_KEY=your_filebase_api_key
+FILEBASE_API_SECRET=your_filebase_api_secret
+FILEBASE_BUCKET_NAME=your_bucket_name
+FILEBASE_GATEWAY=https://gateway.filebase.io/ipfs/
+
+# Server Configuration
+PORT=3001
+NODE_ENV=production
+
+# Optional: Additional RPC endpoints for load balancing
+# BACKUP_RPC_URL=https://api.devnet.solana.com
+```
+
+### Step 4: Database Setup
+
+#### Create PostgreSQL Database
+
+```bash
+# Connect to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE potlaunch;
+
+# Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE potlaunch TO your_username;
+```
+
+#### Generate and Run Migrations
+
+```bash
+# Generate migration files from schema
+bun run db:generate
+
+# Apply migrations to database
+bun run db:migrate
+
+# Optional: Open Drizzle Studio to view database
+bun run db:studio
+```
+
+The database will be created with the following tables:
+- `tokens` - Main token information
+- `token_metadata` - Token metadata (URIs, social links)
+- `dbc_configs` - Dynamic Bonding Curve configurations
+- `build_curve_params` - Curve-specific parameters
+- `locked_vesting_params` - Vesting schedules
+- `base_fee_params` - Fee configurations
+- `fee_scheduler_params` - Fee scheduling
+- `rate_limiter_params` - Rate limiting parameters
+- `migration_fees` - Migration fee configurations
+- `migrated_pool_fees` - Post-migration pool fees
+- `transactions` - User transactions (buy/sell/bridge/deploy)
+
+## Configuration
+
+### Database Schema
+
+The indexer uses a normalized schema to efficiently store token and transaction data:
+
+#### Tokens Table
+
+Core token information:
+
+```typescript
+{
+  id: UUID,                    // Primary key
+  mintAddress: string,         // Solana mint address (unique)
+  name: string,                // Token name
+  symbol: string,              // Token symbol
+  description: string,         // Token description
+  totalSupply: decimal,        // Total token supply
+  decimals: integer,           // Token decimals
+  owner: string,               // Owner wallet address
+  launchpad: enum,             // 'potlaunch' | 'cookedpad'
+  tags: string[],              // Searchable tags
+  active: boolean,             // Active status
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+#### Transactions Table
+
+Transaction records:
+
+```typescript
+{
+  id: UUID,
+  userAddress: string,         // User wallet
+  txHash: string,              // Transaction hash
+  action: enum,                // 'BUY' | 'SELL' | 'BRIDGE' | 'DEPLOY'
+  baseToken: string,           // Base token address
+  quoteToken: string,          // Quote token address
+  amountIn: decimal,           // Input amount
+  amountOut: decimal,          // Output amount
+  pricePerToken: decimal,      // Price at execution
+  slippageBps: integer,        // Slippage in basis points
+  fee: decimal,                // Transaction fee
+  feeToken: string,            // Fee token
+  status: enum,                // 'pending' | 'success' | 'failed'
+  chain: enum,                 // 'SOLANA' | 'ETHEREUM' | etc.
+  poolAddress: string,         // Pool address
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+#### DBC Config Table
+
+Dynamic Bonding Curve configuration:
+
+```typescript
+{
+  id: UUID,
+  tokenId: UUID,               // Foreign key to tokens
+  quoteMint: string,           // SOL, USDC, etc.
+  buildCurveMode: integer,     // 0-3: curve type
+  totalTokenSupply: decimal,
+  migrationOption: integer,    // 0: DAMM v1, 1: DAMM v2
+  tokenBaseDecimal: integer,
+  tokenQuoteDecimal: integer,
+  dynamicFeeEnabled: boolean,
+  activationType: integer,     // 0: Slot, 1: Timestamp
+  collectFeeMode: integer,     // 0: Quote, 1: Output
+  migrationFeeOption: integer, // 0-5: LP fee options
+  tokenType: integer,          // 0: SPL, 1: Token 2022
+  partnerLpPercentage: decimal,
+  creatorLpPercentage: decimal,
+  // ... additional parameters
+}
+```
+
+### Indexer Configuration
+
+The backend uses Drizzle ORM for database operations and Hono for the API server.
+
+**Key Configuration Files:**
+
+- `db/schema.ts` - Database schema definitions
+- `db/connection.ts` - Database connection setup
+- `drizzle.config.ts` - Drizzle ORM configuration
+- `src/routes/` - API route handlers
+- `src/services/` - Business logic services
+
+## Running the Indexer
+
+### Development Mode
+
+Start the indexer with hot reload:
+
+```bash
+bun run dev
+```
+
+The server will start at `http://localhost:3001` with automatic restart on code changes.
+
+### Production Mode
+
+Run in production:
+
+```bash
+bun run start
+```
+
+### Docker Deployment (Optional)
+
+Create `Dockerfile`:
+
+```dockerfile
+FROM oven/bun:1 as base
+WORKDIR /app
+
+# Install dependencies
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
+
+# Copy source
+COPY . .
+
+# Generate Drizzle migrations
+RUN bun run db:generate
+
+EXPOSE 3001
+
+# Start server
+CMD ["bun", "run", "start"]
+```
+
+Build and run:
+
+```bash
+docker build -t potlaunch-indexer .
+docker run -p 3001:3001 --env-file .env potlaunch-indexer
+```
+
+## Data Queries and Processing
+
+### REST API Endpoints
+
+The indexer provides comprehensive REST API endpoints for querying data.
+
+#### Token Endpoints
+
+**Get All Tokens**
+```bash
+GET /api/tokens
+Query params:
+  - launchpad: 'potlaunch' | 'cookedpad'
+  - active: true | false
+  - tag: string
+  - startDate: ISO 8601 date
+  - endDate: ISO 8601 date
+```
+
+**Search Tokens**
+```bash
+GET /api/tokens/search?q=bitcoin
+Query params:
+  - q: search query (required)
+  - owner: wallet address
+  - launchpad: 'potlaunch' | 'cookedpad'
+  - active: true | false
+  - tag: string
+```
+
+**Get Popular Tokens**
+```bash
+GET /api/tokens/popular?limit=10
+Query params:
+  - limit: 1-100 (default: 10)
+  - launchpad: 'potlaunch' | 'cookedpad'
+  - active: true | false
+```
+
+**Get Token by Mint Address**
+```bash
+GET /api/tokens/mint/:address
+```
+
+**Get Tokens by Owner**
+```bash
+GET /api/tokens/address/:address
+```
+
+**Get Token Holders**
+```bash
+GET /api/tokens/holders/:mintAddress
+```
+
+#### Transaction Endpoints
+
+**Get All Transactions**
+```bash
+GET /api/transactions
+Query params:
+  - userAddress: wallet address
+  - action: 'BUY' | 'SELL' | 'BRIDGE' | 'DEPLOY'
+  - baseToken: token address
+  - quoteToken: token address
+  - status: 'pending' | 'success' | 'failed'
+  - chain: 'SOLANA' | 'ETHEREUM' | etc.
+```
+
+**Get User Transactions**
+```bash
+GET /api/transactions/user/:address
+```
+
+**Get Token Transactions**
+```bash
+GET /api/transactions/token/:address
+```
+
+**Create Transaction**
+```bash
+POST /api/transactions
+Body: {
+  userAddress: string,
+  txHash: string,
+  action: 'BUY' | 'SELL',
+  baseToken: string,
+  quoteToken: string,
+  amountIn: number,
+  amountOut: number,
+  pricePerToken: number,
+  slippageBps: number,
+  fee: number,
+  feeToken: string,
+  status: 'pending',
+  chain: 'SOLANA',
+  poolAddress: string
+}
+```
+
+**Update Transaction Status**
+```bash
+PATCH /api/transactions/:id/status
+Body: { status: 'success' | 'failed' }
+```
+
+#### Pool & DBC Endpoints
+
+**Get Pool State**
+```bash
+GET /api/halfbak/pool/state/:mintAddress
+```
+
+**Get Pool Configuration**
+```bash
+GET /api/halfbak/pool/config/:mintAddress
+```
+
+**Get Pool Metadata**
+```bash
+GET /api/halfbak/pool/metadata/:mintAddress
+```
+
+**Get Curve Progress**
+```bash
+GET /api/halfbak/pool/curve-progress/:mintAddress
+```
+
+### Query Examples
+
+#### JavaScript/TypeScript Client
+
+```typescript
+// Fetch all active potlaunch tokens
+const response = await fetch(
+  'http://localhost:3001/api/tokens?launchpad=potlaunch&active=true'
+);
+const { data: tokens } = await response.json();
+
+// Search for tokens
+const searchResponse = await fetch(
+  'http://localhost:3001/api/tokens/search?q=meme&launchpad=potlaunch'
+);
+const { data: searchResults } = await searchResponse.json();
+
+// Get user transactions
+const txResponse = await fetch(
+  `http://localhost:3001/api/transactions/user/${walletAddress}`
+);
+const { transactions } = await txResponse.json();
+
+// Get pool state
+const poolResponse = await fetch(
+  `http://localhost:3001/api/halfbak/pool/state/${mintAddress}`
+);
+const { data: poolState } = await poolResponse.json();
+```
+
+#### cURL Examples
+
+```bash
+# Get popular tokens
+curl "http://localhost:3001/api/tokens/popular?limit=5&launchpad=potlaunch"
+
+# Search tokens
+curl "http://localhost:3001/api/tokens/search?q=solana&active=true"
+
+# Get token by mint address
+curl "http://localhost:3001/api/tokens/mint/11111111111111111111111111111112"
+
+# Get user transactions
+curl "http://localhost:3001/api/transactions/user/YOUR_WALLET_ADDRESS"
+
+# Create transaction record
+curl -X POST "http://localhost:3001/api/transactions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userAddress": "YOUR_WALLET",
+    "txHash": "TRANSACTION_HASH",
+    "action": "BUY",
+    "baseToken": "TOKEN_ADDRESS",
+    "quoteToken": "SOL_ADDRESS",
+    "amountIn": 1.5,
+    "amountOut": 1000,
+    "pricePerToken": 0.0015,
+    "slippageBps": 50,
+    "fee": 0.001,
+    "feeToken": "SOL",
+    "status": "pending",
+    "chain": "SOLANA",
+    "poolAddress": "POOL_ADDRESS"
+  }'
+```
+
+### Direct Database Queries
+
+For advanced use cases, query the database directly:
+
+```typescript
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { tokens, transactions } from './db/schema';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
+
+const connectionString = process.env.DATABASE_URL!;
+const client = postgres(connectionString);
+const db = drizzle(client);
+
+// Get tokens created in the last 24 hours
+const recentTokens = await db
+  .select()
+  .from(tokens)
+  .where(
+    and(
+      eq(tokens.launchpad, 'potlaunch'),
+      gte(tokens.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+    )
+  )
+  .orderBy(desc(tokens.createdAt));
+
+// Get successful transactions for a token
+const tokenTxs = await db
+  .select()
+  .from(transactions)
+  .where(
+    and(
+      eq(transactions.baseToken, 'TOKEN_MINT_ADDRESS'),
+      eq(transactions.status, 'success')
+    )
+  )
+  .orderBy(desc(transactions.createdAt));
+```
+
+## Monitoring & Maintenance
+
+### Health Checks
+
+Check indexer health:
+
+```bash
+# Server health
+curl http://localhost:3001/
+
+# IPFS service health
+curl http://localhost:3001/api/ipfs/health
+```
+
+### Database Maintenance
+
+```bash
+# Backup database
+pg_dump potlaunch > backup_$(date +%Y%m%d).sql
+
+# Restore database
+psql potlaunch < backup_20240101.sql
+
+# Check database size
+psql -U postgres -d potlaunch -c "
+  SELECT
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+  FROM pg_tables
+  WHERE schemaname = 'public'
+  ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+"
+```
+
+### Performance Optimization
+
+**Database Indexes:**
+
+The schema automatically creates indexes on:
+- `mint_address` (unique index on tokens)
+- Foreign key relationships
+- Common query fields
+
+**Additional indexes for better performance:**
+
+```sql
+-- Index for search queries
+CREATE INDEX idx_tokens_name_symbol ON tokens USING gin(to_tsvector('english', name || ' ' || symbol));
+
+-- Index for transaction queries
+CREATE INDEX idx_transactions_user_address ON transactions(user_address);
+CREATE INDEX idx_transactions_base_token ON transactions(base_token);
+CREATE INDEX idx_transactions_created_at ON transactions(created_at DESC);
+
+-- Index for tag queries
+CREATE INDEX idx_tokens_tags ON tokens USING gin(tags);
+```
+
+### Logging
+
+Monitor indexer logs:
+
+```bash
+# View logs (if using PM2)
+pm2 logs potlaunch-indexer
+
+# Or use journald (Linux)
+journalctl -u potlaunch-indexer -f
+
+# Or Docker logs
+docker logs -f potlaunch-indexer
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Database Connection Failed**
+```bash
+# Check PostgreSQL is running
+sudo systemctl status postgresql
+
+# Verify connection string
+psql $DATABASE_URL
+
+# Check firewall rules
+sudo ufw status
+```
+
+**RPC Rate Limiting**
+```
+Error: 429 Too Many Requests
+```
+Solution: Use a premium RPC provider (Helius, QuickNode, or Triton)
+
+**IPFS Upload Fails**
+```
+Error: Failed to upload to IPFS
+```
+Solution: Verify Filebase credentials and bucket permissions
+
+**Migration Errors**
+```bash
+# Reset database (⚠️ DESTRUCTIVE)
+bun run db:push --force
+
+# Or manually fix migrations
+psql -d potlaunch -c "DELETE FROM __drizzle_migrations WHERE id > X;"
+bun run db:migrate
+```
+
+### Debug Mode
+
+Enable detailed logging:
+
+```env
+LOG_LEVEL=debug
+NODE_ENV=development
+```
+
+## Advanced Configuration
+
+### Custom Indexing
+
+Extend the indexer to track custom events:
+
+```typescript
+// src/services/customIndexer.ts
+import { Connection } from '@solana/web3.js';
+import { db } from '../db/connection';
+import { tokens } from '../db/schema';
+
+export class CustomIndexer {
+  constructor(private connection: Connection) {}
+
+  async indexCustomEvents() {
+    // Monitor specific program accounts
+    const programId = 'YOUR_PROGRAM_ID';
+
+    this.connection.onProgramAccountChange(
+      programId,
+      async (accountInfo) => {
+        // Process account change
+        console.log('Account changed:', accountInfo);
+
+        // Store in database
+        await db.insert(tokens).values({
+          // ... your data
+        });
+      }
+    );
+  }
+}
+```
+
+### Webhook Integration
+
+Add webhooks for real-time notifications:
+
+```typescript
+// src/services/webhookService.ts
+export async function notifyTokenCreation(token: Token) {
+  const webhookUrl = process.env.WEBHOOK_URL;
+
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event: 'token.created',
+      data: token
+    })
+  });
+}
+```
+
+
+## Next Steps
+
+- [PotLaunch SDK](/docs/developer-guide/potlaunch-sdk) - Integrate with the SDK
+- [Integrations Guide](/docs/developer-guide/integrations-guide) - API integrations
+- [White Label Solutions](/docs/developer-guide/white-label-solutions) - Build your own launchpad

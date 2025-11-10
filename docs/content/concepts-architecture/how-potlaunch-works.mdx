@@ -1,0 +1,315 @@
+import { Callout } from 'nextra/components'
+
+# How Potlaunch Works
+
+<Callout type="info">
+POTLAUNCH is a decentralized token launch platform built on Solana that enables fair, transparent, and accessible token creation through innovative bonding curve mechanisms and cross-chain capabilities.
+</Callout>
+
+## Overview
+
+POTLAUNCH revolutionizes token launches by combining:
+- **Smart Contract Automation** - Fully automated launch and trading mechanisms
+- **Dynamic Pricing** - Mathematical bonding curves for fair price discovery
+- **Cross-Chain Integration** - Bridge tokens across multiple blockchains
+- **Anti-Rug Protection** - Built-in safety mechanisms to protect participants
+
+## Core Components
+
+### 1. Token Launch Engine
+
+The launch engine handles all aspects of token creation and initialization:
+
+```
+User Input → Validation → Token Creation → Launch Configuration → Price Discovery
+```
+
+**Key Features:**
+- Automated SPL token creation
+- Configurable launch parameters
+- Built-in metadata management
+- Integrated liquidity provision
+
+### 2. Bonding Curve Mechanism
+
+POTLAUNCH uses mathematical bonding curves to determine token prices dynamically:
+
+```
+Price = f(Supply, Reserve, Curve Parameters)
+```
+
+**Benefits:**
+- Continuous liquidity
+- Fair price discovery
+- No order books needed
+- Predictable pricing
+
+**Supported Curves:**
+- Linear curves
+- Exponential curves
+- Logarithmic curves
+- Custom curves
+
+### 3. Liquidity Management System
+
+Automated liquidity management ensures smooth trading and DEX migration:
+
+**Process Flow:**
+```
+Initial Launch → Bonding Curve Trading → Graduation Threshold → DEX Migration
+```
+
+**Features:**
+- Automatic liquidity pool creation
+- Graduated DEX migration (Raydium/Meteora)
+- Locked liquidity for security
+- LP token distribution
+
+### 4. Cross-Chain Bridge
+
+Enables token bridging across multiple blockchains:
+
+**Supported Networks:**
+- Solana (native)
+- NEAR Protocol
+- Ethereum (planned)
+- Base/Cyber (planned)
+
+**Bridge Features:**
+- Fast cross-chain transfers
+- Low bridging fees
+- Secure multi-sig validation
+- Automatic token wrapping/unwrapping
+
+## How It Works: Step by Step
+
+### Phase 1: Token Creation
+
+1. **User Submits Token Details**
+   - Token name, symbol, description
+   - Logo and metadata
+   - Social links and documentation
+
+2. **Smart Contract Initialization**
+   ```typescript
+   // Simplified example
+   const token = await createToken({
+     name: "My Token",
+     symbol: "MTK",
+     decimals: 9,
+     supply: 1_000_000_000,
+   });
+   ```
+
+3. **Launch Configuration**
+   - Bonding curve type selection
+   - Initial pricing parameters
+   - Trading fee structure
+   - Graduation threshold
+
+### Phase 2: Price Discovery
+
+1. **Initial Trading Phase**
+   - Tokens sold via bonding curve
+   - Price increases with demand
+   - Continuous liquidity available
+
+2. **Dynamic Pricing**
+   ```
+   Current Price = Base Price × (1 + Supply / Curve Factor)^Curve Power
+   ```
+
+3. **Market Making**
+   - Automatic buy/sell execution
+   - No slippage protection needed
+   - Fair pricing for all participants
+
+### Phase 3: Graduation & DEX Migration
+
+1. **Threshold Achievement**
+   - Bonding curve reaches target market cap
+   - Sufficient liquidity accumulated
+   - Community validation passed
+
+2. **Liquidity Migration**
+   ```
+   Bonding Curve → Extract Liquidity → Create DEX Pool → Lock LP Tokens
+   ```
+
+3. **DEX Trading**
+   - Token listed on Raydium/Meteora
+   - Free market trading begins
+   - Liquidity permanently locked
+
+### Phase 4: Cross-Chain Expansion
+
+1. **Bridge Initialization**
+   - Token approved for bridging
+   - Wrapped token contracts deployed
+   - Bridge validators activated
+
+2. **Cross-Chain Transfers**
+   ```
+   Solana Token → Lock → Mint Wrapped Token → Destination Chain
+   ```
+
+3. **Multi-Chain Presence**
+   - Trade on multiple DEXs
+   - Expanded user base
+   - Increased liquidity
+
+## Security Architecture
+
+### Smart Contract Security
+
+**Key Security Features:**
+- Audited smart contracts
+- Time-locked operations
+- Multi-signature requirements
+- Emergency pause mechanisms
+
+### Anti-Rug Mechanisms
+
+1. **Liquidity Locking**
+   - Automatic LP token burning
+   - Time-locked withdrawals
+   - Transparent locking periods
+
+2. **Supply Controls**
+   - Fixed token supply
+   - No mint authority
+   - No freeze authority
+
+3. **Fair Launch Guarantees**
+   - Equal access for all participants
+   - No pre-sales or insider allocations
+   - Transparent pricing algorithms
+
+### Audit & Verification
+
+- Third-party security audits
+- Open-source code verification
+- Community bug bounty program
+- Continuous security monitoring
+
+## Technical Stack
+
+### Blockchain Layer
+- **Solana** - Primary blockchain
+- **Anchor Framework** - Smart contract development
+- **SPL Token Program** - Token standard
+
+### Application Layer
+- **Next.js** - Frontend framework
+- **TypeScript** - Type-safe development
+- **Solana Web3.js** - Blockchain interaction
+
+### Infrastructure
+- **RPC Nodes** - Blockchain connectivity
+- **IPFS** - Decentralized metadata storage
+- **Indexers** - Data querying and caching
+
+## Integration Points
+
+### For Developers
+
+```typescript
+import { PotlaunchSDK } from '@potlaunch/sdk';
+
+// Initialize SDK
+const potlaunch = new PotlaunchSDK({
+  connection: solanaConnection,
+  wallet: userWallet,
+});
+
+// Create a launch
+const launch = await potlaunch.createLaunch({
+  // ... parameters
+});
+
+// Buy tokens
+await potlaunch.buyTokens({
+  launchAddress: launch.address,
+  amount: 1000,
+});
+```
+
+### For Integrators
+
+- REST API for platform integration
+- Webhook events for real-time updates
+- White-label solutions for custom branding
+- Smart contract interfaces for direct interaction
+
+## Performance & Scalability
+
+### Transaction Speed
+- **Solana TPS** - 65,000+ transactions per second
+- **Block Time** - ~400ms confirmation
+- **Finality** - 13 seconds average
+
+### Cost Efficiency
+- **Launch Costs** - ~0.1 SOL average
+- **Trading Fees** - 0.5-1% configurable
+- **Bridge Fees** - Minimal cross-chain costs
+
+### Scalability Features
+- Parallel transaction processing
+- Efficient state compression
+- Optimized smart contract design
+- Cached data indexing
+
+## Economic Model
+
+### Fee Structure
+
+1. **Launch Fees**
+   - Platform fee: 0.5-1% of raised funds
+   - Creator fee: Configurable by creator
+   - DEX migration fee: Flat rate
+
+2. **Trading Fees**
+   - Buy fee: 0.5-1% configurable
+   - Sell fee: 0.5-1% configurable
+   - Fee distribution to stakeholders
+
+3. **Bridge Fees**
+   - Cross-chain transfer fee: Minimal
+   - Validator rewards: From bridge fees
+   - Protocol sustainability fee
+
+### Value Accrual
+
+- Platform fees support ecosystem development
+- Liquidity providers earn trading fees
+- Token creators earn ongoing royalties
+- Community members benefit from ecosystem growth
+
+## Future Enhancements
+
+### Roadmap
+
+1. **Q1 2024**
+   - Advanced bonding curve types
+   - Enhanced analytics dashboard
+   - Mobile app launch
+
+2. **Q2 2024**
+   - Ethereum bridge integration
+   - Governance token launch
+   - DAO formation
+
+3. **Q3 2024**
+   - Multi-chain DEX aggregation
+   - Advanced trading features
+   - Institutional tools
+
+4. **Q4 2024**
+   - Layer 2 integration
+   - Derivatives support
+   - Global expansion
+
+<Callout type="success">
+Learn more about specific components in the following sections: [Launch Flow Architecture](/concepts-architecture/launch-flow-architecture), [Token Lifecycle](/concepts-architecture/token-lifecycle), and [Anti-rug Mechanisms](/concepts-architecture/anti-rug-mechanisms).
+</Callout>
+

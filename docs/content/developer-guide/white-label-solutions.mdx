@@ -1,0 +1,455 @@
+# White Label Solutions
+
+Build your own token launch platform using PotLaunch's open-source infrastructure.
+
+> **Source Code**: [POTLAUNCH GitHub Repository](https://github.com/PotLock/potlaunch)
+
+## Overview
+
+PotLaunch provides a complete white label solution for creating custom token launch platforms. Fork the repository and customize it to match your brand, community, or specific use case.
+
+### What You Get
+
+- **Full-stack application** - React frontend + Node.js backend + Solana contracts
+- **Cross-chain support** - Solana, NEAR, Base, Ethereum via Omnibridge
+- **Multiple launch mechanisms** - Bonding curves, Dutch auctions, fair launch
+- **Wallet integration** - Phantom, Backpack, and other Solana wallets
+- **Complete documentation** - User guides, developer docs, contract specs
+- **Production-ready** - Battle-tested infrastructure
+
+## How to Build a White Label with POTLAUNCH
+
+### Step 1: Fork and Clone
+
+```bash
+# Clone the repository
+git clone https://github.com/PotLock/potlaunch.git
+cd potlaunch
+
+# Or fork it first on GitHub, then clone your fork
+git clone https://github.com/YOUR_USERNAME/potlaunch.git
+cd potlaunch
+```
+
+### Step 2: Install Dependencies
+
+```bash
+# Frontend
+cd frontend
+npm install
+
+# Backend
+cd ../backend
+npm install
+
+# Solana contracts (if modifying)
+cd ../solana-contract
+npm install
+```
+
+### Step 3: Configure Environment
+
+```bash
+# Frontend configuration
+cp frontend/.env.example frontend/.env
+
+# Backend configuration
+cp backend/.env.example backend/.env
+```
+
+Edit the `.env` files with your settings:
+
+**Frontend `.env`**:
+```env
+NEXT_PUBLIC_APP_NAME=Your Platform Name
+NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_API_URL=https://your-api-domain.com
+NEXT_PUBLIC_NETWORK=mainnet-beta
+```
+
+**Backend `.env`**:
+```env
+RPC_URL=https://api.mainnet-beta.solana.com
+DATABASE_URL=postgresql://user:password@localhost:5432/yourdb
+JWT_SECRET=your-secret-key
+```
+
+### Step 4: Customize Branding
+
+#### Update App Metadata
+
+Edit `frontend/src/config/app.ts`:
+
+```typescript
+export const appConfig = {
+  name: 'Your Platform',
+  description: 'Your custom token launch platform',
+  url: 'https://yourplatform.com',
+  logo: '/your-logo.png',
+  favicon: '/your-favicon.ico',
+
+  // Social links
+  twitter: 'https://twitter.com/yourhandle',
+  discord: 'https://discord.gg/yourinvite',
+  telegram: 'https://t.me/yourchannel',
+
+  // Colors
+  theme: {
+    primary: '#your-color',
+    secondary: '#your-color',
+    accent: '#your-color'
+  }
+};
+```
+
+#### Update Styles
+
+Edit `frontend/src/styles/globals.css`:
+
+```css
+:root {
+  --color-primary: #your-primary-color;
+  --color-secondary: #your-secondary-color;
+  --color-accent: #your-accent-color;
+  --font-main: 'Your Font', sans-serif;
+}
+```
+
+#### Replace Assets
+
+```bash
+# Logo and branding
+frontend/public/logo.png         # Main logo
+frontend/public/logo-dark.png    # Dark mode logo
+frontend/public/favicon.ico      # Favicon
+frontend/public/og-image.png     # Social share image
+```
+
+### Step 5: Configure Smart Contracts
+
+If you need custom contract logic, modify the Solana programs:
+
+```bash
+cd solana-contract
+
+# Update program configurations
+anchor build
+
+# Deploy to devnet first for testing
+anchor deploy --provider.cluster devnet
+
+# After testing, deploy to mainnet
+anchor deploy --provider.cluster mainnet
+```
+
+Update contract addresses in your frontend config:
+
+```typescript
+// frontend/src/config/contracts.ts
+export const CONTRACTS = {
+  bondingCurve: 'YOUR_PROGRAM_ID',
+  tokenFactory: 'YOUR_FACTORY_ID',
+  // ... other contract addresses
+};
+```
+
+### Step 6: Local Development
+
+Start all services:
+
+```bash
+# Terminal 1 - Frontend
+cd frontend
+npm run dev
+
+# Terminal 2 - Backend
+cd backend
+npm run dev
+
+# Terminal 3 - Local Solana validator (optional)
+solana-test-validator
+```
+
+Access your app at `http://localhost:3000`
+
+## 1-Click Deploy on Vercel
+
+### Quick Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/PotLock/potlaunch)
+
+### Manual Vercel Setup
+
+1. **Connect Repository**
+   - Go to [Vercel](https://vercel.com)
+   - Click "Add New Project"
+   - Import your forked repository
+
+2. **Configure Build Settings**
+   ```
+   Framework Preset: Next.js
+   Root Directory: frontend
+   Build Command: npm run build
+   Output Directory: .next
+   Install Command: npm install
+   ```
+
+3. **Set Environment Variables**
+
+   Add these in Vercel dashboard under Settings → Environment Variables:
+
+   ```
+   NEXT_PUBLIC_APP_NAME=Your Platform Name
+   NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+   NEXT_PUBLIC_API_URL=https://your-api-domain.com
+   NEXT_PUBLIC_NETWORK=mainnet-beta
+   ```
+
+4. **Deploy Backend**
+
+   For backend services, deploy separately:
+   - Use Vercel Serverless Functions
+   - Or deploy to Railway, Render, or your preferred platform
+
+5. **Configure Custom Domain**
+   - Add your domain in Vercel dashboard
+   - Update DNS records as instructed
+   - Enable SSL (automatic with Vercel)
+
+## Customization Options
+
+### Launch Mechanisms
+
+Choose which launch mechanisms to enable:
+
+```typescript
+// frontend/src/config/features.ts
+export const features = {
+  bondingCurves: true,      // Enable bonding curve launches
+  dutchAuctions: true,      // Enable Dutch auction launches
+  fairLaunch: true,         // Enable fair launch mechanism
+  crossChain: true,         // Enable cross-chain features
+  governance: false,        // Enable governance features
+};
+```
+
+### Fee Structure
+
+Customize platform fees:
+
+```typescript
+// backend/src/config/fees.ts
+export const feeConfig = {
+  platformFee: 0.02,        // 2% platform fee
+  creatorFee: 0.01,         // 1% creator fee
+  liquidityFee: 0.02,       // 2% liquidity fee
+  treasuryAddress: 'YOUR_TREASURY_WALLET',
+};
+```
+
+### Token Parameters
+
+Set default token launch parameters:
+
+```typescript
+// frontend/src/config/defaults.ts
+export const tokenDefaults = {
+  initialSupply: '1000000000',
+  decimals: 9,
+
+  bondingCurve: {
+    targetPrice: '1.0',
+    targetSupply: '500000000',
+    curve: 'exponential'  // linear, exponential, sigmoid
+  },
+
+  dutchAuction: {
+    startPrice: '10.0',
+    endPrice: '0.1',
+    duration: 86400  // 24 hours
+  }
+};
+```
+
+### UI Customization
+
+#### Navigation Menu
+
+```typescript
+// frontend/src/components/layout/Navigation.tsx
+export const menuItems = [
+  { label: 'Launch', href: '/launch' },
+  { label: 'Explore', href: '/explore' },
+  { label: 'Portfolio', href: '/portfolio' },
+  // Add your custom menu items
+];
+```
+
+#### Home Page Sections
+
+```typescript
+// frontend/src/pages/index.tsx
+export default function HomePage() {
+  return (
+    <>
+      <Hero />
+      <Features />
+      <Stats />
+      {/* Add your custom sections */}
+    </>
+  );
+}
+```
+
+### Advanced Customization
+
+#### Custom Token Types
+
+Add custom token types beyond standard SPL tokens:
+
+```typescript
+// backend/src/services/token/types.ts
+export enum CustomTokenType {
+  Standard = 'standard',
+  NFTCollection = 'nft-collection',
+  Governance = 'governance',
+  // Add your custom types
+}
+```
+
+#### Custom Analytics
+
+Integrate your analytics provider:
+
+```typescript
+// frontend/src/lib/analytics.ts
+export const trackEvent = (event: string, data?: any) => {
+  // Google Analytics
+  gtag('event', event, data);
+
+  // Mixpanel
+  mixpanel.track(event, data);
+
+  // Add your custom tracking
+};
+```
+
+## Project Structure
+
+```
+potlaunch/
+├── frontend/              # Next.js frontend application
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── pages/         # Next.js pages
+│   │   ├── styles/        # CSS/Tailwind styles
+│   │   ├── config/        # Configuration files
+│   │   └── lib/           # Utilities and helpers
+│   └── public/            # Static assets
+│
+├── backend/               # Node.js backend services
+│   ├── src/
+│   │   ├── routes/        # API routes
+│   │   ├── services/      # Business logic
+│   │   ├── models/        # Database models
+│   │   └── config/        # Server configuration
+│   └── tests/             # Backend tests
+│
+├── solana-contract/       # Anchor smart contracts
+│   ├── programs/          # Solana programs
+│   │   ├── bonding-curve/ # Bonding curve program
+│   │   └── token-factory/ # Token factory program
+│   └── tests/             # Contract tests
+│
+└── docs/                  # Documentation
+    ├── user-guide/        # User documentation
+    ├── developer-guide/   # Developer documentation
+    └── contracts/         # Contract documentation
+```
+
+## Testing Your White Label
+
+### Frontend Testing
+
+```bash
+cd frontend
+
+# Run unit tests
+npm run test
+
+# Run E2E tests
+npm run test:e2e
+
+# Run Storybook
+npm run storybook
+```
+
+### Backend Testing
+
+```bash
+cd backend
+
+# Run unit tests
+npm run test
+
+# Run integration tests
+npm run test:integration
+
+# Test API endpoints
+npm run test:api
+```
+
+### Contract Testing
+
+```bash
+cd solana-contract
+
+# Run contract tests
+anchor test
+
+# Test on localnet
+anchor test --skip-local-validator
+```
+
+## Production Deployment
+
+### Pre-deployment Checklist
+
+- [ ] Update all environment variables for production
+- [ ] Replace test wallet addresses with production wallets
+- [ ] Configure production RPC endpoints
+- [ ] Set up production database
+- [ ] Update contract addresses to mainnet
+- [ ] Test all critical user flows
+- [ ] Set up monitoring and error tracking
+- [ ] Configure rate limiting
+- [ ] Set up backup systems
+- [ ] Prepare rollback plan
+
+### Recommended Infrastructure
+
+**Frontend**: Vercel, Netlify, or Cloudflare Pages
+**Backend**: Railway, Render, or AWS
+**Database**: PostgreSQL on Supabase, Railway, or RDS
+**Monitoring**: Sentry, DataDog, or New Relic
+**Analytics**: Google Analytics, Mixpanel, or PostHog
+
+## Support & Resources
+
+### Documentation
+- [Complete Documentation](https://docs.potlaunch.com)
+- [User Guides](https://docs.potlaunch.com/docs/user-guide/intro)
+- [Developer Guide](https://docs.potlaunch.com/docs/developer-guide/potlaunch-sdk)
+- [Contract Documentation](https://docs.potlaunch.com/docs/contracts/core-contracts)
+
+### Community & Support
+- [Discord Community](https://discord.gg/potlock)
+- [Twitter](https://twitter.com/PotLock_)
+- [Newsletter](https://subscribe.potlock.org)
+- [Issue Tracker](https://github.com/PotLock/potlaunch/issues)
+
+### Live Examples
+- [PotLaunch Production](https://potlaunch.com/)
+- [Testnet Demo](https://testnet.potlaunch.com/)
+- [Staging Environment](https://staging.potlaunch.com/)
+
