@@ -525,6 +525,7 @@ export default function PreviewDeployment({
         website: sanitizedWebsite || "",
         twitter: sanitizedTwitter || "",
         telegram: sanitizedTelegram || "",
+        tags: tokenInfo.tags || [],
         tokenConfig,
       };
 
@@ -769,7 +770,21 @@ export default function PreviewDeployment({
                     <span className="text-sm text-gray-600">Description:</span>
                     <p className="font-medium">{formData.tokenInfo.description || 'No description'}</p>
                   </div>
-                  
+                  {formData.tokenInfo.tags && formData.tokenInfo.tags.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <span className="text-sm text-gray-600">Tags:</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.tokenInfo.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

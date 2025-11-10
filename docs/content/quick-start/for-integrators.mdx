@@ -1,0 +1,374 @@
+import { Callout, Steps, Tabs } from 'nextra/components'
+
+# Quick Start - For Integrators
+
+<Callout type="info">
+Want to integrate POTLAUNCH into your platform or launch a white-label version? This guide will help you get started.
+</Callout>
+
+## Integration Options
+
+POTLAUNCH offers multiple integration approaches to fit your needs:
+
+### 1. SDK Integration
+Integrate token launch functionality directly into your application using our TypeScript SDK.
+
+### 2. White Label Solution
+Deploy a fully-branded version of POTLAUNCH with your own domain and branding.
+
+### 3. API Integration
+Use our REST API to integrate launch functionality without using our SDK.
+
+### 4. Smart Contract Integration
+Interact directly with POTLAUNCH smart contracts for maximum flexibility.
+
+## Quick Integration Guide
+
+<Steps>
+
+### Choose Your Integration Type
+
+Decide which integration approach best fits your needs:
+
+- **SDK Integration** - Best for TypeScript/JavaScript applications
+- **White Label** - Best for launching your own branded platform
+- **API Integration** - Best for non-JavaScript applications
+- **Contract Integration** - Best for custom smart contract integrations
+
+### Set Up Your Environment
+
+<Tabs items={['SDK', 'White Label', 'API', 'Contract']}>
+  <Tabs.Tab>
+  ```bash
+  npm install @potlaunch/sdk
+  ```
+  
+  Initialize the SDK:
+  ```typescript
+  import { PotlaunchSDK } from '@potlaunch/sdk';
+  
+  const potlaunch = new PotlaunchSDK({
+    connection: yourConnection,
+    wallet: yourWallet,
+  });
+  ```
+  </Tabs.Tab>
+  
+  <Tabs.Tab>
+  ```bash
+  git clone https://github.com/PotLock/potlaunch-whitelabel
+  cd potlaunch-whitelabel
+  npm install
+  ```
+  
+  Configure your branding:
+  ```typescript
+  // config/branding.ts
+  export const branding = {
+    name: 'Your Platform',
+    logo: '/your-logo.png',
+    colors: {
+      primary: '#your-color',
+    },
+  };
+  ```
+  </Tabs.Tab>
+  
+  <Tabs.Tab>
+  ```bash
+  # Get your API key
+  curl -X POST https://api.potlaunch.com/v1/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{"email": "your@email.com"}'
+  ```
+  
+  Make API calls:
+  ```bash
+  curl https://api.potlaunch.com/v1/launches \
+    -H "Authorization: Bearer YOUR_API_KEY"
+  ```
+  </Tabs.Tab>
+  
+  <Tabs.Tab>
+  ```bash
+  # Clone the contracts repository
+  git clone https://github.com/PotLock/potlaunch-contracts
+  
+  # Install Anchor
+  cargo install --git https://github.com/coral-xyz/anchor anchor-cli
+  ```
+  
+  Interact with contracts:
+  ```typescript
+  import * as anchor from '@coral-xyz/anchor';
+  import { Program } from '@coral-xyz/anchor';
+  import { Potlaunch } from '../target/types/potlaunch';
+  
+  const program = anchor.workspace.Potlaunch as Program<Potlaunch>;
+  ```
+  </Tabs.Tab>
+</Tabs>
+
+### Configure Your Integration
+
+Set up your integration with the appropriate configuration:
+
+```typescript
+// For SDK Integration
+const config = {
+  network: 'mainnet-beta',
+  rpcUrl: 'YOUR_RPC_URL',
+  apiKey: 'YOUR_API_KEY',
+  webhooks: {
+    onLaunchCreated: 'https://your-domain.com/webhooks/launch-created',
+    onTokenPurchase: 'https://your-domain.com/webhooks/token-purchase',
+  },
+};
+
+const potlaunch = new PotlaunchSDK(config);
+```
+
+### Test Your Integration
+
+Before going live, test your integration thoroughly:
+
+```typescript
+// Use devnet for testing
+const testConfig = {
+  ...config,
+  network: 'devnet',
+};
+
+// Create a test launch
+const testLaunch = await potlaunch.createLaunch({
+  name: 'Test Token',
+  symbol: 'TEST',
+  // ... test parameters
+});
+
+// Verify launch was created successfully
+console.log('Test launch created:', testLaunch.launchAddress);
+```
+
+### Go Live
+
+Once testing is complete, switch to mainnet:
+
+```typescript
+// Switch to mainnet
+const prodConfig = {
+  ...config,
+  network: 'mainnet-beta',
+};
+
+const potlaunch = new PotlaunchSDK(prodConfig);
+```
+
+</Steps>
+
+## White Label Setup
+
+### Custom Branding
+
+Configure your platform's branding:
+
+```typescript
+// config/branding.ts
+export const branding = {
+  // Basic Information
+  name: 'Your Launchpad',
+  tagline: 'Launch tokens your way',
+  
+  // Visual Identity
+  logo: '/assets/logo.png',
+  favicon: '/assets/favicon.ico',
+  
+  // Color Scheme
+  colors: {
+    primary: '#6366f1',
+    secondary: '#8b5cf6',
+    accent: '#ec4899',
+    background: '#0f172a',
+  },
+  
+  // Social Links
+  social: {
+    twitter: 'https://twitter.com/yourplatform',
+    discord: 'https://discord.gg/yourserver',
+    github: 'https://github.com/yourorg',
+  },
+  
+  // Custom Domain
+  domain: 'launch.yourdomain.com',
+};
+```
+
+### Fee Configuration
+
+Set up your fee structure:
+
+```typescript
+// config/fees.ts
+export const feeConfig = {
+  // Platform fees (in basis points, 100 = 1%)
+  platformFee: 100, // 1% platform fee
+  
+  // Creator fees
+  creatorFee: 50, // 0.5% creator fee
+  
+  // Fee recipients
+  platformFeeRecipient: 'YOUR_WALLET_ADDRESS',
+  
+  // Fee splits
+  splits: [
+    { address: 'WALLET_1', percentage: 70 }, // 70% to wallet 1
+    { address: 'WALLET_2', percentage: 30 }, // 30% to wallet 2
+  ],
+};
+```
+
+### Custom Features
+
+Enable or disable features for your platform:
+
+```typescript
+// config/features.ts
+export const features = {
+  enableBondingCurves: true,
+  enableDutchAuctions: true,
+  enableCrossChainBridge: true,
+  enableLiquidityMigration: true,
+  enableAdvancedTrading: true,
+  
+  // Custom features
+  requireKYC: false,
+  enableWhitelist: true,
+  customAntiRugMechanisms: true,
+};
+```
+
+## Integration Examples
+
+### Embedded Launch Widget
+
+Embed a launch widget in your application:
+
+```typescript
+import { PotlaunchWidget } from '@potlaunch/widget';
+
+function MyApp() {
+  return (
+    <PotlaunchWidget
+      theme="dark"
+      defaultLaunchType="bonding-curve"
+      onLaunchCreated={(launch) => {
+        console.log('Launch created:', launch);
+      }}
+    />
+  );
+}
+```
+
+### Custom Launch Flow
+
+Build a custom launch flow with your own UI:
+
+```typescript
+import { usePotlaunch } from '@potlaunch/react';
+
+function CustomLaunchFlow() {
+  const { createLaunch, isLoading } = usePotlaunch();
+  
+  const handleLaunch = async (formData) => {
+    const launch = await createLaunch({
+      name: formData.name,
+      symbol: formData.symbol,
+      // ... other parameters
+    });
+    
+    // Handle success
+    router.push(`/launch/${launch.launchAddress}`);
+  };
+  
+  return (
+    <YourCustomUI onSubmit={handleLaunch} loading={isLoading} />
+  );
+}
+```
+
+## Webhook Integration
+
+### Setting Up Webhooks
+
+Configure webhooks to receive real-time updates:
+
+```typescript
+// config/webhooks.ts
+export const webhooks = {
+  endpoints: {
+    launchCreated: 'https://your-api.com/webhooks/launch-created',
+    tokenPurchase: 'https://your-api.com/webhooks/token-purchase',
+    liquidityMigrated: 'https://your-api.com/webhooks/liquidity-migrated',
+  },
+  secret: 'your-webhook-secret',
+};
+```
+
+### Handling Webhook Events
+
+```typescript
+import { verifyWebhookSignature } from '@potlaunch/sdk';
+
+app.post('/webhooks/launch-created', async (req, res) => {
+  // Verify webhook signature
+  const isValid = verifyWebhookSignature(
+    req.body,
+    req.headers['x-potlaunch-signature'],
+    process.env.WEBHOOK_SECRET
+  );
+  
+  if (!isValid) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  // Process the event
+  const { launch } = req.body;
+  console.log('New launch created:', launch);
+  
+  // Your custom logic here
+  await notifyUsers(launch);
+  await updateDatabase(launch);
+  
+  res.status(200).send('OK');
+});
+```
+
+## Next Steps
+
+<Callout type="success">
+Ready to build? Check out our comprehensive integration guides and white label documentation.
+</Callout>
+
+### Learn More
+
+- [White Label Solutions](/developer-guide/white-label-solutions) - Complete white label guide
+- [Integrations Guide](/developer-guide/integrations-guide) - Detailed integration patterns
+- [Smart Contract API](/developer-guide/smart-contract-api) - Direct contract integration
+- [POTLAUNCH SDK](/developer-guide/potlaunch-sdk) - Full SDK documentation
+
+### Support
+
+- Join our integrator Discord channel
+- Schedule a call with our integration team
+- Access priority support for white label partners
+
+### Enterprise Options
+
+For enterprise integrations and custom requirements:
+- Custom SLA agreements
+- Dedicated support channel
+- Custom feature development
+- On-premise deployment options
+
+Contact us at [partners@potlaunch.com](mailto:partners@potlaunch.com)
+

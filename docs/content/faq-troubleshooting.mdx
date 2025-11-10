@@ -1,0 +1,498 @@
+import { Callout } from 'nextra/components'
+
+# FAQ & Troubleshooting
+
+<Callout type="info">
+Find answers to common questions and solutions to frequent issues. Can't find what you're looking for? Join our [Discord](https://discord.gg/potlock) for help!
+</Callout>
+
+## Frequently Asked Questions
+
+### General Questions
+
+#### What is POTLAUNCH?
+
+POTLAUNCH is a decentralized token launch platform built on Solana that enables fair, transparent, and accessible token creation through innovative bonding curve mechanisms and cross-chain capabilities.
+
+#### How is POTLAUNCH different from other launchpads?
+
+**Key Differences:**
+- ✅ **No Pre-sales** - Everyone starts at the same price
+- ✅ **Automatic Liquidity** - Bonding curve provides instant liquidity
+- ✅ **Permanent Lock** - LP tokens are burned, not locked
+- ✅ **Anti-Rug Protection** - Built-in safety mechanisms
+- ✅ **Cross-Chain** - Bridge tokens across multiple chains
+- ✅ **Fair Launch** - No insider advantages
+
+#### Is POTLAUNCH safe?
+
+Yes! We implement multiple security measures:
+- Audited smart contracts
+- Revoked mint/freeze authorities
+- Permanent liquidity locks
+- Anti-manipulation protections
+- Continuous monitoring
+
+See our [Security](/security) documentation for details.
+
+#### What are the fees?
+
+**Launch Fees:**
+- Platform fee: 1% of raised funds
+- Creator fee: 0-2% (configurable)
+
+**Trading Fees:**
+- Buy/Sell: 0.5-1% (configurable)
+- Bridge: 0.1%
+
+No hidden fees!
+
+### For Users
+
+#### How do I launch a token?
+
+<Callout type="success">
+Follow our [Token Launch Guide](/user-guide/token-launch-guide) for step-by-step instructions!
+</Callout>
+
+Quick steps:
+1. Connect your wallet
+2. Click "Launch Token"
+3. Fill in token details
+4. Configure launch settings
+5. Confirm and launch!
+
+#### What wallet do I need?
+
+Supported wallets:
+- Phantom (Recommended)
+- Backpack
+- Solflare
+- Ledger (Hardware wallet)
+
+#### How much SOL do I need?
+
+**For Launching:**
+- Token creation: ~0.1 SOL
+- Initial liquidity: Optional (10+ SOL recommended)
+
+**For Trading:**
+- Transaction fees: ~0.00001 SOL per transaction
+- Trade amount: Any amount you want to invest
+
+#### Can I edit my token after launch?
+
+You can update:
+- ✅ Token metadata (description, links)
+- ✅ Token image
+- ✅ Social links
+
+You cannot change:
+- ❌ Token name/symbol
+- ❌ Total supply
+- ❌ Bonding curve parameters
+- ❌ Fee structure (after launch)
+
+#### When will my token graduate to DEX?
+
+Tokens graduate when they meet the following criteria:
+- Market cap reaches threshold (typically 100K SOL)
+- Minimum trading volume achieved
+- Minimum number of holders
+- Minimum age (24 hours)
+
+See [Token Lifecycle](/concepts-architecture/token-lifecycle) for details.
+
+#### What happens to my tokens after graduation?
+
+After graduation:
+- Trading moves to Raydium/Meteora
+- Bonding curve is disabled
+- Liquidity is permanently locked
+- Free market pricing begins
+- Cross-chain bridging enabled
+
+#### Can I get my SOL back?
+
+If you bought tokens, you can:
+- Sell them back to the bonding curve (before graduation)
+- Sell them on DEX (after graduation)
+
+Note: Prices fluctuate based on supply and demand.
+
+### For Developers
+
+#### Where can I find the SDK?
+
+Check out our [POTLAUNCH SDK](/developer-guide/potlaunch-sdk) documentation.
+
+Install:
+```bash
+npm install @potlaunch/sdk
+```
+
+#### Are the contracts open source?
+
+Yes! All contracts are open source:
+- [GitHub Repository](https://github.com/PotLock/potlaunch-contracts)
+- [Contract Documentation](/developer-guide/smart-contract-api)
+
+#### How do I integrate POTLAUNCH?
+
+See our [Integrations Guide](/developer-guide/integrations-guide) for:
+- SDK integration
+- API integration
+- Smart contract integration
+- White label solutions
+
+#### Where are the program addresses?
+
+**Mainnet:**
+- Launch Program: `Launch111...` (Coming soon)
+- Bonding Curve: `Curve111...` (Coming soon)
+- Bridge: `Bridge11...` (Coming soon)
+
+**Devnet:**
+- Launch Program: `DevLaunch111...`
+- Bonding Curve: `DevCurve111...`
+- Bridge: `DevBridge11...`
+
+#### Is there a testnet?
+
+Yes! Use Solana devnet for testing:
+- RPC: `https://api.devnet.solana.com`
+- Get test SOL from [Solana Faucet](https://faucet.solana.com)
+- Test the platform on [testnet.potlaunch.com](https://testnet.potlaunch.com)
+
+#### Can I run my own indexer?
+
+Yes! See our [Indexer Setup](/developer-guide/indexer-setup) guide.
+
+### Technical Questions
+
+#### What blockchain is POTLAUNCH on?
+
+Primary: Solana (mainnet)
+Cross-chain: NEAR Protocol, Ethereum (planned), Base (planned)
+
+#### What token standard does POTLAUNCH use?
+
+SPL Token (Solana Program Library Token) standard.
+
+#### How do bonding curves work?
+
+Bonding curves are mathematical formulas that determine token price based on supply:
+- More tokens sold = higher price
+- Tokens sold back = lower price
+- Provides continuous liquidity
+
+See [Dynamic Bonding Curve](/dynamic-bonding-curve) documentation.
+
+#### What happens if the creator stops working on the project?
+
+The token continues independently:
+- Smart contracts are immutable
+- No central control needed
+- Liquidity is permanently locked
+- Community can continue development
+
+#### Can tokens be frozen or minted?
+
+No! All tokens launched on POTLAUNCH have:
+- ❌ Mint authority revoked (no new tokens)
+- ❌ Freeze authority revoked (can't freeze wallets)
+- ✅ Fixed supply
+- ✅ Fully decentralized
+
+## Troubleshooting
+
+### Connection Issues
+
+#### Wallet won't connect
+
+**Solutions:**
+
+1. **Check browser compatibility**
+   - Use Chrome, Firefox, or Brave
+   - Disable other wallet extensions
+   - Clear browser cache
+
+2. **Update wallet extension**
+   - Ensure latest version installed
+   - Try reinstalling the extension
+
+3. **Check network**
+   - Switch to mainnet-beta
+   - Verify RPC endpoint
+
+4. **Refresh and retry**
+   - Refresh the page
+   - Disconnect and reconnect wallet
+
+#### Transaction fails to confirm
+
+**Possible causes:**
+
+1. **Insufficient SOL**
+   ```
+   Error: Insufficient funds
+   Solution: Add more SOL to your wallet
+   ```
+
+2. **Network congestion**
+   ```
+   Error: Transaction timeout
+   Solution: Wait and retry, or increase priority fee
+   ```
+
+3. **Slippage too low**
+   ```
+   Error: Slippage tolerance exceeded
+   Solution: Increase slippage in settings
+   ```
+
+4. **Already processed**
+   ```
+   Error: Transaction already processed
+   Solution: Check your wallet - it may have succeeded
+   ```
+
+### Trading Issues
+
+#### "Slippage tolerance exceeded" error
+
+**Why it happens:**
+Price changed between when you clicked and when transaction processed.
+
+**Solutions:**
+1. Increase slippage tolerance (Settings → Slippage)
+2. Trade smaller amounts
+3. Wait for less volatility
+4. Try again immediately
+
+**Recommended slippage:**
+- Normal: 0.5-1%
+- High volatility: 2-5%
+- Large trades: 5-10%
+
+#### "Insufficient liquidity" error
+
+**Why it happens:**
+Not enough tokens available at current price.
+
+**Solutions:**
+1. Reduce trade amount
+2. Wait for more liquidity
+3. Check if token has graduated
+4. Verify you're on correct curve phase
+
+#### Can't sell tokens
+
+**Possible reasons:**
+
+1. **Token balance issue**
+   - Check you own the tokens
+   - Verify correct token account
+
+2. **Bonding curve disabled**
+   - Token may have graduated
+   - Sell on DEX instead
+
+3. **Trading paused**
+   - Check token status
+   - Wait for trading to resume
+
+4. **Cooldown period**
+   - Some tokens have sell cooldowns
+   - Wait for cooldown to expire
+
+#### Price seems wrong
+
+**Check these:**
+
+1. **Slippage included?**
+   - Price shown may include slippage
+   - Check price impact before confirming
+
+2. **Fees included?**
+   - Trading fees affect final price
+   - Review fee breakdown
+
+3. **Recent trades?**
+   - Price updates with each trade
+   - Refresh to see latest price
+
+### Token Launch Issues
+
+#### Token creation failed
+
+**Common causes:**
+
+1. **Insufficient SOL**
+   ```
+   Need: ~0.1 SOL for rent + gas
+   Solution: Add more SOL to wallet
+   ```
+
+2. **Duplicate symbol**
+   ```
+   Error: Symbol already exists
+   Solution: Choose different symbol
+   ```
+
+3. **Invalid parameters**
+   ```
+   Error: Invalid curve configuration
+   Solution: Check all parameters are valid
+   ```
+
+4. **Transaction timeout**
+   ```
+   Error: Timeout
+   Solution: Retry with higher priority fee
+   ```
+
+#### Metadata not showing
+
+**If your token metadata isn't displaying:**
+
+1. **Wait for propagation**
+   - Can take 1-5 minutes
+   - Refresh the page
+
+2. **Check image URL**
+   - Ensure image is accessible
+   - Verify correct format (PNG, JPG, SVG)
+   - Max size: 1MB
+
+3. **Verify IPFS upload**
+   - Check IPFS gateway responds
+   - Try different gateway
+
+4. **Re-upload metadata**
+   - Use token dashboard
+   - Update metadata
+
+#### Can't find my token
+
+**Where to look:**
+
+1. **Your Launches** tab in dashboard
+2. **Wallet Holdings** section
+3. **Search by address** or symbol
+4. Check [Solana Explorer](https://explorer.solana.com)
+
+**If still missing:**
+- Verify transaction succeeded
+- Check you're on correct network
+- Contact support with transaction hash
+
+### Performance Issues
+
+#### Site loading slowly
+
+**Try these:**
+
+1. **Clear cache**
+   ```
+   Chrome: Ctrl+Shift+Delete
+   Clear cached images and files
+   ```
+
+2. **Switch RPC**
+   - Try different RPC endpoint
+   - Check RPC status
+
+3. **Disable extensions**
+   - Temporarily disable browser extensions
+   - Re-enable one by one
+
+4. **Check internet**
+   - Test connection speed
+   - Try different network
+
+#### Transactions taking too long
+
+**Solutions:**
+
+1. **Increase priority fee**
+   - Settings → Priority Fee → High
+
+2. **Check network status**
+   - [Solana Status](https://status.solana.com)
+
+3. **Optimize timing**
+   - Trade during off-peak hours
+   - Avoid high congestion periods
+
+### Error Messages
+
+#### "Program failed to complete"
+
+**Meaning:** Smart contract execution failed
+
+**Common causes:**
+- Insufficient account balance
+- Invalid parameters
+- Account state issue
+- Program logic error
+
+**Solution:**
+1. Check error details
+2. Verify all parameters
+3. Ensure sufficient funds
+4. Contact support if persists
+
+#### "Blockhash not found"
+
+**Meaning:** Transaction took too long
+
+**Solution:**
+- Retry transaction
+- Increase priority fee
+- Check network status
+
+#### "Account not found"
+
+**Meaning:** Token account doesn't exist
+
+**Solution:**
+- Create token account first
+- Check token mint address
+- Verify you're on correct network
+
+## Getting Help
+
+### Community Support
+
+**Discord** - #help channel
+- Fastest response
+- Community assistance
+- Real-time support
+
+**Twitter** - [@PotLock_](https://twitter.com/PotLock_)
+- Announcements
+- Status updates
+- Quick questions
+
+**Telegram** - POTLAUNCH Community
+- Community discussions
+- Peer support
+
+### Documentation
+
+- [User Guide](/user-guide/intro) - Complete usage guide
+- [Developer Guide](/developer-guide/potlaunch-sdk) - Technical docs
+- [Concepts](/concepts-architecture/how-potlaunch-works) - Deep dives
+
+## Still Need Help?
+
+Can't find the answer you need?
+
+1. **Search the docs** - Use the search bar above
+2. **Check Discord** - Someone may have asked already
+3. **Ask the community** - Discord #help channel
+4. **Contact support** - support@potlaunch.com
+
+We're here to help! 🚀
+

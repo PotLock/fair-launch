@@ -1,0 +1,1208 @@
+import { Callout, Steps, Tabs } from 'nextra/components'
+
+# API Reference
+
+<Callout type="info">
+This guide covers the POTLAUNCH REST API endpoints. All endpoints return JSON responses and follow standard HTTP status codes.
+</Callout>
+
+## Base URLs
+
+POTLAUNCH API is available on both mainnet and testnet:
+
+<Tabs items={['Mainnet', 'Testnet']}>
+  <Tabs.Tab>
+```
+https://api.potlaunch.com
+```
+
+Production environment for live token launches and trading.
+  </Tabs.Tab>
+  
+  <Tabs.Tab>
+```
+https://api-test.potlaunch.com
+```
+
+Testing environment for development and testing. Use testnet SOL for transactions.
+  </Tabs.Tab>
+</Tabs>
+
+<Callout type="warning">
+When using testnet, make sure your wallet is connected to Solana Devnet and you have testnet SOL. You can get testnet SOL from the [Solana Faucet](https://faucet.solana.com/).
+</Callout>
+
+<Callout type="info">
+**Using Testnet in Examples:** To use testnet in any of the examples below, simply replace `https://api.potlaunch.com` with `https://api-test.potlaunch.com` in your requests.
+</Callout>
+
+## Authentication
+
+Currently, the API does not require authentication for read operations. Write operations are open but may require rate limiting in production.
+
+## Response Format
+
+All API responses follow this standard format:
+
+```json
+{
+  "success": true,
+  "data": { /* response data */ },
+  "message": "Optional message"
+}
+```
+
+Error responses:
+
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
+
+---
+
+## Token Endpoints
+
+### Create Token
+
+**POST** `/api/tokens`
+
+Creates a new token with integrated Dynamic Bonding Curve (DBC) configuration.
+
+**Request Body:**
+
+```json
+{
+  "name": "My Token",
+  "symbol": "MTK",
+  "description": "A sample token for demonstration",
+  "totalSupply": "1000000000",
+  "decimals": "9",
+  "mintAddress": "11111111111111111111111111111112",
+  "owner": "11111111111111111111111111111112",
+  "launchpad": "potlaunch",
+  "tokenUri": "https://example.com/token.json",
+  "bannerUri": "https://example.com/banner.png",
+  "website": "https://example.com",
+  "twitter": "https://twitter.com/example",
+  "telegram": "https://t.me/example",
+  "tokenConfig": {
+    "quoteMint": "So11111111111111111111111111111111111111112",
+    "dbcConfig": {
+      "buildCurveMode": 0,
+      "totalTokenSupply": 1000000000,
+      "migrationOption": 0,
+      "tokenBaseDecimal": 9,
+      "tokenQuoteDecimal": 9,
+      "dynamicFeeEnabled": false,
+      "activationType": 0,
+      "collectFeeMode": 0,
+      "migrationFeeOption": 0,
+      "tokenType": 0,
+      "partnerLpPercentage": 0,
+      "creatorLpPercentage": 100,
+      "partnerLockedLpPercentage": 0,
+      "creatorLockedLpPercentage": 0,
+      "creatorTradingFeePercentage": 0,
+      "leftover": 0,
+      "tokenUpdateAuthority": 0,
+      "leftoverReceiver": "11111111111111111111111111111112",
+      "feeClaimer": "11111111111111111111111111111112",
+      "lockedVestingParam": {
+        "totalLockedVestingAmount": 0,
+        "numberOfVestingPeriod": 0,
+        "cliffUnlockAmount": 0,
+        "totalVestingDuration": 0,
+        "cliffDurationFromMigrationTime": 0
+      },
+      "baseFeeParams": {
+        "baseFeeMode": 0
+      },
+      "migrationFee": {
+        "feePercentage": 5,
+        "creatorFeePercentage": 100
+      }
+    }
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "name": "My Token",
+    "symbol": "MTK",
+    "description": "A sample token for demonstration",
+    "totalSupply": "1000000000",
+    "decimals": 9,
+    "mintAddress": "11111111111111111111111111111112",
+    "owner": "11111111111111111111111111111112",
+    "launchpad": "potlaunch",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  },
+  "message": "Token and DBC config created successfully"
+}
+```
+
+---
+
+### Get All Tokens
+
+**GET** `/api/tokens`
+
+Retrieves all tokens with optional filtering.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `launchpad` | string | Filter by launchpad: `potlaunch` or `cookedpad` |
+| `active` | boolean | Filter by active status (`true` for trading/presale, `false` for ended) |
+| `tag` | string | Filter by tag membership |
+| `startDate` | string | Filter tokens created on or after this date (ISO 8601) |
+| `endDate` | string | Filter tokens created on or before this date (ISO 8601) |
+
+**Examples:**
+
+<Tabs items={['cURL', 'JavaScript', 'Python']}>
+  <Tabs.Tab>
+```bash
+# Get all tokens
+curl "https://api.potlaunch.com/api/tokens"
+
+# Get tokens from specific launchpad
+curl "https://api.potlaunch.com/api/tokens?launchpad=potlaunch"
+
+# Get only active tokens
+curl "https://api.potlaunch.com/api/tokens?launchpad=potlaunch&active=true"
+
+# Get tokens with tag
+curl "https://api.potlaunch.com/api/tokens?launchpad=potlaunch&tag=meme"
+
+# Get tokens by date range
+curl "https://api.potlaunch.com/api/tokens?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z"
+```
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+```javascript
+// Using fetch
+const response = await fetch('https://api.potlaunch.com/api/tokens?launchpad=potlaunch&active=true');
+const data = await response.json();
+
+// Using axios
+import axios from 'axios';
+
+const { data } = await axios.get('https://api.potlaunch.com/api/tokens', {
+  params: {
+    launchpad: 'potlaunch',
+    active: true,
+    tag: 'meme'
+  }
+});
+```
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+```python
+import requests
+
+# Get all tokens
+response = requests.get('https://api.potlaunch.com/api/tokens')
+data = response.json()
+
+# With filters
+params = {
+    'launchpad': 'potlaunch',
+    'active': 'true',
+    'tag': 'meme'
+}
+response = requests.get('https://api.potlaunch.com/api/tokens', params=params)
+data = response.json()
+```
+  </Tabs.Tab>
+</Tabs>
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-here",
+      "name": "My Token",
+      "symbol": "MTK",
+      "description": "A sample token",
+      "totalSupply": "1000000000",
+      "decimals": 9,
+      "mintAddress": "11111111111111111111111111111112",
+      "owner": "11111111111111111111111111111112",
+      "launchpad": "potlaunch",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Token by ID
+
+**GET** `/api/tokens/:id`
+
+Retrieves a specific token by its ID.
+
+**Parameters:**
+
+- `id` (path) - Token UUID
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/tokens/uuid-here"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "name": "My Token",
+    "symbol": "MTK",
+    "description": "A sample token",
+    "totalSupply": "1000000000",
+    "decimals": 9,
+    "mintAddress": "11111111111111111111111111111112",
+    "owner": "11111111111111111111111111111112",
+    "launchpad": "potlaunch",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "metadata": {
+      "tokenUri": "https://example.com/token.json",
+      "bannerUri": "https://example.com/banner.png",
+      "website": "https://example.com",
+      "twitter": "https://twitter.com/example",
+      "telegram": "https://t.me/example"
+    }
+  }
+}
+```
+
+---
+
+### Get Token by Mint Address
+
+**GET** `/api/tokens/mint/:address`
+
+Retrieves a token by its mint address.
+
+**Parameters:**
+
+- `address` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/tokens/mint/11111111111111111111111111111112"
+```
+
+---
+
+### Search Tokens
+
+**GET** `/api/tokens/search`
+
+Search tokens by name, symbol, or description.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | Yes | Search query |
+| `owner` | string | No | Filter by owner address |
+| `launchpad` | string | No | Filter by launchpad |
+| `active` | boolean | No | Filter by active status |
+| `tag` | string | No | Filter by tag |
+| `startDate` | string | No | Filter by start date (ISO 8601) |
+| `endDate` | string | No | Filter by end date (ISO 8601) |
+
+**Examples:**
+
+```bash
+# Basic search
+curl "https://api.potlaunch.com/api/tokens/search?q=bitcoin&launchpad=potlaunch"
+
+# Search with owner filter
+curl "https://api.potlaunch.com/api/tokens/search?q=bitcoin&owner=11111111111111111111111111111112"
+
+# Search active tokens only
+curl "https://api.potlaunch.com/api/tokens/search?q=bitcoin&active=true&tag=meme"
+```
+
+---
+
+### Get Tokens by Owner
+
+**GET** `/api/tokens/address/:address`
+
+Retrieves all tokens owned by a specific address.
+
+**Parameters:**
+
+- `address` (path) - Owner's wallet address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/tokens/address/11111111111111111111111111111112"
+```
+
+---
+
+### Get Popular Tokens
+
+**GET** `/api/tokens/popular`
+
+Retrieves popular tokens with optional filtering.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | number | Number of tokens to return (1-100, default: 10) |
+| `launchpad` | string | Filter by launchpad |
+| `active` | boolean | Filter by active status |
+| `tag` | string | Filter by tag |
+| `startDate` | string | Filter by start date (ISO 8601) |
+| `endDate` | string | Filter by end date (ISO 8601) |
+
+**Examples:**
+
+```bash
+# Get top 10 popular tokens
+curl "https://api.potlaunch.com/api/tokens/popular?launchpad=potlaunch"
+
+# Get top 5 popular tokens
+curl "https://api.potlaunch.com/api/tokens/popular?limit=5&launchpad=potlaunch"
+
+# Popular active tokens with tag
+curl "https://api.potlaunch.com/api/tokens/popular?limit=20&active=true&tag=meme"
+```
+
+---
+
+### Get Token Holders
+
+**GET** `/api/tokens/holders/:mintAddress`
+
+Retrieves all holders of a specific token.
+
+**Parameters:**
+
+- `mintAddress` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/tokens/holders/11111111111111111111111111111112"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    "11111111111111111111111111111112",
+    "22222222222222222222222222222223"
+  ]
+}
+```
+
+---
+
+### Update Token
+
+**PATCH** `/api/tokens/:id`
+
+Updates a token's information (partial update).
+
+**Parameters:**
+
+- `id` (path) - Token UUID
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Token Name",
+  "description": "Updated description"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "name": "Updated Token Name",
+    "symbol": "MTK",
+    "description": "Updated description",
+    /* ... other fields ... */
+  },
+  "message": "Token updated successfully"
+}
+```
+
+---
+
+### Delete Token
+
+**DELETE** `/api/tokens/:id`
+
+Deletes a specific token by its ID.
+
+**Parameters:**
+
+- `id` (path) - Token UUID
+
+**Example:**
+
+```bash
+curl -X DELETE "https://api.potlaunch.com/api/tokens/uuid-here"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": true
+  },
+  "message": "Token deleted successfully"
+}
+```
+
+---
+
+## Transaction Endpoints
+
+### Create Transaction
+
+**POST** `/api/transactions`
+
+Creates a transaction record for user activity (BUY/SELL) on a pool.
+
+**Request Body:**
+
+```json
+{
+  "userAddress": "11111111111111111111111111111112",
+  "txHash": "5o7wV...abc123",
+  "action": "BUY",
+  "baseToken": "SOL",
+  "quoteToken": "USDC",
+  "amountIn": 10.5,
+  "amountOut": 0.42,
+  "pricePerToken": 25.0,
+  "slippageBps": 50,
+  "fee": 0.001,
+  "feeToken": "SOL",
+  "status": "pending",
+  "chain": "solana",
+  "poolAddress": "So11111111111111111111111111111111111111112"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    "userAddress": "11111111111111111111111111111112",
+    "txHash": "5o7wV...abc123",
+    "action": "BUY",
+    "baseToken": "SOL",
+    "quoteToken": "USDC",
+    "amountIn": "10.5",
+    "amountOut": "0.42",
+    "pricePerToken": "25.0",
+    "slippageBps": "50",
+    "fee": "0.001",
+    "feeToken": "SOL",
+    "status": "pending",
+    "chain": "solana",
+    "poolAddress": "So11111111111111111111111111111111111111112",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### List Transactions
+
+**GET** `/api/transactions`
+
+Returns transactions optionally filtered by user and attributes.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userAddress` | string | Filter by user address |
+| `action` | string | Filter by action: `BUY` or `SELL` |
+| `baseToken` | string | Filter by base token |
+| `quoteToken` | string | Filter by quote token |
+| `status` | string | Filter by status: `pending`, `success`, or `failed` |
+| `chain` | string | Filter by blockchain: `solana` |
+| `limit` | number | Number of results to return |
+| `offset` | number | Offset for pagination |
+
+**Examples:**
+
+```bash
+# List all transactions
+curl "https://api.potlaunch.com/api/transactions"
+
+# Filter by user address
+curl "https://api.potlaunch.com/api/transactions?userAddress=11111111111111111111111111111112"
+
+# Filter by action
+curl "https://api.potlaunch.com/api/transactions?action=BUY"
+
+# Filter by status
+curl "https://api.potlaunch.com/api/transactions?status=success"
+
+# With pagination
+curl "https://api.potlaunch.com/api/transactions?limit=10&offset=0"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "transactions": [
+    {
+      "id": "uuid-here",
+      "userAddress": "11111111111111111111111111111112",
+      "txHash": "5o7wV...abc123",
+      "action": "BUY",
+      "baseToken": "SOL",
+      "quoteToken": "USDC",
+      "amountIn": "10.5",
+      "amountOut": "0.42",
+      "pricePerToken": "25.0",
+      "slippageBps": "50",
+      "fee": "0.001",
+      "feeToken": "SOL",
+      "status": "success",
+      "chain": "solana",
+      "poolAddress": "So11111111111111111111111111111111111111112",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Transaction by ID
+
+**GET** `/api/transactions/:id`
+
+Retrieves a specific transaction by ID.
+
+**Parameters:**
+
+- `id` (path) - Transaction UUID
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/transactions/uuid-here"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    "userAddress": "11111111111111111111111111111112",
+    "txHash": "5o7wV...abc123",
+    "action": "SELL",
+    "baseToken": "SOL",
+    "quoteToken": "USDC",
+    "amountIn": "5.0",
+    "amountOut": "0.20",
+    "pricePerToken": "25.0",
+    "slippageBps": "50",
+    "fee": "0.0005",
+    "feeToken": "SOL",
+    "status": "pending",
+    "chain": "solana",
+    "poolAddress": "So11111111111111111111111111111111111111112",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### Get Transactions by User
+
+**GET** `/api/transactions/user/:address`
+
+Retrieves all transactions for a specific user address.
+
+**Parameters:**
+
+- `address` (path) - User's wallet address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/transactions/user/11111111111111111111111111111112"
+```
+
+---
+
+### Get Transactions by Token
+
+**GET** `/api/transactions/token/:address`
+
+Retrieves all transactions where the token matches baseToken or quoteToken.
+
+**Parameters:**
+
+- `address` (path) - Token address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/transactions/token/So11111111111111111111111111111111111111112"
+```
+
+---
+
+### Update Transaction Status
+
+**PATCH** `/api/transactions/:id/status`
+
+Updates the status of a transaction.
+
+**Parameters:**
+
+- `id` (path) - Transaction UUID
+
+**Request Body:**
+
+```json
+{
+  "status": "success",
+  "txHash": "5o7wV...abc123"
+}
+```
+
+**Examples:**
+
+```bash
+# Update status to success
+curl -X PATCH \
+  -H "Content-Type: application/json" \
+  -d '{"status":"success"}' \
+  "https://api.potlaunch.com/api/transactions/uuid-here/status"
+
+# Update status to failed
+curl -X PATCH \
+  -H "Content-Type: application/json" \
+  -d '{"status":"failed"}' \
+  "https://api.potlaunch.com/api/transactions/uuid-here/status"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": "uuid-here",
+    /* ... transaction fields ... */
+    "status": "success"
+  }
+}
+```
+
+---
+
+### Delete Transaction
+
+**DELETE** `/api/transactions/:id`
+
+Deletes a transaction by ID.
+
+**Parameters:**
+
+- `id` (path) - Transaction UUID
+
+**Example:**
+
+```bash
+curl -X DELETE "https://api.potlaunch.com/api/transactions/uuid-here"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": true
+  },
+  "message": "Transaction deleted successfully"
+}
+```
+
+---
+
+## IPFS Endpoints
+
+### Upload Image
+
+**POST** `/api/ipfs/upload-image`
+
+Uploads an image file to IPFS via Filebase.
+
+**Request (multipart/form-data):**
+
+- `image` (file) - Image file to upload
+- `fileName` (optional) - Custom filename
+
+**Example:**
+
+```bash
+curl -X POST "https://api.potlaunch.com/api/ipfs/upload-image" \
+  -F "image=@/path/to/image.png" \
+  -F "fileName=my-token-logo"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "imageUri": "https://gateway.filebase.io/ipfs/QmHash..."
+  },
+  "message": "Image uploaded successfully"
+}
+```
+
+---
+
+### Upload Metadata
+
+**POST** `/api/ipfs/upload-metadata`
+
+Uploads token metadata JSON to IPFS.
+
+**Request Body:**
+
+```json
+{
+  "name": "My Token",
+  "symbol": "MTK",
+  "imageUri": "https://gateway.filebase.io/ipfs/QmImageHash...",
+  "bannerUri": "https://gateway.filebase.io/ipfs/QmBannerHash...",
+  "description": "A sample token for demonstration",
+  "website": "https://example.com",
+  "twitter": "https://twitter.com/example",
+  "telegram": "https://t.me/example"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "imageUri": "https://gateway.filebase.io/ipfs/QmMetadataHash..."
+  },
+  "message": "Metadata uploaded successfully"
+}
+```
+
+---
+
+### IPFS Health Check
+
+**GET** `/api/ipfs/health`
+
+Checks IPFS service status.
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/ipfs/health"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "IPFS service is running"
+}
+```
+
+---
+
+## Halfbak (DBC) Endpoints
+
+### Create DBC Configuration
+
+**POST** `/api/halfbak/dbc-config`
+
+Creates a DBC (Dynamic Bonding Curve) configuration transaction.
+
+**Request Body:**
+
+```json
+{
+  "metadata": {
+    "name": "My Token",
+    "symbol": "MTK",
+    "description": "A sample token",
+    "imageUri": "https://gateway.filebase.io/ipfs/QmHash...",
+    "bannerUri": "https://gateway.filebase.io/ipfs/QmHash...",
+    "website": "https://example.com",
+    "twitter": "https://twitter.com/example",
+    "telegram": "https://t.me/example"
+  },
+  "signer": "11111111111111111111111111111112"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "dbcConfigKeypair": {
+      "publicKey": "...",
+      "secretKey": "..."
+    },
+    "transaction": "base64-encoded-transaction",
+    "message": "DBC configuration transaction created successfully"
+  }
+}
+```
+
+---
+
+### Deploy Token
+
+**POST** `/api/halfbak/deploy-token`
+
+Creates a token deployment transaction.
+
+**Request Body:**
+
+```json
+{
+  "metadata": {
+    "name": "My Token",
+    "symbol": "MTK",
+    "description": "A sample token",
+    "imageUri": "https://gateway.filebase.io/ipfs/QmHash..."
+  },
+  "signer": "11111111111111111111111111111112",
+  "dbcConfigKeypair": {
+    "publicKey": {
+      "0": 123,
+      "1": 456
+      /* ... 32 bytes total */
+    },
+    "secretKey": {
+      "0": 123,
+      "1": 456
+      /* ... 64 bytes total */
+    }
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": "base64-encoded-transaction",
+    "baseMint": "TokenMintAddress...",
+    "message": "Token deployment transaction created successfully"
+  }
+}
+```
+
+---
+
+### Whitelist Token
+
+**POST** `/api/halfbak/whitelist`
+
+Whitelists a token for trading.
+
+**Request Body:**
+
+```json
+{
+  "tokenAddress": "11111111111111111111111111111112"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* whitelist result */
+  }
+}
+```
+
+---
+
+### Unwhitelist Token
+
+**POST** `/api/halfbak/unwhitelist`
+
+Removes a token from the whitelist.
+
+**Request Body:**
+
+```json
+{
+  "tokenAddress": "11111111111111111111111111111112"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* unwhitelist result */
+  }
+}
+```
+
+---
+
+### Swap Tokens
+
+**POST** `/api/halfbak/swap`
+
+Creates a swap transaction on the DBC pool.
+
+- `swapBaseForQuote=false` buys base token with quote
+- `swapBaseForQuote=true` sells base token for quote
+
+**Request Body:**
+
+```json
+{
+  "baseMint": "11111111111111111111111111111112",
+  "signer": "11111111111111111111111111111112",
+  "amount": 1000000,
+  "slippageBps": 100,
+  "swapBaseForQuote": false,
+  "computeUnitPriceMicroLamports": 0,
+  "referralTokenAccount": "11111111111111111111111111111112"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": "base64-encoded-transaction",
+    "baseMint": "11111111111111111111111111111112",
+    "message": "Swap transaction created successfully"
+  }
+}
+```
+
+---
+
+### Get Pool State
+
+**GET** `/api/halfbak/pool/state/:mintAddress`
+
+Retrieves pool state information for a token.
+
+**Parameters:**
+
+- `mintAddress` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/halfbak/pool/state/11111111111111111111111111111112"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* pool state data */
+  }
+}
+```
+
+---
+
+### Get Pool Configuration
+
+**GET** `/api/halfbak/pool/config/:mintAddress`
+
+Retrieves pool configuration for a token.
+
+**Parameters:**
+
+- `mintAddress` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/halfbak/pool/config/11111111111111111111111111111112"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* pool configuration data */
+  }
+}
+```
+
+---
+
+### Get Pool Metadata
+
+**GET** `/api/halfbak/pool/metadata/:mintAddress`
+
+Retrieves pool metadata for a token.
+
+**Parameters:**
+
+- `mintAddress` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/halfbak/pool/metadata/11111111111111111111111111111112"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* pool metadata */
+  }
+}
+```
+
+---
+
+### Get Pool Curve Progress
+
+**GET** `/api/halfbak/pool/curve-progress/:mintAddress`
+
+Retrieves curve progress information for a token pool.
+
+**Parameters:**
+
+- `mintAddress` (path) - Token mint address
+
+**Example:**
+
+```bash
+curl "https://api.potlaunch.com/api/halfbak/pool/curve-progress/11111111111111111111111111111112"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* curve progress data */
+  }
+}
+```
+
+---
+
+## HTTP Status Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request - Invalid parameters |
+| 404 | Not Found - Resource doesn't exist |
+| 500 | Internal Server Error |
+
+---
+
+## Rate Limiting
+
+Currently, there are no rate limits enforced. This may change in production environments.
+
+---
+
+## Resources
+
+- [Backend Repository](https://github.com/PotLock/potlaunch-backend)
+- [API Documentation](https://docs.potlaunch.com)
+- [Developer Discord](https://discord.gg/potlaunch)
+
+<Callout type="success">
+Need help? Join our [Discord community](https://discord.gg/potlaunch) for support and discussions.
+</Callout>

@@ -38,7 +38,6 @@ POTLAUNCH is a community-powered token launch platform that enables fair, transp
 
 ```
 potlaunch/
-├── solana-contract/     # Solana smart contracts (Anchor)
 ├── frontend/           # React frontend application
 ├── backend/            # Node.js backend services
 └── docs/              # Comprehensive documentation

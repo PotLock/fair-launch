@@ -1,0 +1,278 @@
+# Integrations Guide
+
+## Overview of Available Integrations
+
+PotLaunch integrates with multiple blockchain networks and services to provide seamless cross-chain functionality:
+
+### Core Integrations
+
+- **NEAR Protocol** - Primary blockchain for smart contracts and account management
+- **Solana** - High-performance token launches and trading
+- **Ethereum** - EVM-compatible token operations
+- **Base** - Layer 2 scaling solution with Aerodrome DEX
+- **Arbitrum** - Optimistic rollup for fast transactions
+
+### DEX Integrations
+
+- **Jupiter** - Solana aggregator for optimal swap routing
+- **Raydium** - Solana AMM for liquidity pools
+- **Meteora DLMM** - Dynamic liquidity market maker
+- **Aerodrome** - Base DEX for liquidity management
+- **Ref Finance** - NEAR Protocol DEX
+
+### Cross-Chain Services
+
+- **NEAR Omni Bridge** - Multi-chain asset bridge
+- **SwapKit** - Cross-chain swaps across 13+ blockchains
+- **Wormhole** - Token bridge protocol
+- **1-Click API** - Simplified deployment and interaction
+
+## Leveraging 1-Click API
+
+The 1-Click API provides simplified access to PotLaunch functionality without managing complex blockchain interactions.
+
+### Features
+
+- **Easy Token Deployment** - Launch tokens with a single API call
+- **Automated Trading** - Execute buy/sell operations programmatically
+- **Cross-Chain Bridging** - Transfer assets between chains
+- **Status Monitoring** - Track transaction and token status
+
+### Quick Start
+
+```typescript
+import { OneClickAPI } from '@cookedbusiness/halfbaked-sdk';
+
+// Initialize API
+const api = new OneClickAPI({
+  apiKey: 'your-api-key',
+  environment: 'mainnet'
+});
+
+// Deploy token
+const token = await api.deployToken({
+  name: 'My Token',
+  symbol: 'MTK',
+  initialSupply: '1000000'
+});
+
+// Execute trade
+const trade = await api.executeTrade({
+  mintAddress: token.address,
+  amount: '100',
+  side: 'buy'
+});
+```
+
+### Authentication
+
+```bash
+# Set your API key
+export ONECLICK_JWT=your_jwt_token
+```
+
+## Understanding NEAR Omni Bridge Integration
+
+The NEAR Omni Bridge is a decentralized multi-chain asset bridge that enables secure cross-chain transfers using Chain Signatures and Multi-Party Computation (MPC).
+
+> **Full Documentation**: [NEAR Omni Bridge GitHub](https://github.com/Near-One/omni-bridge)
+
+### Supported Networks
+
+| Network | Status | Method |
+|---------|--------|--------|
+| Ethereum | ✅ Production | Light client + Chain Signatures |
+| Bitcoin | ✅ Production | Light client + Chain Signatures |
+| Solana | ⚡ Transitioning | Wormhole → Chain Signatures |
+| Base | ⚡ Transitioning | Wormhole → Chain Signatures |
+| Arbitrum | ⚡ Transitioning | Wormhole → Chain Signatures |
+
+### Contract Addresses (Mainnet)
+
+```typescript
+const BRIDGE_ADDRESSES = {
+  near: 'omni.bridge.near',
+  ethereum: '0xe00c629aFaCCb0510995A2B95560E446A24c85B9',
+  solana: 'dahPEoZGXfyV58JqqH85okdHmpN8U2q8owgPUXSCPxe',
+  base: '0xd025b38762B4A4E36F0Cde483b86CB13ea00D989',
+  arbitrum: '0xd025b38762B4A4E36F0Cde483b86CB13ea00D989'
+};
+```
+
+### Transfer Times
+
+**NEAR → Other Chains**: ~30 seconds (MPC signatures)
+
+**Other Chains → NEAR**:
+- Solana: ~14 seconds
+- Base: ~17 minutes
+- Arbitrum: ~18 minutes
+- Ethereum: ~16 minutes
+
+*Additional processing: Relayer (2s) + Wormhole validators (60s)*
+
+### Quick Integration
+
+#### 1. Using SDK
+
+```typescript
+import { getClient } from 'omni-bridge-sdk';
+import { ChainKind } from 'omni-bridge-sdk';
+
+// Initialize client
+const client = getClient(ChainKind.Near, wallet);
+
+// Log metadata (required before deployment)
+const txHash = await client.logMetadata('near:token.near');
+
+// Deploy token to another chain
+await client.deployToken({
+  sourceChain: 'near',
+  targetChain: 'ethereum',
+  txHash: txHash
+});
+
+// Transfer tokens
+await client.initTransfer({
+  token: 'near:token.near',
+  amount: '1000',
+  recipient: '0x...',
+  targetChain: 'ethereum',
+  fee: '10' // Optional: fee in token or native
+});
+```
+
+#### 2. Token Operations
+
+**Log Metadata** (First Step):
+```typescript
+// Required before deploying to other chains
+const tx = await client.logMetadata('near:token.near');
+```
+
+**Deploy Token**:
+```typescript
+// Deploy NEAR token to another chain
+await client.deployToken({
+  sourceChain: 'near',
+  targetChain: 'ethereum',
+  logMetadataTx: tx
+});
+```
+
+**Transfer Assets**:
+```typescript
+// Transfer between chains
+await client.initTransfer({
+  token: 'ethereum:0x...',
+  amount: '100',
+  recipient: 'user.near',
+  targetChain: 'near',
+  nativeFee: '0.01' // ETH for gas
+});
+```
+
+### Fee Structure
+
+Transfers require a fee paid in either:
+- **Transferred Token** - Deducted from transfer amount
+- **Native Chain Token** - ETH, SOL, etc. for gas
+
+> **Note**: On NEAR, fees require separate storage deposit call before `ft_transfer_call`
+
+### API Endpoints
+
+**Fee Provider & Status API**:
+- Mainnet: `https://mainnet.api.bridge.nearone.org/api/v1`
+- Testnet: `https://testnet.api.bridge.nearone.org/api/v1`
+
+Query transfer status, fees, and bridge health.
+
+### Resources
+
+- **Full Documentation**: [Omni Bridge Docs](https://github.com/Near-One/omni-bridge)
+- **Rust SDK**: [omni-bridge](https://crates.io/crates/omni-bridge)
+- **JavaScript SDK**: [omni-bridge-sdk](https://www.npmjs.com/package/omni-bridge-sdk)
+- **OpenAPI Spec**: Available at API endpoints
+
+## Integration Examples
+
+### Cross-Chain Token Launch
+
+```typescript
+import { HalfBakedSDK, getClient, ChainKind } from '@cookedbusiness/halfbaked-sdk';
+
+// 1. Create token on Solana
+const sdk = new HalfBakedSDK({ connection, wallet });
+const token = await sdk.createToken({
+  name: 'Cross Chain Token',
+  symbol: 'XCT',
+  initialSupply: '1000000'
+});
+
+// 2. Bridge to NEAR via Omni Bridge
+const bridgeClient = getClient(ChainKind.Solana, wallet);
+await bridgeClient.initTransfer({
+  token: `solana:${token.mintAddress}`,
+  amount: '100000',
+  recipient: 'user.near',
+  targetChain: 'near'
+});
+
+// 3. Add liquidity on NEAR
+const liquidityManager = new HalfBakedLiquidityManager(config);
+await liquidityManager.addLiquidity({
+  chain: 'near',
+  dex: 'ref-finance',
+  tokenA: token.mintAddress,
+  tokenB: 'wrap.near',
+  amountA: '50000',
+  amountB: '100'
+});
+```
+
+### Multi-DEX Trading
+
+```typescript
+import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+
+const appConfig = getAppConfig('potlaunch');
+const manager = new CrossDexTradingManager(connection, appConfig.config, wallet);
+
+// Automatically detects best DEX and executes trade
+const result = await manager.buyToken({
+  mintAddress: 'token_address',
+  amount: '1000',
+  side: 'buy'
+});
+
+console.log(`Traded on: ${result.dex}`);
+console.log(`Price: ${result.price}`);
+```
+
+## Best Practices
+
+### Security
+- ✅ Always verify contract addresses before transactions
+- ✅ Use testnet for development and testing
+- ✅ Implement proper error handling for bridge transfers
+- ✅ Monitor transfer status via API endpoints
+
+### Performance
+- ✅ Cache token metadata to reduce API calls
+- ✅ Use batch operations when possible
+- ✅ Consider finality times when building UX
+- ✅ Implement retry logic for failed transfers
+
+### Cost Optimization
+- ✅ Batch multiple operations together
+- ✅ Choose optimal fee payment method (token vs native)
+- ✅ Use custom relayers for zero-fee transfers (if available)
+- ✅ Monitor gas prices and adjust accordingly
+
+## Support & Resources
+
+- **PotLaunch SDK**: [@cookedbusiness/halfbaked-sdk](https://www.npmjs.com/package/@cookedbusiness/halfbaked-sdk)
+- **Omni Bridge**: [GitHub Repository](https://github.com/Near-One/omni-bridge)
+- **API Documentation**: Check individual integration docs
+- **Community Support**: Join our Discord for help

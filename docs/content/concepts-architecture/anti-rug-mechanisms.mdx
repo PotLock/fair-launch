@@ -1,0 +1,552 @@
+import { Callout } from 'nextra/components'
+
+# Anti-Rug Mechanisms
+
+<Callout type="warning">
+Protecting the community from rug pulls and scams is a core priority for POTLAUNCH. We've implemented multiple layers of security mechanisms to ensure fair and safe token launches.
+</Callout>
+
+## What is a Rug Pull?
+
+A **rug pull** occurs when token creators or early investors withdraw liquidity or manipulate the token after launch, leaving regular investors with worthless tokens.
+
+**Common Rug Pull Methods:**
+- Withdrawing all liquidity from DEX pools
+- Minting unlimited new tokens (dilution)
+- Freezing trading or specific wallets
+- Hidden backdoors in smart contracts
+- Pump and dump schemes
+- Insider pre-sales with massive discounts
+
+## POTLAUNCH Protection Layers
+
+### Layer 1: Token Design Security
+
+#### 1.1 Revoked Authorities
+
+**Mint Authority Revocation:**
+```typescript
+// Permanently revoke mint authority
+await revokeAuthority({
+  mint: tokenMint,
+  authority: AuthorityType.MintTokens,
+  currentAuthority: creator,
+});
+
+// Result: No one can ever mint more tokens
+// ✅ Fixed supply guaranteed
+// ✅ No dilution possible
+```
+
+**Freeze Authority Revocation:**
+```typescript
+// Permanently revoke freeze authority
+await revokeAuthority({
+  mint: tokenMint,
+  authority: AuthorityType.FreezeAccount,
+  currentAuthority: creator,
+});
+
+// Result: No one can freeze token accounts
+// ✅ Trading cannot be stopped
+// ✅ Accounts cannot be frozen
+```
+
+**Benefits:**
+- Fixed token supply (no inflation)
+- No wallet freezing capabilities
+- Permanent and irreversible
+- Verifiable on-chain
+
+#### 1.2 Fair Launch Distribution
+
+**No Pre-Sales:**
+```typescript
+interface LaunchPolicy {
+  preSale: false; // No pre-sale allowed
+  whitelist: false; // No whitelist advantages
+  teamAllocation: 0; // No team tokens
+  insiderAccess: false; // No insider advantages
+}
+```
+
+**Equal Access Principles:**
+- Everyone buys at bonding curve price
+- No discounts or special allocations
+- Transparent pricing for all
+- First-come, first-served basis
+
+### Layer 2: Liquidity Protection
+
+#### 2.1 Permanent Liquidity Lock
+
+**Automated LP Token Burning:**
+
+```typescript
+async function lockLiquidity(poolAddress: PublicKey): Promise<void> {
+  // 1. Get LP token mint
+  const lpMint = await getLPTokenMint(poolAddress);
+  
+  // 2. Get all LP tokens
+  const lpTokens = await getAllLPTokens(lpMint);
+  
+  // 3. Burn ALL LP tokens (send to null address)
+  await burnTokens({
+    mint: lpMint,
+    amount: lpTokens.totalSupply,
+    owner: BURN_ADDRESS, // 0x000...000
+  });
+  
+  // 4. Verify burn
+  const remainingLP = await getLPSupply(lpMint);
+  assert(remainingLP === 0, 'LP tokens not fully burned');
+}
+```
+
+**Lock Verification:**
+```typescript
+interface LiquidityLockProof {
+  // Lock Details
+  poolAddress: PublicKey;
+  lpTokenMint: PublicKey;
+  lpTokensBurned: number;
+  burnTransaction: string; // Transaction signature
+  
+  // Verification
+  isLocked: true;
+  lockType: 'PERMANENT'; // Cannot be unlocked
+  lockDate: Date;
+  verificationUrl: string; // Blockchain explorer link
+  
+  // Security
+  withdrawalPossible: false;
+  rugPullRisk: 'NONE';
+}
+```
+
+**What This Means:**
+- Liquidity cannot be withdrawn
+- Pool cannot be drained
+- Tokens always tradeable
+- Community fully protected
+
+#### 2.2 Gradual Liquidity Building
+
+**Bonding Curve Reserve:**
+
+```typescript
+interface ReserveManagement {
+  // Reserve Accumulation
+  totalReserve: number; // Total SOL in reserve
+  
+  // Source Breakdown
+  fromBuys: number; // SOL from token purchases
+  fromFees: number; // Trading fees accumulated
+  
+  // Reserve Allocation
+  forDEX: number; // 90% allocated for DEX pool
+  forPlatform: number; // 10% platform fee
+  
+  // Security
+  withdrawalEnabled: false; // No withdrawals allowed
+  onlyForGraduation: true; // Only used for DEX migration
+}
+```
+
+**Reserve Growth Example:**
+
+| Market Cap | Reserve (SOL) | DEX Allocation | Platform Fee |
+|-----------|---------------|----------------|--------------|
+| $10K | 100 | 90 | 10 |
+| $25K | 250 | 225 | 25 |
+| $50K | 500 | 450 | 50 |
+| $100K | 1,000 | 900 | 100 |
+
+### Layer 3: Smart Contract Security
+
+#### 3.1 Audited Contracts
+
+**Security Audits:**
+- Third-party security audits
+- Open-source code review
+- Community bug bounty program
+- Continuous security monitoring
+
+**Audit Coverage:**
+```typescript
+interface AuditReport {
+  auditor: string;
+  date: Date;
+  scope: [
+    'Token Contract',
+    'Bonding Curve Contract',
+    'Bridge Contract',
+    'Governance Contract',
+  ];
+  findings: {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+  status: 'PASSED';
+  reportUrl: string;
+}
+```
+
+#### 3.2 Access Control
+
+**Permission System:**
+
+```typescript
+// Only specific functions can be called by specific roles
+const permissions = {
+  // No one can mint tokens
+  mintTokens: null,
+  
+  // No one can freeze accounts
+  freezeAccount: null,
+  
+  // No one can withdraw reserves before graduation
+  withdrawReserve: null,
+  
+  // Only bonding curve can transfer from reserve
+  transferFromReserve: 'BONDING_CURVE_PROGRAM',
+  
+  // Only during graduation can liquidity be migrated
+  migrateLiquidity: 'GRADUATION_TIMELOCK',
+};
+```
+
+**Time Locks:**
+
+```typescript
+interface TimeLockConfig {
+  // Graduation timelock
+  graduationDelay: 86400, // 24 hours minimum
+  
+  // Emergency actions
+  emergencyPauseDelay: 0, // Immediate if needed
+  emergencyUnpauseDelay: 86400, // 24 hours to unpause
+  
+  // Parameter changes
+  feeChangeDelay: 259200, // 3 days for fee changes
+  curveChangeDelay: 604800, // 7 days for curve changes
+}
+```
+
+### Layer 4: Trading Safeguards
+
+#### 4.1 Anti-Manipulation
+
+**Whale Detection:**
+
+```typescript
+interface WhaleProtection {
+  // Maximum single purchase
+  maxBuyPercentage: 5, // 5% of supply per transaction
+  
+  // Holder concentration limits
+  maxWhaleHolding: 10, // 10% of supply per wallet
+  
+  // Warning system
+  whaleBuyAlert: true,
+  whaleSellAlert: true,
+  
+  // Cooldown periods
+  largeTradeCooldown: 300, // 5 minutes between large trades
+}
+```
+
+**Suspicious Activity Detection:**
+
+```typescript
+class SuspiciousActivityMonitor {
+  async detectSuspiciousPatterns(): Promise<Alert[]> {
+    const alerts = [];
+    
+    // Check for wash trading
+    if (this.detectWashTrading()) {
+      alerts.push({
+        type: 'WASH_TRADING',
+        severity: 'HIGH',
+        action: 'FLAG_WALLET',
+      });
+    }
+    
+    // Check for pump and dump patterns
+    if (this.detectPumpAndDump()) {
+      alerts.push({
+        type: 'PUMP_AND_DUMP',
+        severity: 'CRITICAL',
+        action: 'HALT_TRADING',
+      });
+    }
+    
+    // Check for coordinated attacks
+    if (this.detectCoordinatedAttack()) {
+      alerts.push({
+        type: 'COORDINATED_ATTACK',
+        severity: 'CRITICAL',
+        action: 'EMERGENCY_PAUSE',
+      });
+    }
+    
+    return alerts;
+  }
+}
+```
+
+#### 4.2 Price Protection
+
+**Slippage Protection:**
+
+```typescript
+interface SlippageProtection {
+  // Maximum price impact per trade
+  maxPriceImpact: 10, // 10% maximum
+  
+  // Dynamic slippage based on size
+  calculateSlippage(amount: number): number {
+    const impact = this.calculatePriceImpact(amount);
+    if (impact > this.maxPriceImpact) {
+      throw new Error('Trade would exceed maximum slippage');
+    }
+    return impact;
+  }
+  
+  // User-specified slippage
+  userSlippageTolerance: 0.5, // 0.5% default
+  
+  // Warning system
+  highSlippageWarning: true,
+}
+```
+
+**Circuit Breakers:**
+
+```typescript
+interface CircuitBreaker {
+  // Price volatility limits
+  maxPriceChange1h: 50, // 50% per hour
+  maxPriceChange24h: 100, // 100% per day
+  
+  // Volume limits
+  maxVolumeIncrease: 500, // 500% volume spike triggers review
+  
+  // Automatic actions
+  pauseOnCircuitBreaker: true,
+  notifyTeam: true,
+  requireManualResume: true,
+}
+```
+
+### Layer 5: Transparency & Verification
+
+#### 5.1 On-Chain Transparency
+
+**Public Verification:**
+
+```typescript
+// Anyone can verify token safety
+async function verifyTokenSafety(tokenMint: PublicKey): Promise<SafetyReport> {
+  return {
+    // Authority Status
+    mintAuthority: await checkAuthority(tokenMint, 'mint'), // Should be null
+    freezeAuthority: await checkAuthority(tokenMint, 'freeze'), // Should be null
+    
+    // Liquidity Status
+    liquidityLocked: await checkLiquidityLock(tokenMint),
+    lockType: 'PERMANENT',
+    lpTokensBurned: true,
+    
+    // Supply Information
+    totalSupply: await getTotalSupply(tokenMint),
+    circulatingSupply: await getCirculatingSupply(tokenMint),
+    
+    // Holder Distribution
+    topHolders: await getTopHolders(tokenMint, 10),
+    holderCount: await getHolderCount(tokenMint),
+    
+    // Safety Score
+    safetyScore: calculateSafetyScore(), // 0-100
+    rugPullRisk: 'NONE', // NONE, LOW, MEDIUM, HIGH, CRITICAL
+  };
+}
+```
+
+#### 5.2 Real-Time Monitoring
+
+**Community Dashboard:**
+
+```typescript
+interface CommunityDashboard {
+  // Token Health
+  healthScore: number; // 0-100
+  rugPullIndicators: RiskIndicator[];
+  securityAlerts: Alert[];
+  
+  // Transparency Metrics
+  codeAudited: boolean;
+  liquidityLocked: boolean;
+  authoritiesRevoked: boolean;
+  
+  // Activity Monitoring
+  recentTransactions: Transaction[];
+  largeTransactions: Transaction[];
+  suspiciousActivity: Alert[];
+  
+  // Community Metrics
+  holderCount: number;
+  holderDistribution: Distribution;
+  communityHealth: HealthMetrics;
+}
+```
+
+### Layer 6: Emergency Response
+
+#### 6.1 Emergency Pause
+
+**Pause Mechanism:**
+
+```typescript
+interface EmergencyPause {
+  // Pause triggers
+  triggers: [
+    'CRITICAL_VULNERABILITY',
+    'EXPLOIT_DETECTED',
+    'SUSPICIOUS_ACTIVITY',
+    'MANUAL_INTERVENTION',
+  ];
+  
+  // Pause effects
+  pausedActions: [
+    'TRADING',
+    'LIQUIDITY_CHANGES',
+    'PARAMETER_UPDATES',
+  ];
+  
+  // Resume process
+  resumeRequirements: {
+    securityReview: true,
+    communityVote: true,
+    timeLock: 86400, // 24 hours minimum
+  };
+}
+```
+
+#### 6.2 Community Recovery
+
+**Recovery Process:**
+
+1. **Detection** - Issue identified
+2. **Pause** - Trading halted
+3. **Investigation** - Root cause analysis
+4. **Solution** - Fix implemented
+5. **Review** - Security audit
+6. **Vote** - Community approval
+7. **Resume** - Trading restored
+
+## Verification Checklist
+
+Before participating in any token launch, verify:
+
+### ✅ Token Contract Verification
+
+```bash
+# Check mint authority (should be null)
+solana token-account-info <TOKEN_MINT> --output json | jq '.mintAuthority'
+
+# Check freeze authority (should be null)
+solana token-account-info <TOKEN_MINT> --output json | jq '.freezeAuthority'
+```
+
+### ✅ Liquidity Lock Verification
+
+```bash
+# Check LP tokens burned
+solana account <LP_TOKEN_MINT> --output json | jq '.supply'
+# Should be 0 or verify burn transaction
+```
+
+### ✅ Holder Distribution
+
+```typescript
+// Check if whales control too much
+const topHolders = await getTopHolders(tokenMint, 10);
+const topHolderPercentage = topHolders.reduce((sum, h) => sum + h.percentage, 0);
+
+if (topHolderPercentage > 50) {
+  console.warn('⚠️ Top 10 holders control >50% of supply');
+}
+```
+
+### ✅ Contract Audit
+
+- Check for published audit reports
+- Verify auditor credibility
+- Review audit findings
+- Confirm all issues resolved
+
+## Risk Assessment
+
+**Safety Score Calculation:**
+
+```typescript
+function calculateSafetyScore(token: TokenInfo): number {
+  let score = 0;
+  
+  // Authorities (40 points)
+  if (token.mintAuthority === null) score += 20;
+  if (token.freezeAuthority === null) score += 20;
+  
+  // Liquidity (30 points)
+  if (token.liquidityLocked) score += 15;
+  if (token.lpTokensBurned) score += 15;
+  
+  // Distribution (20 points)
+  if (token.topHolderPercentage < 10) score += 10;
+  if (token.holderCount > 50) score += 10;
+  
+  // Verification (10 points)
+  if (token.audited) score += 5;
+  if (token.verified) score += 5;
+  
+  return score; // 0-100
+}
+```
+
+**Risk Categories:**
+
+| Score | Risk Level | Description |
+|-------|-----------|-------------|
+| 90-100 | Very Low | Maximum security measures |
+| 70-89 | Low | Good security practices |
+| 50-69 | Medium | Some concerns present |
+| 30-49 | High | Multiple red flags |
+| 0-29 | Critical | Avoid - likely scam |
+
+<Callout type="success">
+All tokens launched on POTLAUNCH automatically implement these security measures. Learn more in our [Security](/security) section or check individual token safety scores on the platform.
+</Callout>
+
+## Community Protection
+
+### Reporting Suspicious Activity
+
+If you notice suspicious activity:
+
+1. **Document** - Screenshot evidence
+2. **Report** - Use in-app reporting tool
+3. **Alert** - Notify community
+4. **Verify** - Wait for official response
+
+### Bug Bounty Program
+
+Help secure the platform:
+- Report vulnerabilities
+- Earn rewards
+- Protect the community
+
+See [Bug Bounty](/security/bug-bounty) for details.
+

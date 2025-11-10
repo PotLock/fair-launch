@@ -1,0 +1,72 @@
+# DBC Config Key
+
+## What is a DBC Config Key?
+
+A DBC Config Key is a unique configuration key that will dictate your curve structure and graduated pool fees structure.
+
+### Quote Mint
+
+The quote mint that all baseMint tokens launched with this config will be paired to (e.g., SOL, USDC, MET)
+
+### Pool Fees
+
+- **Base Fees** - Constant fee or Fee Scheduler with decay mechanism
+- **Dynamic Fees** - Variable fees based on market volatility (max 20% of base fee)
+
+### Fee Collection Mode
+
+Determines fee collection: Only Quote tokens or Both Quote and Base tokens
+
+### Activation Type
+
+Slot-based (400ms) or Timestamp-based (100ms) calculation for vesting and fee scheduler
+
+### Locked Vesting
+
+Vesting schedule for baseMint tokens to pool creator after migration
+
+### Token Supply
+
+- **Pre-migration** - Fixed token supply before migration
+- **Post-migration** - Fixed token supply after migration
+- **Dynamic** - Optional null value for dynamic supply
+
+### Migration Configuration
+
+- **DAMM Pool Option** - DAMM V1 (0) or DAMM V2 (1)
+- **Fee Config** - Base fees for migrated pools (0.25%, 0.3%, 1%, 2%, 4% and 6%)
+- **Migration Quote Threshold** - Minimum quote amount for migration
+- **Migration Fee** - Collect a percentage of fees from the pool's quote reserve
+
+### LP Percentages
+
+- **Creator LP** - Claimable LP percentage for pool creator
+- **Partner LP** - Claimable LP percentage for config creator
+- **Creator Locked LP** - Forever locked LP for creator fees
+- **Partner Locked LP** - Forever locked LP for partner fees
+
+### Creator Trading Fee
+
+Percentage of trading fees shared with pool creators (default: 0% to partner only)
+
+### Base Mint Token
+
+- **Token Type** - SPL or Token2022
+- **Token Decimal** - 6 or 9 decimal places
+
+### Price & Curve
+
+- **SqrtStartPrice** - Starting price in square root format
+- **Curve** - Up to 16 curve segments with sqrtPrice and liquidity
+
+### Additional Parameters
+
+- **Config** - Vanity address for the config key
+- **Leftover Receiver** - Claims leftover baseMint tokens after curve completion
+- **Fee Claimer** - Claims bonding curve fees
+- **Payer** - Pays for config key creation
+
+## How to create a DBC Config Key?
+
+You can create a DBC Config Key by using the DBC Typescript SDK or via launch.meteora.ag
+

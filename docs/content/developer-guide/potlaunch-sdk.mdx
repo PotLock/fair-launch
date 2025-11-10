@@ -1,0 +1,413 @@
+# POTLAUNCH SDK
+
+A comprehensive TypeScript SDK for cross-chain token operations, liquidity management, and trading across Solana, Base, NEAR, and Ethereum. Built on top of Meteora SDK, NEAR Intents, Omnibridge, and leading DEX protocols.
+
+> **Warning**: This SDK is in beta and approaching production readiness. While core functionality is stable, some features may still change. We recommend thorough testing before using in production environments.
+
+## Installation and Setup
+
+### Installation
+
+Install the SDK using your preferred package manager:
+
+```bash npm2yarn
+npm install @cookedbusiness/halfbaked-sdk
+```
+
+### Configuration
+
+The SDK provides explicit configuration builders for all supported chains. No environment variables required for browser usage.
+
+#### Chain-Specific Configurations
+
+```typescript
+import {
+  createSolanaConfig,
+  createBaseConfig,
+  createNearConfig,
+  createEthereumConfig,
+  createSwapKitConfig,
+  createCrossDexTradingConfig,
+  getAppConfig
+} from '@cookedbusiness/halfbaked-sdk';
+
+// Solana configuration
+const solanaConfig = createSolanaConfig({
+  rpcUrl: 'https://api.mainnet-beta.solana.com',
+  environment: 'mainnet'
+});
+
+// Base configuration
+const baseConfig = createBaseConfig({
+  rpcUrl: 'https://mainnet.base.org',
+  chainId: 8453
+});
+
+// NEAR configuration
+const nearConfig = createNearConfig({
+  networkId: 'mainnet',
+  nodeUrl: 'https://rpc.mainnet.near.org'
+});
+
+// Ethereum configuration
+const ethereumConfig = createEthereumConfig({
+  rpcUrl: 'https://mainnet.infura.io/v3/YOUR_KEY',
+  chainId: 1
+});
+
+// SwapKit configuration
+const swapKitConfig = createSwapKitConfig({
+  apiKey: 'your-api-key',
+  network: 'mainnet'
+});
+
+// Cross-Dex Trading configuration
+const tokenConfig = createCrossDexTradingConfig({
+  network: 'mainnet',
+  enableCache: true,
+  enableTrading: true
+});
+
+// App-specific presets (Cooked, Arrests, PotLaunch, Generic)
+const appConfig = getAppConfig('potlaunch');
+```
+
+
+## Core Features
+
+### Cross-Dex Trading Manager
+
+A unified interface for detecting, fetching metadata, and trading any Solana token across multiple DEX protocols.
+
+**Key Capabilities:**
+- **Hierarchical Token Detection**: Automatically detects token types (Meteora → Pump.fun → DBC → External)
+- **Multi-Source Metadata**: Aggregates metadata from Jupiter, Metaplex, Meteora, and on-chain sources
+- **Price Discovery**: Gets USD and quote token prices with automatic fallback
+- **Unified Trading Interface**: Buy/sell tokens across multiple DEX protocols
+- **Built-in Caching**: Performance optimization with configurable TTL
+- **App-Specific Configurations**: Pre-configured presets for different applications
+
+```typescript
+import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+import { Connection } from '@solana/web3.js';
+
+const appConfig = getAppConfig('potlaunch');
+const manager = new CrossDexTradingManager(
+  connection,
+  appConfig.config,
+  wallet
+);
+
+// Get token information
+const token = await manager.getToken(mintAddress);
+
+// Execute trade
+const result = await manager.buyToken({
+  mintAddress,
+  amount: '1000000',
+  side: 'buy'
+});
+```
+
+### Token Launch & Trading
+
+- **Dynamic Bonding Curves (DBC)**: Launch tokens with automated price discovery
+- **PumpSwap Integration**: Trade tokens on pump.fun bonding curves
+- **Token Trading**: Buy/sell tokens directly from bonding curves
+- **Cross-chain Bridging**: Seamless token transfers across supported chains
+- **NEAR Intents**: Cross-chain swapping with native asset support
+
+### Liquidity Management
+
+Unified API for managing liquidity across multiple chains and DEX protocols.
+
+**Supported DEXes:**
+- **Solana**: Raydium, Meteora DLMM (Dynamic Liquidity Market Maker)
+- **Base**: Aerodrome (volatile and stable pools) - **PRODUCTION READY**
+- **NEAR**: Ref Finance
+
+**Features:**
+- Pool creation and management
+- Add/remove liquidity with optimal routing
+- Position tracking and management
+- Fee estimation and routing
+- Pool discovery and search
+
+```typescript
+import { HalfBakedLiquidityManager, type SDKConfig } from '@cookedbusiness/halfbaked-sdk';
+
+const config: SDKConfig = {
+  chains: [
+    {
+      chain: 'solana',
+      rpcUrl: 'https://api.mainnet-beta.solana.com',
+      supportedDEXes: ['raydium']
+    },
+    {
+      chain: 'base',
+      rpcUrl: 'https://mainnet.base.org',
+      supportedDEXes: ['aerodrome']
+    },
+    {
+      chain: 'near',
+      rpcUrl: 'https://rpc.mainnet.near.org',
+      supportedDEXes: ['ref-finance']
+    }
+  ],
+  defaultSlippage: 50,
+  maxRetries: 3,
+  timeoutMs: 60_000
+};
+
+const manager = new HalfBakedLiquidityManager(config);
+
+// Add liquidity
+const result = await manager.addLiquidity({
+  chain: 'base',
+  dex: 'aerodrome',
+  tokenA: 'USDC_ADDRESS',
+  tokenB: 'WETH_ADDRESS',
+  amountA: '1000',
+  amountB: '0.5',
+  wallet: walletInfo,
+  slippage: 0.5
+});
+```
+
+### Cross-Chain Swapping
+
+- **SwapKit Integration**: Cross-chain swaps across 13+ blockchains (Solana, Ethereum, Base, NEAR, Bitcoin, THORChain, Maya Protocol, Cosmos, Avalanche, Polygon, BSC, Arbitrum, Optimism)
+- **Jupiter Aggregator**: Optimal route finding for Solana token swaps
+- **Route Optimization**: Automatic route finding with multiple providers
+- **Transaction Monitoring**: Real-time swap status tracking
+
+```typescript
+import { SwapKitManager } from '@cookedbusiness/halfbaked-sdk';
+
+const swapKit = SwapKitManager.create({
+  apiKey: 'your-api-key',
+  network: 'mainnet'
+});
+
+const result = await swapKit.executeSwap({
+  fromChain: 'solana',
+  toChain: 'ethereum',
+  fromToken: 'SOL',
+  toToken: 'ETH',
+  amount: '1000000000',
+  wallet: walletInfo
+});
+```
+
+## How to Launch a Token Using SDK
+
+### Step 1: Initialize the SDK
+
+```typescript
+import { HalfBakedSDK } from '@cookedbusiness/halfbaked-sdk';
+import { Connection, Keypair } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const wallet = Keypair.generate(); // Or use your existing wallet
+
+const sdk = new HalfBakedSDK({
+  connection,
+  wallet,
+  environment: 'mainnet'
+});
+```
+
+### Step 2: Create Token with Bonding Curve
+
+```typescript
+const tokenParams = {
+  name: 'My Token',
+  symbol: 'MTK',
+  description: 'A sample token',
+  imageUrl: 'https://example.com/image.png',
+  initialSupply: '1000000',
+  bondingCurveParams: {
+    targetPrice: '1.0',
+    targetSupply: '500000'
+  }
+};
+
+const result = await sdk.createToken(tokenParams);
+console.log('Token created:', result.mintAddress);
+console.log('Bonding curve:', result.bondingCurveAddress);
+```
+
+### Step 3: Trade on Bonding Curve
+
+```typescript
+// Buy tokens
+const buyResult = await sdk.buyToken({
+  mintAddress: result.mintAddress,
+  amount: '1000',
+  slippage: 0.5
+});
+
+// Sell tokens
+const sellResult = await sdk.sellToken({
+  mintAddress: result.mintAddress,
+  amount: '500',
+  slippage: 0.5
+});
+```
+
+### Step 4: Migrate to DEX (Optional)
+
+```typescript
+const migrateResult = await sdk.migrateToDex({
+  mintAddress: result.mintAddress,
+  targetDex: 'raydium',
+  liquidityAmount: '100000'
+});
+```
+
+## API Reference
+
+### Core Classes
+
+#### `HalfBakedSDK`
+
+Main SDK class for token operations.
+
+**Methods:**
+- `createToken(params)` - Create a new token with bonding curve
+- `buyToken(params)` - Buy tokens from bonding curve
+- `sellToken(params)` - Sell tokens to bonding curve
+- `migrateToDex(params)` - Migrate token to DEX
+- `getTokenInfo(mintAddress)` - Get token metadata and status
+
+#### `CrossDexTradingManager`
+
+Unified trading interface across multiple DEXes.
+
+**Methods:**
+- `getToken(mintAddress)` - Get token with metadata and pricing
+- `buyToken(params)` - Execute buy trade
+- `sellToken(params)` - Execute sell trade
+- `getPrice(mintAddress)` - Get current token price
+
+#### `HalfBakedLiquidityManager`
+
+Multi-chain liquidity management.
+
+**Methods:**
+- `addLiquidity(params)` - Add liquidity to pool
+- `removeLiquidity(params)` - Remove liquidity from pool
+- `createPool(params)` - Create new liquidity pool
+- `getPoolInfo(poolId)` - Get pool information
+
+#### `SwapKitManager`
+
+Cross-chain swapping via SwapKit.
+
+**Methods:**
+- `executeSwap(params)` - Execute cross-chain swap
+- `getQuote(params)` - Get swap quote
+- `getSwapStatus(txHash)` - Check swap status
+
+### Supported Chains & DEXes
+
+**Solana:**
+- Raydium (liquidity management)
+- Meteora DLMM (dynamic liquidity market maker)
+- Jupiter (aggregator for swaps)
+- PumpSwap (pump.fun bonding curves)
+
+**Base:**
+- Aerodrome (volatile and stable pools) - **PRODUCTION READY**
+
+**NEAR:**
+- Ref Finance (liquidity management)
+
+**Cross-Chain (via SwapKit):**
+- 13+ blockchains including Ethereum, Bitcoin, THORChain, Maya Protocol, Cosmos, Avalanche, Polygon, BSC, Arbitrum, Optimism
+
+## Browser Compatibility
+
+The HalfBaked SDK is designed to work seamlessly in both browser and server environments.
+
+**Key Features:**
+- **Zero embedded secrets** - All signing credentials provided by developer
+- **Wallet adapter support** - Compatible with `@solana/wallet-adapter` and custom wallet implementations
+- **No Node-only dependencies** - Core SDK works in browsers, React Native, and Node.js
+- **Explicit configuration** - No reliance on environment variables or `.env` files
+- **Backward compatible** - Existing server-side usage continues to work
+
+### Browser Usage Example
+
+```typescript
+import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+
+function TradingComponent() {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+
+  const appConfig = getAppConfig('potlaunch');
+  const manager = new CrossDexTradingManager(
+    connection,
+    appConfig.config,
+    wallet
+  );
+
+  // Use manager for trading operations
+}
+```
+
+## Error Handling
+
+The SDK provides comprehensive error handling with detailed error messages:
+
+```typescript
+try {
+  await manager.addLiquidity(params);
+} catch (error) {
+  if (error.code === 'INSUFFICIENT_FUNDS') {
+    console.log('Add more funds to your wallet');
+  } else if (error.code === 'SLIPPAGE_EXCEEDED') {
+    console.log('Increase slippage tolerance');
+  }
+
+  console.log('Error:', error.message);
+  console.log('Suggested Action:', error.suggestedAction);
+}
+```
+
+## Security
+
+- **Hard-coded Treasury Addresses**: Secure fee collection
+- **Private Key Management**: Environment variable support for server-side usage
+- **Anti-rug Mechanisms**: Allocation tracking and vesting
+- **Comprehensive Error Handling**: Detailed error messages with actionable steps
+- **Input Validation**: Extensive parameter validation across all operations
+
+## Testing
+
+### Run All Tests
+```bash
+npm test
+```
+
+### Run Specific Test Suites
+```bash
+npm run test:launch          # Launch functionality tests
+npm run test:near-intents    # NEAR Intents tests
+npm run test:bridge          # Bridge functionality tests
+npm run test:jupiter         # Jupiter aggregator tests
+npm run test:aerodrome       # Aerodrome DEX tests
+```
+
+## Additional Resources
+
+- **NPM Package**: [@cookedbusiness/halfbaked-sdk](https://www.npmjs.com/package/@cookedbusiness/halfbaked-sdk)
+
+
+## Support
+
+- Report bugs and feature requests on [GitHub Issues](https://github.com/cookedlabs/halfbaked-sdk/issues)
+- Join our community for support and discussions
+- Check documentation for detailed guides and examples
