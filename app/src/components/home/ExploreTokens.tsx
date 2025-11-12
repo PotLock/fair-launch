@@ -41,7 +41,7 @@ export default function ExploreTokens() {
     <div className="pt-[68px] md:px-6">
       <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
         <h1 className="font-bold text-3xl ex-title">Explore Tokens</h1>
-        <span className="lg:max-w-[26rem] text-xl ex-subtitle">Participate in all the latest token launches.</span>
+        <span className="lg:max-w-104 text-xl ex-subtitle">Participate in all the latest token launches.</span>
       </div>
       
       <div className="relative w-full overflow-hidden">

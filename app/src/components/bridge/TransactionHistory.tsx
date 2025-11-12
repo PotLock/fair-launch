@@ -74,10 +74,10 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
     };
 
     return (
-        <div className="flex-1">
+        <div className="flex-1 w-full">
             <div className="bg-white border border-gray-200 rounded-xl shadow-none p-0">
-                <div className="relative">
-                    <Table className="border-separate border-spacing-y-0">
+                <div className="relative overflow-x-auto">
+                    <Table className="border-separate border-spacing-y-0 min-w-[768px]">
                         <TableHeader className="bg-gray-50 hover:bg-gray-50 rounded-t-xl">
                             <TableRow className="hover:bg-gray-50">
                                 <TableHead className="text-xs font-medium text-gray-900" style={{paddingLeft: "20px"}}>DATE &amp; TIME</TableHead>
@@ -109,17 +109,17 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
                     </Table>
                 </div>
                 {transactions.length > 0 && totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-                        <div className="text-sm text-gray-700">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 md:px-6 py-4 border-t border-gray-200">
+                        <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
                             Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
                             <span className="font-medium">{Math.min(endIndex, transactions.length)}</span> of{" "}
                             <span className="font-medium">{transactions.length}</span> transactions
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-center">
                             <button
                                 onClick={handlePreviousPage}
                                 disabled={currentPage === 1}
-                                className="h-8 px-3 text-sm font-medium border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                className="h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                             >
                                 Previous
                             </button>
@@ -129,7 +129,7 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
                                         <button
                                             key={index}
                                             onClick={() => handlePageClick(page)}
-                                            className={`h-8 w-8 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                                            className={`h-7 w-7 sm:h-8 sm:w-8 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer ${
                                                 currentPage === page
                                                     ? 'bg-red-500 text-white hover:bg-red-600'
                                                     : 'border border-gray-300 bg-white hover:bg-gray-50'
@@ -138,7 +138,7 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
                                             {page}
                                         </button>
                                     ) : (
-                                        <span key={index} className="px-2 text-gray-500">
+                                        <span key={index} className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500">
                                             {page}
                                         </span>
                                     )
@@ -147,7 +147,7 @@ export const TransactionHistory = ({ transactions }: TransactionHistoryProps) =>
                             <button
                                 onClick={handleNextPage}
                                 disabled={currentPage === totalPages}
-                                className="h-8 px-3 text-sm font-medium border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                className="h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                             >
                                 Next
                             </button>

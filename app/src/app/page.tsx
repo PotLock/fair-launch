@@ -21,58 +21,58 @@ export default function Home() {
           <div className="w-full lg:container px-6 lg:px-28 mx-auto">
             <div className="marquee2">
               <div className="marquee2__track">
-                <div className="flex gap-1 items-center flex-shrink-0">
+                <div className="flex gap-1 items-center shrink-0">
                   <img src="/logos/near-intents.svg" alt="near-intents" className="w-28 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0">
+                <div className="flex gap-1 items-center shrink-0">
                   <img src="/logos/aerodrome.png" alt="Aerodrome" className="w-8 h-auto" />
                   <span className="text-lg font-bold">AERODROME</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0">
+                <div className="flex gap-1 items-center shrink-0">
                   <img src="/logos/raydium-text.svg" alt="Raydium" className="w-36 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0">
+                <div className="flex gap-1 items-center shrink-0">
                   <img src="/logos/pumpfun.png" alt="PumpSwap" className="w-9 h-auto" />
                   <span className="font-bold">PumpSwap</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0">
-                  <img src="/logos/rhea.svg" alt="RHEA" className="w-[6rem] h-auto" />
+                <div className="flex gap-1 items-center shrink-0">
+                  <img src="/logos/rhea.svg" alt="RHEA" className="w-24 h-auto" />
                 </div>
 
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/near-intents.svg" alt="near-intents" className="w-28 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/aerodrome.png" alt="Aerodrome" className="w-8 h-auto" />
                   <span className="text-lg font-bold">AERODROME</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/raydium-text.svg" alt="Raydium" className="w-36 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/pumpfun.png" alt="PumpSwap" className="w-9 h-auto" />
                   <span className="font-bold">PumpSwap</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
-                  <img src="/logos/rhea.svg" alt="RHEA" className="w-[6rem] h-auto" />
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
+                  <img src="/logos/rhea.svg" alt="RHEA" className="w-24 h-auto" />
                 </div>
 
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/near-intents.svg" alt="near-intents" className="w-28 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/aerodrome.png" alt="Aerodrome" className="w-8 h-auto" />
                   <span className="text-lg font-bold">AERODROME</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/raydium-text.svg" alt="Raydium" className="w-36 h-auto" />
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
                   <img src="/logos/pumpfun.png" alt="PumpSwap" className="w-9 h-auto" />
                   <span className="font-bold">PumpSwap</span>
                 </div>
-                <div className="flex gap-1 items-center flex-shrink-0" aria-hidden="true">
-                  <img src="/logos/rhea.svg" alt="RHEA" className="w-[6rem] h-auto" />
+                <div className="flex gap-1 items-center shrink-0" aria-hidden="true">
+                  <img src="/logos/rhea.svg" alt="RHEA" className="w-24 h-auto" />
                 </div>
               </div>
             </div>
@@ -95,7 +95,6 @@ export default function Home() {
           </div>
           <CoreCapabilities/>
           
-          {/* Stream the ExploreTokens component with Suspense */}
           <Suspense fallback={<ExploreTokensLoading />}>
             <ExploreTokens/>
           </Suspense>

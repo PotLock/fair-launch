@@ -14,6 +14,7 @@ import {
     hexToNumber
 } from "@/utils";
 import { getSolPrice } from "@/lib/sol";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 
 interface ExploreTokenCardProps {
@@ -62,47 +63,45 @@ export default function ExploreTokenCard({
     const [loading, setLoading] = useState(true);
 
     const fetchTokenData = useCallback(async () => {
-        const solPrice = await getSolPrice();
-        if(!solPrice) return;
+        const solPrice = await getSolPrice(); // SOL price in USD
+        if (!solPrice) return;
+    
         try {
             setLoading(true);
-            
+    
             const [holders, pool, poolConfig] = await Promise.all([
                 getTokenHolders(mint),
                 getPoolStateByMint(mint),
                 getPoolConfigByMint(mint)
             ]);
+    
+            const quote = hexToNumber(pool?.account?.quoteReserve) / LAMPORTS_PER_SOL;
+            const base = hexToNumber(pool?.account?.baseReserve) / Math.pow(10, decimals);
 
-            // Convert hex values to numbers
-            const quote = hexToNumber(pool?.account?.quoteReserve) / Math.pow(10, 9);
-            const base = hexToNumber(pool?.account?.baseReserve) / Math.pow(10, 9);
             const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply) / Math.pow(10, decimals);
 
-            // Calculate price: quote / base (in SOL)
             const price = base > 0 ? quote / base : 0;
-            
-            // Calculate total supply: preMigrationTokenSupply + baseReserve
-            const totalSupplyCalc = preMigrationTokenSupply + base;
-            
-            // Calculate circulating supply: totalSupply - base
-            const circulating = totalSupplyCalc - base;
-            
-            // Calculate market cap: price * circulating
-            const marketCap = price * circulating * solPrice;
 
+            const totalSupply = preMigrationTokenSupply + base;
+
+            const circulating = totalSupply - base;
+
+            const marketCap = price * circulating;
+    
             setTokenData({
-                price: price * solPrice, // Convert to USD
+                price: price * solPrice,
                 holders: holders.length,
-                marketCap,
-                supply: formatNumberToCurrency(Number(totalSupply))
+                marketCap: marketCap * solPrice,
+                supply: formatNumberToCurrency(preMigrationTokenSupply)
             });
+    
         } catch (error) {
             console.error('Error fetching token data:', error);
-            // Keep default values on error
         } finally {
             setLoading(false);
         }
-    }, [mint, totalSupply, decimals]);
+    }, [mint]);
+    
     
     useEffect(() => {
         fetchTokenData();

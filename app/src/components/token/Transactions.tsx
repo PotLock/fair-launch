@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import Link from "next/link";
 import { useTransactions } from "@/hooks/useSWR";
 import { TransactionAction } from "@/types/api";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TransactionsProps {
     tokenAddress: string;
@@ -19,6 +20,12 @@ export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: Tr
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
     const { transactions, isLoading, error } = useTransactions(tokenAddress);
+
+    // Truncate address from the middle
+    const truncateAddress = (address: string, startChars = 6, endChars = 4) => {
+        if (address.length <= startChars + endChars) return address;
+        return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+    };
 
     useEffect(() => {
         setCurrentPage(1);
@@ -127,7 +134,14 @@ export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: Tr
                         paginatedTransactions.map((transfer) => (
                         <tr key={transfer.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
                             <td className="px-4 py-4">
-                                <Link href={`https://solscan.io/tx/${transfer.txHash}?cluster=devnet`} target="_blank" className="text-blue-600 font-mono text-xs truncate max-w-xs">{transfer.txHash.slice(0, 10)+'...'}</Link>
+                                <Link 
+                                    href={`https://solscan.io/tx/${transfer.txHash}?cluster=devnet`} 
+                                    target="_blank" 
+                                    className="text-blue-600 font-mono text-xs hover:underline"
+                                    title={transfer.txHash}
+                                >
+                                    {truncateAddress(transfer.txHash, 8, 8)}
+                                </Link>
                             </td>
                             <td className="px-4 py-4">
                                 <span className="text-slate-700 font-mono text-xs font-medium">{timeAgo(transfer.createdAt)}</span>
@@ -139,13 +153,33 @@ export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: Tr
                             </td>
                             <td className="px-4 py-4">
                                 <div className="flex items-center gap-2">
-                                <span className="text-slate-700 font-mono text-xs truncate max-w-xs">{transfer.userAddress.slice(0, 10)+'...'}</span>
-                                <button
-                                    onClick={() => copyToClipboard(transfer.userAddress)}
-                                    className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                                >
-                                    <Copy className="w-3 h-3" />
-                                </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link 
+                                                href={`https://solscan.io/address/${transfer.userAddress}?cluster=devnet`} 
+                                                target="_blank" 
+                                                className="text-blue-600 font-mono text-xs hover:underline"
+                                            >
+                                                {truncateAddress(transfer.userAddress)}
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="border border-slate-200/70">
+                                            <p className="font-mono text-xs">{transfer.userAddress}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => copyToClipboard(transfer.userAddress)}
+                                                className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                            >
+                                                <Copy className="w-3 h-3" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="border border-slate-200/70">
+                                            <p className="text-xs">Copy address</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 </div>
                             </td>
                             <td className="px-4 py-4">

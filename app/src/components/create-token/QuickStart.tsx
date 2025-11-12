@@ -65,7 +65,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <img
                   src="/images/quick-mint.svg"
                   className="w-14 h-14 sm:w-16 sm:h-16"
@@ -90,40 +90,30 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
             {/* Features List */}
             <ul className="space-y-2 text-xs sm:text-sm text-gray-600">
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 <span>Standard meme coin setup with proven defaults</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 <span>1 billion token supply (6 decimals)</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 <span>All tokens mint directly to your wallet</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 <span>Skip complex tokenomics configuration</span>
               </li>
             </ul>
-
-            {/* Time Estimate */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center text-sm text-gray-600">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="font-medium">Launch Time: 2-5 minutes</span>
-              </div>
-            </div>
           </div>
 
           {/* Custom Creation Card */}
@@ -155,7 +145,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <img
                   src="/images/custom-mint.svg"
                   className="w-12 h-12 sm:w-14 sm:h-14"
@@ -180,40 +170,30 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
             {/* Features List */}
             <ul className="space-y-2 text-xs sm:text-sm text-gray-600">
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-blue-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
                 <span>Complete tokenomics customization</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-blue-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
                 <span>Token allocations and vesting schedules</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-blue-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
                 <span>Bonding curve and fee configuration</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-blue-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
                 <span>Advanced authority and security settings</span>
               </li>
             </ul>
-
-            {/* Time Estimate */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center text-sm text-gray-600">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="font-medium">Launch Time: 10-20 minutes</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -222,7 +202,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
           <div className="w-full border border-red-500 bg-[#DD3345] rounded-xl px-4 py-3 sm:px-5 sm:py-4 shadow-lg">
             <div className="flex flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-white/40 p-1 flex-shrink-0">
+                <div className="rounded-lg bg-white/40 p-1 shrink-0">
                   <img
                     src="/images/thunder.png"
                     alt="NEAR Launch"
@@ -247,7 +227,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
                 <span className="text-white text-sm font-medium group-hover:underline whitespace-nowrap">
                   Get Started
                 </span>
-                <ChevronRight className="text-white h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5"/>
+                <ChevronRight className="text-white h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5"/>
               </Link>
             </div>
           </div>
@@ -255,7 +235,7 @@ export default function QuickStart({ onMethodSelect }: QuickStartProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 px-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 sm:gap-4 px-4">
           <button
             onClick={handleCancel}
             className="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer"
