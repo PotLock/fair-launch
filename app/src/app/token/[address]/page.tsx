@@ -156,7 +156,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
                 images: [
                     {
-                        url: "/hero.png",
+                        url: "/og-image.png",
                         width: 1200,
                         height: 630,
                         alt: "POTLAUNCH",
@@ -167,7 +167,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
                 card: "summary_large_image",
                 title: "Token | POTLAUNCH",
                 description: "Discover and trade tokens on POTLAUNCH. Explore the latest cryptocurrency tokens and trading opportunities.",
-                images: ["/hero.png"],
+                images: ["/og-image.png"],
             },
         };
     }

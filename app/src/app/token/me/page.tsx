@@ -58,7 +58,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "POTLAUNCH",
       images: [
         {
-          url: "/hero.png",
+          url: "/og-image.png",
           width: 1200,
           height: 630,
           alt: "POTLAUNCH My Portfolio",
@@ -71,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
       creator: "@potlaunch",
       title,
       description,
-      images: ["/hero.png"],
+      images: ["/og-image.png"],
     },
     alternates: {
       canonical: "https://potlaunch.com/me",

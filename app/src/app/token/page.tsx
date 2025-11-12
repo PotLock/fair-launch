@@ -69,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
         siteName: "POTLAUNCH",
         images: [
           {
-            url: "/hero.png",
+            url: "/og-image.png",
             width: 1200,
             height: 630,
             alt: "POTLAUNCH Token Launchpad",
@@ -82,7 +82,7 @@ export async function generateMetadata(): Promise<Metadata> {
         creator: "@potlaunch",
         title,
         description,
-        images: ["/hero.png"],
+        images: ["/og-image.png"],
       },
       alternates: {
         canonical: "https://potlaunch.com/token",
@@ -103,7 +103,7 @@ export async function generateMetadata(): Promise<Metadata> {
         description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.",
         images: [
           {
-            url: "/hero.png",
+            url: "/og-image.png",
             width: 1200,
             height: 630,
             alt: "POTLAUNCH Token Launchpad",
@@ -114,7 +114,7 @@ export async function generateMetadata(): Promise<Metadata> {
         card: "summary_large_image",
         title: "Token Launchpad | POTLAUNCH",
         description: "Discover and participate in token launches on POTLAUNCH. Support projects you believe in and explore the latest cryptocurrency tokens.",
-        images: ["/hero.png"],
+        images: ["/og-image.png"],
       },
     };
   }
