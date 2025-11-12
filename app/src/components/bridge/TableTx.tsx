@@ -7,6 +7,7 @@ import { timeAgo } from "@/utils";
 import { getStatusColor } from "@/utils/bridge.utils";
 import { ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Connection, PublicKey } from '@solana/web3.js';
 import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
 import { getRpcSOLEndpoint } from "@/lib/sol";
@@ -47,13 +48,8 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
 
     const fetchTokenFromSolana = async (mintAddress: string): Promise<FallbackTokenInfo | null> => {
         try {
-            console.log('Fetching Solana token metadata for:', mintAddress);
-            
-            // Validate if address is a valid Solana address (base58)
-            // Solana addresses are 32-44 characters of base58
             const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
             if (!base58Regex.test(mintAddress)) {
-                console.warn('Invalid Solana address format:', mintAddress);
                 return null;
             }
             
@@ -63,7 +59,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
             try {
                 mintPublicKey = new PublicKey(mintAddress);
             } catch (error) {
-                console.warn('Failed to create PublicKey from address:', mintAddress);
                 return null;
             }
             
@@ -78,7 +73,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
 
             const accountInfo = await connection.getAccountInfo(metadataPDA);
             if (!accountInfo?.data) {
-                console.warn('Solana metadata account not found for:', mintAddress);
                 return null;
             }
             
@@ -106,7 +100,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 image: imageUrl,
             };
             
-            console.log('Solana token metadata:', tokenInfo);
             return tokenInfo;
         } catch (error) {
             console.error('Error fetching Solana token metadata:', error);
@@ -116,9 +109,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
 
     const fetchTokenFromEVM = async (tokenAddress: string): Promise<FallbackTokenInfo | null> => {
         try {
-            console.log('Fetching EVM token metadata for:', tokenAddress);
-            
-            // Validate if address is a valid EVM address (0x + 40 hex chars)
             if (!ethers.isAddress(tokenAddress)) {
                 console.warn('Invalid EVM address format:', tokenAddress);
                 return null;
@@ -138,24 +128,16 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 image: undefined
             };
             
-            console.log('EVM token metadata:', tokenInfo);
             return tokenInfo;
         } catch (error) {
-            console.error('Error fetching EVM token metadata:', error);
             return null;
         }
     };
 
     const fetchTokenFromNEAR = async (tokenContractId: string): Promise<FallbackTokenInfo | null> => {
         try {
-            console.log('Fetching NEAR token metadata for:', tokenContractId);
-            
-            // Validate if address looks like a NEAR account
-            // NEAR accounts can be like "token.near" or "usdc.testnet" or "abc123...xyz.near"
-            // They should contain at least one dot or be an implicit account (64 hex chars)
             const nearAccountRegex = /^([a-z0-9_-]+\.)*[a-z0-9_-]+\.[a-z]+$|^[a-f0-9]{64}$/i;
             if (!nearAccountRegex.test(tokenContractId)) {
-                console.warn('Invalid NEAR account format:', tokenContractId);
                 return null;
             }
             
@@ -186,19 +168,16 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
             });
 
             if (!response.ok) {
-                console.warn(`NEAR RPC request failed: ${response.status} ${response.statusText}`);
                 return null;
             }
 
             const data = await response.json();
             
             if (data.error) {
-                console.warn('NEAR RPC error:', data.error);
                 return null;
             }
             
             if (!data?.result?.result) {
-                console.warn('NEAR RPC response missing result');
                 return null;
             }
 
@@ -210,12 +189,10 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
             } else if (Array.isArray(rawResult)) {
                 decodedResult = String.fromCharCode(...rawResult);
             } else {
-                console.warn('Unsupported NEAR result format:', typeof rawResult);
                 return null;
             }
 
             const metadata = JSON.parse(decodedResult);
-            console.log('NEAR token metadata:', metadata);
             
             return {
                 symbol: metadata.symbol || 'UNKNOWN',
@@ -223,7 +200,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 image: metadata.icon
             };
         } catch (error) {
-            console.error('Error fetching NEAR token metadata:', error);
             return null;
         }
     };
@@ -239,9 +215,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 throw new Error("Token not found in database");
             }
         } catch (error) {
-            console.log('Falling back to chain-specific fetch:', transaction.chain);
-            
-            // Fallback to chain-specific fetch
             let fallbackInfo: FallbackTokenInfo | null = null;
             
             const chainLower = transaction.chain.toLowerCase();
@@ -257,7 +230,6 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                 setFallbackToken(fallbackInfo);
                 setToken(undefined);
             } else {
-                // If all fallbacks fail, show placeholder
                 setFallbackToken({
                     symbol: 'UNKNOWN',
                     name: 'Unknown Token',
@@ -279,7 +251,7 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
         if (chainLower === 'solana') return 'solana';
         if (chainLower === 'ethereum') return 'ethereum';
         if (chainLower === 'near') return 'near';
-        return 'solana'; // default fallback
+        return 'solana';
     };
 
     const getAmount = (tx: Transaction): string => {
@@ -291,6 +263,38 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
 
     const chainType = chainToChainType(transaction.chain);
     const explorerUrl = CHAINS[chainType]?.explorerUrl || CHAINS.solana.explorerUrl;
+
+    const getTokenExplorerUrl = (tokenAddress: string, chain: TransactionChain): string => {
+        const chainLower = chain.toLowerCase();
+        
+        // Get the appropriate explorer URL for each chain
+        let baseExplorerUrl: string;
+        if (chainLower === 'solana') {
+            baseExplorerUrl = CHAINS.solana.explorerUrl;
+            return `${baseExplorerUrl}/token/${tokenAddress}?cluster=devnet`;
+        } else if (chainLower === 'ethereum') {
+            baseExplorerUrl = CHAINS.ethereum.explorerUrl;
+            return `${baseExplorerUrl}/token/${tokenAddress}`;
+        } else if (chainLower === 'base') {
+            baseExplorerUrl = 'https://basescan.org';
+            return `${baseExplorerUrl}/token/${tokenAddress}`;
+        } else if (chainLower === 'arbitrum') {
+            baseExplorerUrl = 'https://arbiscan.io';
+            return `${baseExplorerUrl}/token/${tokenAddress}`;
+        } else if (chainLower === 'bnb' || chainLower === 'bsc') {
+            baseExplorerUrl = 'https://bscscan.com';
+            return `${baseExplorerUrl}/token/${tokenAddress}`;
+        } else if (chainLower === 'near') {
+            baseExplorerUrl = CHAINS.near.explorerUrl;
+            return `${baseExplorerUrl}/address/${tokenAddress}`;
+        }
+        
+        // Default fallback
+        baseExplorerUrl = CHAINS.solana.explorerUrl;
+        return `${baseExplorerUrl}/token/${tokenAddress}`;
+    };
+
+    const tokenExplorerUrl = getTokenExplorerUrl(transaction.baseToken, transaction.chain);
 
     return (
         <TableRow className="hover:bg-gray-50">
@@ -324,9 +328,13 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                                 </span>
                             )}
                         </div>
-                        <span className="text-xs sm:text-sm text-gray-600">
+                        <Link 
+                            href={tokenExplorerUrl}
+                            target="_blank"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                        >
                             {token?.symbol || fallbackToken?.symbol || 'UNKNOWN'}
-                        </span>
+                        </Link>
                     </div>
                 )}
             </TableCell>
