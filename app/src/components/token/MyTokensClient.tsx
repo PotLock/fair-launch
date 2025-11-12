@@ -125,7 +125,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                     if (balance > 0) {
                         // Get current price
                         const poolState = await getPoolStateByMint(token.mintAddress);
-                        const priceData = calculateTokenPrice(poolState, solPrice);
+                        const priceData = calculateTokenPrice(poolState, token.decimals, solPrice);
 
                         // Calculate value
                         const tokenValue = balance * priceData.priceInUsd;
@@ -200,15 +200,15 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
     if (!publicKey) {
         return (
-            <div className="min-h-screen py-10">
+            <div className="min-h-screen py-6 md:py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">My Portfolio</h1>
                     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                        <div className="w-64 h-64 mb-6 flex items-center justify-center">
+                        <div className="w-48 h-48 md:w-64 md:h-64 mb-6 flex items-center justify-center">
                             <img src="/images/broken-pot.png" alt="Not Found" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2">Solana wallet not connected</h3>
-                        <p className="text-gray-500 mb-6 max-w-md">
+                        <h3 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">Solana wallet not connected</h3>
+                        <p className="text-sm md:text-base text-gray-500 mb-6 max-w-md px-4">
                             Connect your Solana wallet to view and manage your tokens.
                         </p>
                     </div>
@@ -219,42 +219,42 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
     if (loading || loadingPurchased) {
         return (
-            <div className="min-h-screen py-10 w-full">
+            <div className="min-h-screen py-6 md:py-10 w-full">
                 <div className="max-w-7xl mx-auto px-4 w-full">
-                    <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
-                        <div className="max-w-md">
-                            <h1 className="text-3xl font-bold text-black mb-3">My Portfolio</h1>
-                            <p className="text-base text-gray-500 leading-6">
+                    <div className="flex flex-col lg:flex-row justify-between items-start gap-4 md:gap-8 mb-6 md:mb-8">
+                        <div className="max-w-md w-full lg:w-auto">
+                            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 md:mb-3">My Portfolio</h1>
+                            <p className="text-sm md:text-base text-gray-500 leading-6">
                                 View and manage all the tokens you've created on the token launch platforms
                             </p>
                         </div>
-                        <div className="flex md:flex-row flex-col gap-8 w-full">
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
-                                <div className="flex flex-col gap-10">
+                        <div className="flex md:flex-row flex-col gap-4 md:gap-8 w-full lg:w-auto">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-4 md:p-6 md:w-80 w-full">
+                                <div className="flex flex-col gap-6 md:gap-10">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
+                                        <h3 className="text-xl md:text-2xl font-bold text-[#09090B]">My Portfolio</h3>
                                     </div>
-                                    <div className="flex flex-col gap-3">
-                                        <div className="text-3xl font-bold text-[#15803D]">
+                                    <div className="flex flex-col gap-2 md:gap-3">
+                                        <div className="text-2xl md:text-3xl font-bold text-[#15803D]">
                                             $0.00
                                         </div>
-                                        <div className="text-sm font-medium text-[#71717A]">
+                                        <div className="text-xs md:text-sm font-medium text-[#71717A]">
                                             Total portfolio value
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
-                                <div className="flex flex-col gap-10">
+                            <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-4 md:p-6 md:w-80 w-full">
+                                <div className="flex flex-col gap-6 md:gap-10">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
+                                        <h3 className="text-xl md:text-2xl font-bold text-[#09090B]">Total Tokens</h3>
                                     </div>
-                                    <div className="flex flex-col gap-3">
-                                        <div className="text-3xl font-bold text-[#15803D]">
+                                    <div className="flex flex-col gap-2 md:gap-3">
+                                        <div className="text-2xl md:text-3xl font-bold text-[#15803D]">
                                             0
                                         </div>
-                                        <div className="text-sm font-medium text-[#71717A]">
+                                        <div className="text-xs md:text-sm font-medium text-[#71717A]">
                                             (0 Trading)
                                         </div>
                                     </div>
@@ -263,26 +263,26 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 mb-8">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-6 md:mb-8">
                         <div className="flex-1">
                             <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="Search your tokens..."
                                     disabled
-                                    className="w-full px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-base font-medium text-gray-400 placeholder-gray-400 cursor-not-allowed"
+                                    className="w-full px-3 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-sm md:text-base font-medium text-gray-400 placeholder-gray-400 cursor-not-allowed"
                                 />
                             </div>
                         </div>
                         
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild className="w-28">
+                            <DropdownMenuTrigger asChild className="w-full sm:w-28">
                                 <button
                                     disabled
-                                    className="appearance-none px-4 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-sm text-gray-400 cursor-not-allowed flex items-center justify-between w-28"
+                                    className="appearance-none px-4 py-2.5 bg-gray-100 border border-[#E2E8F0] rounded-md text-xs sm:text-sm text-gray-400 cursor-not-allowed flex items-center justify-between w-full sm:w-28"
                                 >
                                     <span>Filter</span>
-                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-20">
@@ -292,12 +292,12 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                             </DropdownMenuContent>
                         </DropdownMenu>
                         
-                        <button disabled className="bg-gray-300 text-gray-500 px-9 py-2.5 rounded-md font-medium flex items-center justify-center">
+                        <button disabled className="bg-gray-300 text-gray-500 px-6 sm:px-9 py-2.5 rounded-md text-sm font-medium flex items-center justify-center w-full sm:w-auto">
                             Search
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 pb-50">
                         {[...Array(6)].map((_, index) => (
                             <TokenCardSkeleton key={index} />
                         ))}
@@ -309,10 +309,10 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
     if (displayError) {
         return (
-            <div className="min-h-screen py-10">
+            <div className="min-h-screen py-6 md:py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
-                <p className="text-red-500 mb-8 text-base">{displayError}</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">My Portfolio</h1>
+                <p className="text-red-500 mb-8 text-sm md:text-base">{displayError}</p>
                 </div>
             </div>
         );
@@ -320,18 +320,18 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
     if (listTokens.length === 0) {
         return (
-            <div className="min-h-screen py-10">
+            <div className="min-h-screen py-6 md:py-10">
                 <div className="max-w-7xl mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-black mb-2">My Portfolio</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">My Portfolio</h1>
                     
                     {searchQuery.trim() && isSearching ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 pb-50">
                             {[...Array(6)].map((_, index) => (
                                 <TokenCardSkeleton key={index} />
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
                             <NoTokensFound 
                                 searchQuery={searchQuery} 
                                 className="pt-10"
@@ -343,7 +343,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                             {!searchQuery.trim() && activeTab === 'created' && (
                                 <button
                                     onClick={()=>router.push("/create")}
-                                    className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                                    className="bg-black hover:bg-gray-800 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-colors duration-200"
                                 >
                                     Create Your First Token
                                 </button>
@@ -356,42 +356,42 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     }
 
     return (
-        <div className="min-h-screen py-10">
+        <div className="min-h-screen py-6 md:py-10">
             <div className="max-w-7xl mx-auto px-4">
-                <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-8">
-                    <div className="max-w-md md:max-w-full">
-                        <h1 className="text-3xl font-bold text-black mb-3">My Portfolio</h1>
-                        <p className="text-base text-gray-500 leading-6">
+                <div className="flex flex-col lg:flex-row justify-between items-start gap-4 md:gap-8 mb-6 md:mb-8">
+                    <div className="max-w-md w-full lg:w-auto">
+                        <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 md:mb-3">My Portfolio</h1>
+                        <p className="text-sm md:text-base text-gray-500 leading-6">
                             View and manage all the tokens you've created on the token launch platforms
                         </p>
                     </div>
-                    <div className="flex md:flex-row flex-col gap-8 w-full">
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
-                            <div className="flex flex-col gap-10">
+                    <div className="flex md:flex-row flex-col gap-4 md:gap-8 w-full lg:w-auto">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-4 md:p-6 md:w-80 w-full">
+                            <div className="flex flex-col gap-6 md:gap-10">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-[#09090B]">My Portfolio</h3>
+                                    <h3 className="text-xl md:text-2xl font-bold text-[#09090B]">My Portfolio</h3>
                                 </div>
-                                <div className="flex flex-col gap-3">
-                                    <div className="text-3xl font-bold text-[#15803D]">
+                                <div className="flex flex-col gap-2 md:gap-3">
+                                    <div className="text-2xl md:text-3xl font-bold text-[#15803D]">
                                         ${formatNumberToCurrency(portfolioValue)}
                                     </div>
-                                    <div className="text-sm font-medium text-[#71717A]">
+                                    <div className="text-xs md:text-sm font-medium text-[#71717A]">
                                         Total portfolio value
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-6 md:w-80 w-full">
-                            <div className="flex flex-col gap-10">
+                        <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl p-4 md:p-6 md:w-80 w-full">
+                            <div className="flex flex-col gap-6 md:gap-10">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-[#09090B]">Total Tokens</h3>
+                                    <h3 className="text-xl md:text-2xl font-bold text-[#09090B]">Total Tokens</h3>
                                 </div>
-                                <div className="flex flex-col gap-3">
-                                    <div className="text-3xl font-bold text-[#15803D]">
+                                <div className="flex flex-col gap-2 md:gap-3">
+                                    <div className="text-2xl md:text-3xl font-bold text-[#15803D]">
                                         {totalTokens}
                                     </div>
-                                    <div className="text-sm font-medium text-[#71717A]">
+                                    <div className="text-xs md:text-sm font-medium text-[#71717A]">
                                         ({tradingTokens} Trading)
                                     </div>
                                 </div>
@@ -401,16 +401,16 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-2 mb-4 border-b border-gray-200 w-full">
+                <div className="flex items-center gap-1 sm:gap-2 mb-4 border-b border-gray-200 w-full overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('created')}
-                        className={`px-6 py-3 ${activeTab === 'created' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer`}
+                        className={`px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base ${activeTab === 'created' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer whitespace-nowrap`}
                     >
                         Created
                     </button>
                     <button
                         onClick={() => setActiveTab('purchased')}
-                        className={`px-6 py-3 ${activeTab === 'purchased' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer`}
+                        className={`px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base ${activeTab === 'purchased' ? 'border-red-500 border-b-2 font-semibold' : 'border-none text-gray-500'} cursor-pointer whitespace-nowrap`}
                     >
                         Purchased
                     </button>
@@ -442,15 +442,15 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <div className="relative">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <div className="relative flex-1 sm:flex-none">
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
+                                <DropdownMenuTrigger asChild className="w-full sm:w-36 cursor-pointer">
                                     <button
-                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-2.5 sm:py-3 w-full sm:w-36 bg-white border border-[#E2E8F0] rounded-md text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <span>{getTimeRangeLabel(selectedTimeRange)}</span>
-                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                        <span className="truncate">{getTimeRangeLabel(selectedTimeRange)}</span>
+                                        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-40 bg-white">
@@ -493,16 +493,16 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                             </DropdownMenu>
                         </div>
 
-                        <div className="relative">
+                        <div className="relative flex-1 sm:flex-none">
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild className="w-36 cursor-pointer">
+                                <DropdownMenuTrigger asChild className="w-full sm:w-36 cursor-pointer">
                                     <button
-                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-3 w-36 bg-white border border-[#E2E8F0] rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="appearance-none flex flex-row gap-2 justify-between items-center px-3 py-2.5 sm:py-3 w-full sm:w-36 bg-white border border-[#E2E8F0] rounded-md text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <span className="capitalize">
+                                        <span className="capitalize truncate">
                                             {tag ? `${TAG_ICONS[tag] ?? ""} ${tag}` : "Tags"}
                                         </span>
-                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-48 bg-white">
@@ -526,44 +526,44 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                 </div>
 
                 {(selectedTimeRange !== "all" || tag) && (
-                    <div className="flex flex-wrap items-center gap-2 mb-6">
+                    <div className="flex flex-wrap items-center gap-2 mb-4 md:mb-6">
                         {selectedTimeRange !== "all" && (
                             <button
                                 onClick={() => handleTimeRangeChange("all")}
-                                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
+                                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-blue-100 bg-blue-50 px-2.5 sm:px-3 py-1 text-xs sm:text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
                             >
                                 <span>{getTimeRangeLabel(selectedTimeRange)}</span>
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </button>
                         )}
                         {tag && (
                             <button
                                 onClick={() => setTag(undefined)}
-                                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
+                                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-blue-100 bg-blue-50 px-2.5 sm:px-3 py-1 text-xs sm:text-sm text-blue-700 transition hover:bg-blue-100 cursor-pointer"
                             >
-                                <span className="capitalize flex items-center gap-2">
+                                <span className="capitalize flex items-center gap-1 sm:gap-2">
                                     <span>{TAG_ICONS[tag]}</span>
                                     <span>{tag}</span>
                                 </span>
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </button>
                         )}
                         <button
                             onClick={handleClearFilters}
-                            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-600 transition hover:bg-gray-100 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-gray-200 bg-white px-2.5 sm:px-3 py-1 text-xs sm:text-sm text-gray-600 transition hover:bg-gray-100 cursor-pointer"
                         >
                             Clear all
                         </button>
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 pb-50">
                     {searchQuery.trim() && isSearching ? (
                         [...Array(6)].map((_, index) => (
                             <TokenCardSkeleton key={index} />
                         ))
                     ) : searchQuery.trim() && !isSearching && searchResults.length === 0 ? (
-                        <div className="col-span-full flex flex-col items-center justify-center text-center">
+                        <div className="col-span-full flex flex-col items-center justify-center text-center px-4">
                             <NoTokensFound 
                                 searchQuery={searchQuery} 
                                 className="pt-3"
@@ -577,7 +577,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                         displayTokens?.map((token: Token) => (
                             <MyTokenCard  
                                 key={token.id.toString()}
-                                className="lg:max-w-[400px]"
+                                className="w-full lg:max-w-[400px]"
                                 id={token.id.toString()}
                                 user={publicKey}
                                 mint={token.mintAddress || ''}

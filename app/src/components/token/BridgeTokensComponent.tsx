@@ -11,6 +11,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useBridge } from "@/hooks/useBridge";
 import { ChainKind, normalizeAmount } from "omni-bridge-sdk";
 import { SOL_NETWORK } from "@/configs/env.config";
+import { useWalletContext } from "@/contexts/WalletProviderContext";
 
 interface Chain {
     name: string;
@@ -41,9 +42,10 @@ export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessin
     const [selectedToChain, setSelectedToChain] = useState<Chain>(chains[1]);
 
     // Wallet hooks
-    const { signedAccountId } = useWalletSelector();
+    const { signedAccountId, signIn } = useWalletSelector();
     const { connected, publicKey } = useWallet();
     const { transferToken } = useBridge();
+    const { connectSolana } = useWalletContext();
 
     // Get bridge transactions for the current user
     const userAddress = publicKey?.toString() || signedAccountId || '';
@@ -76,6 +78,7 @@ export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessin
 
         if(!signedAccountId){
             toast.error('Please connect your NEAR wallet first');
+            signIn();
             return;
         }
 
@@ -86,6 +89,7 @@ export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessin
 
         if (!connected || !publicKey) {
             toast.error('Please connect your Solana wallet first');
+            connectSolana();
             return;
         }
 

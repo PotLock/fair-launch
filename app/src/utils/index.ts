@@ -1,4 +1,5 @@
 import { PoolState } from "@/types/pool";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { toast } from "sonner";
 
 export const formatNumberToCurrency = (x: number): string => {
@@ -171,15 +172,14 @@ export interface TokenPriceData {
 }
 
 // Calculate token price from pool state
-export function calculateTokenPrice(poolState: PoolState, solPrice: number): TokenPriceData {
+export function calculateTokenPrice(poolState: PoolState, decimals: number, solPrice: number): TokenPriceData {
   if (!poolState?.account) {
     return { priceInSol: 0, priceInUsd: 0 };
   }
 
-  const quote = hexToNumber(poolState.account.quoteReserve) / Math.pow(10, 9);
-  const base = hexToNumber(poolState.account.baseReserve) / Math.pow(10, 9);
+  const quote = hexToNumber(poolState?.account?.quoteReserve) / LAMPORTS_PER_SOL;
+  const base = hexToNumber(poolState?.account?.baseReserve) / Math.pow(10, decimals);
 
-  // Calculate price: quote / base (in SOL)
   const priceInSol = base > 0 ? quote / base : 0;
   const priceInUsd = priceInSol * solPrice;
 

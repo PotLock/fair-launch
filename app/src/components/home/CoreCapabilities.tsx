@@ -78,11 +78,11 @@ export default function CoreCapabilities() {
     }, [currentSlide, capabilities.length]);
 
     const nextSlide = () => {
-        setCurrentSlide((prev) => Math.min(prev + 1, maxDesktopSlide));
+        setCurrentSlide((prev) => prev >= maxDesktopSlide ? 0 : prev + 1);
     };
 
     const prevSlide = () => {
-        setCurrentSlide((prev) => Math.max(prev - 1, 0));
+        setCurrentSlide((prev) => prev <= 0 ? maxDesktopSlide : prev - 1);
     };
 
     const goToSlide = (index: number) => {
@@ -216,7 +216,7 @@ export default function CoreCapabilities() {
         <div className="pt-[68px] md:px-6" ref={rootRef}>
             <div className="w-full flex flex-col md:flex-row justify-center text-center md:text-start gap-2 md:justify-between items-center mb-5 md:mb-12">
                 <h1 className="font-bold text-3xl cc-title">Core Capabilities</h1>
-                <span className="md:max-w-[26rem] text-xl cc-subtitle">Comprehensive tools for the complete token lifecycle</span>
+                <span className="md:max-w-104 text-xl cc-subtitle">Comprehensive tools for the complete token lifecycle</span>
             </div>
             
             <div className="relative w-full overflow-hidden">
@@ -234,7 +234,7 @@ export default function CoreCapabilities() {
                         onMouseLeave={handleMouseUp}
                     >
                         {capabilities.map((capability) => (
-                            <div key={capability.id} className="w-full flex-shrink-0 px-4">
+                            <div key={capability.id} className="w-full shrink-0 px-4">
                                 <div className={`${capability.bgColor} rounded-2xl p-6 h-[440px] relative overflow-hidden flex flex-col cc-card`}>
                                     <div className="relative z-10 h-full flex flex-col">
                                         <h3 className="text-xl font-semibold">{capability.title}</h3>
@@ -318,15 +318,13 @@ export default function CoreCapabilities() {
                     <div className="border border-black max-w-[200px] flex rounded-full">
                         <button
                             onClick={prevSlide}
-                            disabled={currentSlide === 0}
-                            className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            className="h-10 w-12 p-2 border-r border-black hover:bg-gray-100 rounded-l-full flex items-center justify-center transition-colors shadow-sm cursor-pointer"
                         >
                             <ChevronLeft className="w-4 h-4 text-gray-600" />
                         </button>
                         <button
                             onClick={nextSlide}
-                            disabled={currentSlide >= maxDesktopSlide}
-                            className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            className="h-10 w-12 p-2 flex items-center justify-center hover:bg-gray-100 rounded-r-full cursor-pointer"
                         >
                             <ChevronRight className="w-4 h-4 text-gray-600" />
                         </button>

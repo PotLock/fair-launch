@@ -29,6 +29,7 @@ interface MyTokenCardProps {
 export function MyTokenCard({
     mint,
     user,
+    decimals,
     banner,
     avatar,
     name,
@@ -52,7 +53,7 @@ export function MyTokenCard({
         try {
             setIsLoadingPrice(true)
             const poolState = await getPoolStateByMint(mint)
-            const priceData = calculateTokenPrice(poolState, solPrice)
+            const priceData = calculateTokenPrice(poolState, decimals, solPrice)
             setCurrentPrice(priceData.priceInSol)
 
             setPriceChange24h(0)

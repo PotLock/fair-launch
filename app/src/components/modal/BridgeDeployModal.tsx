@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { BadgeCheck, Check } from "lucide-react";
 import { Token } from "@/types/api";
 import { useWalletContext } from "@/contexts/WalletProviderContext";
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { BridgeTokensComponent } from "@/components/token/BridgeTokensComponent";
 import { NEAR_NETWORK, SOL_NETWORK } from "@/configs/env.config";
@@ -198,9 +198,10 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     const [bridgeFromChain, setBridgeFromChain] = useState<string>('');
     const [bridgeToChain, setBridgeToChain] = useState<string>('');
 
-    const { signedAccountId } = useWalletSelector()
+    const { signedAccountId, signIn } = useWalletSelector()
     const { address: evmAddress } = useAccount();
-    const { isSolanaConnected,solanaPublicKey } = useWalletContext();
+    const { connect, connectors } = useConnect();
+    const { isSolanaConnected, solanaPublicKey, connectSolana } = useWalletContext();
 
     const { 
         deployToken
@@ -443,29 +444,36 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         stopDeploymentProgressTimer();
 
         if (!isSolanaConnected || !solanaPublicKey) {
-            toast.error('Please connect your Solana wallet first');
             setShowProcessingModal(false);
             setDeploymentStartTime(0);
             setDeploymentProgress(0);
+            toast.error('Please connect your Solana wallet first');
+            connectSolana();
             return;
         }
 
         if(selectedOption?.chain === TransactionChain.NEAR){
             if(!signedAccountId){
-                toast.error('Please connect your NEAR wallet first');
                 setShowProcessingModal(false);
                 setDeploymentStartTime(0);
                 setDeploymentProgress(0);
+                toast.error('Please connect your NEAR wallet first');
+                signIn();
                 return;
             }
         }
 
         if(selectedOption?.chain === TransactionChain.ETHEREUM){
             if(!evmAddress){
-                toast.error('Please connect your EVM wallet first');
                 setShowProcessingModal(false);
                 setDeploymentStartTime(0);
                 setDeploymentProgress(0);
+                toast.error('Please connect your EVM wallet first');
+                try {
+                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
+                } catch (error) {
+                    console.error('Failed to connect EVM wallet:', error);
+                }
                 return;
             }
         }
@@ -814,7 +822,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                             {(!bridgeAddress || bridgeAddress.length === 0) && (
                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <div className="flex items-start gap-2">
-                                        <div className="flex-shrink-0">
+                                        <div className="shrink-0">
                                             <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                             </svg>

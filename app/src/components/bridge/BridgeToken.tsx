@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useReducer } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Check } from "lucide-react";
@@ -15,7 +15,8 @@ import { formatNumberInput, parseFormattedNumber } from "@/utils";
 import { getAllBridgeTokens } from "@/lib/omni-bridge";
 import { ChainKind, normalizeAmount } from "omni-bridge-sdk";
 import { useBridge } from "@/hooks/useBridge";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
+import { useWalletContext } from "@/contexts/WalletProviderContext";
 import { Token, ChainType, TransactionAction, TransactionStatus, TransactionChain } from "@/types/bridge.types";
 import { MIN_BALANCE, MIN_TARGET_BALANCE } from "@/constants/bridge.constants";
 import { useChainTokens } from "@/hooks/useChainTokens";
@@ -27,17 +28,80 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useTransactionBridge } from "@/hooks/useSWR";
 
+
+type ModalState = {
+    showBridgeProcessing: boolean;
+    showBridgeSuccess: boolean;
+    showDeployProcessing: boolean;
+    showDeploySuccess: boolean;
+    bridgeProgress: number;
+    deployProgress: number;
+};
+
+type ModalAction =
+    | { type: 'SHOW_BRIDGE_PROCESSING'; progress?: number }
+    | { type: 'SHOW_BRIDGE_SUCCESS' }
+    | { type: 'SHOW_DEPLOY_PROCESSING'; progress?: number }
+    | { type: 'SHOW_DEPLOY_SUCCESS' }
+    | { type: 'UPDATE_BRIDGE_PROGRESS'; progress: number }
+    | { type: 'UPDATE_DEPLOY_PROGRESS'; progress: number }
+    | { type: 'CLOSE_ALL' }
+    | { type: 'CLOSE_BRIDGE_SUCCESS' }
+    | { type: 'CLOSE_DEPLOY_SUCCESS' };
+
+const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
+    switch (action.type) {
+        case 'SHOW_BRIDGE_PROCESSING':
+            return { ...state, showBridgeProcessing: true, bridgeProgress: action.progress || 0 };
+        case 'SHOW_BRIDGE_SUCCESS':
+            return { ...state, showBridgeProcessing: false, showBridgeSuccess: true, bridgeProgress: 100 };
+        case 'SHOW_DEPLOY_PROCESSING':
+            return { ...state, showDeployProcessing: true, deployProgress: action.progress || 0 };
+        case 'SHOW_DEPLOY_SUCCESS':
+            return { ...state, showDeployProcessing: false, showDeploySuccess: true, deployProgress: 100 };
+        case 'UPDATE_BRIDGE_PROGRESS':
+            return { ...state, bridgeProgress: action.progress };
+        case 'UPDATE_DEPLOY_PROGRESS':
+            return { ...state, deployProgress: action.progress };
+        case 'CLOSE_ALL':
+            return {
+                showBridgeProcessing: false,
+                showBridgeSuccess: false,
+                showDeployProcessing: false,
+                showDeploySuccess: false,
+                bridgeProgress: 0,
+                deployProgress: 0,
+            };
+        case 'CLOSE_BRIDGE_SUCCESS':
+            return { ...state, showBridgeSuccess: false };
+        case 'CLOSE_DEPLOY_SUCCESS':
+            return { ...state, showDeploySuccess: false };
+        default:
+            return state;
+    }
+};
+
 export default function BridgeToken() {
-    const { signedAccountId } = useWalletSelector();
+    const { signedAccountId, signIn } = useWalletSelector();
     const { connected, publicKey } = useWallet();
     const { address: ethereumAddress } = useAccount();
+    const { connect, connectors } = useConnect();
+    const { connectSolana } = useWalletContext();
 
     const { deployToken, transferToken } = useBridge();
     const { getTokensForChain, getLoadingStateForChain } = useChainTokens();
 
+    const [modalState, dispatchModal] = useReducer(modalReducer, {
+        showBridgeProcessing: false,
+        showBridgeSuccess: false,
+        showDeployProcessing: false,
+        showDeploySuccess: false,
+        bridgeProgress: 0,
+        deployProgress: 0,
+    });
+
     const [amount, setAmount] = useState<string>('');
     const [isBridging, setIsBridging] = useState(false);
-    const [bridgeProgress, setBridgeProgress] = useState(0);
     const [isTokenDeployedOnTargetChain, setIsTokenDeployedOnTargetChain] = useState(false);
 
     const [fromChain, setFromChain] = useState<ChainType>('solana');
@@ -47,18 +111,14 @@ export default function BridgeToken() {
     const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
     const [tokenModalType, setTokenModalType] = useState<'from' | 'to'>('from');
 
-    // Loading modal states
-    const [showBridgeProcessingModal, setShowBridgeProcessingModal] = useState(false);
-    const [showBridgeSuccessModal, setShowBridgeSuccessModal] = useState(false);
-    const [showDeployProcessingModal, setShowDeployProcessingModal] = useState(false);
-    const [showDeploySuccessModal, setShowDeploySuccessModal] = useState(false);
-    const [deployProgress, setDeployProgress] = useState(0);
+    const userAddress = useMemo(() => 
+        publicKey?.toBase58() || signedAccountId || ethereumAddress?.toString(),
+        [publicKey, signedAccountId, ethereumAddress]
+    );
+    
+    const { transactions } = useTransactionBridge(userAddress);
 
-
-    const userAddress = publicKey?.toBase58() || signedAccountId || ethereumAddress?.toString();
-    const { transactions, isLoading: isLoadingTransactions, error: transactionsError } = useTransactionBridge(userAddress);
-
-    const getConnectedWallets = (): ChainType[] => {
+    const connectedWallets = useMemo((): ChainType[] => {
         const connectedChains: ChainType[] = [];
         if (connected && publicKey) {
             connectedChains.push('solana');
@@ -70,11 +130,9 @@ export default function BridgeToken() {
             connectedChains.push('ethereum');
         }
         return connectedChains;
-    };
+    }, [connected, publicKey, signedAccountId, ethereumAddress]);
 
     useEffect(() => {
-        const connectedWallets = getConnectedWallets();
-        
         if (connectedWallets.length > 0) {
             if (connectedWallets.length === 1) {
                 setFromChain(connectedWallets[0]);
@@ -94,41 +152,40 @@ export default function BridgeToken() {
                 setToChain('near');
             }
         }
-    }, [connected, publicKey, signedAccountId, ethereumAddress]);
+    }, [connectedWallets]);
 
-    // Helper functions
-    const isFromChainWalletConnected = () => {
+    const isFromChainWalletConnected = useMemo(() => {
         switch (fromChain) {
             case 'near':
                 return !!signedAccountId;
             case 'solana':
-                return connected && publicKey;
+                return connected && !!publicKey;
             case 'ethereum':
                 return !!ethereumAddress;
             default:
                 return false;
         }
-    };
+    }, [fromChain, signedAccountId, connected, publicKey, ethereumAddress]);
 
-    const isAmountExceedingBalance = () => {
+    const isAmountExceedingBalance = useMemo(() => {
         if (!selectedToken || !amount) return false;
         const inputAmount = parseFormattedNumber(amount);
         const tokenBalance = parseFloat(selectedToken.balance);
         return inputAmount > tokenBalance;
-    };
+    }, [selectedToken, amount]);
 
-    const getAvailableTokens = () => {
-        if (!isFromChainWalletConnected()) {
+    const availableTokens = useMemo(() => {
+        if (!isFromChainWalletConnected) {
             return [];
         }
         return getTokensForChain(fromChain);
-    };
+    }, [isFromChainWalletConnected, fromChain, getTokensForChain]);
 
-    const getIsLoadingFromChainTokens = () => {
+    const isLoadingFromChainTokens = useMemo(() => {
         return getLoadingStateForChain(fromChain);
-    };
+    }, [fromChain, getLoadingStateForChain]);
 
-    const getWalletAddress = (chain: ChainType): string | undefined => {
+    const getWalletAddress = useCallback((chain: ChainType): string | undefined => {
         switch (chain) {
             case 'solana':
                 return publicKey?.toBase58();
@@ -139,35 +196,30 @@ export default function BridgeToken() {
             default:
                 return undefined;
         }
-    };
+    }, [publicKey, signedAccountId, ethereumAddress]);
 
-    // Update selected token when chain changes or wallet connection status changes
     useEffect(() => {
-        const availableTokens = getAvailableTokens();
         if (availableTokens.length > 0) {
             setSelectedToken(availableTokens[0]);
         } else {
             setSelectedToken(undefined);
         }
         setIsTokenDeployedOnTargetChain(false);
-    }, [fromChain, connected, signedAccountId, ethereumAddress]);
+    }, [availableTokens.length, fromChain]);
 
-    // Update selected token when tokens change
     useEffect(() => {
-        if (isFromChainWalletConnected()) {
-            const availableTokens = getAvailableTokens();
+        if (isFromChainWalletConnected) {
             if (availableTokens.length > 0 && !selectedToken) {
                 setSelectedToken(availableTokens[0]);
             }
         }
-    }, [getTokensForChain(fromChain).length, selectedToken]);
+    }, [availableTokens.length, selectedToken, isFromChainWalletConnected]);
 
     const fetchBridgeTokens = useCallback(async () => {
         if (selectedToken) {
             const chainToken = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
             const addressTokenBridged = await getAllBridgeTokens(selectedToken.mint, chainToken, 'testnet')
-            console.log("addressTokenBridged", addressTokenBridged)
-            console.log("chainToken", chainToken)
+
             if (addressTokenBridged && addressTokenBridged.length > 0) {
                 const targetChainAddress = addressTokenBridged.find(addr => {
                     const [chain] = addr.split(':');
@@ -192,23 +244,23 @@ export default function BridgeToken() {
         }
     }, [toChain, fromChain]);
 
-    const handleMaxAmount = () => {
+    const handleMaxAmount = useCallback(() => {
         if (selectedToken) {
             const formattedBalance = formatNumberInput(selectedToken.balance);
             setAmount(formattedBalance);
         }
-    };
+    }, [selectedToken]);
 
-    const handleHalfAmount = () => {
+    const handleHalfAmount = useCallback(() => {
         if (selectedToken) {
             const currentAmount = parseFloat(selectedToken.balance) || 0;
             const halfAmount = (currentAmount * 0.5).toFixed(6);
             const formattedHalfAmount = formatNumberInput(halfAmount);
             setAmount(formattedHalfAmount);
         }
-    };
+    }, [selectedToken]);
 
-    const checkBalance = (
+    const checkBalance = useCallback((
         chain: "sol" | "near" | "eth",
         balance: number,
         minRequired: number
@@ -220,14 +272,9 @@ export default function BridgeToken() {
             return false;
         }
         return true;
-    };
+    }, []);
 
-    const handleBridge = async () => {
-        if(!publicKey){
-            toast.error("Please connect wallet Solana")
-            return
-        }
-
+    const handleBridge = useCallback(async () => {
         if (!amount || parseFormattedNumber(amount) <= 0) {
             toast.error('Please enter a valid amount');
             return;
@@ -238,25 +285,41 @@ export default function BridgeToken() {
             return;
         }
 
-        if (!isFromChainWalletConnected()) {
-            toast.error('Please connect your wallet first');
+        if (!isFromChainWalletConnected) {
+            toast.error(`Please connect your ${fromChain.toUpperCase()} wallet first`);
+            if (fromChain === 'solana') {
+                connectSolana();
+            } else if (fromChain === 'near') {
+                signIn();
+            } else if (fromChain === 'ethereum') {
+                try {
+                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
+                } catch (error) {
+                    console.error('Failed to connect EVM wallet:', error);
+                }
+            }
             return;
         }
 
-        if (isAmountExceedingBalance()) {
+        if (isAmountExceedingBalance) {
             toast.error('Amount exceeds token balance');
             return;
         }
 
         setIsBridging(true);
-        setShowBridgeProcessingModal(true);
-        setBridgeProgress(0);
+        dispatchModal({ type: 'SHOW_BRIDGE_PROCESSING', progress: 0 });
 
         let transactionId: string | null = null;
 
         try {
             // Get user address
-            const userAddress = publicKey.toBase58();
+            const userAddress = getWalletAddress(fromChain);
+            if (!userAddress) {
+                toast.error('Wallet address not found');
+                dispatchModal({ type: 'CLOSE_ALL' });
+                setIsBridging(false);
+                return;
+            }
             const amountValue = parseFormattedNumber(amount);
 
             // Create pending transaction before starting bridge
@@ -281,7 +344,7 @@ export default function BridgeToken() {
             transactionId = createdTransaction.id;
 
             // Step 1: Preparing bridge transaction (20%)
-            setBridgeProgress(20);
+            dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 20 });
             await new Promise(resolve => setTimeout(resolve, 500));
 
             const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
@@ -290,7 +353,7 @@ export default function BridgeToken() {
             const amountToBridge = normalizeAmount(amountBigInt, selectedToken.decimals, decimalsToChain);
 
             // Step 2: Initiating transfer (50%)
-            setBridgeProgress(50);
+            dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 50 });
 
             const from = fromChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const to = toChain === 'near' ? ChainKind.Near : ChainKind.Sol;
@@ -308,7 +371,7 @@ export default function BridgeToken() {
             );
 
             // Step 3: Finalizing bridge (100%)
-            setBridgeProgress(100);
+            dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 100 });
             await new Promise(resolve => setTimeout(resolve, 500));
 
             console.log("result", result);
@@ -319,8 +382,7 @@ export default function BridgeToken() {
             }
             setAmount('')
 
-            setShowBridgeProcessingModal(false);
-            setShowBridgeSuccessModal(true);
+            dispatchModal({ type: 'SHOW_BRIDGE_SUCCESS' });
             toast.success('Bridge completed successfully');
         } catch (error) {
             console.error('Bridge error:', error);
@@ -335,40 +397,46 @@ export default function BridgeToken() {
                 }
             }
 
-            setShowBridgeProcessingModal(false);
+            dispatchModal({ type: 'CLOSE_ALL' });
         } finally {
             setIsBridging(false);
         }
-    };
+    }, [amount, selectedToken, isFromChainWalletConnected, isAmountExceedingBalance, fromChain, toChain, getWalletAddress, connectSolana, signIn, connect, connectors, transferToken, signedAccountId, publicKey]);
 
-    const handleDeployToken = async () => {
-        if(!publicKey){
-            toast.error("Please connect wallet Solana")
-            return
-        }
-
+    const handleDeployToken = useCallback(async () => {
         if (!selectedToken) {
             toast.error('Please select a token');
             return;
         }
+        console.log("tochain",toChain)
 
-        if (!isFromChainWalletConnected()) {
-            toast.error('Please connect your wallet first');
+        if (!isFromChainWalletConnected) {
+            toast.error(`Please connect your ${fromChain.toUpperCase()} wallet first`);
+            if (fromChain === 'solana') {
+                connectSolana();
+            } else if (fromChain === 'near') {
+                signIn();
+            } else if (fromChain === 'ethereum') {
+                try {
+                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
+                } catch (error) {
+                    console.error('Failed to connect EVM wallet:', error);
+                }
+            }
             return;
         }
 
-        setShowDeployProcessingModal(true);
-        setDeployProgress(0);
+        dispatchModal({ type: 'SHOW_DEPLOY_PROCESSING', progress: 0 });
 
         let transactionId: string | null = null;
 
         try {
             // Get user address
-            const userAddress = publicKey.toBase58();
+            const userAddress = publicKey?.toBase58();
 
             // Create pending transaction before starting deployment
             const transactionPayload = {
-                userAddress,
+                userAddress: userAddress || '',
                 txHash: '', // Will be updated later when we have the actual tx hash
                 action: TransactionAction.DEPLOY,
                 baseToken: selectedToken.mint,
@@ -380,7 +448,7 @@ export default function BridgeToken() {
                 fee: 0,
                 feeToken: fromChain === 'solana' ? 'SOL' : fromChain === 'near' ? 'NEAR' : 'ETH',
                 status: TransactionStatus.PENDING,
-                chain: toChain === 'solana' ? TransactionChain.SOLANA : toChain === 'near' ? TransactionChain.NEAR : TransactionChain.ETHEREUM,
+                chain: fromChain === 'solana' ? TransactionChain.SOLANA : fromChain === 'near' ? TransactionChain.NEAR : TransactionChain.ETHEREUM,
                 poolAddress: '', // Not applicable for deploy
             };
 
@@ -388,11 +456,11 @@ export default function BridgeToken() {
             transactionId = createdTransaction.id;
 
             // Step 1: Starting deployment (10%)
-            setDeployProgress(10);
+            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 10 });
             await new Promise(resolve => setTimeout(resolve, 500));
 
             // Step 1.5: Check if token is already deployed (20%)
-            setDeployProgress(20);
+            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 20 });
             const network = SOL_NETWORK == "devnet" ? "testnet" : "mainnet";
             const chainToken = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
 
@@ -406,7 +474,7 @@ export default function BridgeToken() {
 
                 if (alreadyDeployed) {
                     // Token already deployed - show success immediately
-                    setDeployProgress(100);
+                    dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
                     await new Promise(resolve => setTimeout(resolve, 500));
 
                     // Update transaction status to success
@@ -414,8 +482,7 @@ export default function BridgeToken() {
                         await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
                     }
 
-                    setShowDeployProcessingModal(false);
-                    setShowDeploySuccessModal(true);
+                    dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
                     setIsTokenDeployedOnTargetChain(true);
                     toast.success('Token already deployed and ready for bridging!');
                     return;
@@ -423,7 +490,7 @@ export default function BridgeToken() {
             }
 
             // Step 2: Checking balances (30%)
-            setDeployProgress(30);
+            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 30 });
             const solBalance = await getSolBalance(publicKey?.toBase58() || '')
             const nearBalance = await getNearBalance(signedAccountId || '')
 
@@ -433,7 +500,7 @@ export default function BridgeToken() {
                     if (transactionId) {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
                     }
-                    setShowDeployProcessingModal(false);
+                    dispatchModal({ type: 'CLOSE_ALL' });
                     return;
                 }
             } else if (fromChain === "near") {
@@ -442,7 +509,7 @@ export default function BridgeToken() {
                     if (transactionId) {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
                     }
-                    setShowDeployProcessingModal(false);
+                    dispatchModal({ type: 'CLOSE_ALL' });
                     return;
                 }
             }
@@ -453,7 +520,7 @@ export default function BridgeToken() {
                     if (transactionId) {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
                     }
-                    setShowDeployProcessingModal(false);
+                    dispatchModal({ type: 'CLOSE_ALL' });
                     return;
                 }
             } else if (toChain === "solana") {
@@ -462,20 +529,20 @@ export default function BridgeToken() {
                     if (transactionId) {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
                     }
-                    setShowDeployProcessingModal(false);
+                    dispatchModal({ type: 'CLOSE_ALL' });
                     return;
                 }
             }
 
             // Step 3: Deploying token (60%)
-            setDeployProgress(60);
+            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 60 });
             const from = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
             const to = toChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
 
             const txDeployToken = await deployToken(network, from, to, selectedToken.mint);
 
             // Step 4: Finalizing deployment (100%)
-            setDeployProgress(100);
+            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
             await new Promise(resolve => setTimeout(resolve, 500));
 
             // Update transaction status to success
@@ -483,8 +550,7 @@ export default function BridgeToken() {
                 await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
             }
             setAmount('')
-            setShowDeployProcessingModal(false);
-            setShowDeploySuccessModal(true);
+            dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
             setIsTokenDeployedOnTargetChain(true);
             toast.success('Deploy token successfully');
 
@@ -495,7 +561,7 @@ export default function BridgeToken() {
             const errorMessage = error?.message || error?.toString() || '';
             if (errorMessage.includes('already been processed') || errorMessage.includes('already deployed')) {
                 // Treat as success - token is already deployed
-                setDeployProgress(100);
+                dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
                 await new Promise(resolve => setTimeout(resolve, 500));
 
                 // Update transaction status to success
@@ -507,8 +573,7 @@ export default function BridgeToken() {
                     }
                 }
 
-                setShowDeployProcessingModal(false);
-                setShowDeploySuccessModal(true);
+                dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
                 setIsTokenDeployedOnTargetChain(true);
                 toast.success('Token already deployed and ready for bridging!');
             } else {
@@ -522,31 +587,38 @@ export default function BridgeToken() {
                 }
 
                 toast.error('Deploy token failed. Please try again.');
-                setShowDeployProcessingModal(false);
+                dispatchModal({ type: 'CLOSE_ALL' });
             }
         } 
-    }
+    }, [selectedToken, toChain, isFromChainWalletConnected, fromChain, connectSolana, signIn, connect, connectors, publicKey, signedAccountId, checkBalance, deployToken, fetchBridgeTokens]);
 
-    const handleSwapChains = () => {
+    const handleSwapChains = useCallback(() => {
         const currentFromChain = fromChain;
         const currentToChain = toChain;
         setFromChain(currentToChain);
         setToChain(currentFromChain);
-    };
+    }, [fromChain, toChain]);
+
+    // Memoize button text for performance
+    const bridgeButtonText = useMemo(() => {
+        if (isBridging) return `Bridging... ${modalState.bridgeProgress}%`;
+        if (isTokenDeployedOnTargetChain) return `Bridge ${selectedToken?.symbol || ''}`;
+        return `Deploy ${selectedToken?.symbol || ''} on ${toChain.toUpperCase()}`;
+    }, [isBridging, modalState.bridgeProgress, isTokenDeployedOnTargetChain, selectedToken, toChain]);
 
     return (
-        <div className="min-h-screen py-8">
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Bridge Tokens</h1>
-                    <p className="text-gray-600 mt-2">Transfer tokens across different blockchain networks</p>
+        <div className="min-h-screen py-4 md:py-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
+                <div className="mb-6 md:mb-8">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Bridge Tokens</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-2">Transfer tokens across different blockchain networks</p>
                 </div>
 
-                <div className="flex gap-6">
+                <div className="flex flex-col-reverse lg:flex-row gap-4 md:gap-6">
                     <TransactionHistory transactions={transactions} />
 
-                    <div className="w-[478px]">
-                        <Card className="bg-white border border-gray-200 rounded-xl p-5 shadow-none">
+                    <div className="w-full lg:w-[478px] lg:shrink-0">
+                        <Card className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 shadow-none">
                             <div className="flex flex-col">
                                 {/* From Section */}
                                 <div className="space-y-2 mb-2">
@@ -572,8 +644,8 @@ export default function BridgeToken() {
                                             onHalfAmount={handleHalfAmount}
                                             onMaxAmount={handleMaxAmount}
                                             chain={fromChain}
-                                            isLoading={getIsLoadingFromChainTokens()}
-                                            isDisabled={!isFromChainWalletConnected() || isBridging}
+                                            isLoading={isLoadingFromChainTokens}
+                                            isDisabled={!isFromChainWalletConnected || isBridging}
                                         />
                                     </div>
                                 </div>
@@ -611,7 +683,7 @@ export default function BridgeToken() {
                                             onHalfAmount={handleHalfAmount}
                                             onMaxAmount={handleMaxAmount}
                                             chain={toChain}
-                                            isLoading={getIsLoadingFromChainTokens()}
+                                            isLoading={isLoadingFromChainTokens}
                                             isDisabled={true}
                                             isReadOnly={true}
                                         />
@@ -623,12 +695,10 @@ export default function BridgeToken() {
                                 <div className="mt-5">
                                     <Button
                                         onClick={isTokenDeployedOnTargetChain ? handleBridge : handleDeployToken}
-                                        disabled={isBridging || !selectedToken || !isFromChainWalletConnected()}
+                                        disabled={isBridging || !selectedToken || !isFromChainWalletConnected}
                                         className="w-full bg-red-500 text-white hover:bg-red-600 cursor-pointer disabled:bg-red-400 disabled:text-white disabled:cursor-not-allowed"
                                     >
-                                        {isBridging ? `Bridging... ${bridgeProgress}%` :
-                                            isTokenDeployedOnTargetChain ? `Bridge ${selectedToken?.symbol || ''}` :
-                                                `Deploy ${selectedToken?.symbol || ''} on ${toChain.toUpperCase()}`}
+                                        {bridgeButtonText}
                                     </Button>
                                 </div>
                             </div>
@@ -640,16 +710,16 @@ export default function BridgeToken() {
             <SelectTokenModal
                 open={isTokenModalOpen}
                 onOpenChange={setIsTokenModalOpen}
-                tokens={getAvailableTokens()}
-                isLoadingTokens={getIsLoadingFromChainTokens()}
+                tokens={availableTokens}
+                isLoadingTokens={isLoadingFromChainTokens}
                 onTokenSelect={setSelectedToken}
                 selectedToken={selectedToken}
                 modalType={tokenModalType}
             />
 
             {/* Bridge Processing Modal */}
-            <Dialog open={showBridgeProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
+            <Dialog open={modalState.showBridgeProcessing} onOpenChange={() => {}}>
+                <DialogContent className="w-[90%] max-w-[500px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {selectedToken?.symbol} from {fromChain} to {toChain}
@@ -686,11 +756,11 @@ export default function BridgeToken() {
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                             <div
                                 className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${bridgeProgress}%` }}
+                                style={{ width: `${modalState.bridgeProgress}%` }}
                             ></div>
                         </div>
                         <p className="text-sm text-gray-600 mb-4">
-                            {bridgeProgress}% complete
+                            {modalState.bridgeProgress}% complete
                         </p>
 
                         <p className="text-sm text-gray-500">
@@ -701,8 +771,8 @@ export default function BridgeToken() {
             </Dialog>
 
             {/* Bridge Success Modal */}
-            <Dialog open={showBridgeSuccessModal} onOpenChange={() => setShowBridgeSuccessModal(false)}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
+            <Dialog open={modalState.showBridgeSuccess} onOpenChange={() => dispatchModal({ type: 'CLOSE_BRIDGE_SUCCESS' })}>
+                <DialogContent className="w-[90%] max-w-[500px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Bridge {selectedToken?.symbol} from {fromChain} to {toChain}
@@ -731,7 +801,7 @@ export default function BridgeToken() {
 
                     <div className="flex justify-end gap-3">
                         <Button
-                            onClick={() => setShowBridgeSuccessModal(false)}
+                            onClick={() => dispatchModal({ type: 'CLOSE_BRIDGE_SUCCESS' })}
                             className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                         >
                             Close
@@ -741,8 +811,8 @@ export default function BridgeToken() {
             </Dialog>
 
             {/* Deploy Processing Modal */}
-            <Dialog open={showDeployProcessingModal} onOpenChange={() => {}}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
+            <Dialog open={modalState.showDeployProcessing} onOpenChange={() => {}}>
+                <DialogContent className="w-[90%] max-w-[500px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {selectedToken?.symbol} to {toChain}
@@ -771,11 +841,11 @@ export default function BridgeToken() {
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                             <div
                                 className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${deployProgress}%` }}
+                                style={{ width: `${modalState.deployProgress}%` }}
                             ></div>
                         </div>
                         <p className="text-sm text-gray-600 mb-4">
-                            {deployProgress}% complete
+                            {modalState.deployProgress}% complete
                         </p>
 
                         <p className="text-sm text-gray-500">
@@ -786,8 +856,8 @@ export default function BridgeToken() {
             </Dialog>
 
             {/* Deploy Success Modal */}
-            <Dialog open={showDeploySuccessModal} onOpenChange={() => setShowDeploySuccessModal(false)}>
-                <DialogContent className="md:max-w-[500px] max-w-[360px] rounded-lg [&>button]:hidden border-none">
+            <Dialog open={modalState.showDeploySuccess} onOpenChange={() => dispatchModal({ type: 'CLOSE_DEPLOY_SUCCESS' })}>
+                <DialogContent className="w-[90%] max-w-[500px] rounded-lg [&>button]:hidden border-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Deploy {selectedToken?.symbol} to {toChain}
@@ -831,7 +901,7 @@ export default function BridgeToken() {
                     <div className="flex justify-end gap-3">
                         <Button
                             onClick={() => {
-                                setShowDeploySuccessModal(false);
+                                dispatchModal({ type: 'CLOSE_DEPLOY_SUCCESS' });
                                 fetchBridgeTokens();
                             }}
                             className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer"

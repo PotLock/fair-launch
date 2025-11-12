@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { SOL_NETWORK } from "@/configs/env.config";
 
 interface TradingInterfaceProps {
   token: Token;
@@ -99,7 +100,6 @@ const COMPUTE_UNIT_PRICE = 100000;
 const MAX_FRACTION_DIGITS = 6;
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
-// Helper functions
 const hexToNumber = (hex: string): number => {
   return !hex || hex === "00" ? 0 : parseInt(hex, 16);
 };
@@ -114,7 +114,6 @@ const formatBalance = (balance: number, decimals: number = 4): string => {
 function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const { publicKey, sendTransaction } = useWallet()
 
-  // useReducer for complex state management
   const [state, dispatch] = useReducer(tradingReducer, {
     tokenData: {
       price: 0,
@@ -137,10 +136,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     payIsSol: true
   });
 
-  // useTransition for non-blocking state updates
   const [isPending, startTransition] = useTransition();
 
-  // useDeferredValue for input debouncing
   const deferredAmountPay = useDeferredValue(state.amountPay);
 
   const tokenOptions = [
@@ -148,7 +145,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     { name: token.symbol, icon: token.metadata.tokenUri }
   ];
 
-  // Fetch user balances with useCallback
   const fetchUserBalances = useCallback(async () => {
     if (!publicKey) {
       dispatch({ type: 'SET_USER_BALANCES', payload: { sol: 0, token: 0 } });
@@ -176,7 +172,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     }
   }, [publicKey, address]);
 
-  // Fetch token market data with useCallback
   const fetchTokenData = useCallback(async () => {
     const solPrice = await getSolPrice();
     if(!solPrice) return;
@@ -190,32 +185,24 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         getPoolConfigByMint(address)
       ]);
 
-      // Convert hex values to numbers
       const quote = hexToNumber(pool?.account?.quoteReserve) / LAMPORTS_PER_SOL;
       const base = hexToNumber(pool?.account?.baseReserve) / Math.pow(10, token.decimals);
 
       const preMigrationTokenSupply = hexToNumber(poolConfig?.preMigrationTokenSupply) / Math.pow(10, token.decimals);
 
-      // Calculate price: quote / base (in SOL)
       const price = base > 0 ? quote / base : 0;
 
-      // Calculate total supply: preMigrationTokenSupply + baseReserve
       const totalSupply = preMigrationTokenSupply + base;
 
-      // Calculate circulating supply: totalSupply - base (tokens NOT in pool)
       const circulating = totalSupply - base;
 
-      // Calculate market cap: price * circulating
       const marketCap = price * circulating;
 
-      // Calculate target raise
       const migrationQuoteThreshold = hexToNumber(poolConfig?.migrationQuoteThreshold);
       const targetRaise = (migrationQuoteThreshold / LAMPORTS_PER_SOL) * solPrice;
 
-      // Update reserves
       dispatch({ type: 'SET_RESERVES', payload: { base, quote } });
 
-      // Use startTransition for non-blocking UI update
       startTransition(() => {
         dispatch({
           type: 'SET_TOKEN_DATA',
@@ -415,8 +402,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
 
   return (
-    <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] max-h-[850px]">
-      <div className="flex flex-col gap-3 p-4 rounded-t-lg rounded-b-none">
+    <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
+      <div className="flex flex-col gap-3 p-3 md:p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
           <span className="font-medium text-blue-700">LIVE TRADING</span>
@@ -428,7 +415,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="text-xs text-gray-500">Market Cap</div>
         </div>
 
-        <div className="flex items-center gap-10 w-full">
+        <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-10 w-full">
             <div>
                 <div className="text-lg font-semibold">
                   {state.loading || isPending ? '...' : `$${formatTokenPrice(state.tokenData.price)}`}
@@ -441,7 +428,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </div>
                 <div className="text-sm text-gray-500">Holders</div>
             </div>
-            <div>
+            <div className="col-span-2 md:col-span-1">
                 <div className="text-lg font-semibold">
                   {state.loading || isPending ? '...' : `$${formatNumberToCurrency(state.tokenData.targetRaise)}`}
                 </div>
@@ -545,8 +532,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   </DropdownMenu>
                 </div>
                 {hasInsufficientBalance && (
-                  <div className="text-sm text-red-500 mt-1">
-                    Insufficient balance
+                  <div className="text-xs text-red-500 mt-1">
+                    Insufficient balance. You need {formatBalance(
+                      Math.abs(currentBalance - parseFloat(state.amountPay.replace(/,/g, '') || '0') - (state.payIsSol ? GAS_RESERVE : 0))
+                    )} more {state.payIsSol ? 'SOL' : token.symbol}
                   </div>
                 )}
                 {!hasInsufficientBalance && (
@@ -616,7 +605,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   <h3 className="text-sm font-semibold">Use this depsoit address</h3>
                   <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
                 </div>
-                <div className="h-[1px] w-full bg-gray-300 mt-2 mb-2"/>
+                <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
                 <div className="flex flex-col space-y-5 justify-center items-center">
                   <div className="border border-gray-200 p-1 rounded-lg">
                     <img src="/icons/qrcode.svg" alt="QRcode" className="w-40 h-40"/>
@@ -650,25 +639,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         </Tabs>
       </div>
 
-      <div className="p-4 flex flex-col gap-2">
+      <div className="p-3 md:p-4 flex flex-col gap-2">
         <h1 className="text-lg font-bold">Trade on DEX</h1>
+        
+        {SOL_NETWORK !== 'mainnet' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
+            <p className="text-sm text-amber-800">
+              DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.
+            </p>
+          </div>
+        )}
+        
         <div className="flex flex-col gap-2">
           <div
-            className="border border-gray-200 bg-white p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between cursor-pointer"
-            onClick={()=>(
-              window.open(`https://devnet.meteora.ag/dlmm/${state.tokenData.poolAddress}`,"_blank")
-            )} 
+            className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between ${
+              SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+            }`}
+            onClick={() => {
+              if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
+                window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
+              }
+            }}
           >
-            <div 
-              className="flex items-center gap-2"
-            >
+            <div className="flex items-center gap-2">
               <div className="relative w-9 h-9">
                 <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
-                <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm  bg-black flex items-center justify-center">
+                <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
                   <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
                 </div>
               </div>
               <span>Trade on Meteora</span>
+              {SOL_NETWORK !== 'mainnet' && (
+                <span className="text-xs text-gray-500">(Mainnet only)</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <ExternalLink className="w-5 h-5" />
@@ -677,18 +680,31 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
+                SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+              }`}>
                 <div className="flex items-center gap-2">
                   <span>Trade on other DEX</span>
+                  {SOL_NETWORK !== 'mainnet' && (
+                    <span className="text-xs text-gray-500">(Mainnet only)</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <ChevronDown className="w-5 h-5" />
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-full bg-white">
+            <DropdownMenuContent className="bg-white" align="start">
               <DropdownMenuGroup>
-                <DropdownMenuItem className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                <DropdownMenuItem 
+                  className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  onClick={() => {
+                    if (SOL_NETWORK === 'mainnet') {
+                      window.open(`https://jup.ag/swap/SOL-${address}`, "_blank");
+                    }
+                  }}
+                  disabled={SOL_NETWORK !== 'mainnet'}
+                >
                   <div className="flex items-center gap-3">
                     <div className="relative w-8 h-8">
                       <img src="/logos/jupiter.png" alt="Jupiter" className="w-8 h-8 rounded-full" />
@@ -702,7 +718,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     <ExternalLink className="w-6 h-6" />
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100">
+                <DropdownMenuItem 
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  onClick={() => {
+                    if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
+                      window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
+                    }
+                  }}
+                  disabled={SOL_NETWORK !== 'mainnet'}
+                >
                   <div className="flex items-center gap-3">
                     <div className="relative w-8 h-8">
                       <img src="/logos/meteora.png" alt="Meteora" className="w-8 h-8 rounded-full" />
@@ -711,6 +735,50 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                       </div>
                     </div>
                     <span>Meteora</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-6 h-6" />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  onClick={() => {
+                    if (SOL_NETWORK === 'mainnet') {
+                      window.open(`https://axiom.trade/?inputMint=So11111111111111111111111111111111111111112&outputMint=${address}`, "_blank");
+                    }
+                  }}
+                  disabled={SOL_NETWORK !== 'mainnet'}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-8 h-8">
+                      <img src="/logos/axiom.svg" alt="Axiom" className="w-8 h-8 rounded-full" />
+                      <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                      </div>
+                    </div>
+                    <span>Axiom</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-6 h-6" />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  onClick={() => {
+                    if (SOL_NETWORK === 'mainnet') {
+                      window.open(`https://photon-sol.tinyastro.io/en/lp/${address}`, "_blank");
+                    }
+                  }}
+                  disabled={SOL_NETWORK !== 'mainnet'}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-8 h-8">
+                      <img src="/logos/photon.svg" alt="Photon" className="w-8 h-8 rounded-full" />
+                      <div className="absolute -bottom-1 right-0 w-3 h-3 rounded-sm bg-black flex items-center justify-center">
+                        <img src="/logos/solana_light.svg" alt="Solana" className="w-2 h-2" />
+                      </div>
+                    </div>
+                    <span>Photon</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <ExternalLink className="w-6 h-6" />

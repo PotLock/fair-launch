@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getTokenByMint, getPopularTokens } from "@/lib/api";
-import { SocialButtons } from "@/components/token/SocialButtons";
 import { TradingInterface } from "@/components/token/TradingInterface";
+import { TokenHeader } from "@/components/token/TokenHeader";
 import Link from "next/link";
 import { Metadata } from "next";
 import LaunchStatusData from "@/components/token/LaunchStatusData";
@@ -195,7 +195,7 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                         <h1 className="text-5xl font-semibold text-black text-center leading-[1.69] tracking-[-6.14%]">
                             Token Not Found
                         </h1>
-                        <p className="text-xl text-black text-center leading-[2] max-w-[741px]">
+                        <p className="text-xl text-black text-center leading-loose max-w-[741px]">
                             The token you're looking for doesn't exist, was removed, or the URL is incorrect. Let's get you back to discovering amazing tokens!
                         </p>
                     </div>
@@ -216,31 +216,12 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
     return (
         <div className="min-h-screen xl:container mx-auto py-10 grid grid-cols-1 md:grid-cols-3 gap-4 md:px-2">
             <div className="px-3 col-span-2 space-y-4">
-                <div className="relative">
-                    <div className="relative">
-                        <img src={token.metadata.bannerUri} alt={token.name} className="w-full h-64 object-cover rounded-lg" />
-                        <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
-                            style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
-                    </div>
-                    <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
-                        <div className="flex items-center gap-3">
-                            <img src={token.metadata.tokenUri} alt={token.name} className="w-20 h-20 rounded-xl border-[1px] object-cover border-gray-100 shadow-md bg-white" />
-                            <div className="flex flex-col">
-                                <span className="text-3xl font-bold text-white uppercase">{token.name}</span>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-lg text-white">${token.symbol}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <SocialButtons 
-                            website={token.metadata.website}
-                            twitter={token.metadata.twitter}
-                            telegram={token.metadata.telegram}
-                        />
-                    </div>
-                </div>
+                <TokenHeader token={token} address={address} />
 
-                {/* <TradingInterface token={token} address={address} /> */}
+                {/* Only show on mobile */}
+                <div className="md:hidden mb-4">
+                    <TradingInterface token={token} address={address} />
+                </div>
 
                 <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1">
                     <h2 className="text-2xl font-medium mb-4">Description</h2>
@@ -248,12 +229,6 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                         {token.description}
                     </p>
                 </Card>
-                
-                {/* <LaunchStatusData 
-                    mint={token.mintAddress}
-                    totalSupply={token.totalSupply}
-                    decimals={token.decimals}
-                /> */}
 
                 <LaunchConditions 
                     token={token}
@@ -270,7 +245,10 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     solPrice={solPrice || 0}
                 />
             </div>
-            <TradingInterface token={token} address={address} />
+            {/* Only show on desktop */}
+            <div className="hidden md:block">
+                <TradingInterface token={token} address={address} />
+            </div>
         </div>
     );
 }

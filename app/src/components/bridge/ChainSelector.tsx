@@ -17,21 +17,21 @@ export const ChainSelector = ({ selectedChain, onChainChange, label, disabledCha
         <DropdownMenu>
             <DropdownMenuTrigger asChild className="border-none">
                 <div
-                    className="hover:bg-gray-100 p-2 cursor-pointer rounded-lg"
+                    className="hover:bg-gray-100 p-1.5 sm:p-2 cursor-pointer rounded-lg"
                     role="button"
                     tabIndex={0}
                     aria-label={label || "Select chain"}
                 >
-                    <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shrink-0">
                             <img
                                 src={CHAINS[selectedChain].icon}
                                 alt={CHAINS[selectedChain].name}
                                 className="w-full h-full rounded-full"
                             />
                         </div>
-                        <span className="text-sm font-medium">{CHAINS[selectedChain].name}</span>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs sm:text-sm font-medium">{CHAINS[selectedChain].name}</span>
+                        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                     </div>
                 </div>
             </DropdownMenuTrigger>

@@ -60,7 +60,7 @@ export default function ExploreTokensCarousel({ tokens }: ExploreTokensCarouselP
     <>
       <div
         ref={scrollContainerRef}
-        className="flex gap-3 overflow-x-auto md:overflow-x-hidden scroll-smooth snap-x snap-mandatory pb-2 touch-pan-x"
+        className="flex gap-3 overflow-x-auto md:overflow-x-hidden scroll-smooth snap-x snap-mandatory p-2 touch-pan-x"
         onTouchStart={(event) => {
           touchStartXRef.current = event.touches[0]?.clientX ?? null;
         }}

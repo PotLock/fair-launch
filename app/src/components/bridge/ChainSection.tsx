@@ -29,7 +29,7 @@ export const ChainSection = ({ chain, onChainChange, walletAddress, label, disab
     };
 
     return (
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-3 gap-2">
             <ChainSelector
                 selectedChain={chain}
                 onChainChange={onChainChange}
@@ -42,7 +42,7 @@ export const ChainSection = ({ chain, onChainChange, walletAddress, label, disab
                     href={getExplorerUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs hover:underline"
+                    className="text-[10px] sm:text-xs hover:underline shrink-0"
                 >
                     {truncateAddress(walletAddress)}
                 </a>

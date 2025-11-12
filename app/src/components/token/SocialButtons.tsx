@@ -29,7 +29,7 @@ export function SocialButtons({ website, twitter, telegram }: SocialButtonsProps
   if (!hasSocialLinks) return null;
 
   return (
-    <div className="flex items-center justify-between gap-6 mr-10 md:mr-14">
+    <div className="flex items-center md:justify-between gap-6 mr-10 md:mr-14">
       {website && (
         <Tooltip>
           <TooltipTrigger asChild>
