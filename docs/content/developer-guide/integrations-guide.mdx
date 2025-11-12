@@ -2,7 +2,7 @@
 
 ## Overview of Available Integrations
 
-PotLaunch integrates with multiple blockchain networks and services to provide seamless cross-chain functionality:
+POTLAUNCH integrates with multiple blockchain networks and services to provide seamless cross-chain functionality:
 
 ### Core Integrations
 
@@ -29,7 +29,7 @@ PotLaunch integrates with multiple blockchain networks and services to provide s
 
 ## Leveraging 1-Click API
 
-The 1-Click API provides simplified access to PotLaunch functionality without managing complex blockchain interactions.
+The 1-Click API provides simplified access to POTLAUNCH functionality without managing complex blockchain interactions.
 
 ### Features
 
@@ -41,7 +41,7 @@ The 1-Click API provides simplified access to PotLaunch functionality without ma
 ### Quick Start
 
 ```typescript
-import { OneClickAPI } from '@cookedbusiness/halfbaked-sdk';
+import { OneClickAPI } from '@potlaunch/sdk';
 
 // Initialize API
 const api = new OneClickAPI({
@@ -200,10 +200,15 @@ Query transfer status, fees, and bridge health.
 ### Cross-Chain Token Launch
 
 ```typescript
-import { HalfBakedSDK, getClient, ChainKind } from '@cookedbusiness/halfbaked-sdk';
+import {
+  PotlaunchSDK,
+  PotlaunchLiquidityManager,
+  getClient,
+  ChainKind
+} from '@potlaunch/sdk';
 
 // 1. Create token on Solana
-const sdk = new HalfBakedSDK({ connection, wallet });
+const sdk = new PotlaunchSDK({ connection, wallet });
 const token = await sdk.createToken({
   name: 'Cross Chain Token',
   symbol: 'XCT',
@@ -220,7 +225,7 @@ await bridgeClient.initTransfer({
 });
 
 // 3. Add liquidity on NEAR
-const liquidityManager = new HalfBakedLiquidityManager(config);
+const liquidityManager = new PotlaunchLiquidityManager(config);
 await liquidityManager.addLiquidity({
   chain: 'near',
   dex: 'ref-finance',
@@ -234,7 +239,7 @@ await liquidityManager.addLiquidity({
 ### Multi-DEX Trading
 
 ```typescript
-import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+import { CrossDexTradingManager, getAppConfig } from '@potlaunch/sdk';
 
 const appConfig = getAppConfig('potlaunch');
 const manager = new CrossDexTradingManager(connection, appConfig.config, wallet);
@@ -253,26 +258,26 @@ console.log(`Price: ${result.price}`);
 ## Best Practices
 
 ### Security
-- ✅ Always verify contract addresses before transactions
-- ✅ Use testnet for development and testing
-- ✅ Implement proper error handling for bridge transfers
-- ✅ Monitor transfer status via API endpoints
+- Always verify contract addresses before transactions
+- Use testnet for development and testing
+- Implement proper error handling for bridge transfers
+- Monitor transfer status via API endpoints
 
 ### Performance
-- ✅ Cache token metadata to reduce API calls
-- ✅ Use batch operations when possible
-- ✅ Consider finality times when building UX
-- ✅ Implement retry logic for failed transfers
+- Cache token metadata to reduce API calls
+- Use batch operations when possible
+- Consider finality times when building UX
+- Implement retry logic for failed transfers
 
 ### Cost Optimization
-- ✅ Batch multiple operations together
-- ✅ Choose optimal fee payment method (token vs native)
-- ✅ Use custom relayers for zero-fee transfers (if available)
-- ✅ Monitor gas prices and adjust accordingly
+- Batch multiple operations together
+- Choose optimal fee payment method (token vs native)
+- Use custom relayers for zero-fee transfers (if available)
+- Monitor gas prices and adjust accordingly
 
 ## Support & Resources
 
-- **PotLaunch SDK**: [@cookedbusiness/halfbaked-sdk](https://www.npmjs.com/package/@cookedbusiness/halfbaked-sdk)
+- **POTLAUNCH SDK**: [@potlaunch/sdk](https://www.npmjs.com/package/@potlaunch/sdk)
 - **Omni Bridge**: [GitHub Repository](https://github.com/Near-One/omni-bridge)
 - **API Documentation**: Check individual integration docs
 - **Community Support**: Join our Discord for help

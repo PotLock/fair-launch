@@ -11,7 +11,7 @@ A comprehensive TypeScript SDK for cross-chain token operations, liquidity manag
 Install the SDK using your preferred package manager:
 
 ```bash npm2yarn
-npm install @cookedbusiness/halfbaked-sdk
+npm install @potlaunch/sdk
 ```
 
 ### Configuration
@@ -29,7 +29,7 @@ import {
   createSwapKitConfig,
   createCrossDexTradingConfig,
   getAppConfig
-} from '@cookedbusiness/halfbaked-sdk';
+} from '@potlaunch/sdk';
 
 // Solana configuration
 const solanaConfig = createSolanaConfig({
@@ -68,7 +68,7 @@ const tokenConfig = createCrossDexTradingConfig({
   enableTrading: true
 });
 
-// App-specific presets (Cooked, Arrests, PotLaunch, Generic)
+// App-specific presets (Potlaunch, community, generic)
 const appConfig = getAppConfig('potlaunch');
 ```
 
@@ -88,7 +88,7 @@ A unified interface for detecting, fetching metadata, and trading any Solana tok
 - **App-Specific Configurations**: Pre-configured presets for different applications
 
 ```typescript
-import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+import { CrossDexTradingManager, getAppConfig } from '@potlaunch/sdk';
 import { Connection } from '@solana/web3.js';
 
 const appConfig = getAppConfig('potlaunch');
@@ -134,7 +134,7 @@ Unified API for managing liquidity across multiple chains and DEX protocols.
 - Pool discovery and search
 
 ```typescript
-import { HalfBakedLiquidityManager, type SDKConfig } from '@cookedbusiness/halfbaked-sdk';
+import { PotlaunchLiquidityManager, type SDKConfig } from '@potlaunch/sdk';
 
 const config: SDKConfig = {
   chains: [
@@ -159,7 +159,7 @@ const config: SDKConfig = {
   timeoutMs: 60_000
 };
 
-const manager = new HalfBakedLiquidityManager(config);
+const manager = new PotlaunchLiquidityManager(config);
 
 // Add liquidity
 const result = await manager.addLiquidity({
@@ -182,7 +182,7 @@ const result = await manager.addLiquidity({
 - **Transaction Monitoring**: Real-time swap status tracking
 
 ```typescript
-import { SwapKitManager } from '@cookedbusiness/halfbaked-sdk';
+import { SwapKitManager } from '@potlaunch/sdk';
 
 const swapKit = SwapKitManager.create({
   apiKey: 'your-api-key',
@@ -204,13 +204,13 @@ const result = await swapKit.executeSwap({
 ### Step 1: Initialize the SDK
 
 ```typescript
-import { HalfBakedSDK } from '@cookedbusiness/halfbaked-sdk';
+import { PotlaunchSDK } from '@potlaunch/sdk';
 import { Connection, Keypair } from '@solana/web3.js';
 
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 const wallet = Keypair.generate(); // Or use your existing wallet
 
-const sdk = new HalfBakedSDK({
+const sdk = new PotlaunchSDK({
   connection,
   wallet,
   environment: 'mainnet'
@@ -269,7 +269,7 @@ const migrateResult = await sdk.migrateToDex({
 
 ### Core Classes
 
-#### `HalfBakedSDK`
+#### `PotlaunchSDK`
 
 Main SDK class for token operations.
 
@@ -290,7 +290,7 @@ Unified trading interface across multiple DEXes.
 - `sellToken(params)` - Execute sell trade
 - `getPrice(mintAddress)` - Get current token price
 
-#### `HalfBakedLiquidityManager`
+#### `PotlaunchLiquidityManager`
 
 Multi-chain liquidity management.
 
@@ -328,7 +328,7 @@ Cross-chain swapping via SwapKit.
 
 ## Browser Compatibility
 
-The HalfBaked SDK is designed to work seamlessly in both browser and server environments.
+The Potlaunch SDK is designed to work seamlessly in both browser and server environments.
 
 **Key Features:**
 - **Zero embedded secrets** - All signing credentials provided by developer
@@ -340,7 +340,7 @@ The HalfBaked SDK is designed to work seamlessly in both browser and server envi
 ### Browser Usage Example
 
 ```typescript
-import { CrossDexTradingManager, getAppConfig } from '@cookedbusiness/halfbaked-sdk';
+import { CrossDexTradingManager, getAppConfig } from '@potlaunch/sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 
 function TradingComponent() {
@@ -403,11 +403,11 @@ npm run test:aerodrome       # Aerodrome DEX tests
 
 ## Additional Resources
 
-- **NPM Package**: [@cookedbusiness/halfbaked-sdk](https://www.npmjs.com/package/@cookedbusiness/halfbaked-sdk)
+- **NPM Package**: [@potlaunch/sdk](https://www.npmjs.com/package/@potlaunch/sdk)
 
 
 ## Support
 
-- Report bugs and feature requests on [GitHub Issues](https://github.com/cookedlabs/halfbaked-sdk/issues)
+- Report bugs and feature requests on [GitHub Issues](https://github.com/potlaunch/sdk/issues)
 - Join our community for support and discussions
 - Check documentation for detailed guides and examples
