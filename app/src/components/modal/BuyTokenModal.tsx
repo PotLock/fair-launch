@@ -95,7 +95,7 @@ export function BuyTokenModal({
           <div className="flex items-center gap-3 mb-2">
             {tokenLogo && (
               <img
-                src={tokenLogo}
+                src={`${process.env.NEXT_PUBLIC_IPFS_URL}${tokenLogo}`}
                 alt={tokenSymbol}
                 className="w-10 h-10 rounded-full object-cover"
                 onError={(e) => {

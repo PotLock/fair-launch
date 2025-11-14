@@ -314,7 +314,7 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                         <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             {token?.metadata.tokenUri || fallbackToken?.image ? (
                                 <img 
-                                    src={token?.metadata.tokenUri || fallbackToken?.image} 
+                                    src={fallbackToken?.image||`${process.env.NEXT_PUBLIC_IPFS_URL}${token?.metadata.tokenUri }`} 
                                     alt={token?.symbol || fallbackToken?.symbol} 
                                     className="h-full w-full rounded-full object-cover"
                                     onError={(e) => {

@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
 
         const title = `${token.name} (${token.symbol}) | POTLAUNCH`;
         const description = token.description || `Discover ${token.name} (${token.symbol}) on POTLAUNCH. Trade, explore, and learn about this token.`;
-        const imageUrl = token.metadata.tokenUri || "/logo.png";
+        const imageUrl = process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri || "/logo.png";
         
         // Create structured data for better SEO
         const structuredData = {

@@ -32,7 +32,7 @@ export default function TokenSuccessModal({
           {tokenLogo && (
             <div className="flex justify-center mb-4">
               <img 
-                src={tokenLogo} 
+                src={`${process.env.NEXT_PUBLIC_IPFS_URL}${tokenLogo}`} 
                 alt="Token Logo" 
                 className="h-14 w-14 rounded-full object-cover"
                 onError={(e) => {

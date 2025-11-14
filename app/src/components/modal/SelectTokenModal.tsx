@@ -62,45 +62,48 @@ export const SelectTokenModal = ({
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
   };
 
-  const renderTokenItem = (token: Token) => (
-    <div
-      key={token.mint}
-      className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
-      onClick={() => handleTokenSelect(token)}
-    >
-      <div className="flex items-center gap-3 flex-1">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
-          <img 
-            src={token.icon} 
-            alt={token.symbol}
-            className="w-full h-full rounded-full"
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-gray-700">{token.name || token.symbol}</span>
-            
+  const renderTokenItem = (token: Token) => {
+    const iconUrl = token.icon.startsWith('https') ? token.icon : `${process.env.NEXT_PUBLIC_IPFS_URL}${token.icon}`;
+    return (
+      <div
+        key={token.mint}
+        className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
+        onClick={() => handleTokenSelect(token)}
+      >
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+            <img 
+              src={iconUrl} 
+              alt={token.symbol}
+              className="w-full h-full rounded-full"
+            />
           </div>
-          <div className="flex items-center gap-2 mt-1 w-full">
-            <span className="text-xs text-gray-500">{token.symbol}</span>
-            <div className="flex justify-center items-center w-full">
-                {token.mint && (
-                    <span className="text-xs text-gray-400">{formatAddress(token.mint)}</span>
-                )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm text-gray-700">{token.name || token.symbol}</span>
+              
+            </div>
+            <div className="flex items-center gap-2 mt-1 w-full">
+              <span className="text-xs text-gray-500">{token.symbol}</span>
+              <div className="flex justify-center items-center w-full">
+                  {token.mint && (
+                      <span className="text-xs text-gray-400">{formatAddress(token.mint)}</span>
+                  )}
+              </div>
             </div>
           </div>
         </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-sm font-medium text-gray-700">
+            {formatNumberToCurrency(Number(token.balance))}
+          </span>
+          <span className="text-xs text-gray-400">
+            ${formatNumberToCurrency(Number(token.value || "0"))}
+            </span>
+          </div>
       </div>
-      <div className="flex flex-col items-end gap-1">
-        <span className="text-sm font-medium text-gray-700">
-          {formatNumberToCurrency(Number(token.balance))}
-        </span>
-        <span className="text-xs text-gray-400">
-          ${formatNumberToCurrency(Number(token.value || "0"))}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -428,7 +428,7 @@ export default function TokenInfo({
                 {formData.logo ? (
                   <div className="flex flex-col items-center">
                     <img 
-                      src={formData.logo} 
+                      src={`${process.env.NEXT_PUBLIC_IPFS_URL}${formData.logo}`} 
                       alt="Token Logo" 
                       className="w-32 h-32 object-cover rounded-lg mb-2"
                     />
@@ -472,7 +472,7 @@ export default function TokenInfo({
                 {formData.banner ? (
                   <div className="flex flex-col items-center">
                     <img 
-                      src={formData.banner} 
+                      src={`${process.env.NEXT_PUBLIC_IPFS_URL}${formData.banner}`} 
                       alt="Banner Image" 
                       className="w-full h-32 object-cover rounded-lg mb-2"
                     />

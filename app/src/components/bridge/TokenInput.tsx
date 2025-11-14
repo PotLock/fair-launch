@@ -31,6 +31,9 @@ export const TokenInput = ({
     isDisabled,
     isReadOnly = false
 }: TokenInputProps) => {
+
+    const iconUrl = selectedToken?.icon.startsWith('https') ? selectedToken?.icon : `${process.env.NEXT_PUBLIC_IPFS_URL}${selectedToken?.icon}`;
+
     return (
         <>
             <div className="flex justify-between items-center gap-2">
@@ -57,7 +60,7 @@ export const TokenInput = ({
                                 <>
                                     <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center relative">
                                         <img
-                                            src={selectedToken?.icon || '/chains/near-dark.svg'}
+                                            src={iconUrl || '/chains/near-dark.svg'}
                                             alt={selectedToken?.symbol || 'NEAR'}
                                             className="w-full h-full rounded-full"
                                         />

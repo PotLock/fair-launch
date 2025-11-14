@@ -104,15 +104,15 @@ export function MyTokenCard({
                 <motion.img 
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.3 }}
-                    src={banner} 
+                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${banner}`} 
                     alt={name} 
                     className="w-full h-48 object-cover rounded-xl" 
                 />
                 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-xl" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent rounded-xl" />
 
                 <div className="absolute bottom-4 left-4 flex items-center gap-3 w-full">
-                    <img src={avatar} alt={name} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={`${process.env.NEXT_PUBLIC_IPFS_URL}${avatar}`} alt={name} className="w-12 h-12 rounded-full object-cover" />
                     <div>
                         <h3 className="text-white font-bold text-lg">{name}</h3>
                         <div className="flex items-center gap-2">

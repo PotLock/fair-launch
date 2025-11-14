@@ -122,7 +122,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
-
         if (type === 'logo') {
           setLogoUrl(imageUrl);
           toast.success('Logo uploaded successfully!');
@@ -901,7 +900,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               {logoUrl ? (
                 <div className="flex flex-col items-center">
                   <img 
-                    src={logoUrl} 
+                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${logoUrl}`} 
                     alt="Token Logo" 
                     className="w-32 h-32 object-cover rounded-lg mb-2"
                   />
@@ -937,7 +936,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               {bannerUrl ? (
                 <div className="flex flex-col items-center">
                   <img 
-                    src={bannerUrl} 
+                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${bannerUrl}`} 
                     alt="Banner Image" 
                     className="w-full h-32 object-cover rounded-lg mb-2"
                   />

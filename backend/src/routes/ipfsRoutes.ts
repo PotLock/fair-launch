@@ -10,9 +10,8 @@ const app = new Hono();
 const FILEBASE_API_KEY = process.env.FILEBASE_API_KEY;
 const FILEBASE_API_SECRET = process.env.FILEBASE_API_SECRET;
 const FILEBASE_BUCKET_NAME = process.env.FILEBASE_BUCKET_NAME;
-const FILEBASE_GATEWAY = process.env.FILEBASE_GATEWAY;
 
-if (!FILEBASE_API_KEY || !FILEBASE_API_SECRET || !FILEBASE_BUCKET_NAME || !FILEBASE_GATEWAY) {
+if (!FILEBASE_API_KEY || !FILEBASE_API_SECRET || !FILEBASE_BUCKET_NAME) {
   throw new Error('FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables are required');
 }
 
@@ -44,7 +43,7 @@ app.post('/upload-image', async (c) => {
 
     return c.json({
       success: true,
-      data: { imageUri: FILEBASE_GATEWAY + cid },
+      data: { imageUri: cid },
       message: 'Image uploaded successfully'
     }, 201);
   } catch (error) {
@@ -74,7 +73,7 @@ app.post('/upload-metadata', zValidator('json', UploadMetadataSchema), async (c)
 
     return c.json({
       success: true,
-      data: { imageUri: FILEBASE_GATEWAY + cid },
+      data: { imageUri: cid },
       message: 'Metadata uploaded successfully'
     }, 201);
   } catch (error) {
