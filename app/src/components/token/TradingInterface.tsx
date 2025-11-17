@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
-import { ChevronDown, Copy, Download, ExternalLink, Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useReducer, useTransition, useDeferredValue, memo } from "react";
+import { ChevronDown, Copy, Download, ExternalLink, Wallet, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useReducer, useTransition, useDeferredValue, memo, useRef } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
 import { getRpcSOLEndpoint, getSolPrice, getSolBalance, getTokenBalanceOnSOL } from "@/lib/sol";
+import { calculateDbcSwapQuote, approximateSwapQuote } from "@/lib/meteora";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
@@ -95,6 +97,7 @@ const SLIPPAGE_BPS = 50;
 const COMPUTE_UNIT_PRICE = 100000;
 const MAX_FRACTION_DIGITS = 6;
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const TOTAL_FEE_PERCENT = 0.003; // 0.3% total fee (protocol + partner + creator)
 
 // Migration Progress Enum
 enum MigrationProgress {
@@ -178,8 +181,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   });
 
   const [isPending, startTransition] = useTransition();
-
   const deferredAmountPay = useDeferredValue(state.amountPay);
+  const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -271,6 +274,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     fetchUserBalances();
   }, [fetchUserBalances]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (quoteTimeoutRef.current) {
+        clearTimeout(quoteTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const hasInsufficientBalance = useMemo(() => {
     if (!deferredAmountPay || deferredAmountPay.trim() === '') return false;
 
@@ -291,6 +303,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const handleAmountPayChange = useCallback((value: string) => {
     dispatch({ type: 'SET_AMOUNT_PAY', payload: value });
 
+    // Clear any pending quote calculation
+    if (quoteTimeoutRef.current) {
+      clearTimeout(quoteTimeoutRef.current);
+    }
+
     if (value.trim() === '') {
       dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: '' });
       return;
@@ -303,19 +320,37 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    const k = state.baseReserve * state.quoteReserve;
-    if (state.payIsSol) {
-      const newQuote = state.quoteReserve + amountPayNum;
-      const newBase = k / newQuote;
-      const deltaBase = state.baseReserve - newBase;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaBase.toFixed(4) });
-    } else {
-      const newBase = state.baseReserve + amountPayNum;
-      const newQuote = k / newBase;
-      const deltaQuote = state.quoteReserve - newQuote;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaQuote.toFixed(4) });
-    }
-  }, [state.baseReserve, state.quoteReserve, state.payIsSol]);
+    // Debounce the API call by 300ms
+    quoteTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Use Meteora SDK for accurate DBC quote calculation
+        const connection = new Connection(getRpcSOLEndpoint());
+        const outputAmount = await calculateDbcSwapQuote(
+          connection,
+          state.tokenData.poolAddress,
+          amountPayNum,
+          !state.payIsSol, // swapBaseForQuote: true when selling tokens (payIsSol=false)
+          token.decimals,
+          SLIPPAGE_BPS
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      } catch (error) {
+        console.error('Error calculating DBC quote, using approximation:', error);
+
+        // Fallback to approximation if SDK call fails
+        const outputAmount = approximateSwapQuote(
+          state.baseReserve,
+          state.quoteReserve,
+          amountPayNum,
+          !state.payIsSol,
+          TOTAL_FEE_PERCENT
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      }
+    }, 300);
+  }, [state.baseReserve, state.quoteReserve, state.payIsSol, state.tokenData.poolAddress, token.decimals]);
 
 
   const handleBuyAndSell = useCallback(async () => {
@@ -595,7 +630,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
-                    value={state.amountReceive || ''}
+                    value={state.amountReceive ? parseFloat(state.amountReceive).toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: MAX_FRACTION_DIGITS,
+                    }) : ''}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
                     disabled
@@ -687,60 +725,56 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       </div>
 
       <div className="p-3 md:p-4 flex flex-col gap-2">
-        <h1 className="text-lg font-bold">Trade on DEX</h1>
-        
-        {SOL_NETWORK !== 'mainnet' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
-            <p className="text-sm text-amber-800">
-              DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.
-            </p>
-          </div>
-        )}
-        
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold">Trade on DEX</h1>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>DBC is a virtual pool bonding curve. DEX trading is only available on mainnet via Jupiter, Photon, and Axiom.</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
         <div className="flex flex-col gap-2">
-          <div
-            className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between ${
-              SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-            }`}
-            onClick={() => {
-              if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
-                window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
-              }
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="relative w-9 h-9">
-                <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
-                <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
-                  <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
+                <div className="flex items-center gap-2">
+                  <div className="relative w-9 h-9">
+                    <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
+                    <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
+                      <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+                    </div>
+                  </div>
+                  <span>Trade on Meteora</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5" />
                 </div>
               </div>
-              <span>Trade on Meteora</span>
-              {SOL_NETWORK !== 'mainnet' && (
-                <span className="text-xs text-gray-500">(Mainnet only)</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <ExternalLink className="w-5 h-5" />
-            </div>
-          </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm border border-gray-200">
+              <p>Meteora DLMM pools are not compatible with DBC virtual pools. Use Jupiter, Photon, or Axiom instead.</p>
+            </TooltipContent>
+          </Tooltip>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
-                SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span>Trade on other DEX</span>
-                  {SOL_NETWORK !== 'mainnet' && (
-                    <span className="text-xs text-gray-500">(Mainnet only)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <ChevronDown className="w-5 h-5" />
-                </div>
-              </div>
-            </DropdownMenuTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
+                    SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span>Trade on other DEX</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-5 h-5" />
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white" align="start">
               <DropdownMenuGroup>
                 <DropdownMenuItem 
@@ -833,7 +867,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenu>
+            </TooltipTrigger>
+            {SOL_NETWORK !== 'mainnet' && (
+              <TooltipContent>
+                <p>DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
       </div>
     </div>
