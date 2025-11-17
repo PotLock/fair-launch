@@ -16,19 +16,6 @@ import { getSolPrice } from "@/lib/sol";
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
-export async function generateStaticParams() {
-    try {
-        const popularTokens = await getPopularTokens(10);
-        
-        return popularTokens.map((token) => ({
-            address: token.mintAddress,
-        }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ address: string }> }): Promise<Metadata> {
     const { address } = await params;
     
@@ -218,7 +205,6 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
             <div className="px-3 col-span-2 space-y-4">
                 <TokenHeader token={token} address={address} />
 
-                {/* Only show on mobile */}
                 <div className="md:hidden mb-4">
                     <TradingInterface token={token} address={address} />
                 </div>
@@ -245,7 +231,7 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     solPrice={solPrice || 0}
                 />
             </div>
-            {/* Only show on desktop */}
+
             <div className="hidden md:block">
                 <TradingInterface token={token} address={address} />
             </div>

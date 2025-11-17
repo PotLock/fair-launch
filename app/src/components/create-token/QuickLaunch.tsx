@@ -13,6 +13,8 @@ import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
 import URLInput from "@/components/ui/url-input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { TagsSelectModal, TAG_ICONS } from "@/components/modal/TagsSelectModal";
 import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
 
@@ -762,9 +764,22 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2 px-4">
-            Make your own token
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black px-4">
+              Make your own token
+            </h1>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-5 h-5">
+                  <Info className="w-5 h-5 text-gray-400 cursor-help" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm">
+                <p className="font-semibold mb-1">Dynamic Bonding Curve (DBC)</p>
+                <p>Your token launches with a virtual liquidity pool using Meteora's DBC. It automatically migrates to a full DEX pool once the fundraising target is reached (minimum 750 USD).</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <p className="text-sm sm:text-base text-gray-600 px-4">
             Add your token name, symbol, logo, and social links.
           </p>
@@ -801,9 +816,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Token Supply <strong className="text-red-500">*</strong>
-              </label>
+              <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Token Supply <strong className="text-red-500">*</strong>
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Total number of tokens that will exist. Part of this supply goes into the bonding curve reserve, while the rest enters circulation.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -814,9 +839,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Decimal <strong className="text-red-500">*</strong>
-              </label>
+              <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Decimal <strong className="text-red-500">*</strong>
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Number of decimal places for your token. Higher decimals (6-9) allow for more precise pricing and trading.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"

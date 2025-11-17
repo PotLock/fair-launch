@@ -19,9 +19,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
     const [isContractExpanded, setIsContractExpanded] = useState<boolean>(false);
     const [isBridgeModalOpen, setIsBridgeModalOpen] = useState<boolean>(false);
     
-    // Extract data from props
     const { bridgeTokenAddresses, solPrice, poolConfig, poolState, tokenPrice } = data;
-
 
     const parseBridgedAddresses = (addresses: string[]) => {
         return addresses.map(address => {
@@ -92,18 +90,16 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
     // Helper functions to calculate values from dbcConfig and poolConfig
     const calculateTotalSupply = () => {
         if (poolConfig?.preMigrationTokenSupply) {
-            // Convert hex to decimal and divide by 10^6 (token decimals)
             const supply = parseInt(poolConfig.preMigrationTokenSupply, 16);
-            return supply / Math.pow(10, 6); // Assuming 6 decimals
+            return supply / Math.pow(10, 6);
         }
         return token?.totalSupply || 0;
     };
 
     const calculateTargetRaise = () => {
         if (poolConfig?.migrationQuoteThreshold) {
-            // Convert hex to decimal and convert lamports to SOL
             const lamports = parseInt(poolConfig.migrationQuoteThreshold, 16);
-            return lamports / Math.pow(10, 9); // Convert lamports to SOL
+            return lamports / Math.pow(10, 9);
         }
         return 0;
     };
@@ -190,7 +186,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setIsContractExpanded(!isContractExpanded)}
-                                className="flex items-center gap-2 text-gray-700 font-normal text-sm hover:text-gray-900"
+                                className="flex items-center gap-2 text-gray-700 font-normal text-sm hover:text-gray-900 cursor-pointer"
                             >
                                 Contract Addresses
                                 {isContractExpanded ? (

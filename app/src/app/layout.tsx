@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { InforWarning } from "../components/layout/InforWarning";
 import { Footer } from "../components/layout/Footer";
 import { HelpButton } from "../components/layout/HelpButton";
+import { Analytics } from "@vercel/analytics/next"
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -120,6 +121,7 @@ export default async function RootLayout({
       <body
         className={`${spaceGrotesk.variable} antialiased`}
       >
+        <Analytics />
         <WalletContextProvider>
             <Header />
             <InforWarning/>

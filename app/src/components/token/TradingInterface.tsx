@@ -4,17 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
-import { ChevronDown, Copy, Download, ExternalLink, Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo } from "react";
+import { ChevronDown, Copy, Download, ExternalLink, Wallet, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useReducer, useTransition, useDeferredValue, memo, useRef } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
 import { getRpcSOLEndpoint, getSolPrice, getSolBalance, getTokenBalanceOnSOL } from "@/lib/sol";
+import { calculateDbcSwapQuote, approximateSwapQuote } from "@/lib/meteora";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
-import { useRouter } from "next/navigation";
 import { SOL_NETWORK } from "@/configs/env.config";
 
 interface TradingInterfaceProps {
@@ -28,6 +29,7 @@ interface TokenData {
   marketCap: number;
   targetRaise: number;
   poolAddress: string;
+  migrationProgress: number;
 }
 
 interface UserBalances {
@@ -35,7 +37,6 @@ interface UserBalances {
   token: number;
 }
 
-// Trading state for useReducer
 interface TradingState {
   tokenData: TokenData;
   userBalances: UserBalances;
@@ -49,7 +50,6 @@ interface TradingState {
   payIsSol: boolean;
 }
 
-// Action types for reducer
 type TradingAction =
   | { type: 'SET_TOKEN_DATA'; payload: TokenData }
   | { type: 'SET_USER_BALANCES'; payload: UserBalances }
@@ -63,7 +63,6 @@ type TradingAction =
   | { type: 'RESET_AMOUNTS' }
   | { type: 'SWITCH_TOKEN'; payload: boolean };
 
-// Reducer function
 const tradingReducer = (state: TradingState, action: TradingAction): TradingState => {
   switch (action.type) {
     case 'SET_TOKEN_DATA':
@@ -93,12 +92,56 @@ const tradingReducer = (state: TradingState, action: TradingAction): TradingStat
   }
 };
 
-// Constants
 const GAS_RESERVE = 0.001; // Reserve SOL for gas fees
 const SLIPPAGE_BPS = 50;
 const COMPUTE_UNIT_PRICE = 100000;
 const MAX_FRACTION_DIGITS = 6;
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const TOTAL_FEE_PERCENT = 0.003; // 0.3% total fee (protocol + partner + creator)
+
+// Migration Progress Enum
+enum MigrationProgress {
+  PreBondingCurve = 0,
+  PostBondingCurve = 1,
+  LockedVesting = 2,
+  CreatedPool = 3
+}
+
+// Get user-friendly phase information
+const getPhaseInfo = (migrationProgress: number) => {
+  switch (migrationProgress) {
+    case MigrationProgress.PreBondingCurve:
+      return {
+        label: 'BONDING CURVE',
+        color: 'orange',
+        description: 'Initial fundraising phase'
+      };
+    case MigrationProgress.PostBondingCurve:
+      return {
+        label: 'FUNDRAISING COMPLETE',
+        color: 'green',
+        description: 'Preparing for migration'
+      };
+    case MigrationProgress.LockedVesting:
+      return {
+        label: 'VESTING PERIOD',
+        color: 'purple',
+        description: 'Locked vesting in progress'
+      };
+    case MigrationProgress.CreatedPool:
+      return {
+        label: 'LIVE TRADING',
+        color: 'emerald',
+        description: 'Pool created and migrated'
+      };
+    default:
+      return {
+        label: 'UNKNOWN',
+        color: 'gray',
+        description: 'Status unknown'
+      };
+  }
+};
 
 const hexToNumber = (hex: string): number => {
   return !hex || hex === "00" ? 0 : parseInt(hex, 16);
@@ -120,7 +163,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       holders: 0,
       marketCap: 0,
       targetRaise: 0,
-      poolAddress: ''
+      poolAddress: '',
+      migrationProgress: 0
     },
     userBalances: {
       sol: 0,
@@ -137,8 +181,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   });
 
   const [isPending, startTransition] = useTransition();
-
   const deferredAmountPay = useDeferredValue(state.amountPay);
+  const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -159,7 +203,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         getTokenBalanceOnSOL(address, publicKey.toString())
       ]);
 
-      // Use startTransition for non-blocking update
       startTransition(() => {
         dispatch({
           type: 'SET_USER_BALANCES',
@@ -211,7 +254,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             holders: holders.length,
             marketCap: marketCap * solPrice,
             targetRaise,
-            poolAddress: pool.publicKey
+            poolAddress: pool.publicKey,
+            migrationProgress: pool?.account?.migrationProgress ?? 0
           }
         });
       });
@@ -230,7 +274,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     fetchUserBalances();
   }, [fetchUserBalances]);
 
-  // Validation helpers with useMemo for performance
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (quoteTimeoutRef.current) {
+        clearTimeout(quoteTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const hasInsufficientBalance = useMemo(() => {
     if (!deferredAmountPay || deferredAmountPay.trim() === '') return false;
 
@@ -238,10 +290,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if (isNaN(amountPayNum) || amountPayNum <= 0) return false;
 
     if (state.payIsSol) {
-      // When buying, check SOL balance (reserve for gas fees)
       return amountPayNum > (state.userBalances.sol - GAS_RESERVE);
     } else {
-      // When selling, check token balance
       return amountPayNum > state.userBalances.token;
     }
   }, [deferredAmountPay, state.payIsSol, state.userBalances]);
@@ -250,9 +300,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     return state.payIsSol ? state.userBalances.sol : state.userBalances.token;
   }, [state.payIsSol, state.userBalances]);
 
-  // Calculate swap amounts with useCallback for optimization
   const handleAmountPayChange = useCallback((value: string) => {
     dispatch({ type: 'SET_AMOUNT_PAY', payload: value });
+
+    // Clear any pending quote calculation
+    if (quoteTimeoutRef.current) {
+      clearTimeout(quoteTimeoutRef.current);
+    }
 
     if (value.trim() === '') {
       dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: '' });
@@ -266,25 +320,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    // Constant product formula: x * y = k
-    const k = state.baseReserve * state.quoteReserve;
-    if (state.payIsSol) {
-      // Buying: Paying SOL -> receive token
-      const newQuote = state.quoteReserve + amountPayNum;
-      const newBase = k / newQuote;
-      const deltaBase = state.baseReserve - newBase;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaBase.toFixed(4) });
-    } else {
-      // Selling: Paying token -> receive SOL
-      const newBase = state.baseReserve + amountPayNum;
-      const newQuote = k / newBase;
-      const deltaQuote = state.quoteReserve - newQuote;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaQuote.toFixed(4) });
-    }
-  }, [state.baseReserve, state.quoteReserve, state.payIsSol]);
+    // Debounce the API call by 300ms
+    quoteTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Use Meteora SDK for accurate DBC quote calculation
+        const connection = new Connection(getRpcSOLEndpoint());
+        const outputAmount = await calculateDbcSwapQuote(
+          connection,
+          state.tokenData.poolAddress,
+          amountPayNum,
+          !state.payIsSol, // swapBaseForQuote: true when selling tokens (payIsSol=false)
+          token.decimals,
+          SLIPPAGE_BPS
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      } catch (error) {
+        console.error('Error calculating DBC quote, using approximation:', error);
+
+        // Fallback to approximation if SDK call fails
+        const outputAmount = approximateSwapQuote(
+          state.baseReserve,
+          state.quoteReserve,
+          amountPayNum,
+          !state.payIsSol,
+          TOTAL_FEE_PERCENT
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      }
+    }, 300);
+  }, [state.baseReserve, state.quoteReserve, state.payIsSol, state.tokenData.poolAddress, token.decimals]);
 
 
-  // Handle buy/sell transaction with useCallback
   const handleBuyAndSell = useCallback(async () => {
     // Validation checks
     if (!publicKey) {
@@ -363,7 +431,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         await connection.confirmTransaction(signatureSwap, "confirmed");
 
-        // Update transaction status to success
         if (createdTransactionId) {
           try {
             await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
@@ -377,7 +444,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         toast.success(`Successfully ${state.payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${state.amountReceive} ${receiveSymbol}`);
         console.log("Swap Transaction Signature:", signatureSwap);
 
-        // Refresh data
         await Promise.all([fetchTokenData(), fetchUserBalances()]);
         dispatch({ type: 'RESET_AMOUNTS' });
       } else {
@@ -385,7 +451,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       }
     } catch (error) {
       console.error("Error during swap:", error);
-      // If we already created a transaction record, mark it failed
       try {
         if (createdTransactionId) {
           await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
@@ -401,12 +466,29 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   }, [publicKey, sendTransaction, address, state, hasInsufficientBalance, currentBalance, token, fetchTokenData, fetchUserBalances]);
 
 
+  const phaseInfo = getPhaseInfo(state.tokenData.migrationProgress);
+
+  // Get appropriate Tailwind classes based on phase color
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { dot: string; text: string }> = {
+      orange: { dot: 'bg-orange-600', text: 'text-orange-600' },
+      blue: { dot: 'bg-blue-700', text: 'text-blue-700' },
+      green: { dot: 'bg-green-600', text: 'text-green-600' },
+      purple: { dot: 'bg-purple-600', text: 'text-purple-600' },
+      emerald: { dot: 'bg-emerald-600', text: 'text-emerald-600' },
+      gray: { dot: 'bg-gray-600', text: 'text-gray-600' }
+    };
+    return colorMap[color] || colorMap.gray;
+  };
+
+  const colorClasses = getColorClasses(phaseInfo.color);
+
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
       <div className="flex flex-col gap-3 p-3 md:p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
-          <span className="font-medium text-blue-700">LIVE TRADING</span>
+          <div className={`w-2.5 h-2.5 rounded-full ${colorClasses.dot} animate-pulse`}></div>
+          <span className={`font-medium ${colorClasses.text}`}>{phaseInfo.label}</span>
         </div>
         <div className="flex flex-col">
             <div className="text-3xl font-bold text-blue-600">
@@ -505,7 +587,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
                         <div className="w-6 h-6">
-                          <img src={state.payIsSol ? "/logos/solana_light.svg" : token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
+                          <img src={state.payIsSol ? "/logos/solana_light.svg" : process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
                         </div>
                         <span>{state.payIsSol ? 'SOL' : token.symbol}</span>
                         <div className="relative w-4 h-4">
@@ -523,7 +605,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                            <img src={option.name !== 'SOL' ? process.env.NEXT_PUBLIC_IPFS_URL + option.icon : '/logos/solana_light.svg'} alt={option.name} className="w-5 h-5 rounded-full" />
                             <span>{option.name}</span>
                           </div>
                         </DropdownMenuItem>
@@ -548,14 +630,17 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
-                    value={state.amountReceive || ''}
+                    value={state.amountReceive ? parseFloat(state.amountReceive).toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: MAX_FRACTION_DIGITS,
+                    }) : ''}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
                     disabled
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
                     <div className="h-6 w-6">
-                      <img src={state.payIsSol ? token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
+                      <img src={state.payIsSol ? process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
                     <span className="text-lg">{state.payIsSol ? token.symbol : 'SOL'}</span>
                   </div>
@@ -640,60 +725,56 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       </div>
 
       <div className="p-3 md:p-4 flex flex-col gap-2">
-        <h1 className="text-lg font-bold">Trade on DEX</h1>
-        
-        {SOL_NETWORK !== 'mainnet' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
-            <p className="text-sm text-amber-800">
-              DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.
-            </p>
-          </div>
-        )}
-        
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold">Trade on DEX</h1>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>DBC is a virtual pool bonding curve. DEX trading is only available on mainnet via Jupiter, Photon, and Axiom.</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
         <div className="flex flex-col gap-2">
-          <div
-            className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between ${
-              SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-            }`}
-            onClick={() => {
-              if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
-                window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
-              }
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="relative w-9 h-9">
-                <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
-                <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
-                  <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
+                <div className="flex items-center gap-2">
+                  <div className="relative w-9 h-9">
+                    <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
+                    <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
+                      <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+                    </div>
+                  </div>
+                  <span>Trade on Meteora</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5" />
                 </div>
               </div>
-              <span>Trade on Meteora</span>
-              {SOL_NETWORK !== 'mainnet' && (
-                <span className="text-xs text-gray-500">(Mainnet only)</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <ExternalLink className="w-5 h-5" />
-            </div>
-          </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm border border-gray-200">
+              <p>Meteora DLMM pools are not compatible with DBC virtual pools. Use Jupiter, Photon, or Axiom instead.</p>
+            </TooltipContent>
+          </Tooltip>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
-                SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span>Trade on other DEX</span>
-                  {SOL_NETWORK !== 'mainnet' && (
-                    <span className="text-xs text-gray-500">(Mainnet only)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <ChevronDown className="w-5 h-5" />
-                </div>
-              </div>
-            </DropdownMenuTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
+                    SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span>Trade on other DEX</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-5 h-5" />
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white" align="start">
               <DropdownMenuGroup>
                 <DropdownMenuItem 
@@ -786,12 +867,18 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenu>
+            </TooltipTrigger>
+            {SOL_NETWORK !== 'mainnet' && (
+              <TooltipContent>
+                <p>DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
       </div>
     </div>
   );
 }
 
-// Export memoized component for performance optimization
 export const TradingInterface = memo(TradingInterfaceComponent);

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { uploadImage } from '@/lib/api';
 import URLInput from '@/components/ui/url-input';
+import { InfoTooltip, DBC_TOOLTIPS } from '@/components/ui/info-tooltip';
 import { TagsSelectModal, TAG_ICONS } from '@/components/modal/TagsSelectModal';
 import {
   DropdownMenu,
@@ -297,9 +298,15 @@ export default function TokenInfo({
     <div className="min-h-screen bg-white flex flex-col items-center">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-black mb-2">
-          What's your token called?
-        </h1>
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-3xl font-bold text-black">
+            What's your token called?
+          </h1>
+          <InfoTooltip
+            title={DBC_TOOLTIPS.overview.title}
+            content={DBC_TOOLTIPS.overview.description}
+          />
+        </div>
         <p className="text-gray-600 text-lg">
           Add your token name, symbol, logo, and social links.
         </p>
@@ -557,9 +564,15 @@ export default function TokenInfo({
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Tokenomics</h3>
             <div className='flex flex-row gap-2 justify-between'>
               <div className="space-y-2 mb-3 sm:mb-4 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Token Supply <strong className="text-red-500">*</strong>
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Total Token Supply <strong className="text-red-500">*</strong>
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.totalTokenSupply.title}
+                    content={DBC_TOOLTIPS.totalTokenSupply.description}
+                  />
+                </div>
                 <input
                   type="number"
                   placeholder="1000000"
@@ -573,9 +586,15 @@ export default function TokenInfo({
               </div>
 
               <div className="space-y-2 mb-3 sm:mb-4 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Quote Address
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Quote Address
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenQuoteAddress.title}
+                    content={DBC_TOOLTIPS.tokenQuoteAddress.description}
+                  />
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -665,9 +684,15 @@ export default function TokenInfo({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Base Decimal
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Base Decimal
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenBaseDecimal.title}
+                    content={DBC_TOOLTIPS.tokenBaseDecimal.description}
+                  />
+                </div>
               <input
                 type="number"
                 placeholder="6"
@@ -680,9 +705,15 @@ export default function TokenInfo({
               />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Quote Decimal
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Quote Decimal
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenQuoteDecimal.title}
+                    content={DBC_TOOLTIPS.tokenQuoteDecimal.description}
+                  />
+                </div>
               <input
                 type="number"
                 placeholder="6"

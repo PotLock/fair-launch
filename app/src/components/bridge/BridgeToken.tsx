@@ -352,27 +352,47 @@ export default function BridgeToken() {
             const decimalsToChain = fromChain == "near" ? 24 : selectedToken.decimals;
             const amountToBridge = normalizeAmount(amountBigInt, selectedToken.decimals, decimalsToChain);
 
-            // Step 2: Initiating transfer (50%)
+            // Step 2: Initiating transfer (50% - 95%)
             dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 50 });
+
+            // Start progress animation during bridge based on estimated VAA fetch time (~80s)
+            const estimatedBridgeDurationMs = 80000; // VAA fetch typically takes ~80 seconds
+            const bridgeWaitStart = Date.now();
+            const bridgeProgressInterval = setInterval(() => {
+                const elapsed = Date.now() - bridgeWaitStart;
+                const normalized = estimatedBridgeDurationMs > 0 ? elapsed / estimatedBridgeDurationMs : 0;
+                const projected = 50 + Math.floor(Math.min(0.999, Math.max(0, normalized)) * 45); // 50% to 95%
+                const nextValue = Math.min(95, projected);
+                dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: nextValue });
+            }, 1000);
 
             const from = fromChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const to = toChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const senderAddress = fromChain === 'near' ? signedAccountId : publicKey?.toString();
             const recipientAddress = toChain === 'near' ? signedAccountId : publicKey?.toString();
 
-            const result = await transferToken(
-                network,
-                from,
-                to,
-                senderAddress!,
-                selectedToken.mint,
-                amountToBridge,
-                recipientAddress!
-            );
+            let result;
+            try {
+                result = await transferToken(
+                    network,
+                    from,
+                    to,
+                    senderAddress!,
+                    selectedToken.mint,
+                    amountToBridge,
+                    recipientAddress!
+                );
 
-            // Step 3: Finalizing bridge (100%)
-            dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 100 });
-            await new Promise(resolve => setTimeout(resolve, 500));
+                // Clear interval and complete progress
+                clearInterval(bridgeProgressInterval);
+
+                // Step 3: Finalizing bridge (100%)
+                dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 100 });
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (bridgeError) {
+                clearInterval(bridgeProgressInterval);
+                throw bridgeError;
+            }
 
             console.log("result", result);
 
@@ -534,25 +554,44 @@ export default function BridgeToken() {
                 }
             }
 
-            // Step 3: Deploying token (60%)
+            // Step 3: Deploying token (60% - 95%)
             dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 60 });
+
+            // Start progress animation during deployment
+            let currentProgress = 60;
+            const progressInterval = setInterval(() => {
+                if (currentProgress < 95) {
+                    currentProgress += 1;
+                    dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: currentProgress });
+                }
+            }, 200);
+
             const from = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
             const to = toChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
 
-            const txDeployToken = await deployToken(network, from, to, selectedToken.mint);
+            try {
+                const txDeployToken = await deployToken(network, from, to, selectedToken.mint);
 
-            // Step 4: Finalizing deployment (100%)
-            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
-            await new Promise(resolve => setTimeout(resolve, 500));
+                // Clear interval and complete progress
+                clearInterval(progressInterval);
 
-            // Update transaction status to success
-            if (transactionId) {
-                await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+                // Step 4: Finalizing deployment (100%)
+                dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Update transaction status to success
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+                }
+                setAmount('')
+                dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
+                setIsTokenDeployedOnTargetChain(true);
+                toast.success('Deploy token successfully');
+
+            } catch (deployError) {
+                clearInterval(progressInterval);
+                throw deployError;
             }
-            setAmount('')
-            dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
-            setIsTokenDeployedOnTargetChain(true);
-            toast.success('Deploy token successfully');
 
         } catch (error: any) {
             console.error("Deploy token error:", error);
@@ -764,7 +803,7 @@ export default function BridgeToken() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                            Please don't close this window. Bridge typically takes 1-2 minutes.
+                            Please don't close this window while the bridge is in progress.
                         </p>
                     </div>
                 </DialogContent>
@@ -849,7 +888,7 @@ export default function BridgeToken() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                            Please don't close this window. Deployment typically takes 2-5 minutes.
+                            Please don't close this window while the deployment is in progress.
                         </p>
                     </div>
                 </DialogContent>
