@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, ExternalLink, Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Minus, Plus, Info } from "lucide-react";
 import { getPoolConfigByMint, getPoolStateByMint } from "@/lib/api";
 import { Token } from "@/types/api";
 import { getSolPrice } from "@/lib/sol";
@@ -241,9 +241,19 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
 
                 {!poolStatus.showLiquidityActions && (
                     <div className={`border rounded-lg p-3 md:p-4 ${statusColors.bg} ${statusColors.border}`}>
-                        <h4 className={`font-medium text-sm mb-2 ${statusColors.text}`}>
-                            {poolStatus.label}
-                        </h4>
+                        <div className="flex items-center gap-2 mb-2">
+                            <h4 className={`font-medium text-sm ${statusColors.text}`}>
+                                {poolStatus.label}
+                            </h4>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                    <p>DBC is a virtual pool. You cannot add or remove liquidity until migration is complete and the pool becomes a real DEX pool.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <p className="text-xs text-gray-600">
                             {poolStatus.description}. Liquidity management will be available after migration.
                         </p>
@@ -252,9 +262,19 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
 
                 {poolStatus.showLiquidityActions && (
                     <div className="border border-emerald-200 rounded-lg p-3 md:p-4 bg-emerald-50">
-                        <h4 className="font-medium text-sm mb-3 text-emerald-600">
-                            Manage your Position
-                        </h4>
+                        <div className="flex items-center gap-2 mb-3">
+                            <h4 className="font-medium text-sm text-emerald-600">
+                                Manage your Position
+                            </h4>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="w-3.5 h-3.5 text-emerald-500 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                    <p>Pool has been migrated! You can now add/remove liquidity and trade on Meteora and other DEX exchanges.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <div className="flex flex-col md:flex-row md:justify-between gap-3 md:gap-4">
                             <div className="grid grid-cols-3 gap-3 md:gap-4 flex-1">
                                 <div>

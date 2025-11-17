@@ -174,9 +174,15 @@ export default function DBCConfig({
     <div className="min-h-screen bg-white flex flex-col items-center">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-black mb-2">
-          Bonding Curve Configuration
-        </h1>
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-3xl font-bold text-black">
+            Bonding Curve Configuration
+          </h1>
+          <InfoTooltip
+            title={DBC_TOOLTIPS.overview.title}
+            content={DBC_TOOLTIPS.overview.description}
+          />
+        </div>
         <p className="text-gray-600 text-lg">
           Configure your bonding curve and migration settings for your token.
         </p>

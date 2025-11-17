@@ -186,7 +186,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setIsContractExpanded(!isContractExpanded)}
-                                className="flex items-center gap-2 text-gray-700 font-normal text-sm hover:text-gray-900"
+                                className="flex items-center gap-2 text-gray-700 font-normal text-sm hover:text-gray-900 cursor-pointer"
                             >
                                 Contract Addresses
                                 {isContractExpanded ? (

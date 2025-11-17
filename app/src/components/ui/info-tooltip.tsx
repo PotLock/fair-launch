@@ -29,17 +29,40 @@ export function InfoTooltip({ content, title, children }: InfoTooltipProps) {
             </button>
           )}
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs border border-gray-200">
+        <TooltipContent className="max-w-xs border border-gray-200 text-[11px]">
           {title && <p className="font-semibold mb-1">{title}</p>}
-          <p className="text-sm">{content}</p>
+          <p className="text-[11px]">{content}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
-// DBC Config Tooltips from Meteora Docs
 export const DBC_TOOLTIPS = {
+  overview: {
+    title: "Dynamic Bonding Curve (DBC)",
+    description: "DBC is Meteora's virtual liquidity pool system that allows you to launch tokens with an automated bonding curve. Your token starts in a virtual pool and automatically migrates to a full DLMM pool once the fundraising target is reached (minimum 750 USD). Migration happens in 4 phases: PreBondingCurve (0) → PostBondingCurve (1) → LockedVesting (2) → CreatedPool (3)."
+  },
+  migrationPhases: {
+    title: "Migration Phases",
+    description: "Phase 0: PreBondingCurve - Initial setup | Phase 1: PostBondingCurve - Active trading with bonding curve | Phase 2: LockedVesting - Vesting period for locked tokens | Phase 3: CreatedPool - Full DEX pool created. Migration triggers when quoteReserve >= migrationQuoteThreshold."
+  },
+  totalTokenSupply: {
+    title: "Total Token Supply",
+    description: "Total number of tokens that will exist. Part of this supply goes into the bonding curve reserve for price discovery, while the rest enters circulation. The percentageSupplyOnMigration determines how much gets migrated to the LP pool."
+  },
+  tokenQuoteAddress: {
+    title: "Token Quote Address",
+    description: "The quote token (trading pair) for your bonding curve. Common options: SOL (native), USDC, or USDT. This is the token users will trade against your token. SOL is recommended for maximum liquidity."
+  },
+  tokenBaseDecimal: {
+    title: "Token Base Decimal",
+    description: "Number of decimal places for your token (base mint). Standard is 6-9 decimals. Higher decimals (6-9) allow for more precise pricing and smaller unit trading. Must be between 0-99."
+  },
+  tokenQuoteDecimal: {
+    title: "Token Quote Decimal",
+    description: "Number of decimal places for the quote token. SOL uses 9 decimals, USDC uses 6. This should match the decimals of your chosen quote token for proper price calculations."
+  },
   buildCurveMode: {
     title: "Build Curve Mode",
     modes: {
