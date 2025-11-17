@@ -7,14 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
 import { ChevronDown, Copy, Download, ExternalLink, Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useTransition, useDeferredValue, memo } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
 import { getRpcSOLEndpoint, getSolPrice, getSolBalance, getTokenBalanceOnSOL } from "@/lib/sol";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
-import { useRouter } from "next/navigation";
 import { SOL_NETWORK } from "@/configs/env.config";
 
 interface TradingInterfaceProps {
@@ -28,6 +27,7 @@ interface TokenData {
   marketCap: number;
   targetRaise: number;
   poolAddress: string;
+  migrationProgress: number;
 }
 
 interface UserBalances {
@@ -35,7 +35,6 @@ interface UserBalances {
   token: number;
 }
 
-// Trading state for useReducer
 interface TradingState {
   tokenData: TokenData;
   userBalances: UserBalances;
@@ -49,7 +48,6 @@ interface TradingState {
   payIsSol: boolean;
 }
 
-// Action types for reducer
 type TradingAction =
   | { type: 'SET_TOKEN_DATA'; payload: TokenData }
   | { type: 'SET_USER_BALANCES'; payload: UserBalances }
@@ -63,7 +61,6 @@ type TradingAction =
   | { type: 'RESET_AMOUNTS' }
   | { type: 'SWITCH_TOKEN'; payload: boolean };
 
-// Reducer function
 const tradingReducer = (state: TradingState, action: TradingAction): TradingState => {
   switch (action.type) {
     case 'SET_TOKEN_DATA':
@@ -93,12 +90,55 @@ const tradingReducer = (state: TradingState, action: TradingAction): TradingStat
   }
 };
 
-// Constants
 const GAS_RESERVE = 0.001; // Reserve SOL for gas fees
 const SLIPPAGE_BPS = 50;
 const COMPUTE_UNIT_PRICE = 100000;
 const MAX_FRACTION_DIGITS = 6;
 const LAMPORTS_PER_SOL = 1_000_000_000;
+
+// Migration Progress Enum
+enum MigrationProgress {
+  PreBondingCurve = 0,
+  PostBondingCurve = 1,
+  LockedVesting = 2,
+  CreatedPool = 3
+}
+
+// Get user-friendly phase information
+const getPhaseInfo = (migrationProgress: number) => {
+  switch (migrationProgress) {
+    case MigrationProgress.PreBondingCurve:
+      return {
+        label: 'BONDING CURVE',
+        color: 'orange',
+        description: 'Initial fundraising phase'
+      };
+    case MigrationProgress.PostBondingCurve:
+      return {
+        label: 'FUNDRAISING COMPLETE',
+        color: 'green',
+        description: 'Preparing for migration'
+      };
+    case MigrationProgress.LockedVesting:
+      return {
+        label: 'VESTING PERIOD',
+        color: 'purple',
+        description: 'Locked vesting in progress'
+      };
+    case MigrationProgress.CreatedPool:
+      return {
+        label: 'LIVE TRADING',
+        color: 'emerald',
+        description: 'Pool created and migrated'
+      };
+    default:
+      return {
+        label: 'UNKNOWN',
+        color: 'gray',
+        description: 'Status unknown'
+      };
+  }
+};
 
 const hexToNumber = (hex: string): number => {
   return !hex || hex === "00" ? 0 : parseInt(hex, 16);
@@ -120,7 +160,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       holders: 0,
       marketCap: 0,
       targetRaise: 0,
-      poolAddress: ''
+      poolAddress: '',
+      migrationProgress: 0
     },
     userBalances: {
       sol: 0,
@@ -159,7 +200,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         getTokenBalanceOnSOL(address, publicKey.toString())
       ]);
 
-      // Use startTransition for non-blocking update
       startTransition(() => {
         dispatch({
           type: 'SET_USER_BALANCES',
@@ -211,7 +251,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             holders: holders.length,
             marketCap: marketCap * solPrice,
             targetRaise,
-            poolAddress: pool.publicKey
+            poolAddress: pool.publicKey,
+            migrationProgress: pool?.account?.migrationProgress ?? 0
           }
         });
       });
@@ -230,7 +271,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     fetchUserBalances();
   }, [fetchUserBalances]);
 
-  // Validation helpers with useMemo for performance
   const hasInsufficientBalance = useMemo(() => {
     if (!deferredAmountPay || deferredAmountPay.trim() === '') return false;
 
@@ -238,10 +278,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if (isNaN(amountPayNum) || amountPayNum <= 0) return false;
 
     if (state.payIsSol) {
-      // When buying, check SOL balance (reserve for gas fees)
       return amountPayNum > (state.userBalances.sol - GAS_RESERVE);
     } else {
-      // When selling, check token balance
       return amountPayNum > state.userBalances.token;
     }
   }, [deferredAmountPay, state.payIsSol, state.userBalances]);
@@ -250,7 +288,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     return state.payIsSol ? state.userBalances.sol : state.userBalances.token;
   }, [state.payIsSol, state.userBalances]);
 
-  // Calculate swap amounts with useCallback for optimization
   const handleAmountPayChange = useCallback((value: string) => {
     dispatch({ type: 'SET_AMOUNT_PAY', payload: value });
 
@@ -266,16 +303,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    // Constant product formula: x * y = k
     const k = state.baseReserve * state.quoteReserve;
     if (state.payIsSol) {
-      // Buying: Paying SOL -> receive token
       const newQuote = state.quoteReserve + amountPayNum;
       const newBase = k / newQuote;
       const deltaBase = state.baseReserve - newBase;
       dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaBase.toFixed(4) });
     } else {
-      // Selling: Paying token -> receive SOL
       const newBase = state.baseReserve + amountPayNum;
       const newQuote = k / newBase;
       const deltaQuote = state.quoteReserve - newQuote;
@@ -284,7 +318,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   }, [state.baseReserve, state.quoteReserve, state.payIsSol]);
 
 
-  // Handle buy/sell transaction with useCallback
   const handleBuyAndSell = useCallback(async () => {
     // Validation checks
     if (!publicKey) {
@@ -363,7 +396,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         await connection.confirmTransaction(signatureSwap, "confirmed");
 
-        // Update transaction status to success
         if (createdTransactionId) {
           try {
             await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
@@ -377,7 +409,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         toast.success(`Successfully ${state.payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${state.amountReceive} ${receiveSymbol}`);
         console.log("Swap Transaction Signature:", signatureSwap);
 
-        // Refresh data
         await Promise.all([fetchTokenData(), fetchUserBalances()]);
         dispatch({ type: 'RESET_AMOUNTS' });
       } else {
@@ -385,7 +416,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       }
     } catch (error) {
       console.error("Error during swap:", error);
-      // If we already created a transaction record, mark it failed
       try {
         if (createdTransactionId) {
           await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
@@ -401,12 +431,29 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   }, [publicKey, sendTransaction, address, state, hasInsufficientBalance, currentBalance, token, fetchTokenData, fetchUserBalances]);
 
 
+  const phaseInfo = getPhaseInfo(state.tokenData.migrationProgress);
+
+  // Get appropriate Tailwind classes based on phase color
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { dot: string; text: string }> = {
+      orange: { dot: 'bg-orange-600', text: 'text-orange-600' },
+      blue: { dot: 'bg-blue-700', text: 'text-blue-700' },
+      green: { dot: 'bg-green-600', text: 'text-green-600' },
+      purple: { dot: 'bg-purple-600', text: 'text-purple-600' },
+      emerald: { dot: 'bg-emerald-600', text: 'text-emerald-600' },
+      gray: { dot: 'bg-gray-600', text: 'text-gray-600' }
+    };
+    return colorMap[color] || colorMap.gray;
+  };
+
+  const colorClasses = getColorClasses(phaseInfo.color);
+
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
       <div className="flex flex-col gap-3 p-3 md:p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
-          <span className="font-medium text-blue-700">LIVE TRADING</span>
+          <div className={`w-2.5 h-2.5 rounded-full ${colorClasses.dot} animate-pulse`}></div>
+          <span className={`font-medium ${colorClasses.text}`}>{phaseInfo.label}</span>
         </div>
         <div className="flex flex-col">
             <div className="text-3xl font-bold text-blue-600">
@@ -505,7 +552,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
                         <div className="w-6 h-6">
-                          <img src={state.payIsSol ? "/logos/solana_light.svg" : token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
+                          <img src={state.payIsSol ? "/logos/solana_light.svg" : process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
                         </div>
                         <span>{state.payIsSol ? 'SOL' : token.symbol}</span>
                         <div className="relative w-4 h-4">
@@ -523,7 +570,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                            <img src={option.name !== 'SOL' ? process.env.NEXT_PUBLIC_IPFS_URL + option.icon : '/logos/solana_light.svg'} alt={option.name} className="w-5 h-5 rounded-full" />
                             <span>{option.name}</span>
                           </div>
                         </DropdownMenuItem>
@@ -555,7 +602,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
                     <div className="h-6 w-6">
-                      <img src={state.payIsSol ? token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
+                      <img src={state.payIsSol ? process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
                     <span className="text-lg">{state.payIsSol ? token.symbol : 'SOL'}</span>
                   </div>
@@ -793,5 +840,4 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   );
 }
 
-// Export memoized component for performance optimization
 export const TradingInterface = memo(TradingInterfaceComponent);

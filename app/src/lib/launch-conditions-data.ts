@@ -3,6 +3,8 @@ import { getSolPrice } from "@/lib/sol";
 import { getPoolConfigByMint, getPoolStateByMint } from "@/lib/api";
 import { Token } from "@/types/api";
 import { PoolState, PoolConfig } from "@/types/pool";
+import { hexToNumber } from "@/utils";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 export interface LaunchConditionsData {
     bridgeTokenAddresses: string[];
@@ -14,7 +16,6 @@ export interface LaunchConditionsData {
 
 export async function fetchLaunchConditionsData(token: Token): Promise<LaunchConditionsData> {
     try {
-        // Fetch all data in parallel
         const [bridgedAddresses, solPrice, poolConfig, poolState] = await Promise.all([
             getBridgedAddressToken(token?.mintAddress || ''),
             getSolPrice(),
@@ -22,17 +23,13 @@ export async function fetchLaunchConditionsData(token: Token): Promise<LaunchCon
             token?.mintAddress ? getPoolStateByMint(token.mintAddress) : null
         ]);
 
-        // Calculate token price
         let tokenPrice = 0;
-        if (poolState?.account && solPrice) {
+        if (poolState?.account && solPrice && token?.decimals) {
             try {
-                // Calculate token price from sqrtPrice
-                // sqrtPrice is stored as a string, convert to number
-                const sqrtPrice = parseFloat(poolState.account.sqrtPrice);
-                // Price = (sqrtPrice / 2^64)^2
-                const price = Math.pow(sqrtPrice / Math.pow(2, 64), 2);
-                // Convert to USD if SOL price is available
-                tokenPrice = price * solPrice;
+                const quote = hexToNumber(poolState.account.quoteReserve) / LAMPORTS_PER_SOL;
+                const base = hexToNumber(poolState.account.baseReserve) / Math.pow(10, token.decimals);
+                const priceInSol = base > 0 ? quote / base : 0;
+                tokenPrice = priceInSol * solPrice;
             } catch (error) {
                 console.error('Error calculating token price:', error);
                 tokenPrice = 0;
