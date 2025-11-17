@@ -31,17 +31,25 @@ export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: Tr
         setCurrentPage(1);
     }, [tokenAddress]);
 
-    const totalPages = Math.ceil((transactions?.length || 0) / itemsPerPage) || 1;
+    // Filter out BRIDGE and DEPLOY transactions, only show BUY and SELL
+    const filteredTransactions = useMemo(() => {
+        if (!transactions || transactions.length === 0) return [];
+        return transactions.filter(
+            tx => tx.action === TransactionAction.BUY || tx.action === TransactionAction.SELL
+        );
+    }, [transactions]);
+
+    const totalPages = Math.ceil((filteredTransactions?.length || 0) / itemsPerPage) || 1;
 
     const paginatedTransactions = useMemo(() => {
-        if (!transactions || transactions.length === 0) return [];
+        if (!filteredTransactions || filteredTransactions.length === 0) return [];
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
-        return transactions.slice(startIndex, endIndex);
-    }, [transactions, currentPage, itemsPerPage]);
+        return filteredTransactions.slice(startIndex, endIndex);
+    }, [filteredTransactions, currentPage, itemsPerPage]);
 
     const startIndex = (currentPage - 1) * itemsPerPage + 1;
-    const endIndex = Math.min(currentPage * itemsPerPage, transactions?.length || 0);
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredTransactions?.length || 0);
 
     const handlePreviousPage = () => {
         setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -203,8 +211,8 @@ export default function Transactions({ tokenAddress, tokenSymbol, solPrice }: Tr
 
             <div className="mt-6 text-xs text-slate-500 flex items-center justify-between">
                 <span>
-                    {transactions?.length > 0 ? (
-                        `Showing ${startIndex} - ${endIndex} of ${transactions.length} transfers`
+                    {filteredTransactions?.length > 0 ? (
+                        `Showing ${startIndex} - ${endIndex} of ${filteredTransactions.length} transfers`
                     ) : (
                         "No transfers found"
                     )}

@@ -47,9 +47,6 @@ export function BridgeTokensComponent({token, chains, onClose, onBridgeProcessin
     const { transferToken } = useBridge();
     const { connectSolana } = useWalletContext();
 
-    // Get bridge transactions for the current user
-    const userAddress = publicKey?.toString() || signedAccountId || '';
-
     const handleFromChainChange = (chain: Chain) => {
         setSelectedFromChain(chain);
         if (selectedToChain && selectedToChain.name === chain.name) {
