@@ -44,8 +44,10 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@cookedbusiness/halfbaked-sdk": "^1.2.21",
     "@coral-xyz/anchor": "^0.31.1",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@near-js/tokens": "^2.5.1",
     "@near-wallet-selector/bitte-wallet": "^10.1.0",
     "@near-wallet-selector/intear-wallet": "^10.1.0",
     "@near-wallet-selector/ledger": "^10.1.0",
@@ -76,6 +78,7 @@
     "lucide-react": "^0.545.0",
     "next": "15.5.4",
     "omni-bridge-sdk": "^0.20.6",
+    "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "recharts": "^3.3.0",
