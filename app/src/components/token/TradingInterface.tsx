@@ -6,8 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
-import { ChevronDown, Copy, Download, ExternalLink, Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo } from "react";
+import { ChevronDown, Copy, Download, ExternalLink, Wallet, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo, useRef } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
 import { getRpcSOLEndpoint, getSolPrice, getSolBalance, getTokenBalanceOnSOL } from "@/lib/sol";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -16,6 +16,16 @@ import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { SOL_NETWORK } from "@/configs/env.config";
+import { useNearIntents } from "@/hooks/useNearIntents";
+import { useWalletSelector } from "@near-wallet-selector/react-hook";
+import { QRCodeSVG } from "qrcode.react";
+
+// Convert NEAR to yoctoNEAR: 1 NEAR = 10^24 yoctoNEAR
+const parseNearAmount = (amount: string): string => {
+  if (!amount || parseFloat(amount) <= 0) return "0";
+  const amountNum = parseFloat(amount);
+  return (amountNum * Math.pow(10, 24)).toFixed(0);
+};
 
 interface TradingInterfaceProps {
   token: Token;
@@ -111,8 +121,22 @@ const formatBalance = (balance: number, decimals: number = 4): string => {
   });
 };
 
+// Deposit workflow state interface
+interface DepositState {
+  depositAmount: string;
+  depositAddress: string | null;
+  depositMemo: string | null;
+  purchaseInfo: any | null;
+  swapStatus: any | null;
+  isGeneratingAddress: boolean;
+  isSettling: boolean;
+  isLoadingPurchaseInfo: boolean;
+}
+
 function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const { publicKey, sendTransaction } = useWallet()
+  const { signedAccountId } = useWalletSelector();
+  const nearIntents = useNearIntents();
 
   const [state, dispatch] = useReducer(tradingReducer, {
     tokenData: {
@@ -136,7 +160,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     payIsSol: true
   });
 
+  // Deposit workflow state
+  const [depositState, setDepositState] = useState<DepositState>({
+    depositAmount: '',
+    depositAddress: null,
+    depositMemo: null,
+    purchaseInfo: null,
+    swapStatus: null,
+    isGeneratingAddress: false,
+    isSettling: false,
+    isLoadingPurchaseInfo: false,
+  });
+
   const [isPending, startTransition] = useTransition();
+  const statusPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const deferredAmountPay = useDeferredValue(state.amountPay);
 
@@ -400,6 +437,193 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     }
   }, [publicKey, sendTransaction, address, state, hasInsufficientBalance, currentBalance, token, fetchTokenData, fetchUserBalances]);
 
+  // ============================================================================
+  // DEPOSIT WORKFLOW FUNCTIONS
+  // ============================================================================
+
+  // Fetch purchase information when user enters amount
+  const fetchPurchaseInfo = useCallback(async (amount: string) => {
+    if (!amount || parseFloat(amount) <= 0 || !signedAccountId || !publicKey) {
+      setDepositState(prev => ({ ...prev, purchaseInfo: null }));
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isLoadingPurchaseInfo: true }));
+      
+      // Convert NEAR amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const amountInYoctoNEAR = parseNearAmount(amount) || "0";
+      
+      const purchaseInfo = await nearIntents.getPurchaseInfo({
+        originAsset: "wNEAR",
+        destinationAsset: token.symbol,
+        amount: amountInYoctoNEAR,
+        senderAddress: signedAccountId,
+        recipientAddress: publicKey.toString(),
+      });
+
+      setDepositState(prev => ({ ...prev, purchaseInfo, isLoadingPurchaseInfo: false }));
+    } catch (error) {
+      console.error("Error fetching purchase info:", error);
+      setDepositState(prev => ({ ...prev, purchaseInfo: null, isLoadingPurchaseInfo: false }));
+    }
+  }, [signedAccountId, publicKey, token.symbol, nearIntents]);
+
+  // Poll for swap status
+  const startStatusPolling = useCallback((depositAddress: string) => {
+    // Clear any existing interval
+    if (statusPollIntervalRef.current) {
+      clearInterval(statusPollIntervalRef.current);
+    }
+
+    // Poll every 5 seconds
+    statusPollIntervalRef.current = setInterval(async () => {
+      try {
+        const detailedStatus = await nearIntents.getDetailedSwapStatus(depositAddress);
+        setDepositState(prev => ({ ...prev, swapStatus: detailedStatus }));
+
+        // Stop polling if swap is complete
+        if (detailedStatus.isComplete) {
+          if (statusPollIntervalRef.current) {
+            clearInterval(statusPollIntervalRef.current);
+            statusPollIntervalRef.current = null;
+          }
+
+          if (detailedStatus.isSuccess) {
+            toast.success(`Successfully received ${token.symbol} tokens!`);
+            await fetchUserBalances();
+          } else if (detailedStatus.isFailed) {
+            toast.error("Swap failed. Please contact support.");
+          }
+        }
+      } catch (error) {
+        console.error("Error polling swap status:", error);
+      }
+    }, 5000);
+  }, [nearIntents, token.symbol, fetchUserBalances]);
+
+  // Generate deposit address
+  const handleGenerateDepositAddress = useCallback(async () => {
+    if (!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0) {
+      toast.error("Please enter an amount to deposit");
+      return;
+    }
+
+    if (!signedAccountId) {
+      toast.error("Please connect your NEAR wallet");
+      return;
+    }
+
+    if (!publicKey) {
+      toast.error("Please connect your Solana wallet");
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isGeneratingAddress: true }));
+      
+      // Convert NEAR amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const amountInYoctoNEAR = parseNearAmount(depositState.depositAmount) || "0";
+      
+      const { depositAddress, depositMemo, quote } = await nearIntents.generateDepositAddress({
+        senderAddress: signedAccountId,
+        recipientAddress: publicKey.toString(),
+        originAsset: "wNEAR",
+        destinationAsset: token.symbol,
+        amount: amountInYoctoNEAR,
+      });
+
+      setDepositState(prev => ({
+        ...prev,
+        depositAddress,
+        depositMemo: depositMemo || null,
+        purchaseInfo: quote || prev.purchaseInfo,
+        isGeneratingAddress: false,
+      }));
+
+      // Start polling for status
+      startStatusPolling(depositAddress);
+      
+      toast.success("Deposit address generated! Send NEAR to this address.");
+    } catch (error) {
+      console.error("Error generating deposit address:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate deposit address");
+      setDepositState(prev => ({ ...prev, isGeneratingAddress: false }));
+    }
+  }, [depositState.depositAmount, signedAccountId, publicKey, token.symbol, nearIntents, startStatusPolling]);
+
+  // Settle deposit after user confirms deposit
+  const handleSettleDeposit = useCallback(async (txHash?: string) => {
+    if (!depositState.depositAddress) {
+      toast.error("No deposit address found");
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isSettling: true }));
+      
+      const status = await nearIntents.settleDeposit({
+        depositAddress: depositState.depositAddress,
+        txHash,
+        depositMemo: depositState.depositMemo || undefined,
+        waitForSettlement: true,
+      });
+
+      setDepositState(prev => ({ ...prev, swapStatus: status, isSettling: false }));
+
+      if (status.status === "SUCCESS") {
+        toast.success(`Successfully received ${token.symbol} tokens!`);
+        // Refresh balances
+        await fetchUserBalances();
+      } else if (status.status === "FAILED") {
+        toast.error("Swap failed. Please contact support.");
+      } else if (status.status === "REFUNDED") {
+        toast.info("Deposit was refunded. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error settling deposit:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to settle deposit");
+      setDepositState(prev => ({ ...prev, isSettling: false }));
+    }
+  }, [depositState.depositAddress, depositState.depositMemo, token.symbol, nearIntents, fetchUserBalances]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (statusPollIntervalRef.current) {
+        clearInterval(statusPollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Handle deposit amount change
+  const handleDepositAmountChange = useCallback((value: string) => {
+    const raw = value.replace(/,/g, '');
+    if (/^\d*\.?\d*$/.test(raw)) {
+      setDepositState(prev => ({ ...prev, depositAmount: raw }));
+      // Fetch purchase info when amount changes
+      if (raw && parseFloat(raw) > 0) {
+        fetchPurchaseInfo(raw);
+      } else {
+        setDepositState(prev => ({ ...prev, purchaseInfo: null }));
+      }
+    }
+  }, [fetchPurchaseInfo]);
+
+  // Copy deposit address to clipboard
+  const handleCopyDepositAddress = useCallback(() => {
+    if (depositState.depositAddress) {
+      navigator.clipboard.writeText(depositState.depositAddress);
+      toast.success("Deposit address copied to clipboard");
+    }
+  }, [depositState.depositAddress]);
+
+  // Format address for display
+  const formatAddress = useCallback((address: string | null) => {
+    if (!address) return "";
+    if (address.length <= 20) return address;
+    return `${address.slice(0, 10)}...${address.slice(-10)}`;
+  }, []);
 
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
@@ -590,50 +814,177 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
+                    value={depositState.depositAmount}
+                    onChange={(e) => handleDepositAmountChange(e.target.value)}
+                    onBlur={() => {
+                      if (depositState.depositAmount) {
+                        const formatted = parseFloat(depositState.depositAmount).toLocaleString('en-US', {
+                          maximumFractionDigits: MAX_FRACTION_DIGITS,
+                        });
+                        setDepositState(prev => ({ ...prev, depositAmount: formatted }));
+                      }
+                    }}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
+                    inputMode="decimal"
                   />
                   <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
                     <img src="/logos/near.svg" alt="NEAR" className="w-5 h-5" />
                     <span className="mr-5">NEAR</span>
                   </button>
                 </div>
-                <span className="text-sm text-gray-500 mt-1">-</span>
+                {depositState.isLoadingPurchaseInfo ? (
+                  <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Loading purchase info...</span>
+                  </div>
+                ) : depositState.purchaseInfo ? (
+                  <div className="text-sm text-gray-500 mt-1">
+                    You will receive approximately {formatBalance(parseFloat(depositState.purchaseInfo.expectedOut || "0"), 4)} {token.symbol}
+                    {depositState.purchaseInfo.minAmountOut && (
+                      <span className="block text-xs text-gray-400 mt-1">
+                        Minimum: {formatBalance(parseFloat(depositState.purchaseInfo.minAmountOut || "0"), 4)} {token.symbol}
+                      </span>
+                    )}
+                    {depositState.purchaseInfo.timeEstimate && (
+                      <span className="block text-xs text-gray-400 mt-1">
+                        Estimated time: {depositState.purchaseInfo.timeEstimate} seconds
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-500 mt-1">-</span>
+                )}
               </div>
-              <Card className="shadow-none p-3 py-4 space-y-4">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Use this depsoit address</h3>
-                  <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
-                </div>
-                <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
-                <div className="flex flex-col space-y-5 justify-center items-center">
-                  <div className="border border-gray-200 p-1 rounded-lg">
-                    <img src="/icons/qrcode.svg" alt="QRcode" className="w-40 h-40"/>
-                  </div>
-                  <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
-                    <span className="text-sm">qAHMEAU4..........8jiETcaSL5u5sAnZN</span>
-                    <Button className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2">
-                      <Copy className="w-3 h-3 text-gray-600" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="pt-3">
-                  <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
-                    <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the Near network</h3>
-                    <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
-                  </div>
-                </div>
-              </Card>
-              <Card className="shadow-none p-3 space-y-4 w-full">
-                <div className="flex justify-between w-full items-center text-xs text-gray-500">
-                  <span>Minimum Deposit</span>
-                  <span>0.001 SOL</span>
-                </div>
-                <div className="flex justify-between w-full items-center text-xs text-gray-500">
-                  <span>Processing Time</span>
-                  <span>~5 mins</span>
-                </div>
-              </Card>
+
+              {depositState.depositAddress ? (
+                <>
+                  <Card className="shadow-none p-3 py-4 space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold">Use this deposit address</h3>
+                      <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
+                    </div>
+                    <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
+                    <div className="flex flex-col space-y-5 justify-center items-center">
+                      <div className="border border-gray-200 p-1 rounded-lg bg-white">
+                        <QRCodeSVG value={depositState.depositAddress} size={160} level="M" />
+                      </div>
+                      <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
+                        <span className="text-sm font-mono">{formatAddress(depositState.depositAddress)}</span>
+                        <Button 
+                          onClick={handleCopyDepositAddress}
+                          className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2"
+                        >
+                          <Copy className="w-3 h-3 text-gray-600" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="pt-3">
+                      <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
+                        <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the NEAR network</h3>
+                        <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Swap Status Display */}
+                  {depositState.swapStatus && (
+                    <Card className="shadow-none p-3 space-y-3 w-full">
+                      <div className="flex items-center gap-2 mb-2">
+                        {depositState.swapStatus.isComplete ? (
+                          depositState.swapStatus.isSuccess ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          )
+                        ) : (
+                          <Clock className="w-5 h-5 text-blue-500 animate-pulse" />
+                        )}
+                        <h3 className="text-sm font-semibold">
+                          {depositState.swapStatus.isComplete
+                            ? depositState.swapStatus.isSuccess
+                              ? "Swap Completed"
+                              : "Swap Failed"
+                            : "Processing Swap"}
+                        </h3>
+                      </div>
+                      {depositState.swapStatus.status && (
+                        <div className="text-xs text-gray-600">
+                          Status: <span className="font-medium">{depositState.swapStatus.status}</span>
+                        </div>
+                      )}
+                      {depositState.swapStatus.swapDetails && (
+                        <div className="space-y-1 text-xs text-gray-600">
+                          {depositState.swapStatus.swapDetails.amountIn && (
+                            <div>Amount In: {depositState.swapStatus.swapDetails.amountIn}</div>
+                          )}
+                          {depositState.swapStatus.swapDetails.amountOut && (
+                            <div>Amount Out: {depositState.swapStatus.swapDetails.amountOut}</div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  )}
+
+                  <Button
+                    onClick={() => handleSettleDeposit()}
+                    disabled={depositState.isSettling || depositState.swapStatus?.isComplete}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-6 rounded-lg"
+                  >
+                    {depositState.isSettling ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                        Settling Deposit...
+                      </>
+                    ) : depositState.swapStatus?.isComplete ? (
+                      depositState.swapStatus.isSuccess ? "Swap Completed" : "Try Again"
+                    ) : (
+                      "Check Status"
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Card className="shadow-none p-3 space-y-4 w-full">
+                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                      <span>Minimum Deposit</span>
+                      <span>0.001 NEAR</span>
+                    </div>
+                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                      <span>Processing Time</span>
+                      <span>~5 mins</span>
+                    </div>
+                    {depositState.purchaseInfo?.slippageBps && (
+                      <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                        <span>Slippage Tolerance</span>
+                        <span>{(depositState.purchaseInfo.slippageBps / 100).toFixed(2)}%</span>
+                      </div>
+                    )}
+                  </Card>
+                  <Button
+                    onClick={handleGenerateDepositAddress}
+                    disabled={!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0 || depositState.isGeneratingAddress || !signedAccountId || !publicKey}
+                    className={`w-full ${
+                      depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && signedAccountId && publicKey && !depositState.isGeneratingAddress
+                        ? "bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                        : "bg-gray-300 hover:bg-gray-300 cursor-not-allowed"
+                    } text-white font-medium py-6 rounded-lg`}
+                  >
+                    {depositState.isGeneratingAddress ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                        Generating Address...
+                      </>
+                    ) : !signedAccountId ? (
+                      "Connect NEAR Wallet"
+                    ) : !publicKey ? (
+                      "Connect Solana Wallet"
+                    ) : (
+                      `Buy ${token.symbol} with NEAR`
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
