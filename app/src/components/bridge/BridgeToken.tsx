@@ -25,6 +25,7 @@ import { ChainSection } from "./ChainSection";
 import { TokenInput } from "./TokenInput";
 import { BridgeInfoCard } from "./BridgeInfoCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertCircle } from "lucide-react";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useTransactionBridge } from "@/hooks/useSWR";
 
@@ -599,11 +600,9 @@ export default function BridgeToken() {
             // Check if error is due to token already being deployed
             const errorMessage = error?.message || error?.toString() || '';
             if (errorMessage.includes('already been processed') || errorMessage.includes('already deployed')) {
-                // Treat as success - token is already deployed
                 dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                // Update transaction status to success
                 if (transactionId) {
                     try {
                         await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
@@ -616,7 +615,6 @@ export default function BridgeToken() {
                 setIsTokenDeployedOnTargetChain(true);
                 toast.success('Token already deployed and ready for bridging!');
             } else {
-                // Update transaction status to failed
                 if (transactionId) {
                     try {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
@@ -638,7 +636,24 @@ export default function BridgeToken() {
         setToChain(currentFromChain);
     }, [fromChain, toChain]);
 
-    // Memoize button text for performance
+
+    const handleToChainChange = useCallback((chain: ChainType) => {
+        if (chain === fromChain) {
+            toast.error('Bridge only works for cross-chain transfers. Please select a different destination chain.');
+            return;
+        }
+        setToChain(chain);
+    }, [fromChain]);
+
+    const handleFromChainChange = useCallback((chain: ChainType) => {
+        if (chain === toChain) {
+            const availableChains: ChainType[] = ['solana', 'near', 'ethereum'].filter(c => c !== chain) as ChainType[];
+            setToChain(availableChains[0]);
+        }
+        setFromChain(chain);
+    }, [toChain]);
+
+
     const bridgeButtonText = useMemo(() => {
         if (isBridging) return `Bridging... ${modalState.bridgeProgress}%`;
         if (isTokenDeployedOnTargetChain) return `Bridge ${selectedToken?.symbol || ''}`;
@@ -665,7 +680,7 @@ export default function BridgeToken() {
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <ChainSection
                                             chain={fromChain}
-                                            onChainChange={setFromChain}
+                                            onChainChange={handleFromChainChange}
                                             walletAddress={getWalletAddress(fromChain)}
                                             label="Select source chain"
                                             disabledChains={["ethereum"]}
@@ -707,11 +722,14 @@ export default function BridgeToken() {
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <ChainSection
                                             chain={toChain}
-                                            onChainChange={setToChain}
+                                            onChainChange={handleToChainChange}
                                             walletAddress={getWalletAddress(toChain)}
                                             label="Select destination chain"
-                                            disabledChains={["ethereum"]}
-                                            disabledTooltips={{ ethereum: "Coming soon" }}
+                                            disabledChains={["ethereum", fromChain]}
+                                            disabledTooltips={{
+                                                ethereum: "Coming soon",
+                                                [fromChain]: "Cannot bridge to same chain"
+                                            }}
                                         />
 
                                         <TokenInput
@@ -725,11 +743,19 @@ export default function BridgeToken() {
                                             isLoading={isLoadingFromChainTokens}
                                             isDisabled={true}
                                             isReadOnly={true}
+                                            sourceChain={fromChain}
                                         />
                                     </div>
                                 </div>
 
-                                <BridgeInfoCard />
+                                <BridgeInfoCard fromChain={fromChain} toChain={toChain} />
+
+                                <div className="flex items-start gap-2 mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <AlertCircle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-orange-700">
+                                        Bridge only supports cross-chain transfers. Token swaps on the same chain are not available.
+                                    </p>
+                                </div>
 
                                 <div className="mt-5">
                                     <Button

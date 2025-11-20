@@ -27,29 +27,29 @@ importers:
         specifier: ^2.5.1
         version: 2.5.1
       '@near-wallet-selector/bitte-wallet':
-        specifier: ^10.1.0
-        version: 10.1.0
+        specifier: ^10.1.1
+        version: 10.1.1
       '@near-wallet-selector/core':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-wallet-selector/intear-wallet':
-        specifier: ^10.1.0
-        version: 10.1.0
+        specifier: ^10.1.1
+        version: 10.1.1
       '@near-wallet-selector/ledger':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(typescript@5.9.3)
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(typescript@5.9.3)
       '@near-wallet-selector/meteor-wallet':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(near-api-js@5.1.1)
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(near-api-js@5.1.1)
       '@near-wallet-selector/modal-ui':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@near-wallet-selector/nightly':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-wallet-selector/react-hook':
-        specifier: ^10.1.0
-        version: 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: ^10.1.1
+        version: 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-collapsible':
         specifier: ^1.1.12
         version: 1.1.12(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -123,8 +123,8 @@ importers:
         specifier: 15.5.4
         version: 15.5.4(@babel/core@7.28.5)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       omni-bridge-sdk:
-        specifier: github:Near-One/bridge-sdk-js#fix/wallet-selector-action-format
-        version: https://codeload.github.com/Near-One/bridge-sdk-js/tar.gz/d6c3dc633f9194000d63f30f14844b26488f92c0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(@types/react@19.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(got@11.8.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^0.21.0
+        version: 0.21.0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(@types/react@19.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(got@11.8.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -1051,8 +1051,8 @@ packages:
   '@keystonehq/sol-keyring@0.20.0':
     resolution: {integrity: sha512-UBeMlecybTDQaFMI951LBEVRyZarqKHOcwWqqvphV+x7WquYz0SZ/wf/PhizV0MWoGTQwt2m5aqROzksi6svqw==}
 
-  '@ledgerhq/devices@8.6.0':
-    resolution: {integrity: sha512-ISp5g6OfWr3WnAvmph0/iEHpFvWRDflRfhZH1/oDeXb/okmmAimKOnSUCMC0voOAou7CEoMTCtRkelHPok41Yg==}
+  '@ledgerhq/devices@8.6.1':
+    resolution: {integrity: sha512-PQR2fyWz7P/wMFHY9ZLz17WgFdxC/Im0RVDcWXpp24+iRQRyxhQeX2iG4mBKUzfaAW6pOIEiWt+vmJh88QP9rQ==}
 
   '@ledgerhq/devices@8.7.0':
     resolution: {integrity: sha512-3pSOULPUhClk2oOxa6UnoyXW8+05FK7r6cpq2WiTey4kyIUjmIraO7AX9lhz9IU73dGVtBMdU+NCPPO2RYJaTQ==}
@@ -1060,8 +1060,8 @@ packages:
   '@ledgerhq/errors@6.27.0':
     resolution: {integrity: sha512-EE2hATONHdNP3YWFe3rZwwpSEzI5oN+q/xTjOulnjHZo84TLjungegEJ54A/Pzld0woulkkeVA27FbW5SAO1aA==}
 
-  '@ledgerhq/hw-transport-webhid@6.30.7':
-    resolution: {integrity: sha512-mZJbFLO7v9nx8b7zLPexD0POhUkWuXdXaqEQSYF+uftC1A1UG1IhZ3feZ6UGa0eP5ELgULjbALV432R8SoDTvw==}
+  '@ledgerhq/hw-transport-webhid@6.30.8':
+    resolution: {integrity: sha512-2Hc15GjC7BFrpMVJYJ7N2p70A6OzIdcMklwUEYpOcIVYbEWWj84+M5E5pc83ZIBc5j3C8rdtjncPCm2ExGx2LQ==}
 
   '@ledgerhq/hw-transport-webhid@6.30.9':
     resolution: {integrity: sha512-5if/V1NyOr4JuEX+NB/bxaE92TptpgX+r1mGmzDHG6Gs9/fX/HhKe1GVwwU5C7LvTFrdTgMzEs2aIkpoMM60Ag==}
@@ -1408,42 +1408,42 @@ packages:
   '@near-js/wallet-account@1.3.3':
     resolution: {integrity: sha512-GDzg/Kz0GBYF7tQfyQQQZ3vviwV8yD+8F2lYDzsWJiqIln7R1ov0zaXN4Tii86TeS21KPn2hHAsVu3Y4txa8OQ==}
 
-  '@near-wallet-selector/bitte-wallet@10.1.0':
-    resolution: {integrity: sha512-jaejX2Y2jOtSxKFkaK8YVPG2KD2zcnv+fDpPmVI4bWYVYV++4tCgKITWiuXSZ4MPdCbE6dqDm9RR5fFfGDYXuA==}
+  '@near-wallet-selector/bitte-wallet@10.1.1':
+    resolution: {integrity: sha512-AFmjm9ejjnhwul/+fhmVVGCc3RKVy2KLkyj21FFMMxxFQQO2UqDNa3Nb4CCAK6u8rJdaezt9FRFIgUnauPGaWA==}
 
-  '@near-wallet-selector/core@10.1.0':
-    resolution: {integrity: sha512-ZGr7Pc05JoVRsNEG6sBl0ZE8HXkgPoy5yOc8ntxJHdGDjK0rw9G7b7ThnvP8eWzs6OHGcSEoOEPgNmtT8BrcBg==}
+  '@near-wallet-selector/core@10.1.1':
+    resolution: {integrity: sha512-g2dpqoYZLEN9H1SXagbaarPfCs3M4GaIMBjfEKh09fauvOgf8YFWpy3QOyom1A+8O3dfrUCIMpid3MlxdhIQAA==}
 
   '@near-wallet-selector/core@8.10.2':
     resolution: {integrity: sha512-MH8sg6XHyylq2ZXxnOjrKHMCmuRgFfpfdC816fW0R8hctZiXZ0lmfLvgG1xfA2BAxrVytiU1g3dcE97/P5cZqg==}
     peerDependencies:
       near-api-js: ^4.0.0 || ^5.0.0
 
-  '@near-wallet-selector/intear-wallet@10.1.0':
-    resolution: {integrity: sha512-n41I5bPzR2Ku3Pz+VF1Wna0Apix4fcHJLDz2YdPr2vzt/+u/cz26OtazRQYbZTm8XHn7hLmRWGWXazAbfLj0Zg==}
+  '@near-wallet-selector/intear-wallet@10.1.1':
+    resolution: {integrity: sha512-14VV+mnnMghtAh7/cFTVNBIwdX0FCH8hUFJYJV7CvA+J5zkTCiRh2bxVxv45ICOrl+DSKnFUkya+l9n0SUNMuA==}
 
-  '@near-wallet-selector/ledger@10.1.0':
-    resolution: {integrity: sha512-g96hljbbHs9Onaunk4SKdYjBVZx0RZYtxqm9+6NdAiwev7y3M+6kVL8+2OmVXf+gEtp3ILCWrAd5+zuMdBw6Kw==}
+  '@near-wallet-selector/ledger@10.1.1':
+    resolution: {integrity: sha512-wQZRG8vo+nZD3Qj1jlVOOIZCcpxzTZsJ3Al2a1aOjCuB/wIA9g11Dmbj0StYkm6on5RRNCRZ8Xn0Osf5GmPlig==}
 
-  '@near-wallet-selector/meteor-wallet@10.1.0':
-    resolution: {integrity: sha512-AMKNj8rHdUxa/qymErWER2j+OvElEzjWKxaQygYhstZsPb0Au7pcvIaNhIXPkfGrZ46wZVWwrimxRBXKXUrOow==}
+  '@near-wallet-selector/meteor-wallet@10.1.1':
+    resolution: {integrity: sha512-+kXa+ZqzamgoRRb9mNuDfyiKp6phjuVSBUMyeg+pRfpR9rt1KaXr6Uk8GHMiwULTxJVPU1xRtMk5xQ291KHDXw==}
 
-  '@near-wallet-selector/modal-ui@10.1.0':
-    resolution: {integrity: sha512-jOzmnaOwmmXalxm36drV3zGxxFNmPNNTQVEndfoKM7Si2kKMqIxX8naxRG/Fk8xwN+zyK91h5FeX8DBjm9LYyA==}
+  '@near-wallet-selector/modal-ui@10.1.1':
+    resolution: {integrity: sha512-1KJkFUu6gi6vX70e9xm8aMKCN1N41kBRa0aZHvdE9dZIsf3CZAlpmC/Yjm2w/UT7SOfjLmNS13kSoAAXvklpxA==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
 
-  '@near-wallet-selector/nightly@10.1.0':
-    resolution: {integrity: sha512-Qqsh0/VOlV/latAAw3hWckrf3xlZoVHXa0J8tpYggMcGX81Z6lGOt53KSgFkE7dRG8m92hFoWKoCqMrtyK0+tQ==}
+  '@near-wallet-selector/nightly@10.1.1':
+    resolution: {integrity: sha512-QOAUx7qBZUar/K3VaM5cIAlq7DQcTC648WQvKEwycEEAIIypByTpwhUfbHE1G5VjuSco8dAAWse+zmYIUNmiIg==}
 
-  '@near-wallet-selector/react-hook@10.1.0':
-    resolution: {integrity: sha512-L7Xt2ylWwlNk1LrvV1nyiYeFfjMzEojb/HPWMfX+IMUkqO65xHnA1DEmUr9lDqf3O6eKkeYizhmSBrE/2HX8qA==}
+  '@near-wallet-selector/react-hook@10.1.1':
+    resolution: {integrity: sha512-NRysBGqqitggj6CyLHLRc28+2xRPW/M2cGZfhgeHHtPCKPYsKVCaslR3kRBqdqIp37tatbMntV463N4u2692Qw==}
     peerDependencies:
       react: '>=18'
 
-  '@near-wallet-selector/wallet-utils@10.1.0':
-    resolution: {integrity: sha512-VD7r7owdu9CA1uqm3MmGt8YXwLrbr0Wej1fxeZqQ0WKWxfERTUW1rcA6FLmuPJiBMY11K2kwR+bgdyX0WcGFRw==}
+  '@near-wallet-selector/wallet-utils@10.1.1':
+    resolution: {integrity: sha512-wrkWLWWtz1SE4sNdLOeZm3zDyP36FFhAQNVrVCMwgwZoIC6duFDVMrgBi3xkSwaNmnPR6BGD8lm0sHFLpjoL5A==}
 
   '@near-wallet-selector/wallet-utils@8.10.2':
     resolution: {integrity: sha512-B+mQBpkQ0PwDsxLw+tiju3u5cDFxKCQntTl9G1oTkKpDUiUmOZfzlKYM0s549WicNUqIVvCLQyicMhgIfLunQw==}
@@ -6336,9 +6336,8 @@ packages:
   ofetch@1.5.1:
     resolution: {integrity: sha512-2W4oUZlVaqAPAil6FUg/difl6YhqhUR7x2eZY4bQCko22UXg3hptq9KLQdqFClV+Wu85UX7hNtdGTngi/1BxcA==}
 
-  omni-bridge-sdk@https://codeload.github.com/Near-One/bridge-sdk-js/tar.gz/d6c3dc633f9194000d63f30f14844b26488f92c0:
-    resolution: {tarball: https://codeload.github.com/Near-One/bridge-sdk-js/tar.gz/d6c3dc633f9194000d63f30f14844b26488f92c0}
-    version: 0.20.7
+  omni-bridge-sdk@0.21.0:
+    resolution: {integrity: sha512-izPdREusbmZ5Iw6IHhhv/Cn8t8zVD7N7uOVBpRXuJUJHbQnWLw5MSaqBY2Rc/UkI0371uDlfEmOmfG9d8ngXhg==}
 
   on-exit-leak-free@0.2.0:
     resolution: {integrity: sha512-dqaz3u44QbRXQooZLTUKU41ZrzYrcvLISVgbrzbyCMxpmSLJvZ3ZamIJIZ29P6OhZIkNIQKosdeM6t1LYbA9hg==}
@@ -9217,7 +9216,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@ledgerhq/devices@8.6.0':
+  '@ledgerhq/devices@8.6.1':
     dependencies:
       '@ledgerhq/errors': 6.27.0
       '@ledgerhq/logs': 6.13.0
@@ -9233,9 +9232,9 @@ snapshots:
 
   '@ledgerhq/errors@6.27.0': {}
 
-  '@ledgerhq/hw-transport-webhid@6.30.7':
+  '@ledgerhq/hw-transport-webhid@6.30.8':
     dependencies:
-      '@ledgerhq/devices': 8.6.0
+      '@ledgerhq/devices': 8.6.1
       '@ledgerhq/errors': 6.27.0
       '@ledgerhq/hw-transport': 6.31.13
       '@ledgerhq/logs': 6.13.0
@@ -9864,13 +9863,13 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  '@near-wallet-selector/bitte-wallet@10.1.0':
+  '@near-wallet-selector/bitte-wallet@10.1.1':
     dependencies:
       '@bitte-ai/wallet': 0.8.2
     transitivePeerDependencies:
       - encoding
 
-  '@near-wallet-selector/core@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))':
+  '@near-wallet-selector/core@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))':
     dependencies:
       '@near-js/crypto': 2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/providers': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/transactions@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
@@ -9894,7 +9893,7 @@ snapshots:
       near-api-js: 5.1.1
       rxjs: 7.8.1
 
-  '@near-wallet-selector/intear-wallet@10.1.0':
+  '@near-wallet-selector/intear-wallet@10.1.1':
     dependencies:
       '@near-js/crypto': 2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/keystores': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)
@@ -9902,21 +9901,21 @@ snapshots:
       '@near-js/transactions': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/types': 2.5.1
       '@near-js/utils': 2.5.1(@near-js/types@2.5.1)
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
-      '@near-wallet-selector/wallet-utils': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/wallet-utils': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
       js-sha256: 0.9.0
     transitivePeerDependencies:
       - encoding
 
-  '@near-wallet-selector/ledger@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(typescript@5.9.3)':
+  '@near-wallet-selector/ledger@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(typescript@5.9.3)':
     dependencies:
       '@ledgerhq/hw-transport': 6.30.3
-      '@ledgerhq/hw-transport-webhid': 6.30.7
+      '@ledgerhq/hw-transport-webhid': 6.30.8
       '@near-js/crypto': 2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/transactions': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/utils': 2.5.1(@near-js/types@2.5.1)
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
-      '@near-wallet-selector/wallet-utils': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/wallet-utils': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
       borsh: 2.0.0
       is-mobile: 4.0.0
       js-sha256: 0.9.0
@@ -9927,11 +9926,11 @@ snapshots:
       - encoding
       - typescript
 
-  '@near-wallet-selector/meteor-wallet@10.1.0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(near-api-js@5.1.1)':
+  '@near-wallet-selector/meteor-wallet@10.1.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(near-api-js@5.1.1)':
     dependencies:
       '@meteorwallet/sdk': 1.0.24(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(near-api-js@5.1.1)
       '@near-js/keystores-browser': 2.3.0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
     transitivePeerDependencies:
       - '@near-js/crypto'
       - '@near-js/keystores'
@@ -9940,9 +9939,9 @@ snapshots:
       - encoding
       - near-api-js
 
-  '@near-wallet-selector/modal-ui@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@near-wallet-selector/modal-ui@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       copy-to-clipboard: 3.3.3
       qrcode: 1.5.4
       react: 19.1.0
@@ -9952,27 +9951,27 @@ snapshots:
       - '@near-js/utils'
       - encoding
 
-  '@near-wallet-selector/nightly@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))':
+  '@near-wallet-selector/nightly@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))':
     dependencies:
       '@near-js/crypto': 2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/signers': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/transactions@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))
       '@near-js/transactions': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
-      '@near-wallet-selector/wallet-utils': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/wallet-utils': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))
     transitivePeerDependencies:
       - '@near-js/keystores'
       - '@near-js/types'
       - '@near-js/utils'
       - encoding
 
-  '@near-wallet-selector/react-hook@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@near-wallet-selector/react-hook@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@near-js/crypto': 2.3.0(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/providers': 2.3.0(@near-js/crypto@2.3.0(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/transactions@2.3.0(@near-js/crypto@2.3.0(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/transactions': 2.3.0(@near-js/crypto@2.3.0(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.3.0)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/types': 2.3.0
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
-      '@near-wallet-selector/modal-ui': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/modal-ui': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react: 19.1.0
     transitivePeerDependencies:
       - '@near-js/keystores'
@@ -9980,7 +9979,7 @@ snapshots:
       - encoding
       - react-dom
 
-  '@near-wallet-selector/wallet-utils@10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))':
+  '@near-wallet-selector/wallet-utils@10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))':
     dependencies:
       '@near-js/crypto': 2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/providers': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/transactions@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
@@ -9988,7 +9987,7 @@ snapshots:
       '@near-js/transactions': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/types': 2.5.1
       '@near-js/utils': 2.5.1(@near-js/types@2.5.1)
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       js-sha256: 0.9.0
     transitivePeerDependencies:
       - '@near-js/keystores'
@@ -17336,7 +17335,7 @@ snapshots:
       node-fetch-native: 1.6.7
       ufo: 1.6.1
 
-  omni-bridge-sdk@https://codeload.github.com/Near-One/bridge-sdk-js/tar.gz/d6c3dc633f9194000d63f30f14844b26488f92c0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(@types/react@19.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(got@11.8.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10):
+  omni-bridge-sdk@0.21.0(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/tokens@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))(@types/react@19.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(got@11.8.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10):
     dependencies:
       '@coral-xyz/anchor': 0.32.1(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@ethereumjs/mpt': 10.1.0
@@ -17348,7 +17347,7 @@ snapshots:
       '@near-js/signers': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/transactions@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))
       '@near-js/transactions': 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@near-js/types': 2.5.1
-      '@near-wallet-selector/core': 10.1.0(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
+      '@near-wallet-selector/core': 10.1.1(@near-js/keystores@2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1))(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       '@scure/base': 2.0.0

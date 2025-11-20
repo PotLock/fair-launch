@@ -10,6 +10,7 @@ import { getSolPrice } from "@/lib/sol";
 import { formatTinyPrice, hexToNumber } from "@/utils";
 import { SOL_NETWORK } from "@/configs/env.config";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getIpfsUrl } from "@/lib/utils";
 
 // Migration status enums
 enum IsMigrated {
@@ -430,7 +431,7 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
                         id: poolState.publicKey,
                         poolAddress: poolState.publicKey,
                         name: `${token.name}-SOL`,
-                        token1Icon: process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri,
+                        token1Icon: getIpfsUrl(token.metadata.tokenUri),
                         token2Icon: "/chains/solana-dark.svg",
                         platforms: [
                             {
@@ -550,25 +551,12 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
         <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
-                {/* <Button 
-                    className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
-                    onClick={()=>onAddLiquidity(true)}  
-                >
-                    <Plus className="w-3 h-3"/>
-                    <span className="font-normal">{data.length === 0 ? "Create Pool" : "Add Liquidity"}</span>
-                </Button> */}
             </div>
 
             <div className="space-y-4 mt-4">
                 {data.length === 0 ? (
                     <div className="text-center py-8">
                         <p className="text-gray-500 mb-4">No liquidity pools found</p>
-                        <Button 
-                            onClick={() => onAddLiquidity(true)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                            Create Your First Pool
-                        </Button>
                     </div>
                 ) : (
                     data.map((section) => (

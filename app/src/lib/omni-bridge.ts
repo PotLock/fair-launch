@@ -61,12 +61,25 @@ export const getAllBridgeTokens = async (
     try{
         setNetwork(network)
         const bridgeTokens: OmniAddress[] = []
-        const tokenChains = [ChainKind.Sol,ChainKind.Near, ChainKind.Eth]
+        const tokenChains = [ChainKind.Sol, ChainKind.Near, ChainKind.Eth]
+
+        // Create omni address once outside the loop
+        const tokenAddress = omniAddress(chainToken, address);
+
         for(const tokenChain of tokenChains){
-            const tokenAddress = omniAddress(chainToken, address);
-            const bridgeToken = await getBridgedToken(tokenAddress,tokenChain)
-            if(bridgeToken){
-                bridgeTokens.push(bridgeToken)
+            // Skip if trying to get bridged token on the same chain as source
+            if(tokenChain === chainToken){
+                continue;
+            }
+
+            try {
+                const bridgeToken = await getBridgedToken(tokenAddress, tokenChain)
+                if(bridgeToken){
+                    bridgeTokens.push(bridgeToken)
+                }
+            } catch (innerError) {
+                // Log but don't throw - continue checking other chains
+                console.warn(`Failed to get bridged token for chain ${tokenChain}:`, innerError);
             }
         }
         // console.log("bridgeTokens", bridgeTokens)

@@ -251,6 +251,21 @@ body{
   background-color: #d4d4d4 !important;
 }
 
+/* Fix scroll lock issue when Solana wallet modal closes */
+.wallet-adapter-modal-fade-in {
+  /* Ensure modal doesn't permanently lock scroll */
+}
+
+body.wallet-adapter-modal-wrapper-open {
+  overflow: auto !important;
+}
+
+/* Force body to be scrollable after wallet modal closes */
+html:not(:has(.wallet-adapter-modal-wrapper)) body,
+html:not(:has([data-radix-dialog-overlay])) body {
+  overflow: auto !important;
+}
+
 .wallet-adapter-button-start-icon svg {
   width: 16px !important;
   height: 16px !important;

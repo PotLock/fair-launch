@@ -22,7 +22,6 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { ethers } from 'ethers';
 import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 
-
 export const useBridge = () => {
   const anchorProvider = useAnchorProvider()
   const { walletSelector: nearWalletSelector } = useWalletSelector()

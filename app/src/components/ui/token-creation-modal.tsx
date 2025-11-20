@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+import { getIpfsUrl } from "@/lib/utils";
 
 interface TokenCreationModalProps {
   isVisible: boolean;
@@ -52,7 +53,7 @@ export default function TokenCreationModal({
           {tokenLogo && (
             <div className="flex justify-center mb-4">
               <img
-                src={`${process.env.NEXT_PUBLIC_IPFS_URL}${tokenLogo}`}
+                src={getIpfsUrl(tokenLogo)}
                 alt="Token Logo"
                 className="h-12 w-12 rounded-full object-cover"
                 onError={(e) => {

@@ -34,7 +34,7 @@ export default function Header() {
                     </Link>
                 </div>
                 <div className="flex items-center">
-                    <nav className="hidden lg:flex items-center space-x-8 mr-10">
+                    <nav className="hidden md:flex items-center md:space-x-6 xl:space-x-8 mr-10">
                         <Link href="/token" className="relative pb-1 group">
                             <span className={`text-sm ${isActive('/token') ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'}`}>
                                 Launchpad

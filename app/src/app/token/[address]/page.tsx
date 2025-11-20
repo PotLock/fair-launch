@@ -11,6 +11,7 @@ import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
 import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
 import Transactions from "@/components/token/Transactions";
 import { getSolPrice } from "@/lib/sol";
+import { getIpfsUrl } from "@/lib/utils";
 
 // Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
 
         const title = `${token.name} (${token.symbol}) | POTLAUNCH`;
         const description = token.description || `Discover ${token.name} (${token.symbol}) on POTLAUNCH. Trade, explore, and learn about this token.`;
-        const imageUrl = process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri || "/logo.png";
+        const imageUrl = getIpfsUrl(token.metadata.tokenUri) || "/logo.png";
         
         // Create structured data for better SEO
         const structuredData = {

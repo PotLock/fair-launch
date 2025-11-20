@@ -5,6 +5,7 @@ import { TokenSelectSkeleton } from "@/components/ui/token-select-skeleton";
 import { formatNumberInput, formatNumberToCurrency } from "@/utils";
 import { CHAINS } from "@/constants/bridge.constants";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getIpfsUrl } from "@/lib/utils";
 
 interface TokenInputProps {
     amount: string;
@@ -17,6 +18,7 @@ interface TokenInputProps {
     isLoading: boolean;
     isDisabled: boolean;
     isReadOnly?: boolean;
+    sourceChain?: ChainType; // The source chain for cross-chain bridging
 }
 
 export const TokenInput = ({
@@ -29,10 +31,38 @@ export const TokenInput = ({
     chain,
     isLoading,
     isDisabled,
-    isReadOnly = false
+    isReadOnly = false,
+    sourceChain
 }: TokenInputProps) => {
 
-    const iconUrl = selectedToken?.icon.startsWith('https') ? selectedToken?.icon : `${process.env.NEXT_PUBLIC_IPFS_URL}${selectedToken?.icon}`;
+    // Get native token info based on chain
+    const getNativeTokenInfo = (chainType: ChainType) => {
+        switch (chainType) {
+            case 'near':
+                return { symbol: 'NEAR', icon: '/chains/near-dark.svg' };
+            case 'solana':
+                return { symbol: 'SOL', icon: '/chains/solana-dark.svg' };
+            case 'ethereum':
+                return { symbol: 'ETH', icon: '/chains/ethereum.svg' };
+            default:
+                return { symbol: 'Token', icon: '/chains/solana-dark.svg' };
+        }
+    };
+
+    // For destination (readOnly), use source chain's native token as fallback
+    // Because bridging transfers the same token across chains
+    const fallbackChain = isReadOnly && sourceChain ? sourceChain : chain;
+    const nativeToken = getNativeTokenInfo(fallbackChain);
+
+    // Get icon URL - only use IPFS for IPFS hashes (like "Qm..." or "bafy...")
+    const getTokenIcon = () => {
+        if (!selectedToken?.icon) {
+            return nativeToken.icon;
+        }
+        return getIpfsUrl(selectedToken.icon);
+    };
+
+    const iconUrl = getTokenIcon();
 
     return (
         <>
@@ -60,8 +90,8 @@ export const TokenInput = ({
                                 <>
                                     <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center relative">
                                         <img
-                                            src={iconUrl || '/chains/near-dark.svg'}
-                                            alt={selectedToken?.symbol || 'NEAR'}
+                                            src={iconUrl}
+                                            alt={selectedToken?.symbol || nativeToken.symbol}
                                             className="w-full h-full rounded-full"
                                         />
                                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex items-center justify-center">
@@ -73,7 +103,7 @@ export const TokenInput = ({
                                         </div>
                                     </div>
                                     <span className="text-xs sm:text-sm text-gray-500">
-                                        {selectedToken?.symbol || (!isLoading && 'NEAR')}
+                                        {selectedToken?.symbol || (!isLoading && nativeToken.symbol)}
                                     </span>
                                 </>
                             )}
@@ -96,8 +126,8 @@ export const TokenInput = ({
                                             <>
                                                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center relative">
                                                     <img
-                                                        src={selectedToken?.icon || '/chains/solana-dark.svg'}
-                                                        alt={selectedToken?.symbol || 'SOL'}
+                                                        src={iconUrl}
+                                                        alt={selectedToken?.symbol || nativeToken.symbol}
                                                         className="w-full h-full rounded-full"
                                                     />
                                                     <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex items-center justify-center">
@@ -109,7 +139,7 @@ export const TokenInput = ({
                                                     </div>
                                                 </div>
                                                 <span className="text-xs sm:text-sm font-medium">
-                                                    {selectedToken?.symbol || (!isLoading && 'SOL')}
+                                                    {selectedToken?.symbol || (!isLoading && nativeToken.symbol)}
                                                 </span>
                                                 <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
                                             </>

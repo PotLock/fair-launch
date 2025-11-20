@@ -209,7 +209,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                                                 ))}
                                             </div>
                                             <span className="text-sm text-gray-600 ml-2">
-                                                {token?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                                {token?.symbol || 'Token'} is deployed on {deployedChains.length} {deployedChains.length === 1 ? 'chain' : 'chains'}
                                             </span>
                                         </>
                                     ) : (
@@ -242,7 +242,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                                         ))}
                                     </div>
                                     <span className="text-sm text-gray-600 ml-2">
-                                        {token?.symbol || 'Token'} is deployed on {deployedChains.length} chains
+                                        {token?.symbol || 'Token'} is deployed on {deployedChains.length} {deployedChains.length === 1 ? 'chain' : 'chains'}
                                     </span>
                                 </>
                             ) : (

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { SOL_NETWORK } from "@/configs/env.config";
+import { getIpfsUrl } from "@/lib/utils";
 
 interface TradingInterfaceProps {
   token: Token;
@@ -497,7 +498,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="text-xs text-gray-500">Market Cap</div>
         </div>
 
-        <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-10 w-full">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-4 xl:gap-10 w-full">
             <div>
                 <div className="text-lg font-semibold">
                   {state.loading || isPending ? '...' : `$${formatTokenPrice(state.tokenData.price)}`}
@@ -587,7 +588,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
                         <div className="w-6 h-6">
-                          <img src={state.payIsSol ? "/logos/solana_light.svg" : process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
+                          <img src={state.payIsSol ? "/logos/solana_light.svg" : getIpfsUrl(token.metadata.tokenUri)} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
                         </div>
                         <span>{state.payIsSol ? 'SOL' : token.symbol}</span>
                         <div className="relative w-4 h-4">
@@ -605,7 +606,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <img src={option.name !== 'SOL' ? process.env.NEXT_PUBLIC_IPFS_URL + option.icon : '/logos/solana_light.svg'} alt={option.name} className="w-5 h-5 rounded-full" />
+                            <img src={option.name !== 'SOL' ? getIpfsUrl(option.icon) : '/logos/solana_light.svg'} alt={option.name} className="w-5 h-5 rounded-full" />
                             <span>{option.name}</span>
                           </div>
                         </DropdownMenuItem>
@@ -640,7 +641,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
                     <div className="h-6 w-6">
-                      <img src={state.payIsSol ? process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
+                      <img src={state.payIsSol ? getIpfsUrl(token.metadata.tokenUri) : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
                     <span className="text-lg">{state.payIsSol ? token.symbol : 'SOL'}</span>
                   </div>
@@ -768,7 +769,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
                   }`}>
                     <div className="flex items-center gap-2">
-                      <span>Trade on other DEX</span>
+                      <span>Trade on another DEX</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <ChevronDown className="w-5 h-5" />
