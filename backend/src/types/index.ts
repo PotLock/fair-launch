@@ -213,11 +213,11 @@ export const DeployTokenRequestSchema = z.object({
   signer: z.string().min(1, 'Signer public key is required'),
   dbcConfigKeypair: z.object({
     publicKey: z.record(z.string(), z.number()).refine(
-      (obj) => Object.keys(obj).length === 32,
+      (obj: Record<string, number>) => Object.keys(obj).length === 32,
       'Public key must have exactly 32 bytes'
     ),
     secretKey: z.record(z.string(), z.number()).refine(
-      (obj) => Object.keys(obj).length === 64,
+      (obj: Record<string, number>) => Object.keys(obj).length === 64,
       'Secret key must have exactly 64 bytes'
     ),
   }),
@@ -491,7 +491,15 @@ export interface CleanTokenResponse {
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
-  metadata?: Omit<TokenMetadataEntity, 'id' | 'tokenId'>;
+  // Required metrics - always present (never null/undefined)
+  price: string; // Current price from pool state, "0" if pool not found
+  holders: number; // Number of holders, 0 if fetch fails
+  marketCap: string; // Calculated from price * supply, "0" if cannot calculate
+  supply: string; // Circulating supply from pool state or totalSupply fallback
+  metadata?: Omit<TokenMetadataEntity, 'id' | 'tokenId'> & {
+    bannerUri: string; // Always present, empty string if missing
+    tokenUri: string; // Always present, empty string if missing
+  };
   dbcConfig?: CleanDbcConfigResponse;
 }
 

@@ -24,56 +24,89 @@ import type {
 } from '../types';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getRpcSOLEndpoint } from '../lib/sol';
+import { formatTokenResponseWithMetrics } from '../lib/tokenFormatter';
+import { fetchTokenMetrics } from '../lib/parallelFetcher';
+import { cacheService, CACHE_TTL } from './cacheService';
+import { validateDbcConfigRelations } from '../lib/dbcValidator';
+import { decimalToString } from '../lib/numberUtils';
+import { HalfbakService } from './halfbakService';
 
 export class TokenService {
-  private formatTokenResponseClean(token: TokenWithRelations, dbcConfig?: DbcConfigWithRelations | null): CleanTokenResponse {
-    // Helper function to remove internal IDs from nested objects
-    const removeInternalIds = (obj: any): any => {
-      if (!obj || typeof obj !== 'object') return obj;
-      
-      // Handle Date objects properly
-      if (obj instanceof Date) {
-        return obj;
+  private halfbakService: HalfbakService;
+
+  constructor() {
+    this.halfbakService = new HalfbakService();
+  }
+
+  /**
+   * Fetches metrics for a token, using cache when available.
+   * Returns default metrics if fetch fails.
+   */
+  private async getTokenMetrics(mintAddress: string, totalSupply: string, decimals: number): Promise<any> {
+    // Check cache first
+    const cacheKey = `token:${mintAddress}:metrics`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch metrics in parallel
+    const metrics = await fetchTokenMetrics(
+      mintAddress,
+      totalSupply,
+      decimals,
+      this,
+      this.halfbakService
+    );
+
+    // Cache the result
+    cacheService.set(cacheKey, metrics, CACHE_TTL.METRICS);
+
+    return metrics;
+  }
+
+  /**
+   * Formats token response with metrics included.
+   * Ensures all required fields are present.
+   */
+  private async formatTokenResponseClean(
+    token: TokenWithRelations, 
+    dbcConfig?: DbcConfigWithRelations | null,
+    includeMetrics: boolean = true
+  ): Promise<CleanTokenResponse> {
+    // Validate DBC config if present
+    if (dbcConfig) {
+      try {
+        validateDbcConfigRelations(dbcConfig);
+      } catch (error) {
+        console.warn(`DBC config validation warning for token ${token.id}:`, error);
+        // Continue anyway - we'll still return the token
       }
-      
-      if (Array.isArray(obj)) {
-        return obj.map(item => removeInternalIds(item));
-      }
-      
-      const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        // Skip internal database IDs and relation IDs but keep the main token ID
-        if ((key === 'id' && obj !== token) || 
-            key === 'dbcConfigId' || 
-            key === 'baseFeeParamsId' || 
-            key === 'tokenId') {
-          continue;
-        }
-        
-        cleaned[key] = removeInternalIds(value);
-      }
-      return cleaned;
+    }
+
+    // Fetch metrics if requested
+    let metrics: any = {
+      price: '0',
+      holders: 0,
+      marketCap: '0',
+      supply: decimalToString(token.totalSupply),
     };
 
-    const cleanedDbcConfig = dbcConfig ? removeInternalIds(dbcConfig) : undefined;
+    if (includeMetrics && token.mintAddress) {
+      try {
+        metrics = await this.getTokenMetrics(
+          token.mintAddress,
+          decimalToString(token.totalSupply),
+          token.decimals
+        );
+      } catch (error) {
+        console.error(`Error fetching metrics for token ${token.mintAddress}:`, error);
+        // Use defaults - metrics already set above
+      }
+    }
 
-    return {
-      id: token.id, // Keep only the main token ID
-      name: token.name,
-      symbol: token.symbol,
-      description: token.description,
-      totalSupply: token.totalSupply,
-      decimals: token.decimals,
-      mintAddress: token.mintAddress,
-      owner: token.owner,
-      launchpad: token.launchpad,
-      tags: token.tags,
-      active: token.active,
-      createdAt: token.createdAt,
-      updatedAt: token.updatedAt,
-      metadata: token.metadata ? removeInternalIds(token.metadata) : undefined,
-      dbcConfig: cleanedDbcConfig,
-    };
+    // Use the formatter utility
+    return formatTokenResponseWithMetrics(token, metrics, dbcConfig);
   }
 
   async createToken(tokenData: CreateTokenRequest): Promise<{ success: boolean; tokenId: string; dbcConfigId: string }> {
@@ -110,6 +143,32 @@ export class TokenService {
 
       // Always create DBC config as part of token creation flow
       const dbcConfigResult = await this.createDBCConfig(token.id, tokenData.tokenConfig);
+
+      // Validate the created DBC config
+      const createdDbcConfig = await db.query.dbcConfigs.findFirst({
+        where: eq(dbcConfigs.id, dbcConfigResult.dbcConfigId),
+        with: {
+          buildCurveParams: true,
+          lockedVestingParams: true,
+          baseFeeParams: {
+            with: {
+              feeSchedulerParams: true,
+              rateLimiterParams: true,
+            }
+          },
+          migrationFee: true,
+          migratedPoolFee: true,
+        },
+      });
+
+      if (createdDbcConfig) {
+        try {
+          validateDbcConfigRelations(createdDbcConfig as DbcConfigWithRelations);
+        } catch (error) {
+          console.error('DBC config validation failed after creation:', error);
+          // Log but don't fail - the config was created
+        }
+      }
 
       return { 
         success: true, 
@@ -208,28 +267,31 @@ export class TokenService {
 
     // Always include all possible parameters if they exist, regardless of buildCurveMode
     // This allows for more flexible configuration
+    // Ensure all fields are properly converted to strings for decimal fields
     if (dbcConfig.percentageSupplyOnMigration !== undefined) {
-      params.percentageSupplyOnMigration = dbcConfig.percentageSupplyOnMigration.toString();
+      params.percentageSupplyOnMigration = decimalToString(dbcConfig.percentageSupplyOnMigration);
     }
     if (dbcConfig.migrationQuoteThreshold !== undefined) {
-      params.migrationQuoteThreshold = dbcConfig.migrationQuoteThreshold.toString();
+      params.migrationQuoteThreshold = decimalToString(dbcConfig.migrationQuoteThreshold);
     }
     if (dbcConfig.initialMarketCap !== undefined) {
-      params.initialMarketCap = dbcConfig.initialMarketCap.toString();
+      params.initialMarketCap = decimalToString(dbcConfig.initialMarketCap);
     }
     if (dbcConfig.migrationMarketCap !== undefined) {
-      params.migrationMarketCap = dbcConfig.migrationMarketCap.toString();
+      params.migrationMarketCap = decimalToString(dbcConfig.migrationMarketCap);
     }
     if (dbcConfig.liquidityWeights !== undefined) {
       params.liquidityWeights = dbcConfig.liquidityWeights;
     }
 
+    // Always insert buildCurveParams - it's required
     await db.insert(buildCurveParams).values(params);
   }
 
   private async insertFeeParams(baseFeeParamsId: string, baseFeeParams: BaseFeeParams) {
     if (baseFeeParams.baseFeeMode === 0 || baseFeeParams.baseFeeMode === 1) {
       // Fee Scheduler (Linear or Exponential)
+      // Always create feeSchedulerParams - it's required for these modes
       if (baseFeeParams.feeSchedulerParam) {
         await db.insert(feeSchedulerParams).values({
           baseFeeParamsId: baseFeeParamsId,
@@ -238,16 +300,35 @@ export class TokenService {
           numberOfPeriod: baseFeeParams.feeSchedulerParam.numberOfPeriod,
           totalDuration: baseFeeParams.feeSchedulerParam.totalDuration,
         });
+      } else {
+        // Create default fee scheduler params if not provided
+        await db.insert(feeSchedulerParams).values({
+          baseFeeParamsId: baseFeeParamsId,
+          startingFeeBps: 100, // 1%
+          endingFeeBps: 100, // 1%
+          numberOfPeriod: 0,
+          totalDuration: 0,
+        });
       }
     } else if (baseFeeParams.baseFeeMode === 2) {
       // Rate Limiter
+      // Always create rateLimiterParams - it's required for this mode
       if (baseFeeParams.rateLimiterParam) {
         await db.insert(rateLimiterParams).values({
           baseFeeParamsId: baseFeeParamsId,
           baseFeeBps: baseFeeParams.rateLimiterParam.baseFeeBps,
           feeIncrementBps: baseFeeParams.rateLimiterParam.feeIncrementBps,
-          referenceAmount: baseFeeParams.rateLimiterParam.referenceAmount.toString(),
+          referenceAmount: decimalToString(baseFeeParams.rateLimiterParam.referenceAmount),
           maxLimiterDuration: baseFeeParams.rateLimiterParam.maxLimiterDuration,
+        });
+      } else {
+        // Create default rate limiter params if not provided
+        await db.insert(rateLimiterParams).values({
+          baseFeeParamsId: baseFeeParamsId,
+          baseFeeBps: 100, // 1%
+          feeIncrementBps: 10, // 0.1%
+          referenceAmount: '0',
+          maxLimiterDuration: 0,
         });
       }
     }
@@ -280,7 +361,16 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+      // Validate DBC config if present
+      if (token.dbcConfig) {
+        try {
+          validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+        } catch (error) {
+          console.warn(`DBC config validation warning for token ${id}:`, error);
+        }
+      }
+
+      return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error getting token:', error);
       throw new Error('Failed to get token');
@@ -314,7 +404,16 @@ export class TokenService {
         return null;
       }
 
-      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+      // Validate DBC config if present
+      if (token.dbcConfig) {
+        try {
+          validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+        } catch (error) {
+          console.warn(`DBC config validation warning for token ${address}:`, error);
+        }
+      }
+
+      return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error getting token by address:', error);
       return null;
@@ -344,7 +443,50 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return allTokens.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+      // Fetch metrics for all tokens in parallel using Promise.allSettled
+      // This ensures we get results even if some RPC calls fail
+      const tokensWithMetrics = await Promise.allSettled(
+        allTokens.map(async (token) => {
+          try {
+            // Validate DBC config if present
+            if (token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${token.id}:`, error);
+            // Return token with default metrics if formatting fails
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      // Extract successful results, use defaults for failed ones
+      return tokensWithMetrics.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          // If formatting failed, return token with default metrics
+          const token = allTokens[index];
+          if (!token) {
+            throw new Error(`Token at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            token as TokenWithRelations,
+            {
+              price: '0',
+              holders: 0,
+              marketCap: '0',
+              supply: decimalToString(token.totalSupply),
+            },
+            token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
     } catch (error) {
       console.error('Error getting all tokens:', error);
       throw new Error('Failed to get tokens');
@@ -374,7 +516,46 @@ export class TokenService {
         },
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
-      return tokensByOwner.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+
+      // Fetch metrics in parallel
+      const tokensWithMetrics = await Promise.allSettled(
+        tokensByOwner.map(async (token) => {
+          try {
+            if (token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${token.id}:`, error);
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      return tokensWithMetrics.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          const token = tokensByOwner[index];
+          if (!token) {
+            throw new Error(`Token at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            token as TokenWithRelations,
+            {
+              price: '0',
+              holders: 0,
+              marketCap: '0',
+              supply: decimalToString(token.totalSupply),
+            },
+            token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
     } catch (error) {
       console.error('Error getting tokens by owner:', error);
       throw new Error('Failed to get tokens by owner');
@@ -448,7 +629,16 @@ export class TokenService {
         throw new Error('Token not found');
       }
 
-      return this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+      // Validate DBC config if present
+      if (token.dbcConfig) {
+        try {
+          validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+        } catch (error) {
+          console.warn(`DBC config validation warning for token ${id}:`, error);
+        }
+      }
+
+      return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
     } catch (error) {
       console.error('Error updating token:', error);
       throw new Error(error instanceof Error ? error.message : 'Failed to update token');
@@ -520,7 +710,45 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return searchResults.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+      // Fetch metrics in parallel for all search results
+      const tokensWithMetrics = await Promise.allSettled(
+        searchResults.map(async (token) => {
+          try {
+            if (token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${token.id}:`, error);
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      return tokensWithMetrics.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          const token = searchResults[index];
+          if (!token) {
+            throw new Error(`Token at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            token as TokenWithRelations,
+            {
+              price: '0',
+              holders: 0,
+              marketCap: '0',
+              supply: decimalToString(token.totalSupply),
+            },
+            token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
     } catch (error) {
       console.error('Error searching tokens:', error);
       throw new Error('Failed to search tokens');
@@ -551,7 +779,45 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return tokensByLaunchpad.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+      // Fetch metrics in parallel
+      const tokensWithMetrics = await Promise.allSettled(
+        tokensByLaunchpad.map(async (token) => {
+          try {
+            if (token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${token.id}:`, error);
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      return tokensWithMetrics.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          const token = tokensByLaunchpad[index];
+          if (!token) {
+            throw new Error(`Token at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            token as TokenWithRelations,
+            {
+              price: '0',
+              holders: 0,
+              marketCap: '0',
+              supply: decimalToString(token.totalSupply),
+            },
+            token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
     } catch (error) {
       console.error('Error getting tokens by launchpad:', error);
       throw new Error('Failed to get tokens by launchpad');
@@ -601,7 +867,45 @@ export class TokenService {
         orderBy: (tokens, { desc }) => [desc(tokens.createdAt)],
       });
 
-      return filteredTokens.map(token => this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations));
+      // Fetch metrics in parallel
+      const tokensWithMetrics = await Promise.allSettled(
+        filteredTokens.map(async (token) => {
+          try {
+            if (token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${token.id}:`, error);
+            return await this.formatTokenResponseClean(token as TokenWithRelations, token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      return tokensWithMetrics.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          const token = filteredTokens[index];
+          if (!token) {
+            throw new Error(`Token at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            token as TokenWithRelations,
+            {
+              price: '0',
+              holders: 0,
+              marketCap: '0',
+              supply: decimalToString(token.totalSupply),
+            },
+            token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
     } catch (error) {
       console.error('Error getting filtered tokens:', error);
       throw new Error('Failed to get filtered tokens');
@@ -609,6 +913,13 @@ export class TokenService {
   }
 
   async getHoldersByMintAddress(mintAddress: string): Promise<string[]> {
+    // Check cache first
+    const cacheKey = `token:${mintAddress}:holders`;
+    const cached = cacheService.get<string[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
       const connection = new Connection(getRpcSOLEndpoint());
       
@@ -637,9 +948,15 @@ export class TokenService {
         return new PublicKey(ownerBytes).toBase58();
       });
       
-      return holders.filter((holder) => holder !== mintAddress);
+      const filteredHolders = holders.filter((holder) => holder !== mintAddress);
+      
+      // Cache the result
+      cacheService.set(cacheKey, filteredHolders, CACHE_TTL.HOLDERS);
+      
+      return filteredHolders;
     } catch (error) {
       console.error('Error getting holders by mint address:', error);
+      // Return empty array on error, don't cache errors
       return [];
     }
   }
@@ -689,7 +1006,8 @@ export class TokenService {
       });
 
       // Calculate popularity score for each token
-      const tokensWithScore = await Promise.all(
+      // Fetch holders in parallel for all tokens
+      const tokensWithScore = await Promise.allSettled(
         allTokens.map(async (token) => {
           try {
             if (!token.mintAddress) {
@@ -728,11 +1046,70 @@ export class TokenService {
         })
       );
 
-      // Sort by popularity score (descending) and take the limit
-      const popularTokens = tokensWithScore
+      // Extract successful results
+      const validTokensWithScore = tokensWithScore
+        .map((result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          } else {
+            // Use default score if calculation failed
+            const token = allTokens[index];
+            if (!token) {
+              throw new Error(`Token at index ${index} is undefined`);
+            }
+            const now = new Date();
+            const daysSinceCreation = Math.max(1, (now.getTime() - token.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+            const recencyScore = Math.max(0, 30 - daysSinceCreation);
+            return {
+              token: token as TokenWithRelations,
+              popularityScore: recencyScore,
+              holderCount: 0
+            };
+          }
+        })
         .sort((a, b) => b.popularityScore - a.popularityScore)
-        .slice(0, limit)
-        .map(item => this.formatTokenResponseClean(item.token, item.token.dbcConfig as DbcConfigWithRelations));
+        .slice(0, limit);
+
+      // Format tokens with metrics - fetch in parallel
+      const formattedTokens = await Promise.allSettled(
+        validTokensWithScore.map(async (item) => {
+          try {
+            if (item.token.dbcConfig) {
+              try {
+                validateDbcConfigRelations(item.token.dbcConfig as DbcConfigWithRelations);
+              } catch (error) {
+                console.warn(`DBC config validation warning for token ${item.token.id}:`, error);
+              }
+            }
+            return await this.formatTokenResponseClean(item.token, item.token.dbcConfig as DbcConfigWithRelations);
+          } catch (error) {
+            console.error(`Error formatting token ${item.token.id}:`, error);
+            return await this.formatTokenResponseClean(item.token, item.token.dbcConfig as DbcConfigWithRelations);
+          }
+        })
+      );
+
+      // Extract successful results
+      const popularTokens = formattedTokens.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          const item = validTokensWithScore[index];
+          if (!item) {
+            throw new Error(`Token item at index ${index} is undefined`);
+          }
+          return formatTokenResponseWithMetrics(
+            item.token,
+            {
+              price: '0',
+              holders: item.holderCount,
+              marketCap: '0',
+              supply: decimalToString(item.token.totalSupply),
+            },
+            item.token.dbcConfig as DbcConfigWithRelations
+          );
+        }
+      });
 
       return popularTokens;
     } catch (error) {

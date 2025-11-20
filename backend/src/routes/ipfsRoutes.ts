@@ -6,19 +6,25 @@ import { z } from 'zod';
 
 const app = new Hono();
 
-// Environment variables for Filebase
+// Environment variables for Filebase (optional - IPFS routes will return errors if not configured)
 const FILEBASE_API_KEY = process.env.FILEBASE_API_KEY;
 const FILEBASE_API_SECRET = process.env.FILEBASE_API_SECRET;
 const FILEBASE_BUCKET_NAME = process.env.FILEBASE_BUCKET_NAME;
 
-if (!FILEBASE_API_KEY || !FILEBASE_API_SECRET || !FILEBASE_BUCKET_NAME) {
-  throw new Error('FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables are required');
-}
-
-const ipfsService = new IPFSService(FILEBASE_API_KEY, FILEBASE_API_SECRET, FILEBASE_BUCKET_NAME);
+// Only initialize IPFS service if all required env vars are present
+const ipfsService = (FILEBASE_API_KEY && FILEBASE_API_SECRET && FILEBASE_BUCKET_NAME)
+  ? new IPFSService(FILEBASE_API_KEY, FILEBASE_API_SECRET, FILEBASE_BUCKET_NAME)
+  : null;
 
 // Upload image file
 app.post('/upload-image', async (c) => {
+  if (!ipfsService) {
+    return c.json({
+      success: false,
+      message: 'IPFS service is not configured. Please set FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables'
+    }, 503);
+  }
+
   try {
     const formData = await c.req.formData();
     const imageFile = formData.get('image') as File;
@@ -57,6 +63,13 @@ app.post('/upload-image', async (c) => {
 
 // Upload metadata JSON
 app.post('/upload-metadata', zValidator('json', UploadMetadataSchema), async (c) => {
+  if (!ipfsService) {
+    return c.json({
+      success: false,
+      message: 'IPFS service is not configured. Please set FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables'
+    }, 503);
+  }
+
   try {
     const metadataData = c.req.valid('json');
     
@@ -98,7 +111,8 @@ app.post('/upload-metadata', zValidator('json', UploadMetadataSchema), async (c)
 app.get('/health', async (c) => {
   return c.json({
     success: true,
-    message: 'IPFS service is running'
+    message: ipfsService ? 'IPFS service is running' : 'IPFS service is not configured',
+    configured: !!ipfsService
   });
 });
 
