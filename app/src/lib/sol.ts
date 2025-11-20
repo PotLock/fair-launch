@@ -2,6 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
+import { getIpfsUrl } from './utils';
 
 const URL_API = "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT";
 const FALLBACK_URL_API = "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT";
@@ -190,7 +191,6 @@ export async function getAllTokens(walletAddress: string): Promise<TokenInfo[]> 
 
       // Get token metadata
       const metadata = await getTokenMetadata(mint);
-      
       tokens.push({
         mint,
         name: metadata?.name || 'Unknown Token',
@@ -251,10 +251,9 @@ async function getTokenMetadata(mint: string): Promise<TokenMetadata | null> {
     
     //@ts-ignore
     const metadata = deserializeMetadata(accountInfo);
-    
     let imageUrl: string | undefined;
     try {
-      const imageResponse = await fetch(metadata.uri);
+      const imageResponse = await fetch(getIpfsUrl(metadata.uri));
       if (imageResponse.ok) {
         const imageData = await imageResponse.json();
         imageUrl = imageData?.image;
