@@ -13,8 +13,11 @@ import LoadingOverlay from "@/components/ui/loading-overlay";
 import TokenCreationModal from "@/components/ui/token-creation-modal";
 import TokenSuccessModal from "@/components/ui/token-success-modal";
 import URLInput from "@/components/ui/url-input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { TagsSelectModal, TAG_ICONS } from "@/components/modal/TagsSelectModal";
 import { BuyTokenModal } from "@/components/modal/BuyTokenModal";
+import { getIpfsUrl } from "@/lib/utils";
 
 interface QuickLaunchProps {
   onCancel?: () => void;
@@ -47,6 +50,47 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   // State for buy token modal
   const [isBuyTokenModalOpen, setIsBuyTokenModalOpen] = useState(false);
+
+  // Validation function for website URL
+  const isWebsiteValid = useMemo(() => {
+    if (!formData.websiteUrl || !formData.websiteUrl.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.websiteUrl.trim();
+    const withoutProto = trimmed.replace(/^https?:\/\//, '');
+    if (!withoutProto) return false;
+
+    // Validate domain format
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+.*$/;
+    return domainRegex.test(withoutProto);
+  }, [formData.websiteUrl]);
+
+  // Validation function for Twitter URL
+  const isTwitterValid = useMemo(() => {
+    if (!formData.twitterUrl || !formData.twitterUrl.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.twitterUrl.trim();
+    const raw = trimmed
+      .replace(/^https?:\/\//, '')
+      .replace(/^(x\.com|twitter\.com)\//, '');
+    const username = raw.replace(/[^A-Za-z0-9_]/g, '');
+
+    // Valid if username is between 1-15 characters and contains only valid chars
+    return username.length > 0 && username.length <= 15 && /^[A-Za-z0-9_]+$/.test(username);
+  }, [formData.twitterUrl]);
+
+  // Validation function for Telegram URL
+  const isTelegramValid = useMemo(() => {
+    if (!formData.telegramUrl || !formData.telegramUrl.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.telegramUrl.trim();
+    const raw = trimmed
+      .replace(/^https?:\/\//, '')
+      .replace(/^(t\.me|telegram\.me|telegram\.org)\//, '');
+    const handle = raw.replace(/[^A-Za-z0-9_]/g, '');
+
+    // Valid if handle is between 5-32 characters
+    return handle.length >= 5 && handle.length <= 32;
+  }, [formData.telegramUrl]);
 
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
@@ -221,6 +265,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       if (!trimmed) return undefined;
       const withoutProto = trimmed.replace(/^https?:\/\//, '');
       if (!withoutProto) return undefined;
+
+      // Validate domain format: must contain at least one dot and valid characters
+      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+.*$/;
+      if (!domainRegex.test(withoutProto)) {
+        return undefined;
+      }
+
       try {
         const url = new URL(`https://${withoutProto}`);
         return url.toString();
@@ -589,7 +640,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             id: 'deployment-progress'
           });
 
-          const waitTime = 10000; // 10 seconds
+          const waitTime = 15000; // 15 seconds
           const startTime = Date.now();
           const interval = 1000; // Update every second
 
@@ -762,9 +813,22 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2 px-4">
-            Make your own token
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black px-4">
+              Make your own token
+            </h1>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-5 h-5">
+                  <Info className="w-5 h-5 text-gray-400 cursor-help" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm">
+                <p className="font-semibold mb-1">Dynamic Bonding Curve (DBC)</p>
+                <p>Your token launches with a virtual liquidity pool using Meteora's DBC. It automatically migrates to a full DEX pool once the fundraising target is reached (minimum 750 USD).</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <p className="text-sm sm:text-base text-gray-600 px-4">
             Add your token name, symbol, logo, and social links.
           </p>
@@ -801,9 +865,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Token Supply <strong className="text-red-500">*</strong>
-              </label>
+              <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Token Supply <strong className="text-red-500">*</strong>
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Total number of tokens that will exist. Part of this supply goes into the bonding curve reserve, while the rest enters circulation.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -814,9 +888,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Decimal <strong className="text-red-500">*</strong>
-              </label>
+              <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Decimal <strong className="text-red-500">*</strong>
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Number of decimal places for your token. Higher decimals (6-9) allow for more precise pricing and trading.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -899,9 +983,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             >
               {logoUrl ? (
                 <div className="flex flex-col items-center">
-                  <img 
-                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${logoUrl}`} 
-                    alt="Token Logo" 
+                  <img
+                    src={getIpfsUrl(logoUrl)}
+                    alt="Token Logo"
                     className="w-32 h-32 object-cover rounded-lg mb-2"
                   />
                   {isUploadingLogo && (
@@ -935,9 +1019,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             >
               {bannerUrl ? (
                 <div className="flex flex-col items-center">
-                  <img 
-                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${bannerUrl}`} 
-                    alt="Banner Image" 
+                  <img
+                    src={getIpfsUrl(bannerUrl)}
+                    alt="Banner Image"
                     className="w-full h-32 object-cover rounded-lg mb-2"
                   />
                   {isUploadingBanner && (
@@ -995,7 +1079,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onChange={(value) => handleInputChange('twitterUrl', value)}
                 placeholder="yourusername"
                 className="w-full"
+                isInvalid={!isTwitterValid}
               />
+              {!isTwitterValid && formData.twitterUrl && (
+                <p className="mt-1 text-sm text-red-500">
+                  Please enter a valid username (1-15 characters, letters, numbers, underscore only)
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1007,7 +1097,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onChange={(value) => handleInputChange('websiteUrl', value)}
                 placeholder="yourwebsite.com"
                 className="w-full"
+                isInvalid={!isWebsiteValid}
               />
+              {!isWebsiteValid && formData.websiteUrl && (
+                <p className="mt-1 text-sm text-red-500">
+                  Please enter a valid website URL (e.g., example.com)
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1019,7 +1115,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onChange={(value) => handleInputChange('telegramUrl', value)}
                 placeholder="yourchannel"
                 className="w-full"
+                isInvalid={!isTelegramValid}
               />
+              {!isTelegramValid && formData.telegramUrl && (
+                <p className="mt-1 text-sm text-red-500">
+                  Please enter a valid username (5-32 characters, letters, numbers, underscore only)
+                </p>
+              )}
             </div>
           </div>
         </div>

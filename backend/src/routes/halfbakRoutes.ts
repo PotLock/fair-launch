@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { buildDbcConfigRequest, buildDeployTokenRequest, buildSwapTokenRequest } from '../lib/halfbak';
 import { DbcConfigRequestSchema, DeployTokenRequestSchema, SwapTokenRequestSchema } from '../types';
 import type { DbcConfigRequestType, DeployTokenRequestType, SwapTokenRequestType } from '../types';
+import { logRequestStart, logRequestEnd, logError } from '../lib/logger';
 
 const app = new Hono();
 const halfbakService = new HalfbakService();
@@ -194,23 +195,37 @@ app.post('/swap', zValidator('json', SwapTokenRequestSchema), async (c) => {
 });
 
 app.get('/pool/state/:mintAddress', async (c) => {
+  const startTime = Date.now();
+  const mintAddress = c.req.param('mintAddress');
+  logRequestStart('GET /api/halfbak/pool/state/:mintAddress', { mintAddress });
+  
   try {
-    const mintAddress = c.req.param('mintAddress');
     const pool = await halfbakService.getPoolStateByMintAddress(mintAddress);
+    const duration = Date.now() - startTime;
+    logRequestEnd('GET /api/halfbak/pool/state/:mintAddress', duration, true, { mintAddress });
     return c.json({ success: true, data: pool });
   } catch (error) {
-    console.error('Error in get pool by mint address route:', error);
+    const duration = Date.now() - startTime;
+    logError('Error in get pool by mint address route', error instanceof Error ? error : new Error(String(error)), { mintAddress });
+    logRequestEnd('GET /api/halfbak/pool/state/:mintAddress', duration, false, { mintAddress });
     return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
   }
 });
 
 app.get('/pool/config/:mintAddress', async (c) => {
+  const startTime = Date.now();
+  const mintAddress = c.req.param('mintAddress');
+  logRequestStart('GET /api/halfbak/pool/config/:mintAddress', { mintAddress });
+  
   try {
-    const mintAddress = c.req.param('mintAddress');
     const poolConfig = await halfbakService.getPoolConfigByMintAddress(mintAddress);
+    const duration = Date.now() - startTime;
+    logRequestEnd('GET /api/halfbak/pool/config/:mintAddress', duration, true, { mintAddress });
     return c.json({ success: true, data: poolConfig });
   } catch (error) {
-    console.error('Error in get pool config by mint address route:', error);
+    const duration = Date.now() - startTime;
+    logError('Error in get pool config by mint address route', error instanceof Error ? error : new Error(String(error)), { mintAddress });
+    logRequestEnd('GET /api/halfbak/pool/config/:mintAddress', duration, false, { mintAddress });
     return c.json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' }, 500);
   }
 });

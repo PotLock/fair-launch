@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatNumberToCurrency } from "@/utils";
+import { getIpfsUrl } from "@/lib/utils";
 
 interface Token {
   symbol: string;
@@ -63,7 +64,7 @@ export const SelectTokenModal = ({
   };
 
   const renderTokenItem = (token: Token) => {
-    const iconUrl = token.icon.startsWith('https') ? token.icon : `${process.env.NEXT_PUBLIC_IPFS_URL}${token.icon}`;
+    const iconUrl = getIpfsUrl(token.icon);
     return (
       <div
         key={token.mint}

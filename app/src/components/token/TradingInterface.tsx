@@ -4,18 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Token, TransactionAction, TransactionStatus, TransactionChain } from "@/types/api";
 import { formatNumberToCurrency, formatTokenPrice } from "@/utils";
-import { ChevronDown, Copy, Download, ExternalLink, Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo } from "react";
+import { ChevronDown, Copy, Download, ExternalLink, Wallet, Loader2, CheckCircle2, XCircle, Clock, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useReducer, useTransition, useDeferredValue, memo, useRef } from "react";
 import { getTokenHolders, getPoolStateByMint, getPoolConfigByMint, Swap } from "@/lib/api";
 import { getRpcSOLEndpoint, getSolPrice, getSolBalance, getTokenBalanceOnSOL } from "@/lib/sol";
+import { calculateDbcSwapQuote, approximateSwapQuote } from "@/lib/meteora";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import { Connection, Transaction } from "@solana/web3.js";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
-import { useRouter } from "next/navigation";
 import { SOL_NETWORK } from "@/configs/env.config";
+import { getIpfsUrl } from "@/lib/utils";
+import { useNearIntents } from "@/hooks/useNearIntents";
+import { useWalletSelector } from "@near-wallet-selector/react-hook";
+import { QRCodeSVG } from "qrcode.react";
+
+// Convert NEAR to yoctoNEAR: 1 NEAR = 10^24 yoctoNEAR
+const parseNearAmount = (amount: string): string => {
+  if (!amount || parseFloat(amount) <= 0) return "0";
+  const amountNum = parseFloat(amount);
+  return (amountNum * Math.pow(10, 24)).toFixed(0);
+};
 
 interface TradingInterfaceProps {
   token: Token;
@@ -28,6 +40,7 @@ interface TokenData {
   marketCap: number;
   targetRaise: number;
   poolAddress: string;
+  migrationProgress: number;
 }
 
 interface UserBalances {
@@ -35,7 +48,6 @@ interface UserBalances {
   token: number;
 }
 
-// Trading state for useReducer
 interface TradingState {
   tokenData: TokenData;
   userBalances: UserBalances;
@@ -49,7 +61,6 @@ interface TradingState {
   payIsSol: boolean;
 }
 
-// Action types for reducer
 type TradingAction =
   | { type: 'SET_TOKEN_DATA'; payload: TokenData }
   | { type: 'SET_USER_BALANCES'; payload: UserBalances }
@@ -63,7 +74,6 @@ type TradingAction =
   | { type: 'RESET_AMOUNTS' }
   | { type: 'SWITCH_TOKEN'; payload: boolean };
 
-// Reducer function
 const tradingReducer = (state: TradingState, action: TradingAction): TradingState => {
   switch (action.type) {
     case 'SET_TOKEN_DATA':
@@ -93,12 +103,56 @@ const tradingReducer = (state: TradingState, action: TradingAction): TradingStat
   }
 };
 
-// Constants
 const GAS_RESERVE = 0.001; // Reserve SOL for gas fees
 const SLIPPAGE_BPS = 50;
 const COMPUTE_UNIT_PRICE = 100000;
 const MAX_FRACTION_DIGITS = 6;
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const TOTAL_FEE_PERCENT = 0.003; // 0.3% total fee (protocol + partner + creator)
+
+// Migration Progress Enum
+enum MigrationProgress {
+  PreBondingCurve = 0,
+  PostBondingCurve = 1,
+  LockedVesting = 2,
+  CreatedPool = 3
+}
+
+// Get user-friendly phase information
+const getPhaseInfo = (migrationProgress: number) => {
+  switch (migrationProgress) {
+    case MigrationProgress.PreBondingCurve:
+      return {
+        label: 'BONDING CURVE',
+        color: 'orange',
+        description: 'Initial fundraising phase'
+      };
+    case MigrationProgress.PostBondingCurve:
+      return {
+        label: 'FUNDRAISING COMPLETE',
+        color: 'green',
+        description: 'Preparing for migration'
+      };
+    case MigrationProgress.LockedVesting:
+      return {
+        label: 'VESTING PERIOD',
+        color: 'purple',
+        description: 'Locked vesting in progress'
+      };
+    case MigrationProgress.CreatedPool:
+      return {
+        label: 'LIVE TRADING',
+        color: 'emerald',
+        description: 'Pool created and migrated'
+      };
+    default:
+      return {
+        label: 'UNKNOWN',
+        color: 'gray',
+        description: 'Status unknown'
+      };
+  }
+};
 
 const hexToNumber = (hex: string): number => {
   return !hex || hex === "00" ? 0 : parseInt(hex, 16);
@@ -111,8 +165,22 @@ const formatBalance = (balance: number, decimals: number = 4): string => {
   });
 };
 
+// Deposit workflow state interface
+interface DepositState {
+  depositAmount: string;
+  depositAddress: string | null;
+  depositMemo: string | null;
+  purchaseInfo: any | null;
+  swapStatus: any | null;
+  isGeneratingAddress: boolean;
+  isSettling: boolean;
+  isLoadingPurchaseInfo: boolean;
+}
+
 function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const { publicKey, sendTransaction } = useWallet()
+  const { signedAccountId } = useWalletSelector();
+  const nearIntents = useNearIntents();
 
   const [state, dispatch] = useReducer(tradingReducer, {
     tokenData: {
@@ -120,7 +188,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       holders: 0,
       marketCap: 0,
       targetRaise: 0,
-      poolAddress: ''
+      poolAddress: '',
+      migrationProgress: 0
     },
     userBalances: {
       sol: 0,
@@ -136,9 +205,22 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     payIsSol: true
   });
 
-  const [isPending, startTransition] = useTransition();
+  // Deposit workflow state
+  const [depositState, setDepositState] = useState<DepositState>({
+    depositAmount: '',
+    depositAddress: null,
+    depositMemo: null,
+    purchaseInfo: null,
+    swapStatus: null,
+    isGeneratingAddress: false,
+    isSettling: false,
+    isLoadingPurchaseInfo: false,
+  });
 
+  const [isPending, startTransition] = useTransition();
+  const statusPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const deferredAmountPay = useDeferredValue(state.amountPay);
+  const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tokenOptions = [
     { name: 'SOL', icon: '/chains/sol.jpeg' },
@@ -159,7 +241,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         getTokenBalanceOnSOL(address, publicKey.toString())
       ]);
 
-      // Use startTransition for non-blocking update
       startTransition(() => {
         dispatch({
           type: 'SET_USER_BALANCES',
@@ -211,7 +292,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             holders: holders.length,
             marketCap: marketCap * solPrice,
             targetRaise,
-            poolAddress: pool.publicKey
+            poolAddress: pool.publicKey,
+            migrationProgress: pool?.account?.migrationProgress ?? 0
           }
         });
       });
@@ -230,7 +312,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     fetchUserBalances();
   }, [fetchUserBalances]);
 
-  // Validation helpers with useMemo for performance
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (quoteTimeoutRef.current) {
+        clearTimeout(quoteTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const hasInsufficientBalance = useMemo(() => {
     if (!deferredAmountPay || deferredAmountPay.trim() === '') return false;
 
@@ -238,10 +328,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if (isNaN(amountPayNum) || amountPayNum <= 0) return false;
 
     if (state.payIsSol) {
-      // When buying, check SOL balance (reserve for gas fees)
       return amountPayNum > (state.userBalances.sol - GAS_RESERVE);
     } else {
-      // When selling, check token balance
       return amountPayNum > state.userBalances.token;
     }
   }, [deferredAmountPay, state.payIsSol, state.userBalances]);
@@ -250,9 +338,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     return state.payIsSol ? state.userBalances.sol : state.userBalances.token;
   }, [state.payIsSol, state.userBalances]);
 
-  // Calculate swap amounts with useCallback for optimization
   const handleAmountPayChange = useCallback((value: string) => {
     dispatch({ type: 'SET_AMOUNT_PAY', payload: value });
+
+    // Clear any pending quote calculation
+    if (quoteTimeoutRef.current) {
+      clearTimeout(quoteTimeoutRef.current);
+    }
 
     if (value.trim() === '') {
       dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: '' });
@@ -266,25 +358,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    // Constant product formula: x * y = k
-    const k = state.baseReserve * state.quoteReserve;
-    if (state.payIsSol) {
-      // Buying: Paying SOL -> receive token
-      const newQuote = state.quoteReserve + amountPayNum;
-      const newBase = k / newQuote;
-      const deltaBase = state.baseReserve - newBase;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaBase.toFixed(4) });
-    } else {
-      // Selling: Paying token -> receive SOL
-      const newBase = state.baseReserve + amountPayNum;
-      const newQuote = k / newBase;
-      const deltaQuote = state.quoteReserve - newQuote;
-      dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: deltaQuote.toFixed(4) });
-    }
-  }, [state.baseReserve, state.quoteReserve, state.payIsSol]);
+    // Debounce the API call by 300ms
+    quoteTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Use Meteora SDK for accurate DBC quote calculation
+        const connection = new Connection(getRpcSOLEndpoint());
+        const outputAmount = await calculateDbcSwapQuote(
+          connection,
+          state.tokenData.poolAddress,
+          amountPayNum,
+          !state.payIsSol, // swapBaseForQuote: true when selling tokens (payIsSol=false)
+          token.decimals,
+          SLIPPAGE_BPS
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      } catch (error) {
+        console.error('Error calculating DBC quote, using approximation:', error);
+
+        // Fallback to approximation if SDK call fails
+        const outputAmount = approximateSwapQuote(
+          state.baseReserve,
+          state.quoteReserve,
+          amountPayNum,
+          !state.payIsSol,
+          TOTAL_FEE_PERCENT
+        );
+
+        dispatch({ type: 'SET_AMOUNT_RECEIVE', payload: outputAmount.toFixed(MAX_FRACTION_DIGITS) });
+      }
+    }, 300);
+  }, [state.baseReserve, state.quoteReserve, state.payIsSol, state.tokenData.poolAddress, token.decimals]);
 
 
-  // Handle buy/sell transaction with useCallback
   const handleBuyAndSell = useCallback(async () => {
     // Validation checks
     if (!publicKey) {
@@ -363,7 +469,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         await connection.confirmTransaction(signatureSwap, "confirmed");
 
-        // Update transaction status to success
         if (createdTransactionId) {
           try {
             await updateTransactionStatus(createdTransactionId, TransactionStatus.SUCCESS, signatureSwap);
@@ -377,7 +482,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         toast.success(`Successfully ${state.payIsSol ? "bought" : "sold"} ${token.symbol}! Received ${state.amountReceive} ${receiveSymbol}`);
         console.log("Swap Transaction Signature:", signatureSwap);
 
-        // Refresh data
         await Promise.all([fetchTokenData(), fetchUserBalances()]);
         dispatch({ type: 'RESET_AMOUNTS' });
       } else {
@@ -385,7 +489,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       }
     } catch (error) {
       console.error("Error during swap:", error);
-      // If we already created a transaction record, mark it failed
       try {
         if (createdTransactionId) {
           await updateTransactionStatus(createdTransactionId, TransactionStatus.FAILED);
@@ -400,13 +503,217 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     }
   }, [publicKey, sendTransaction, address, state, hasInsufficientBalance, currentBalance, token, fetchTokenData, fetchUserBalances]);
 
+  // ============================================================================
+  // DEPOSIT WORKFLOW FUNCTIONS
+  // ============================================================================
+
+  // Fetch purchase information when user enters amount
+  const fetchPurchaseInfo = useCallback(async (amount: string) => {
+    if (!amount || parseFloat(amount) <= 0 || !signedAccountId || !publicKey) {
+      setDepositState(prev => ({ ...prev, purchaseInfo: null }));
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isLoadingPurchaseInfo: true }));
+      
+      // Convert NEAR amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const amountInYoctoNEAR = parseNearAmount(amount) || "0";
+      
+      const purchaseInfo = await nearIntents.getPurchaseInfo({
+        originAsset: "wNEAR",
+        destinationAsset: token.symbol,
+        amount: amountInYoctoNEAR,
+        senderAddress: signedAccountId,
+        recipientAddress: publicKey.toString(),
+      });
+
+      setDepositState(prev => ({ ...prev, purchaseInfo, isLoadingPurchaseInfo: false }));
+    } catch (error) {
+      console.error("Error fetching purchase info:", error);
+      setDepositState(prev => ({ ...prev, purchaseInfo: null, isLoadingPurchaseInfo: false }));
+    }
+  }, [signedAccountId, publicKey, token.symbol, nearIntents]);
+
+  // Poll for swap status
+  const startStatusPolling = useCallback((depositAddress: string) => {
+    // Clear any existing interval
+    if (statusPollIntervalRef.current) {
+      clearInterval(statusPollIntervalRef.current);
+    }
+
+    // Poll every 5 seconds
+    statusPollIntervalRef.current = setInterval(async () => {
+      try {
+        const detailedStatus = await nearIntents.getDetailedSwapStatus(depositAddress);
+        setDepositState(prev => ({ ...prev, swapStatus: detailedStatus }));
+
+        // Stop polling if swap is complete
+        if (detailedStatus.isComplete) {
+          if (statusPollIntervalRef.current) {
+            clearInterval(statusPollIntervalRef.current);
+            statusPollIntervalRef.current = null;
+          }
+
+          if (detailedStatus.isSuccess) {
+            toast.success(`Successfully received ${token.symbol} tokens!`);
+            await fetchUserBalances();
+          } else if (detailedStatus.isFailed) {
+            toast.error("Swap failed. Please contact support.");
+          }
+        }
+      } catch (error) {
+        console.error("Error polling swap status:", error);
+      }
+    }, 5000);
+  }, [nearIntents, token.symbol, fetchUserBalances]);
+
+  // Generate deposit address
+  const handleGenerateDepositAddress = useCallback(async () => {
+    if (!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0) {
+      toast.error("Please enter an amount to deposit");
+      return;
+    }
+
+    if (!signedAccountId) {
+      toast.error("Please connect your NEAR wallet");
+      return;
+    }
+
+    if (!publicKey) {
+      toast.error("Please connect your Solana wallet");
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isGeneratingAddress: true }));
+      
+      // Convert NEAR amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const amountInYoctoNEAR = parseNearAmount(depositState.depositAmount) || "0";
+      
+      const { depositAddress, depositMemo, quote } = await nearIntents.generateDepositAddress({
+        senderAddress: signedAccountId,
+        recipientAddress: publicKey.toString(),
+        originAsset: "wNEAR",
+        destinationAsset: token.symbol,
+        amount: amountInYoctoNEAR,
+      });
+
+      setDepositState(prev => ({
+        ...prev,
+        depositAddress,
+        depositMemo: depositMemo || null,
+        purchaseInfo: quote || prev.purchaseInfo,
+        isGeneratingAddress: false,
+      }));
+
+      // Start polling for status
+      startStatusPolling(depositAddress);
+      
+      toast.success("Deposit address generated! Send NEAR to this address.");
+    } catch (error) {
+      console.error("Error generating deposit address:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate deposit address");
+      setDepositState(prev => ({ ...prev, isGeneratingAddress: false }));
+    }
+  }, [depositState.depositAmount, signedAccountId, publicKey, token.symbol, nearIntents, startStatusPolling]);
+
+  // Settle deposit after user confirms deposit
+  const handleSettleDeposit = useCallback(async (txHash?: string) => {
+    if (!depositState.depositAddress) {
+      toast.error("No deposit address found");
+      return;
+    }
+
+    try {
+      setDepositState(prev => ({ ...prev, isSettling: true }));
+      
+      const status = await nearIntents.settleDeposit({
+        depositAddress: depositState.depositAddress,
+        txHash,
+        depositMemo: depositState.depositMemo || undefined,
+        waitForSettlement: true,
+      });
+
+      setDepositState(prev => ({ ...prev, swapStatus: status, isSettling: false }));
+
+      if (status.status === "SUCCESS") {
+        toast.success(`Successfully received ${token.symbol} tokens!`);
+        // Refresh balances
+        await fetchUserBalances();
+      } else if (status.status === "FAILED") {
+        toast.error("Swap failed. Please contact support.");
+      } else if (status.status === "REFUNDED") {
+        toast.info("Deposit was refunded. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error settling deposit:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to settle deposit");
+      setDepositState(prev => ({ ...prev, isSettling: false }));
+    }
+  }, [depositState.depositAddress, depositState.depositMemo, token.symbol, nearIntents, fetchUserBalances]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (statusPollIntervalRef.current) {
+        clearInterval(statusPollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Handle deposit amount change
+  const handleDepositAmountChange = useCallback((value: string) => {
+    const raw = value.replace(/,/g, '');
+    if (/^\d*\.?\d*$/.test(raw)) {
+      setDepositState(prev => ({ ...prev, depositAmount: raw }));
+      // Fetch purchase info when amount changes
+      if (raw && parseFloat(raw) > 0) {
+        fetchPurchaseInfo(raw);
+      } else {
+        setDepositState(prev => ({ ...prev, purchaseInfo: null }));
+      }
+    }
+  }, [fetchPurchaseInfo]);
+
+  // Copy deposit address to clipboard
+  const handleCopyDepositAddress = useCallback(() => {
+    if (depositState.depositAddress) {
+      navigator.clipboard.writeText(depositState.depositAddress);
+      toast.success("Deposit address copied to clipboard");
+    }
+  }, [depositState.depositAddress]);
+
+  // Format address for display
+  const formatAddress = useCallback((address: string | null) => {
+    if (!address) return "";
+    if (address.length <= 20) return address;
+    return `${address.slice(0, 10)}...${address.slice(-10)}`;
+  }, []);
+
+  const phaseInfo = getPhaseInfo(state.tokenData.migrationProgress);
+
+  // Get appropriate Tailwind classes based on phase color
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { dot: string; text: string }> = {
+      orange: { dot: 'bg-orange-600', text: 'text-orange-600' },
+      blue: { dot: 'bg-blue-700', text: 'text-blue-700' },
+      green: { dot: 'bg-green-600', text: 'text-green-600' },
+      purple: { dot: 'bg-purple-600', text: 'text-purple-600' },
+      emerald: { dot: 'bg-emerald-600', text: 'text-emerald-600' },
+      gray: { dot: 'bg-gray-600', text: 'text-gray-600' }
+    };
+    return colorMap[color] || colorMap.gray;
+  };
+
+  const colorClasses = getColorClasses(phaseInfo.color);
 
   return (
     <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
       <div className="flex flex-col gap-3 p-3 md:p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-700"></div>
-          <span className="font-medium text-blue-700">LIVE TRADING</span>
+          <div className={`w-2.5 h-2.5 rounded-full ${colorClasses.dot} animate-pulse`}></div>
+          <span className={`font-medium ${colorClasses.text}`}>{phaseInfo.label}</span>
         </div>
         <div className="flex flex-col">
             <div className="text-3xl font-bold text-blue-600">
@@ -415,7 +722,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="text-xs text-gray-500">Market Cap</div>
         </div>
 
-        <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-10 w-full">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-4 xl:gap-10 w-full">
             <div>
                 <div className="text-lg font-semibold">
                   {state.loading || isPending ? '...' : `$${formatTokenPrice(state.tokenData.price)}`}
@@ -505,7 +812,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
                         <div className="w-6 h-6">
-                          <img src={state.payIsSol ? "/logos/solana_light.svg" : token.metadata.tokenUri} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
+                          <img src={state.payIsSol ? "/logos/solana_light.svg" : getIpfsUrl(token.metadata.tokenUri)} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
                         </div>
                         <span>{state.payIsSol ? 'SOL' : token.symbol}</span>
                         <div className="relative w-4 h-4">
@@ -523,7 +830,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <img src={option.icon} alt={option.name} className="w-5 h-5 rounded-full" />
+                            <img src={option.name !== 'SOL' ? getIpfsUrl(option.icon) : '/logos/solana_light.svg'} alt={option.name} className="w-5 h-5 rounded-full" />
                             <span>{option.name}</span>
                           </div>
                         </DropdownMenuItem>
@@ -548,14 +855,17 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
-                    value={state.amountReceive || ''}
+                    value={state.amountReceive ? parseFloat(state.amountReceive).toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: MAX_FRACTION_DIGITS,
+                    }) : ''}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
                     disabled
                   />
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
                     <div className="h-6 w-6">
-                      <img src={state.payIsSol ? token.metadata.tokenUri : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
+                      <img src={state.payIsSol ? getIpfsUrl(token.metadata.tokenUri) : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
                     <span className="text-lg">{state.payIsSol ? token.symbol : 'SOL'}</span>
                   </div>
@@ -590,110 +900,233 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
+                    value={depositState.depositAmount}
+                    onChange={(e) => handleDepositAmountChange(e.target.value)}
+                    onBlur={() => {
+                      if (depositState.depositAmount) {
+                        const formatted = parseFloat(depositState.depositAmount).toLocaleString('en-US', {
+                          maximumFractionDigits: MAX_FRACTION_DIGITS,
+                        });
+                        setDepositState(prev => ({ ...prev, depositAmount: formatted }));
+                      }
+                    }}
                     className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
                     placeholder="0.00"
+                    inputMode="decimal"
                   />
                   <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
                     <img src="/logos/near.svg" alt="NEAR" className="w-5 h-5" />
                     <span className="mr-5">NEAR</span>
                   </button>
                 </div>
-                <span className="text-sm text-gray-500 mt-1">-</span>
+                {depositState.isLoadingPurchaseInfo ? (
+                  <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Loading purchase info...</span>
+                  </div>
+                ) : depositState.purchaseInfo ? (
+                  <div className="text-sm text-gray-500 mt-1">
+                    You will receive approximately {formatBalance(parseFloat(depositState.purchaseInfo.expectedOut || "0"), 4)} {token.symbol}
+                    {depositState.purchaseInfo.minAmountOut && (
+                      <span className="block text-xs text-gray-400 mt-1">
+                        Minimum: {formatBalance(parseFloat(depositState.purchaseInfo.minAmountOut || "0"), 4)} {token.symbol}
+                      </span>
+                    )}
+                    {depositState.purchaseInfo.timeEstimate && (
+                      <span className="block text-xs text-gray-400 mt-1">
+                        Estimated time: {depositState.purchaseInfo.timeEstimate} seconds
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-500 mt-1">-</span>
+                )}
               </div>
-              <Card className="shadow-none p-3 py-4 space-y-4">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Use this depsoit address</h3>
-                  <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
-                </div>
-                <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
-                <div className="flex flex-col space-y-5 justify-center items-center">
-                  <div className="border border-gray-200 p-1 rounded-lg">
-                    <img src="/icons/qrcode.svg" alt="QRcode" className="w-40 h-40"/>
-                  </div>
-                  <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
-                    <span className="text-sm">qAHMEAU4..........8jiETcaSL5u5sAnZN</span>
-                    <Button className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2">
-                      <Copy className="w-3 h-3 text-gray-600" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="pt-3">
-                  <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
-                    <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the Near network</h3>
-                    <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
-                  </div>
-                </div>
-              </Card>
-              <Card className="shadow-none p-3 space-y-4 w-full">
-                <div className="flex justify-between w-full items-center text-xs text-gray-500">
-                  <span>Minimum Deposit</span>
-                  <span>0.001 SOL</span>
-                </div>
-                <div className="flex justify-between w-full items-center text-xs text-gray-500">
-                  <span>Processing Time</span>
-                  <span>~5 mins</span>
-                </div>
-              </Card>
+
+              {depositState.depositAddress ? (
+                <>
+                  <Card className="shadow-none p-3 py-4 space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold">Use this deposit address</h3>
+                      <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
+                    </div>
+                    <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
+                    <div className="flex flex-col space-y-5 justify-center items-center">
+                      <div className="border border-gray-200 p-1 rounded-lg bg-white">
+                        <QRCodeSVG value={depositState.depositAddress} size={160} level="M" />
+                      </div>
+                      <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
+                        <span className="text-sm font-mono">{formatAddress(depositState.depositAddress)}</span>
+                        <Button 
+                          onClick={handleCopyDepositAddress}
+                          className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2"
+                        >
+                          <Copy className="w-3 h-3 text-gray-600" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="pt-3">
+                      <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
+                        <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the NEAR network</h3>
+                        <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Swap Status Display */}
+                  {depositState.swapStatus && (
+                    <Card className="shadow-none p-3 space-y-3 w-full">
+                      <div className="flex items-center gap-2 mb-2">
+                        {depositState.swapStatus.isComplete ? (
+                          depositState.swapStatus.isSuccess ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          )
+                        ) : (
+                          <Clock className="w-5 h-5 text-blue-500 animate-pulse" />
+                        )}
+                        <h3 className="text-sm font-semibold">
+                          {depositState.swapStatus.isComplete
+                            ? depositState.swapStatus.isSuccess
+                              ? "Swap Completed"
+                              : "Swap Failed"
+                            : "Processing Swap"}
+                        </h3>
+                      </div>
+                      {depositState.swapStatus.status && (
+                        <div className="text-xs text-gray-600">
+                          Status: <span className="font-medium">{depositState.swapStatus.status}</span>
+                        </div>
+                      )}
+                      {depositState.swapStatus.swapDetails && (
+                        <div className="space-y-1 text-xs text-gray-600">
+                          {depositState.swapStatus.swapDetails.amountIn && (
+                            <div>Amount In: {depositState.swapStatus.swapDetails.amountIn}</div>
+                          )}
+                          {depositState.swapStatus.swapDetails.amountOut && (
+                            <div>Amount Out: {depositState.swapStatus.swapDetails.amountOut}</div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  )}
+
+                  <Button
+                    onClick={() => handleSettleDeposit()}
+                    disabled={depositState.isSettling || depositState.swapStatus?.isComplete}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-6 rounded-lg"
+                  >
+                    {depositState.isSettling ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                        Settling Deposit...
+                      </>
+                    ) : depositState.swapStatus?.isComplete ? (
+                      depositState.swapStatus.isSuccess ? "Swap Completed" : "Try Again"
+                    ) : (
+                      "Check Status"
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Card className="shadow-none p-3 space-y-4 w-full">
+                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                      <span>Minimum Deposit</span>
+                      <span>0.001 NEAR</span>
+                    </div>
+                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                      <span>Processing Time</span>
+                      <span>~5 mins</span>
+                    </div>
+                    {depositState.purchaseInfo?.slippageBps && (
+                      <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                        <span>Slippage Tolerance</span>
+                        <span>{(depositState.purchaseInfo.slippageBps / 100).toFixed(2)}%</span>
+                      </div>
+                    )}
+                  </Card>
+                  <Button
+                    onClick={handleGenerateDepositAddress}
+                    disabled={!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0 || depositState.isGeneratingAddress || !signedAccountId || !publicKey}
+                    className={`w-full ${
+                      depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && signedAccountId && publicKey && !depositState.isGeneratingAddress
+                        ? "bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                        : "bg-gray-300 hover:bg-gray-300 cursor-not-allowed"
+                    } text-white font-medium py-6 rounded-lg`}
+                  >
+                    {depositState.isGeneratingAddress ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                        Generating Address...
+                      </>
+                    ) : !signedAccountId ? (
+                      "Connect NEAR Wallet"
+                    ) : !publicKey ? (
+                      "Connect Solana Wallet"
+                    ) : (
+                      `Buy ${token.symbol} with NEAR`
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
       </div>
 
       <div className="p-3 md:p-4 flex flex-col gap-2">
-        <h1 className="text-lg font-bold">Trade on DEX</h1>
-        
-        {SOL_NETWORK !== 'mainnet' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
-            <p className="text-sm text-amber-800">
-              DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.
-            </p>
-          </div>
-        )}
-        
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold">Trade on DEX</h1>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>DBC is a virtual pool bonding curve. DEX trading is only available on mainnet via Jupiter, Photon, and Axiom.</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
         <div className="flex flex-col gap-2">
-          <div
-            className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between ${
-              SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-            }`}
-            onClick={() => {
-              if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
-                window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
-              }
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="relative w-9 h-9">
-                <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
-                <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
-                  <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
+                <div className="flex items-center gap-2">
+                  <div className="relative w-9 h-9">
+                    <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
+                    <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
+                      <img src="/logos/solana_light.svg" alt="Solana" className="w-3 h-3" />
+                    </div>
+                  </div>
+                  <span>Trade on Meteora</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5" />
                 </div>
               </div>
-              <span>Trade on Meteora</span>
-              {SOL_NETWORK !== 'mainnet' && (
-                <span className="text-xs text-gray-500">(Mainnet only)</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <ExternalLink className="w-5 h-5" />
-            </div>
-          </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm border border-gray-200">
+              <p>Meteora DLMM pools are not compatible with DBC virtual pools. Use Jupiter, Photon, or Axiom instead.</p>
+            </TooltipContent>
+          </Tooltip>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
-                SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span>Trade on other DEX</span>
-                  {SOL_NETWORK !== 'mainnet' && (
-                    <span className="text-xs text-gray-500">(Mainnet only)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <ChevronDown className="w-5 h-5" />
-                </div>
-              </div>
-            </DropdownMenuTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
+                    SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span>Trade on another DEX</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-5 h-5" />
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white" align="start">
               <DropdownMenuGroup>
                 <DropdownMenuItem 
@@ -786,12 +1219,18 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenu>
+            </TooltipTrigger>
+            {SOL_NETWORK !== 'mainnet' && (
+              <TooltipContent>
+                <p>DEX trading is only available on mainnet. You're currently on {SOL_NETWORK}.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
       </div>
     </div>
   );
 }
 
-// Export memoized component for performance optimization
 export const TradingInterface = memo(TradingInterfaceComponent);

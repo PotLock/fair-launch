@@ -7,6 +7,8 @@ import { formatNumberToCurrency, calculateTokenPrice, formatPriceChange, calcula
 import { getTokenBalanceOnSOL } from "@/lib/sol";
 import { useRouter } from "next/navigation";
 import { getPoolStateByMint, getOldestPriceFromTransactions } from "@/lib/api";
+import { triggerProgressBar } from "./layout/PageProgressBar";
+import { getIpfsUrl } from "@/lib/utils";
 
 interface MyTokenCardProps {
     id: string;
@@ -104,7 +106,7 @@ export function MyTokenCard({
                 <motion.img 
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.3 }}
-                    src={`${process.env.NEXT_PUBLIC_IPFS_URL}${banner}`} 
+                    src={getIpfsUrl(banner)}
                     alt={name} 
                     className="w-full h-48 object-cover rounded-xl" 
                 />
@@ -112,7 +114,7 @@ export function MyTokenCard({
                 <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent rounded-xl" />
 
                 <div className="absolute bottom-4 left-4 flex items-center gap-3 w-full">
-                    <img src={`${process.env.NEXT_PUBLIC_IPFS_URL}${avatar}`} alt={name} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={getIpfsUrl(avatar)} alt={name} className="w-12 h-12 rounded-full object-cover" />
                     <div>
                         <h3 className="text-white font-bold text-lg">{name}</h3>
                         <div className="flex items-center gap-2">
@@ -172,18 +174,24 @@ export function MyTokenCard({
                 </div>
 
                 <div className="flex gap-10 mt-8">
-                    <motion.button 
+                    <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={()=>router.push(`/token/${mint}`)} 
+                        onClick={() => {
+                            triggerProgressBar();
+                            router.push(`/token/${mint}`);
+                        }}
                         className="flex-1 bg-white border border-gray-300 text-gray-800 py-1.5 px-2 rounded-md font-medium hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                         <span className="text-sm">View Details</span>
                     </motion.button>
-                    <motion.button 
+                    <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={()=>router.push(`/token/${mint}`)} 
+                        onClick={() => {
+                            triggerProgressBar();
+                            router.push(`/token/${mint}`);
+                        }}
                         className={`flex-1 ${getActionButtonStyle(actionButton.variant)} text-white py-1.5 px-2 rounded-md font-medium transition-colors cursor-pointer`}
                     >
                         <span className="text-sm">{actionButton.text}</span>

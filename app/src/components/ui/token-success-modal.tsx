@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import React from 'react';
+import { getIpfsUrl } from "@/lib/utils";
 
 interface TokenSuccessModalProps {
   isVisible: boolean;
@@ -31,9 +32,9 @@ export default function TokenSuccessModal({
           {/* Token Logo */}
           {tokenLogo && (
             <div className="flex justify-center mb-4">
-              <img 
-                src={`${process.env.NEXT_PUBLIC_IPFS_URL}${tokenLogo}`} 
-                alt="Token Logo" 
+              <img
+                src={getIpfsUrl(tokenLogo)}
+                alt="Token Logo"
                 className="h-14 w-14 rounded-full object-cover"
                 onError={(e) => {
                   // Fallback to default icon if image fails to load

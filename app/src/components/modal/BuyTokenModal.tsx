@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, getIpfsUrl } from "@/lib/utils";
 
 interface BuyTokenModalProps {
   open: boolean;
@@ -95,7 +95,7 @@ export function BuyTokenModal({
           <div className="flex items-center gap-3 mb-2">
             {tokenLogo && (
               <img
-                src={`${process.env.NEXT_PUBLIC_IPFS_URL}${tokenLogo}`}
+                src={getIpfsUrl(tokenLogo)}
                 alt={tokenSymbol}
                 className="w-10 h-10 rounded-full object-cover"
                 onError={(e) => {
@@ -104,19 +104,19 @@ export function BuyTokenModal({
                 }}
               />
             )}
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Buy {tokenSymbol}
+            <DialogTitle className="text-2xl font-bold text-gray-900 flex gap-1">
+              Buy <p className="uppercase">{tokenSymbol}</p>
             </DialogTitle>
           </div>
           <DialogDescription className="text-base text-gray-600 mt-2">
-            Choose how many <strong>{tokenSymbol}</strong> you want to buy (optional)
+            Choose how many <strong className="uppercase">{tokenSymbol}</strong> you want to buy (optional)
           </DialogDescription>
         </DialogHeader>
 
         {/* Info Banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <div className="flex gap-3">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>

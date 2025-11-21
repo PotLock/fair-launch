@@ -25,6 +25,7 @@ import { ChainSection } from "./ChainSection";
 import { TokenInput } from "./TokenInput";
 import { BridgeInfoCard } from "./BridgeInfoCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertCircle } from "lucide-react";
 import { createTransaction, updateTransactionStatus } from "@/lib/api";
 import { useTransactionBridge } from "@/hooks/useSWR";
 
@@ -352,27 +353,47 @@ export default function BridgeToken() {
             const decimalsToChain = fromChain == "near" ? 24 : selectedToken.decimals;
             const amountToBridge = normalizeAmount(amountBigInt, selectedToken.decimals, decimalsToChain);
 
-            // Step 2: Initiating transfer (50%)
+            // Step 2: Initiating transfer (50% - 95%)
             dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 50 });
+
+            // Start progress animation during bridge based on estimated VAA fetch time (~80s)
+            const estimatedBridgeDurationMs = 80000; // VAA fetch typically takes ~80 seconds
+            const bridgeWaitStart = Date.now();
+            const bridgeProgressInterval = setInterval(() => {
+                const elapsed = Date.now() - bridgeWaitStart;
+                const normalized = estimatedBridgeDurationMs > 0 ? elapsed / estimatedBridgeDurationMs : 0;
+                const projected = 50 + Math.floor(Math.min(0.999, Math.max(0, normalized)) * 45); // 50% to 95%
+                const nextValue = Math.min(95, projected);
+                dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: nextValue });
+            }, 1000);
 
             const from = fromChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const to = toChain === 'near' ? ChainKind.Near : ChainKind.Sol;
             const senderAddress = fromChain === 'near' ? signedAccountId : publicKey?.toString();
             const recipientAddress = toChain === 'near' ? signedAccountId : publicKey?.toString();
 
-            const result = await transferToken(
-                network,
-                from,
-                to,
-                senderAddress!,
-                selectedToken.mint,
-                amountToBridge,
-                recipientAddress!
-            );
+            let result;
+            try {
+                result = await transferToken(
+                    network,
+                    from,
+                    to,
+                    senderAddress!,
+                    selectedToken.mint,
+                    amountToBridge,
+                    recipientAddress!
+                );
 
-            // Step 3: Finalizing bridge (100%)
-            dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 100 });
-            await new Promise(resolve => setTimeout(resolve, 500));
+                // Clear interval and complete progress
+                clearInterval(bridgeProgressInterval);
+
+                // Step 3: Finalizing bridge (100%)
+                dispatchModal({ type: 'UPDATE_BRIDGE_PROGRESS', progress: 100 });
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (bridgeError) {
+                clearInterval(bridgeProgressInterval);
+                throw bridgeError;
+            }
 
             console.log("result", result);
 
@@ -534,25 +555,44 @@ export default function BridgeToken() {
                 }
             }
 
-            // Step 3: Deploying token (60%)
+            // Step 3: Deploying token (60% - 95%)
             dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 60 });
+
+            // Start progress animation during deployment
+            let currentProgress = 60;
+            const progressInterval = setInterval(() => {
+                if (currentProgress < 95) {
+                    currentProgress += 1;
+                    dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: currentProgress });
+                }
+            }, 200);
+
             const from = fromChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
             const to = toChain === 'solana' ? ChainKind.Sol : ChainKind.Near;
 
-            const txDeployToken = await deployToken(network, from, to, selectedToken.mint);
+            try {
+                const txDeployToken = await deployToken(network, from, to, selectedToken.mint);
 
-            // Step 4: Finalizing deployment (100%)
-            dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
-            await new Promise(resolve => setTimeout(resolve, 500));
+                // Clear interval and complete progress
+                clearInterval(progressInterval);
 
-            // Update transaction status to success
-            if (transactionId) {
-                await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+                // Step 4: Finalizing deployment (100%)
+                dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Update transaction status to success
+                if (transactionId) {
+                    await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS, txDeployToken.result?.toString());
+                }
+                setAmount('')
+                dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
+                setIsTokenDeployedOnTargetChain(true);
+                toast.success('Deploy token successfully');
+
+            } catch (deployError) {
+                clearInterval(progressInterval);
+                throw deployError;
             }
-            setAmount('')
-            dispatchModal({ type: 'SHOW_DEPLOY_SUCCESS' });
-            setIsTokenDeployedOnTargetChain(true);
-            toast.success('Deploy token successfully');
 
         } catch (error: any) {
             console.error("Deploy token error:", error);
@@ -560,11 +600,9 @@ export default function BridgeToken() {
             // Check if error is due to token already being deployed
             const errorMessage = error?.message || error?.toString() || '';
             if (errorMessage.includes('already been processed') || errorMessage.includes('already deployed')) {
-                // Treat as success - token is already deployed
                 dispatchModal({ type: 'UPDATE_DEPLOY_PROGRESS', progress: 100 });
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                // Update transaction status to success
                 if (transactionId) {
                     try {
                         await updateTransactionStatus(transactionId, TransactionStatus.SUCCESS);
@@ -577,7 +615,6 @@ export default function BridgeToken() {
                 setIsTokenDeployedOnTargetChain(true);
                 toast.success('Token already deployed and ready for bridging!');
             } else {
-                // Update transaction status to failed
                 if (transactionId) {
                     try {
                         await updateTransactionStatus(transactionId, TransactionStatus.FAILED);
@@ -599,7 +636,24 @@ export default function BridgeToken() {
         setToChain(currentFromChain);
     }, [fromChain, toChain]);
 
-    // Memoize button text for performance
+
+    const handleToChainChange = useCallback((chain: ChainType) => {
+        if (chain === fromChain) {
+            toast.error('Bridge only works for cross-chain transfers. Please select a different destination chain.');
+            return;
+        }
+        setToChain(chain);
+    }, [fromChain]);
+
+    const handleFromChainChange = useCallback((chain: ChainType) => {
+        if (chain === toChain) {
+            const availableChains: ChainType[] = ['solana', 'near', 'ethereum'].filter(c => c !== chain) as ChainType[];
+            setToChain(availableChains[0]);
+        }
+        setFromChain(chain);
+    }, [toChain]);
+
+
     const bridgeButtonText = useMemo(() => {
         if (isBridging) return `Bridging... ${modalState.bridgeProgress}%`;
         if (isTokenDeployedOnTargetChain) return `Bridge ${selectedToken?.symbol || ''}`;
@@ -626,7 +680,7 @@ export default function BridgeToken() {
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <ChainSection
                                             chain={fromChain}
-                                            onChainChange={setFromChain}
+                                            onChainChange={handleFromChainChange}
                                             walletAddress={getWalletAddress(fromChain)}
                                             label="Select source chain"
                                             disabledChains={["ethereum"]}
@@ -668,11 +722,14 @@ export default function BridgeToken() {
                                     <div className="border border-gray-200 rounded-lg p-3">
                                         <ChainSection
                                             chain={toChain}
-                                            onChainChange={setToChain}
+                                            onChainChange={handleToChainChange}
                                             walletAddress={getWalletAddress(toChain)}
                                             label="Select destination chain"
-                                            disabledChains={["ethereum"]}
-                                            disabledTooltips={{ ethereum: "Coming soon" }}
+                                            disabledChains={["ethereum", fromChain]}
+                                            disabledTooltips={{
+                                                ethereum: "Coming soon",
+                                                [fromChain]: "Cannot bridge to same chain"
+                                            }}
                                         />
 
                                         <TokenInput
@@ -686,11 +743,19 @@ export default function BridgeToken() {
                                             isLoading={isLoadingFromChainTokens}
                                             isDisabled={true}
                                             isReadOnly={true}
+                                            sourceChain={fromChain}
                                         />
                                     </div>
                                 </div>
 
-                                <BridgeInfoCard />
+                                <BridgeInfoCard fromChain={fromChain} toChain={toChain} />
+
+                                <div className="flex items-start gap-2 mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <AlertCircle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-orange-700">
+                                        Bridge only supports cross-chain transfers. Token swaps on the same chain are not available.
+                                    </p>
+                                </div>
 
                                 <div className="mt-5">
                                     <Button
@@ -764,7 +829,7 @@ export default function BridgeToken() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                            Please don't close this window. Bridge typically takes 1-2 minutes.
+                            Please don't close this window while the bridge is in progress.
                         </p>
                     </div>
                 </DialogContent>
@@ -849,7 +914,7 @@ export default function BridgeToken() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                            Please don't close this window. Deployment typically takes 2-5 minutes.
+                            Please don't close this window while the deployment is in progress.
                         </p>
                     </div>
                 </DialogContent>

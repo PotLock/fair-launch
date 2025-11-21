@@ -33,10 +33,9 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const { connectSolana, disconnectSolana, isSolanaConnected, solanaPublicKey } = useWalletContext();
   const [isConnectingNEAR, setIsConnectingNEAR] = useState(false);
 
-  // Update connected wallets when wallet states change
   useEffect(() => {
     const wallets: ConnectedWallet[] = [];
-    
+
     if (isSolanaConnected && solanaPublicKey) {
       wallets.push({
         type: 'solana',
@@ -44,7 +43,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
         displayName: 'Solana Wallet'
       });
     }
-    
+
     if (signedAccountId) {
       wallets.push({
         type: 'near',
@@ -52,7 +51,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
         displayName: 'NEAR Wallet'
       });
     }
-    
+
     if (evmConnected && evmAddress) {
       wallets.push({
         type: 'evm',
@@ -62,10 +61,38 @@ const SignInModal: React.FC<SignInModalProps> = ({
     }
   }, [isSolanaConnected, solanaPublicKey, signedAccountId, evmConnected, evmAddress]);
 
+  // Reset body scroll when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Small delay to ensure Radix Dialog has finished its cleanup
+      const timer = setTimeout(() => {
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isSolanaConnected && solanaPublicKey) {
+      const timer = setTimeout(() => {
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('pointer-events');
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.removeProperty('overflow');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSolanaConnected, solanaPublicKey]);
+
   const handleConnectSolana = async () => {
     try {
-      await connectSolana();
       onClose();
+      setTimeout(() => {
+        connectSolana();
+      }, 150);
     } catch (error) {
       console.error('Failed to connect Solana wallet:', error);
     }

@@ -545,7 +545,7 @@ export default function PreviewDeployment({
             id: 'deployment-progress'
           });
 
-          const waitTime = 10000; // 10 seconds
+          const waitTime = 15000; // 15 seconds
           const startTime = Date.now();
           const interval = 1000; // Update every second
 

@@ -11,23 +11,11 @@ import { fetchLaunchConditionsData } from "@/lib/launch-conditions-data";
 import { LiquidityPoolsWrapper } from "@/components/token/LiquidityPoolsWrapper";
 import Transactions from "@/components/token/Transactions";
 import { getSolPrice } from "@/lib/sol";
+import { getIpfsUrl } from "@/lib/utils";
 
 // Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-    try {
-        const popularTokens = await getPopularTokens(10);
-        
-        return popularTokens.map((token) => ({
-            address: token.mintAddress,
-        }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ address: string }> }): Promise<Metadata> {
     const { address } = await params;
@@ -62,7 +50,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
 
         const title = `${token.name} (${token.symbol}) | POTLAUNCH`;
         const description = token.description || `Discover ${token.name} (${token.symbol}) on POTLAUNCH. Trade, explore, and learn about this token.`;
-        const imageUrl = process.env.NEXT_PUBLIC_IPFS_URL + token.metadata.tokenUri || "/logo.png";
+        const imageUrl = getIpfsUrl(token.metadata.tokenUri) || "/logo.png";
         
         // Create structured data for better SEO
         const structuredData = {
@@ -218,7 +206,6 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
             <div className="px-3 col-span-2 space-y-4">
                 <TokenHeader token={token} address={address} />
 
-                {/* Only show on mobile */}
                 <div className="md:hidden mb-4">
                     <TradingInterface token={token} address={address} />
                 </div>
@@ -245,7 +232,7 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     solPrice={solPrice || 0}
                 />
             </div>
-            {/* Only show on desktop */}
+
             <div className="hidden md:block">
                 <TradingInterface token={token} address={address} />
             </div>

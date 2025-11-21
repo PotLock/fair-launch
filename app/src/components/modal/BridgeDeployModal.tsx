@@ -49,6 +49,7 @@ interface DeploymentOption {
     cost: string;
     disabled: boolean;
     chain: TransactionChain;
+    isDeployed?: boolean;
 }
 
 interface DeploymentEstimateStats {
@@ -187,6 +188,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     const [estimatesLoading, setEstimatesLoading] = useState(false);
     const [estimatesError, setEstimatesError] = useState<string | null>(null);
     const [selectedEstimateMs, setSelectedEstimateMs] = useState<number | null>(null);
+    const [deploymentOptionsWithStatus, setDeploymentOptionsWithStatus] = useState<DeploymentOption[]>(deploymentOptions);
 
     // BridgeTokens modal states
     const [showBridgeProcessingModal, setShowBridgeProcessingModal] = useState(false);
@@ -212,6 +214,30 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     useEffect(() => {
         const newDefaultTab = bridgeAddress && bridgeAddress.length > 0 ? "bridge" : "create";
         setActiveTab(newDefaultTab);
+    }, [bridgeAddress]);
+
+    // Check which chains are already deployed
+    useEffect(() => {
+        if (!bridgeAddress || bridgeAddress.length === 0) {
+            setDeploymentOptionsWithStatus(deploymentOptions);
+            return;
+        }
+
+        const updatedOptions = deploymentOptions.map(option => {
+            const chainType = option.name.toLowerCase();
+            const isDeployed = bridgeAddress.some(addr => {
+                const [chain] = addr.split(':');
+                return chain === chainType;
+            });
+
+            return {
+                ...option,
+                isDeployed,
+                disabled: option.disabled || isDeployed
+            };
+        });
+
+        setDeploymentOptionsWithStatus(updatedOptions);
     }, [bridgeAddress]);
 
     useEffect(() => {
@@ -401,9 +427,9 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
         return <span className="text-xs text-gray-400">No historical data yet</span>;
     }, [deploymentEstimates, estimatesError, estimatesLoading, getEstimateText]);
 
-    const handleOptionSelect = (option: typeof deploymentOptions[number]) => {
-        if (option.disabled) {
-            return; // Don't allow selection of disabled options
+    const handleOptionSelect = (option: DeploymentOption) => {
+        if (option.disabled || option.isDeployed) {
+            return; // Don't allow selection of disabled or already deployed options
         }
         setSelectedOption(option);
         setShowReviewModal(true);
@@ -836,12 +862,12 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                                 </div>
                             )}
                             <div className="space-y-3">
-                                {deploymentOptions.map((option, index) => (
+                                {deploymentOptionsWithStatus.map((option, index) => (
                                     <Tooltip key={index}>
                                         <TooltipTrigger asChild>
                                             <div
                                                 className={`flex items-center justify-between p-2 px-3 border rounded-lg transition-colors ${
-                                                    option.disabled
+                                                    option.disabled || option.isDeployed
                                                         ? 'border-gray-300 bg-gray-100 cursor-not-allowed opacity-60'
                                                         : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
                                                 }`}
@@ -860,18 +886,25 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                                                         />
                                                     </div>
                                                     <div className="space-y-0.5">
-                                                        <h3 className={`font-semibold text-sm ${
-                                                            option.disabled ? 'text-gray-500' : 'text-gray-900'
-                                                        }`}>
-                                                            {option.name}
-                                                        </h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className={`font-semibold text-sm ${
+                                                                option.disabled || option.isDeployed ? 'text-gray-500' : 'text-gray-900'
+                                                            }`}>
+                                                                {option.name}
+                                                            </h3>
+                                                            {option.isDeployed && (
+                                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] rounded-full font-medium">
+                                                                    Deployed
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className={`text-xs ${
-                                                            option.disabled ? 'text-gray-400' : 'text-gray-600'
+                                                            option.disabled || option.isDeployed ? 'text-gray-400' : 'text-gray-600'
                                                         }`}>
                                                             {option.description}
                                                         </p>
                                                         <p className={`text-xs font-extralight ${
-                                                            option.disabled ? 'text-gray-400' : 'text-gray-500'
+                                                            option.disabled || option.isDeployed ? 'text-gray-400' : 'text-gray-500'
                                                         }`}>
                                                             Available DEXes: {option.availableDexes}
                                                         </p>
@@ -880,17 +913,26 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
                                                 <div className="text-right space-y-1">
                                                     <div className={`text-sm font-medium ${
-                                                        option.disabled ? 'text-gray-500' : 'text-gray-900'
+                                                        option.disabled || option.isDeployed ? 'text-gray-500' : 'text-gray-900'
                                                     }`}>
                                                         {option.cost}
                                                     </div>
-                                                    {!option.disabled ? renderEstimate(option.chain) : (
-                                                        <span className="text-xs text-gray-400">Coming soon</span>
+                                                    {!option.disabled && !option.isDeployed ? renderEstimate(option.chain) : (
+                                                        option.isDeployed ? (
+                                                            <span className="text-xs text-gray-400">Already deployed</span>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">Coming soon</span>
+                                                        )
                                                     )}
                                                 </div>
                                             </div>
                                         </TooltipTrigger>
-                                        {option.disabled && (
+                                        {option.isDeployed && (
+                                            <TooltipContent className="bg-white border border-gray-100">
+                                                <p>This chain has already been deployed</p>
+                                            </TooltipContent>
+                                        )}
+                                        {option.disabled && !option.isDeployed && (
                                             <TooltipContent className="bg-white border border-gray-100">
                                                 <p>Coming Soon</p>
                                             </TooltipContent>
@@ -1179,7 +1221,7 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
 
                     <div className="flex justify-end gap-3">
                         <button
-                            onClick={onClose}
+                            onClick={handleBridgeNow}
                             className="px-6 text-gray-700 hover:border-red-400 hover:text-red-500 cursor-pointer border border-gray-300 py-2 rounded-lg"
                         >
                             Cancel

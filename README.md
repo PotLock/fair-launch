@@ -20,7 +20,6 @@ PotLock operates across multiple blockchain networks and provides various tools 
 - **Base/Cyber** - Activity DAO via Commit Protocol
 - **Solana** - Token launchpad and bonding curves
 
-
 ## 🪴 POTLAUNCH Overview
 
 POTLAUNCH is a community-powered token launch platform that enables fair, transparent, and accessible token creation across multiple blockchains. Built on Solana with cross-chain capabilities through NEAR Intents and Omnibridge.

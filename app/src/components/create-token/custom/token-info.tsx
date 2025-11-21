@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { uploadImage } from '@/lib/api';
 import URLInput from '@/components/ui/url-input';
+import { InfoTooltip, DBC_TOOLTIPS } from '@/components/ui/info-tooltip';
 import { TagsSelectModal, TAG_ICONS } from '@/components/modal/TagsSelectModal';
+import { getIpfsUrl } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -88,6 +90,47 @@ export default function TokenInfo({
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+  // Validation function for website URL
+  const isWebsiteValid = useMemo(() => {
+    if (!formData.website || !formData.website.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.website.trim();
+    const withoutProto = trimmed.replace(/^https?:\/\//, '');
+    if (!withoutProto) return false;
+
+    // Validate domain format
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+.*$/;
+    return domainRegex.test(withoutProto);
+  }, [formData.website]);
+
+  // Validation function for Twitter URL
+  const isTwitterValid = useMemo(() => {
+    if (!formData.twitter || !formData.twitter.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.twitter.trim();
+    const raw = trimmed
+      .replace(/^https?:\/\//, '')
+      .replace(/^(x\.com|twitter\.com)\//, '');
+    const username = raw.replace(/[^A-Za-z0-9_]/g, '');
+
+    // Valid if username is between 1-15 characters and contains only valid chars
+    return username.length > 0 && username.length <= 15 && /^[A-Za-z0-9_]+$/.test(username);
+  }, [formData.twitter]);
+
+  // Validation function for Telegram URL
+  const isTelegramValid = useMemo(() => {
+    if (!formData.telegram || !formData.telegram.trim()) return true; // Empty is valid (optional field)
+
+    const trimmed = formData.telegram.trim();
+    const raw = trimmed
+      .replace(/^https?:\/\//, '')
+      .replace(/^(t\.me|telegram\.me|telegram\.org)\//, '');
+    const handle = raw.replace(/[^A-Za-z0-9_]/g, '');
+
+    // Valid if handle is between 5-32 characters
+    return handle.length >= 5 && handle.length <= 32;
+  }, [formData.telegram]);
 
   const progressPercentage = useMemo(() =>
     (currentStep / totalSteps) * 100,
@@ -237,6 +280,13 @@ export default function TokenInfo({
       if (!trimmed) return undefined;
       const withoutProto = trimmed.replace(/^https?:\/\//, '');
       if (!withoutProto) return undefined;
+
+      // Validate domain format: must contain at least one dot and valid characters
+      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+.*$/;
+      if (!domainRegex.test(withoutProto)) {
+        return undefined;
+      }
+
       try {
         const url = new URL(`https://${withoutProto}`);
         return url.toString();
@@ -297,9 +347,15 @@ export default function TokenInfo({
     <div className="min-h-screen bg-white flex flex-col items-center">
       {/* Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-black mb-2">
-          What's your token called?
-        </h1>
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-3xl font-bold text-black">
+            What's your token called?
+          </h1>
+          <InfoTooltip
+            title={DBC_TOOLTIPS.overview.title}
+            content={DBC_TOOLTIPS.overview.description}
+          />
+        </div>
         <p className="text-gray-600 text-lg">
           Add your token name, symbol, logo, and social links.
         </p>
@@ -427,9 +483,9 @@ export default function TokenInfo({
               >
                 {formData.logo ? (
                   <div className="flex flex-col items-center">
-                    <img 
-                      src={`${process.env.NEXT_PUBLIC_IPFS_URL}${formData.logo}`} 
-                      alt="Token Logo" 
+                    <img
+                      src={getIpfsUrl(formData.logo)}
+                      alt="Token Logo"
                       className="w-32 h-32 object-cover rounded-lg mb-2"
                     />
                     {isUploadingLogo && (
@@ -471,9 +527,9 @@ export default function TokenInfo({
               >
                 {formData.banner ? (
                   <div className="flex flex-col items-center">
-                    <img 
-                      src={`${process.env.NEXT_PUBLIC_IPFS_URL}${formData.banner}`} 
-                      alt="Banner Image" 
+                    <img
+                      src={getIpfsUrl(formData.banner)}
+                      alt="Banner Image"
                       className="w-full h-32 object-cover rounded-lg mb-2"
                     />
                     {isUploadingBanner && (
@@ -523,7 +579,13 @@ export default function TokenInfo({
                   onChange={(value) => handleInputChange('website', value)}
                   placeholder="yourwebsite.com"
                   className="w-full"
+                  isInvalid={!isWebsiteValid}
                 />
+                {!isWebsiteValid && formData.website && (
+                  <p className="mt-1 text-sm text-red-500">
+                    Please enter a valid website URL (e.g., example.com)
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -535,7 +597,13 @@ export default function TokenInfo({
                   onChange={(value) => handleInputChange('twitter', value)}
                   placeholder="yourusername"
                   className="w-full"
+                  isInvalid={!isTwitterValid}
                 />
+                {!isTwitterValid && formData.twitter && (
+                  <p className="mt-1 text-sm text-red-500">
+                    Please enter a valid username (1-15 characters, letters, numbers, underscore only)
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -547,7 +615,13 @@ export default function TokenInfo({
                   onChange={(value) => handleInputChange('telegram', value)}
                   placeholder="yourchannel"
                   className="w-full"
+                  isInvalid={!isTelegramValid}
                 />
+                {!isTelegramValid && formData.telegram && (
+                  <p className="mt-1 text-sm text-red-500">
+                    Please enter a valid username (5-32 characters, letters, numbers, underscore only)
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -557,9 +631,15 @@ export default function TokenInfo({
             <h3 className="text-base sm:text-lg font-semibold text-black mb-3 sm:mb-4">Tokenomics</h3>
             <div className='flex flex-row gap-2 justify-between'>
               <div className="space-y-2 mb-3 sm:mb-4 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Token Supply <strong className="text-red-500">*</strong>
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Total Token Supply <strong className="text-red-500">*</strong>
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.totalTokenSupply.title}
+                    content={DBC_TOOLTIPS.totalTokenSupply.description}
+                  />
+                </div>
                 <input
                   type="number"
                   placeholder="1000000"
@@ -573,9 +653,15 @@ export default function TokenInfo({
               </div>
 
               <div className="space-y-2 mb-3 sm:mb-4 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Quote Address
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Quote Address
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenQuoteAddress.title}
+                    content={DBC_TOOLTIPS.tokenQuoteAddress.description}
+                  />
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -665,9 +751,15 @@ export default function TokenInfo({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Base Decimal
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Base Decimal
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenBaseDecimal.title}
+                    content={DBC_TOOLTIPS.tokenBaseDecimal.description}
+                  />
+                </div>
               <input
                 type="number"
                 placeholder="6"
@@ -680,9 +772,15 @@ export default function TokenInfo({
               />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Token Quote Decimal
-                </label>
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Token Quote Decimal
+                  </label>
+                  <InfoTooltip
+                    title={DBC_TOOLTIPS.tokenQuoteDecimal.title}
+                    content={DBC_TOOLTIPS.tokenQuoteDecimal.description}
+                  />
+                </div>
               <input
                 type="number"
                 placeholder="6"

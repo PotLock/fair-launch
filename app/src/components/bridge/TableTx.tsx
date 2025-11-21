@@ -15,6 +15,7 @@ import { ethers } from "ethers";
 import { getRpcEVMEndpoint } from "@/lib/evm";
 import { getRpcNEAREndpoint } from "@/lib/near";
 import { TATUM_API_KEY } from "@/configs/env.config";
+import { getIpfsUrl } from "@/lib/utils";
 
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
@@ -313,9 +314,9 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
                     <div className="flex flex-row gap-1 items-center">
                         <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             {token?.metadata.tokenUri || fallbackToken?.image ? (
-                                <img 
-                                    src={fallbackToken?.image||`${process.env.NEXT_PUBLIC_IPFS_URL}${token?.metadata.tokenUri }`} 
-                                    alt={token?.symbol || fallbackToken?.symbol} 
+                                <img
+                                    src={fallbackToken?.image || getIpfsUrl(token?.metadata.tokenUri)}
+                                    alt={token?.symbol || fallbackToken?.symbol}
                                     className="h-full w-full rounded-full object-cover"
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;

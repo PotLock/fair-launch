@@ -16,11 +16,11 @@ import {
 } from 'omni-bridge-sdk';
 import { SOL_PRIVATE_KEY } from '../configs/env.config';
 import useAnchorProvider from '@/hooks/useAnchorProvider';
-import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { useAccount, useWalletClient } from 'wagmi';
 import { ethers } from 'ethers';
+import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 
 export const useBridge = () => {
   const anchorProvider = useAnchorProvider()
