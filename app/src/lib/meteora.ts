@@ -50,17 +50,11 @@ export async function calculateDbcSwapQuote(
     });
 
     let outputAmountBN: BN;
-    if (typeof quote === 'object' && 'outputAmount' in quote) {
-      const hexOutput = (quote as any).outputAmount;
-      if (typeof hexOutput === 'string') {
-        outputAmountBN = new BN(hexOutput, 16);
-      } else if (hexOutput && typeof hexOutput.toNumber === 'function') {
-        outputAmountBN = hexOutput;
-      } else {
-        throw new Error("Invalid outputAmount format");
-      }
-    } else if (quote.minimumAmountOut) {
-      outputAmountBN = new BN(quote.minimumAmountOut.toString());
+    const quoteAny = quote as { outputAmount?: BN; minimumAmountOut?: BN };
+    if (quoteAny.outputAmount) {
+      outputAmountBN = new BN(quoteAny.outputAmount.toString());
+    } else if (quoteAny.minimumAmountOut) {
+      outputAmountBN = new BN(quoteAny.minimumAmountOut.toString());
     } else {
       throw new Error("Quote outputAmount is undefined");
     }
