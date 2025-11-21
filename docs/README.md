@@ -1,121 +1,145 @@
-# POTLAUNCH Documentation
+# POTLAUNCH Docs
 
-This documentation site is built using [Next.js](https://nextjs.org/) app router + [Mantine](https://mantine.dev/) + [Nextra](https://nextra.site/).
+Documentation site for the POTLAUNCH token launch platform.
 
-## About POTLAUNCH
+## Tech Stack
 
-POTLAUNCH is a platform for launching projects with community funding. Create and deploy your own SPL tokens, manage token launches through bonding curves, and build your community-driven project.
+- **Framework**: Next.js 16
+- **Documentation**: Nextra 4
+- **UI**: Mantine 8
+- **Language**: TypeScript 5.9
+- **Testing**: Jest, React Testing Library
+- **Storybook**: Component development
 
-## Installation
+## Project Structure
 
-```bash
-npm install
+```
+docs/
+├── app/               # Next.js app directory
+├── components/        # Shared UI components
+├── content/           # MDX documentation content
+│   ├── concepts-architecture/
+│   ├── developer-guide/
+│   ├── dynamic-bonding-curve/
+│   ├── quick-start/
+│   └── user-guide/
+├── config/            # Site configuration
+├── theme/             # Mantine theme
+├── test/              # Test files
+└── public/            # Static assets
 ```
 
-or
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Yarn 4+
+
+### Installation
 
 ```bash
 yarn install
 ```
 
-## Local Development
-
-```bash
-npm run dev
-```
-
-or
+### Development
 
 ```bash
 yarn dev
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+Server runs at http://localhost:3000
 
-## Build
-
-```bash
-npm run build
-```
-
-or
+### Build
 
 ```bash
 yarn build
 ```
 
-This command generates static content and can be served using any static contents hosting service.
+This generates static content and builds the Pagefind search index.
 
-## Features
+### Production
 
-This documentation site includes:
+```bash
+yarn start
+```
 
-- [Next.js](https://nextjs.org/) app router with App Directory
-- [Mantine UI](https://mantine.dev/) components for beautiful interface
-- [Nextra](https://nextra.site/) documentation framework
-- [TypeScript](https://www.typescriptlang.org/) for type safety
-- Dark mode support synced between Mantine and Nextra
-- Responsive design for mobile and desktop
-- Custom Navigation and Footer components
-- Search functionality
-- [PostCSS](https://postcss.org/) with [mantine-postcss-preset](https://mantine.dev/styles/postcss-preset)
-- [Storybook](https://storybook.js.org/) for component development
-- [Jest](https://jestjs.io/) setup with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro)
-- ESLint setup with [eslint-config-mantine](https://github.com/mantinedev/eslint-config-mantine)
+## Scripts
 
-## Folder Structure
+| Command | Description |
+|---------|-------------|
+| `yarn dev` | Start development server |
+| `yarn build` | Build for production with search index |
+| `yarn start` | Start production server |
+| `yarn lint` | Run ESLint and Stylelint |
+| `yarn typecheck` | Check TypeScript types |
+| `yarn test` | Run all tests |
+| `yarn jest` | Run Jest tests |
+| `yarn storybook` | Start Storybook dev server |
+| `yarn prettier:write` | Format code |
+| `yarn analyze` | Analyze bundle size |
 
-- `app` – Next.js app directory with pages and layouts
-- `components` – shared UI components (Navigation, Footer, Logo, etc.)
-- `content` – Nextra documentation content (.mdx and _meta.json files)
-- `theme` – Mantine theme configuration
+## Documentation Structure
 
-## Available Scripts
+| Section | Description |
+|---------|-------------|
+| Quick Start | Getting started guides |
+| User Guide | End-user documentation |
+| Developer Guide | API and SDK documentation |
+| Dynamic Bonding Curve | Technical curve documentation |
+| Concepts & Architecture | System architecture |
+| FAQ & Troubleshooting | Common issues and solutions |
+| Contributing | Contribution guidelines |
+| Changelog | Version history |
 
-### Development
+## Writing Documentation
 
-- `dev` – start development server
-- `build` – bundle application for production
-- `start` – start production server
-- `analyze` – analyze application bundle with [@next/bundle-analyzer](https://www.npmjs.com/package/@next/bundle-analyzer)
+Documentation is written in MDX format in the `content/` directory.
 
-### Testing
+### Page Metadata
 
-- `typecheck` – checks TypeScript types
-- `lint` – runs ESLint
-- `prettier:check` – checks files with Prettier
-- `jest` – runs jest tests
-- `jest:watch` – starts jest in watch mode
-- `test` – runs all tests (`jest`, `prettier:check`, `lint`, `typecheck`)
+Each section has a `_meta.ts` file for navigation ordering:
 
-### Other
+```ts
+export default {
+  index: 'Introduction',
+  'getting-started': 'Getting Started',
+  'advanced-usage': 'Advanced Usage',
+}
+```
 
-- `storybook` – starts Storybook dev server
-- `storybook:build` – build production Storybook bundle
-- `prettier:write` – formats all files with Prettier
+### MDX Features
+
+- Mantine components available in MDX
+- Code syntax highlighting
+- Callouts and alerts
+- Interactive examples
+
+## Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `nextra` | Documentation framework |
+| `nextra-theme-docs` | Docs theme |
+| `@mantine/core` | UI components |
+| `@mantine/hooks` | React hooks |
+| `pagefind` | Static search |
 
 ## Deployment
 
-The documentation site can be deployed to any static hosting service such as:
+Deploy to any static hosting service:
+
+```bash
+yarn build
+```
+
+The output is in `.next/` directory. Compatible with:
 
 - Vercel
 - Netlify
-- GitHub Pages
-- AWS S3
 - Cloudflare Pages
-
-For production deployment, run:
-
-```bash
-npm run build
-```
-
-Then deploy the generated `.next` directory to your hosting provider.
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
+- GitHub Pages
 
 ## License
 
-Built with ❤️ by [POTLOCK](https://potlock.org)
+MIT
