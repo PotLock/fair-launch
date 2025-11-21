@@ -1,7 +1,7 @@
 import type { TokenWithRelations, CleanTokenResponse } from '../types';
 import type { TokenMetricsData } from './parallelFetcher';
-import { formatPoolStateToMetrics } from './poolStateFormatter';
 import { decimalToString } from './numberUtils';
+import type { PoolConfig } from '../types/pool';
 
 /**
  * Formats a token response with metrics included.
@@ -10,7 +10,7 @@ import { decimalToString } from './numberUtils';
 export function formatTokenResponseWithMetrics(
   token: TokenWithRelations,
   metrics: TokenMetricsData,
-  dbcConfig?: any
+  dbcConfig?: PoolConfig
 ): CleanTokenResponse {
   // Ensure metadata always has bannerUri and tokenUri
   const metadata = token.metadata ? {
