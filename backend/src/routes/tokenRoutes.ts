@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { TokenService } from '../services/tokenService';
 import { CreateTokenSchema, UpdateTokenSchema } from '../types';
 import { z } from 'zod';
+import { logRequestStart, logRequestEnd, logError } from '../lib/logger';
 
 const app = new Hono();
 const tokenService = new TokenService();
@@ -38,11 +39,15 @@ app.post('/', zValidator('json', CreateTokenSchema), async (c) => {
 
 // Get all tokens
 app.get('/', async (c) => {
+  const startTime = Date.now();
+  logRequestStart('GET /api/tokens', { query: c.req.query() });
+  
   try {
     const launchpad = c.req.query('launchpad');
     
     // Validate launchpad parameter if provided
     if (launchpad && launchpad !== 'potlaunch' && launchpad !== 'cookedpad') {
+      logRequestEnd('GET /api/tokens', Date.now() - startTime, false);
       return c.json({
         success: false,
         message: 'Invalid launchpad value. Must be "potlaunch" or "cookedpad"'
@@ -60,6 +65,7 @@ app.get('/', async (c) => {
       if (lower === 'true' || lower === 'false') {
         active = lower === 'true';
       } else {
+        logRequestEnd('GET /api/tokens', Date.now() - startTime, false);
         return c.json({
           success: false,
           message: 'Invalid active value. Must be "true" or "false"'
@@ -80,12 +86,19 @@ app.get('/', async (c) => {
       tokens = await tokenService.getAllTokens();
     }
     
+    const duration = Date.now() - startTime;
+    logRequestEnd('GET /api/tokens', duration, true, { 
+      tokenCount: tokens.length 
+    });
+    
     return c.json({
       success: true,
       data: tokens
     });
   } catch (error) {
-    console.error('Error in get all tokens route:', error);
+    const duration = Date.now() - startTime;
+    logError('Error in get all tokens route', error instanceof Error ? error : new Error(String(error)));
+    logRequestEnd('GET /api/tokens', duration, false);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -219,6 +232,9 @@ app.get('/address/:address', async (c) => {
 
 // Get popular tokens - This must come before /:id to avoid route conflicts
 app.get('/popular', async (c) => {
+  const startTime = Date.now();
+  logRequestStart('GET /api/tokens/popular', { query: c.req.query() });
+  
   try {
     const limitParam = c.req.query('limit');
     const launchpad = c.req.query('launchpad');
@@ -230,6 +246,7 @@ app.get('/popular', async (c) => {
     
     // Validate limit parameter
     if (isNaN(limit) || limit < 1 || limit > 100) {
+      logRequestEnd('GET /api/tokens/popular', Date.now() - startTime, false);
       return c.json({
         success: false,
         message: 'Limit must be a number between 1 and 100'
@@ -238,6 +255,7 @@ app.get('/popular', async (c) => {
     
     // Validate launchpad parameter if provided
     if (launchpad && launchpad !== 'potlaunch' && launchpad !== 'cookedpad') {
+      logRequestEnd('GET /api/tokens/popular', Date.now() - startTime, false);
       return c.json({
         success: false,
         message: 'Invalid launchpad value. Must be "potlaunch" or "cookedpad"'
@@ -250,6 +268,7 @@ app.get('/popular', async (c) => {
       if (lower === 'true' || lower === 'false') {
         active = lower === 'true';
       } else {
+        logRequestEnd('GET /api/tokens/popular', Date.now() - startTime, false);
         return c.json({
           success: false,
           message: 'Invalid active value. Must be "true" or "false"'
@@ -266,12 +285,20 @@ app.get('/popular', async (c) => {
       endDate
     );
     
+    const duration = Date.now() - startTime;
+    logRequestEnd('GET /api/tokens/popular', duration, true, {
+      limit,
+      tokenCount: popularTokens.length,
+    });
+    
     return c.json({
       success: true,
       data: popularTokens
     });
   } catch (error) {
-    console.error('Error in get popular tokens route:', error);
+    const duration = Date.now() - startTime;
+    logError('Error in get popular tokens route', error instanceof Error ? error : new Error(String(error)));
+    logRequestEnd('GET /api/tokens/popular', duration, false);
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -280,12 +307,22 @@ app.get('/popular', async (c) => {
 });
 
 app.get('/holders/:mintAddress', async (c) => {
+  const startTime = Date.now();
+  const mintAddress = c.req.param('mintAddress');
+  logRequestStart('GET /api/tokens/holders/:mintAddress', { mintAddress });
+  
   try {
-    const mintAddress = c.req.param('mintAddress');
     const holders = await tokenService.getHoldersByMintAddress(mintAddress);
+    const duration = Date.now() - startTime;
+    logRequestEnd('GET /api/tokens/holders/:mintAddress', duration, true, {
+      mintAddress,
+      holderCount: holders.length,
+    });
     return c.json({ success: true, data: holders });
   } catch (error) {
-    console.error('Error in get holders by mint address route:', error);
+    const duration = Date.now() - startTime;
+    logError('Error in get holders by mint address route', error instanceof Error ? error : new Error(String(error)), { mintAddress });
+    logRequestEnd('GET /api/tokens/holders/:mintAddress', duration, false, { mintAddress });
     return c.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'

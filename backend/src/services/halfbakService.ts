@@ -6,7 +6,8 @@ import { getDBCConfig } from "../configs/dbc.config";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { toSdkMetadata } from "../lib/halfbak";
 import { DynamicBondingCurveClient } from "@meteora-ag/dynamic-bonding-curve-sdk";
-import Decimal from 'decimal.js'
+import Decimal from 'decimal.js';
+import { cacheService, CACHE_TTL } from './cacheService';
 
 export class HalfbakService {
     private launchClient: LaunchClient;
@@ -137,6 +138,13 @@ export class HalfbakService {
     }
 
     async getPoolStateByMintAddress(mintAddress: string){
+      // Check cache first
+      const cacheKey = `pool:${mintAddress}:state`;
+      const cached = cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       try {
         const connection = new Connection(getRpcSOLEndpoint());
         const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
@@ -146,6 +154,9 @@ export class HalfbakService {
           throw new Error(`DBC Pool not found for ${mintAddress}`);
         }
 
+        // Cache the result
+        cacheService.set(cacheKey, poolState, CACHE_TTL.POOL_STATE);
+
         return poolState;
       } catch (error) {
         console.error('Error getting pool by mint address:', error);
@@ -154,6 +165,13 @@ export class HalfbakService {
     }
 
     async getPoolConfigByMintAddress(mintAddress: string){
+      // Check cache first
+      const cacheKey = `pool:${mintAddress}:config`;
+      const cached = cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       try {
         const connection = new Connection(getRpcSOLEndpoint());
         const dbcInstance = new DynamicBondingCurveClient(connection, 'confirmed');
@@ -168,6 +186,10 @@ export class HalfbakService {
         if (!poolConfig) {
           throw new Error(`DBC Pool config not found for ${dbcConfigAddress.toString()}`);
         }
+
+        // Cache the result
+        cacheService.set(cacheKey, poolConfig, CACHE_TTL.POOL_CONFIG);
+
         return poolConfig;
       } catch (error) {
         console.error('Error getting pool config by mint address:', error);
