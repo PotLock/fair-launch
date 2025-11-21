@@ -58,3 +58,4 @@ lerna-debug.log*
 
 /.claude
 .mcp.json
+.DS_Store
